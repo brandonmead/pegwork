@@ -13,6 +13,7 @@ use Pegwork\Admin\Notices;
 use Pegwork\Api\Registry;
 use Pegwork\Api\RegistryBuilder;
 use Pegwork\Cli\SchemaCommand;
+use Pegwork\Content\Registrar;
 use Pegwork\Registry\Loader;
 use Pegwork\Registry\Result;
 
@@ -78,7 +79,7 @@ final class Plugin {
 	}
 
 	/**
-	 * Builds the registry on init, priority 5. Content registration (PR 3) follows here.
+	 * Builds the registry on init, priority 5, then registers its content.
 	 */
 	public static function init(): void {
 		$builder = new RegistryBuilder();
@@ -92,6 +93,8 @@ final class Plugin {
 
 		$db           = get_option( Loader::DB_OPTION, array() );
 		self::$result = Loader::load( $builder->packages(), is_array( $db ) ? $db : array() );
+
+		Registrar::register( self::$result->registry );
 
 		/**
 		 * Fires after Pegwork has registered its content.
