@@ -1,0 +1,157 @@
+{
+	"types": {
+		"sifg_project": {
+			"fields": [
+				{
+					"key": "name",
+					"type": "text",
+					"label": "Name",
+					"required": true,
+					"visibility": "public",
+					"meta_key": null,
+					"storage": "post_title",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "description",
+					"type": "rich_text",
+					"label": "Description",
+					"required": true,
+					"visibility": "public",
+					"meta_key": null,
+					"storage": "post_content",
+					"show_when": null,
+					"required_when": null,
+					"validate": { "min_words": 50, "max_words": 300 },
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "who_for",
+					"type": "text",
+					"label": "Who it's for",
+					"required": false,
+					"visibility": "public",
+					"meta_key": "_sifg_project_who_for",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": { "max_length": 200 },
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "website",
+					"type": "url",
+					"label": "Website",
+					"required": false,
+					"visibility": "public",
+					"meta_key": "_sifg_project_website",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "needs_volunteers",
+					"type": "boolean",
+					"label": "Needs volunteers",
+					"required": false,
+					"visibility": "public",
+					"meta_key": "_sifg_project_needs_volunteers",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": false
+				},
+				{
+					"key": "volunteer_link",
+					"type": "url",
+					"label": "Volunteer link",
+					"required": false,
+					"visibility": "public",
+					"meta_key": "_sifg_project_volunteer_link",
+					"storage": "meta",
+					"show_when": { "field": "needs_volunteers", "equals": true },
+					"required_when": { "field": "needs_volunteers", "equals": true },
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "github_link",
+					"type": "url",
+					"label": "GitHub link",
+					"required": false,
+					"visibility": "public",
+					"meta_key": "_sifg_project_github_link",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "contact_email",
+					"type": "email",
+					"label": "Contact email",
+					"required": true,
+					"visibility": "private",
+					"meta_key": "_sifg_project_contact_email",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "last_verified",
+					"type": "date",
+					"label": "Last verified",
+					"required": false,
+					"visibility": "public",
+					"meta_key": "_sifg_project_last_verified",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				}
+			],
+			"taxonomies": [
+				{
+					"key": "sifg_project_type",
+					"rest_base": "sifg_project_type",
+					"select": "single",
+					"required": true,
+					"label": "Type"
+				},
+				{
+					"key": "sifg_project_status",
+					"rest_base": "sifg_project_status",
+					"select": "single",
+					"required": true,
+					"label": "Project status"
+				},
+				{
+					"key": "sifg_impact",
+					"rest_base": "sifg_impact",
+					"select": "multi",
+					"required": false,
+					"label": "Impact categories"
+				}
+			]
+		}
+	}
+}

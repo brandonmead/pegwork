@@ -13,9 +13,15 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 ## Phase 1 PRs
 1. Scaffold (merged)
 2. Registry (in review)
+<<<<<<< HEAD
 3. Content registration (merged)
 4. Fields and validation (in review)
 5. Editor panel
+=======
+3. Content registration
+4. Fields and validation
+5. Editor panel (draft PR open; end-to-end check after PR 3/4 merge)
+>>>>>>> ccf950c (Add editor panel (PR 5 front end))
 6. Export/import and DB source
 7. Module loader and public API (in review)
 8. sifg-config (in siforgood repo)

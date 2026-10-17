@@ -54,6 +54,28 @@ jobs:
 
       - run: bash bin/check-module-boundary.sh modules tests/fixtures/modules
 
+  js:
+    name: JS
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # npm 10 fails to resolve the Vitest peer set (arborist edgesOut bug); the lockfile is npm 11.
+      - run: npm install -g npm@11.20.0
+
+      - run: npm ci
+
+      - run: npm run lint:js
+
+      - run: npm run build
+
+      - run: npm run test:unit
+
   test:
     name: Test (PHP ${{ matrix.php }}, WP ${{ matrix.wp }})
     runs-on: ubuntu-24.04
