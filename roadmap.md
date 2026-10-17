@@ -3,7 +3,7 @@
 Purpose: planned work and goals with status; completed items move to changelog.md.
 
 ## Phases
-1. Foundation: schema registry, types, fields, taxonomies, REST, JSON export. Gate: config exports and re-imports cleanly. Status: PR 1 (scaffold) merged; PR 2 (registry) in review.
+1. Foundation: schema registry, types, fields, taxonomies, REST, JSON export. Gate: config exports and re-imports cleanly. Status: PRs 1-5 and 7 merged; PR 6 (export/import, gate test) in review, done when merged; PR 8 (sifg-config sign-off) next.
 2. Display: listings, templates, filters. Gate: directory fast with 500 test records.
 3. Forms. Gate: two weeks of real submissions without defects.
 4. Automation v1. Gate: one full staleness check cycle.
@@ -12,12 +12,12 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## Phase 1 PRs
 1. Scaffold (merged)
-2. Registry (in review)
+2. Registry (merged)
 3. Content registration (merged)
 4. Fields and validation (merged)
-5. Editor panel (in review)
-6. Export/import and DB source
-7. Module loader and public API (in review)
+5. Editor panel (merged)
+6. Export/import and DB source (in review; done when merged)
+7. Module loader and public API (merged)
 8. sifg-config (in siforgood repo)
 
 ## Done

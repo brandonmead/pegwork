@@ -19,16 +19,18 @@ final class Result {
 	/**
 	 * Creates the result.
 	 *
-	 * @param Registry                             $registry Effective registry.
-	 * @param array<string, array<string, string>> $sources  Source of each object: [kind][key] => package id or Loader::DB_SOURCE.
-	 * @param ValidationError[]                    $errors   Errors from rejected packages and DB entries.
-	 * @param array<int, array<string, string>>    $shadowed DB entries hidden by a file package: each has kind, key and by (the package id).
+	 * @param Registry                             $registry  Effective registry.
+	 * @param array<string, array<string, string>> $sources   Source of each object: [kind][key] => package id or Loader::DB_SOURCE.
+	 * @param ValidationError[]                    $errors    Errors from rejected packages and DB entries.
+	 * @param array<int, array<string, string>>    $shadowed  DB entries hidden by a file package: each has kind, key and by (the package id).
+	 * @param array<string, array<string, mixed>>  $manifests Normalized manifest of each registered file package, by package id.
 	 */
 	public function __construct(
 		public readonly Registry $registry,
 		public readonly array $sources = array(),
 		public readonly array $errors = array(),
-		public readonly array $shadowed = array()
+		public readonly array $shadowed = array(),
+		public readonly array $manifests = array()
 	) {
 	}
 
