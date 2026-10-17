@@ -9,14 +9,15 @@ declare( strict_types=1 );
 
 namespace Pegwork\Admin;
 
+use Pegwork\Api\Registry;
 use WP_Block_Editor_Context;
 use WP_Post;
 
 /**
  * Enqueues the editor panel script with its config, and limits post_content blocks.
  *
- * Both read the schema registry through pegwork_registry() and do nothing when it is absent.
- * The config contract is documented in docs/editor-panel.md.
+ * Both read the schema registry through pegwork_registry(). The config contract is documented
+ * in docs/editor-panel.md.
  */
 final class EditorPanel {
 
@@ -73,15 +74,10 @@ final class EditorPanel {
 	/**
 	 * The panel config from the registry, after the `pegwork_editor_panel_config` filter.
 	 *
-	 * @return array{types: array<string, array<string, mixed>>} Config. No types when the registry is absent.
+	 * @return array{types: array<string, array<string, mixed>>} Config. No types when the filter returns a malformed value.
 	 */
 	public static function config(): array {
-		if ( ! function_exists( 'pegwork_registry' ) ) {
-			return array( 'types' => array() );
-		}
-
-		$registry = pegwork_registry();
-		$config   = self::build_config( $registry->content_types(), $registry->taxonomies() );
+		$config = self::from_registry( pegwork_registry() );
 
 		/**
 		 * Filters the editor panel config localized as window.pegworkEditor.
@@ -93,6 +89,16 @@ final class EditorPanel {
 		return is_array( $config ) && isset( $config['types'] ) && is_array( $config['types'] )
 			? $config
 			: array( 'types' => array() );
+	}
+
+	/**
+	 * Builds the panel config from a registry, without the filter.
+	 *
+	 * @param Registry $registry Schema registry.
+	 * @return array{types: array<string, array<string, mixed>>} Config.
+	 */
+	public static function from_registry( Registry $registry ): array {
+		return self::build_config( $registry->content_types(), $registry->taxonomies() );
 	}
 
 	/**
@@ -145,9 +151,7 @@ final class EditorPanel {
 	 * @return bool|string[] Allowed block types.
 	 */
 	public static function allowed_block_types( $allowed, $context ) {
-		if ( ! function_exists( 'pegwork_registry' )
-			|| ! $context instanceof WP_Block_Editor_Context
-			|| ! $context->post instanceof WP_Post ) {
+		if ( ! $context instanceof WP_Block_Editor_Context || ! $context->post instanceof WP_Post ) {
 			return $allowed;
 		}
 

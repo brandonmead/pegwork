@@ -26,7 +26,7 @@
 					"storage": "post_content",
 					"show_when": null,
 					"required_when": null,
-					"validate": { "min_words": 50, "max_words": 300 },
+					"validate": { "max_words": 300, "min_words": 50 },
 					"options": [],
 					"default": null
 				},
@@ -80,8 +80,8 @@
 					"visibility": "public",
 					"meta_key": "_sifg_project_volunteer_link",
 					"storage": "meta",
-					"show_when": { "field": "needs_volunteers", "equals": true },
-					"required_when": { "field": "needs_volunteers", "equals": true },
+					"show_when": { "equals": true, "field": "needs_volunteers" },
+					"required_when": { "equals": true, "field": "needs_volunteers" },
 					"validate": [],
 					"options": [],
 					"default": null

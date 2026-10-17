@@ -45,13 +45,9 @@ class EditorPanelTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Without the registry, allowed blocks pass through unchanged.
+	 * Post types not in the registry keep their allowed blocks.
 	 */
-	public function test_allowed_blocks_unchanged_without_registry() {
-		if ( function_exists( 'pegwork_registry' ) ) {
-			$this->markTestSkipped( 'Registry present; covered by the unit test of allowed_blocks_for().' );
-		}
-
+	public function test_allowed_blocks_unchanged_for_other_types() {
 		$post    = self::factory()->post->create_and_get();
 		$context = new \WP_Block_Editor_Context( array( 'post' => $post ) );
 
@@ -63,11 +59,6 @@ class EditorPanelTest extends WP_UnitTestCase {
 	 * The pegwork_editor_panel_config filter adjusts the config.
 	 */
 	public function test_config_filter() {
-		if ( ! function_exists( 'pegwork_registry' ) ) {
-			$this->assertSame( array( 'types' => array() ), EditorPanel::config() );
-			return;
-		}
-
 		$extra = array(
 			'fields'     => array(),
 			'taxonomies' => array(),

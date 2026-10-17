@@ -8,12 +8,13 @@
 namespace Pegwork\Tests\Unit;
 
 use Pegwork\Admin\EditorPanel;
+use Pegwork\Registry\Loader;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
  * Tests EditorPanel::build_config() and EditorPanel::allowed_blocks_for().
  *
- * The fixtures are shared with the JS unit tests, so both sides hold to one contract.
+ * The expected config fixture is shared with the JS unit tests, so both sides hold to one contract.
  */
 class EditorPanelConfigTest extends TestCase {
 
@@ -29,14 +30,24 @@ class EditorPanelConfigTest extends TestCase {
 	}
 
 	/**
-	 * The sifg_project example builds the documented config.
+	 * The examples/sifg package, loaded through the real registry, builds the documented config.
 	 */
-	public function test_builds_sifg_project_config() {
-		$registry = $this->fixture( 'registry.json' );
+	public function test_builds_sifg_project_config_from_registry() {
+		$result = Loader::load( array( dirname( __DIR__, 2 ) . '/examples/sifg' ) );
+
+		$this->assertTrue( $result->is_valid() );
+		$this->assertSame( $this->fixture( 'config.json' ), EditorPanel::from_registry( $result->registry ) );
+	}
+
+	/**
+	 * Allowed blocks come from the real sifg_project definition.
+	 */
+	public function test_sifg_project_allowed_blocks_from_registry() {
+		$registry = Loader::load( array( dirname( __DIR__, 2 ) . '/examples/sifg' ) )->registry;
 
 		$this->assertSame(
-			$this->fixture( 'config.json' ),
-			EditorPanel::build_config( $registry['content_types'], $registry['taxonomies'] )
+			array( 'core/paragraph', 'core/list', 'core/list-item', 'core/heading' ),
+			EditorPanel::allowed_blocks_for( true, $registry->content_type( 'sifg_project' ) )
 		);
 	}
 

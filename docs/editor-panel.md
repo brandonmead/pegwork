@@ -65,7 +65,7 @@ The JS parser (`config.js`) drops malformed entries and fills these defaults, so
 ## PHP side
 
 - `EditorPanel::register()` (called from `Plugin::boot()`) hooks `enqueue_block_editor_assets` and `allowed_block_types_all`.
-- Both do nothing when `pegwork_registry()` does not exist.
+- Both read `pegwork_registry()`. `EditorPanel::from_registry( Registry )` builds the config from `content_types()` and `taxonomies()`.
 - The script enqueues only on post editor screens whose post type is in the config, and only when `assets/build/editor-panel.asset.php` exists.
 - `EditorPanel::build_config( $content_types, $taxonomies )` is pure (registry arrays in, config out).
 - Filter `pegwork_editor_panel_config` ( array `$config` ) adjusts the config before it is localized.
@@ -85,4 +85,4 @@ npm run lint:js
 npm run test:unit # Vitest, via wp-scripts test-unit-js
 ```
 
-Fixtures `tests/fixtures/editor-panel/registry.json` (the `sifg_project` example) and `config.json` (its expected config) are shared: PHPUnit checks the PHP builder produces `config.json`, and the JS tests parse it.
+`tests/fixtures/editor-panel/config.json` is the expected config for `examples/sifg`, and both sides use it: PHPUnit loads the package through `Loader` and checks `from_registry()` produces it, and the JS tests parse it.
