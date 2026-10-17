@@ -1,0 +1,1 @@
+{ "code": "invalid_default", "file": "content-types/thing.json", "pointer": "/fields/0/default", "schema": true }

@@ -1,0 +1,90 @@
+<?php
+/**
+ * Unit tests for the public Registry API.
+ *
+ * @package Pegwork
+ */
+
+namespace Pegwork\Tests\Unit\Api;
+
+use Pegwork\Api\Registry;
+use Pegwork\Registry\Loader;
+use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+
+/**
+ * Tests Pegwork\Api\Registry.
+ */
+class RegistryTest extends TestCase {
+
+	/**
+	 * Registry built from the complete fixture.
+	 *
+	 * @var Registry
+	 */
+	private $registry;
+
+	/**
+	 * Loads the fixture.
+	 */
+	protected function set_up() {
+		parent::set_up();
+		$this->registry = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/complete' ) )->registry;
+	}
+
+	/**
+	 * Collections are keyed by key, in load order.
+	 */
+	public function test_collections() {
+		$this->assertSame( array( 'demo_event', 'demo_venue' ), array_keys( $this->registry->content_types() ) );
+		$this->assertSame( array( 'demo_region', 'demo_topic' ), array_keys( $this->registry->taxonomies() ) );
+		$this->assertSame( array( 'event_related', 'event_venue' ), array_keys( $this->registry->relationships() ) );
+	}
+
+	/**
+	 * One content type, or null.
+	 */
+	public function test_content_type() {
+		$this->assertSame( 'Events', $this->registry->content_type( 'demo_event' )['labels']['plural'] );
+		$this->assertNull( $this->registry->content_type( 'missing' ) );
+	}
+
+	/**
+	 * Fields keep definition order and filter by visibility.
+	 */
+	public function test_fields() {
+		$all = $this->registry->fields( 'demo_event' );
+		$this->assertCount( 11, $all );
+		$this->assertSame( 'title', array_key_first( $all ) );
+		$this->assertSame( 'venue', array_key_last( $all ) );
+
+		$this->assertSame( array( 'organizer_email' ), array_keys( $this->registry->fields( 'demo_event', 'private' ) ) );
+		$this->assertCount( 10, $this->registry->fields( 'demo_event', 'public' ) );
+		$this->assertSame( array(), $this->registry->fields( 'missing' ) );
+		$this->assertSame( array(), $this->registry->fields( 'demo_venue' ) );
+	}
+
+	/**
+	 * Returned arrays are copies: changing them does not change the registry.
+	 */
+	public function test_read_only() {
+		$types                         = $this->registry->content_types();
+		$types['demo_event']['labels'] = array();
+		unset( $types['demo_venue'] );
+
+		$this->assertSame( 'Events', $this->registry->content_type( 'demo_event' )['labels']['plural'] );
+		$this->assertCount( 2, $this->registry->content_types() );
+	}
+
+	/**
+	 * An empty registry answers every method.
+	 */
+	public function test_empty_registry() {
+		$empty = new Registry();
+
+		$this->assertSame( array(), $empty->content_types() );
+		$this->assertNull( $empty->content_type( 'x' ) );
+		$this->assertSame( array(), $empty->fields( 'x' ) );
+		$this->assertSame( array(), $empty->taxonomies() );
+		$this->assertSame( array(), $empty->relationships() );
+	}
+}

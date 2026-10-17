@@ -1,0 +1,285 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/brandonmead/pegwork/schema/registry.schema.json",
+	"title": "Pegwork registry package file",
+	"description": "One file of a Pegwork schema package: manifest.json, content-types/*.json, taxonomies/*.json or relationships/*.json. Validate a specific file against #/$defs/manifest, #/$defs/content_type, #/$defs/taxonomy or #/$defs/relationship. The PHP validator (src/Registry/Validator.php) is the runtime truth; checks that span objects (references, duplicate keys) exist only there.",
+	"anyOf": [
+		{ "$ref": "#/$defs/manifest" },
+		{ "$ref": "#/$defs/content_type" },
+		{ "$ref": "#/$defs/taxonomy" },
+		{ "$ref": "#/$defs/relationship" }
+	],
+	"$defs": {
+		"format": {
+			"description": "File format version.",
+			"type": "integer",
+			"const": 1
+		},
+		"key": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"object_key": {
+			"description": "Content type or taxonomy key: not a reserved WordPress term and not prefixed wp_.",
+			"allOf": [
+				{ "$ref": "#/$defs/key" },
+				{ "not": { "pattern": "^wp_" } },
+				{ "not": { "$ref": "#/$defs/reserved_key" } }
+			]
+		},
+		"reserved_key": {
+			"enum": [
+				"action", "attachment", "attachment_id", "author", "author_name", "calendar", "cat", "category",
+				"category__and", "category__in", "category__not_in", "category_name", "comments_per_page",
+				"comments_popup", "cpage", "custom", "custom_css", "customize_changeset", "customize_messenger_channel",
+				"customized", "day", "debug", "embed", "error", "exact", "favicon", "feed", "fields", "hour",
+				"link_category", "m", "minute", "monthnum", "more", "name", "nav_menu", "nav_menu_item", "nonce",
+				"nopaging", "oembed_cache", "offset", "order", "orderby", "p", "page", "page_id", "paged", "pagename",
+				"pb", "perm", "post", "post__in", "post__not_in", "post_format", "post_mime_type", "post_parent",
+				"post_parent__in", "post_parent__not_in", "post_status", "post_tag", "post_type", "posts",
+				"posts_per_archive_page", "posts_per_page", "preview", "rest_route", "revision", "robots", "s", "search",
+				"second", "sentence", "showposts", "sitemap", "static", "status", "subpost", "subpost_id", "tag",
+				"tag__and", "tag__in", "tag__not_in", "tag_id", "tag_slug__and", "tag_slug__in", "taxonomy", "tb",
+				"term", "terms", "theme", "title", "type", "types", "user_request", "w", "withcomments",
+				"withoutcomments", "year"
+			]
+		},
+		"text": {
+			"type": "string",
+			"minLength": 1
+		},
+		"texts": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/text" }
+		},
+		"labels": {
+			"type": "object",
+			"required": [ "singular", "plural" ],
+			"additionalProperties": false,
+			"properties": {
+				"singular": { "$ref": "#/$defs/text" },
+				"plural": { "$ref": "#/$defs/text" }
+			}
+		},
+		"manifest": {
+			"title": "Package manifest (manifest.json)",
+			"type": "object",
+			"required": [ "format", "id", "version", "label" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"id": { "$ref": "#/$defs/key" },
+				"version": {
+					"type": "string",
+					"pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+				},
+				"label": { "$ref": "#/$defs/text" },
+				"requires": {
+					"description": "Version constraints by plugin slug, such as { \"pegwork\": \">=0.1.0\" }.",
+					"type": "object",
+					"propertyNames": { "not": { "pattern": "(callback|_cb|_class)$" } },
+					"additionalProperties": { "$ref": "#/$defs/text" }
+				}
+			}
+		},
+		"content_type": {
+			"title": "Content type (content-types/<key>.json)",
+			"type": "object",
+			"required": [ "format", "key", "labels" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"key": {
+					"allOf": [
+						{ "$ref": "#/$defs/object_key" },
+						{ "maxLength": 20 }
+					]
+				},
+				"labels": { "$ref": "#/$defs/labels" },
+				"public": { "type": "boolean", "default": true },
+				"taxonomies": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/taxonomy_usage" }
+				},
+				"fields": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/field" }
+				},
+				"wp": {
+					"description": "WordPress-only settings.",
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"rest_base": { "$ref": "#/$defs/text" },
+						"rewrite_slug": { "$ref": "#/$defs/text" },
+						"has_archive": { "type": "boolean" },
+						"menu_icon": { "$ref": "#/$defs/text" },
+						"supports": { "$ref": "#/$defs/texts" },
+						"capability_type": { "$ref": "#/$defs/text" },
+						"allowed_blocks": { "$ref": "#/$defs/texts" }
+					}
+				}
+			}
+		},
+		"taxonomy_usage": {
+			"type": "object",
+			"required": [ "key" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": { "$ref": "#/$defs/key" },
+				"select": { "enum": [ "single", "multi" ], "default": "multi" },
+				"required": { "type": "boolean", "default": false }
+			}
+		},
+		"field": {
+			"type": "object",
+			"required": [ "key", "type", "label" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": { "$ref": "#/$defs/key" },
+				"type": { "enum": [ "text", "textarea", "rich_text", "url", "email", "boolean", "date", "number", "select" ] },
+				"label": { "$ref": "#/$defs/text" },
+				"required": { "type": "boolean", "default": false },
+				"visibility": { "enum": [ "public", "private" ], "default": "public" },
+				"default": {},
+				"options": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/option" }
+				},
+				"required_when": { "$ref": "#/$defs/condition" },
+				"show_when": { "$ref": "#/$defs/condition" },
+				"validate": { "$ref": "#/$defs/validate" },
+				"wp": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"storage": {
+							"description": "Store in a post column instead of meta.",
+							"enum": [ "post_title", "post_content" ]
+						}
+					}
+				}
+			},
+			"allOf": [
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "const": "select" } } },
+					"then": { "required": [ "options" ] },
+					"else": { "properties": { "options": false } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "enum": [ "text", "textarea", "rich_text", "url", "email", "select" ] } } },
+					"then": { "properties": { "default": { "type": "string" } } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "enum": [ "text", "textarea", "rich_text", "url", "email" ] } } },
+					"then": { "properties": { "validate": { "propertyNames": { "enum": [ "min_length", "max_length", "min_words", "max_words", "pattern" ] } } } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "const": "number" } } },
+					"then": { "properties": { "default": { "type": "number" }, "validate": { "propertyNames": { "enum": [ "min", "max" ] } } } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "const": "boolean" } } },
+					"then": { "properties": { "default": { "type": "boolean" } } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "const": "date" } } },
+					"then": { "properties": { "default": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" } } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "enum": [ "boolean", "date", "select" ] } } },
+					"then": { "properties": { "validate": { "maxProperties": 0 } } }
+				}
+			]
+		},
+		"option": {
+			"type": "object",
+			"required": [ "value", "label" ],
+			"additionalProperties": false,
+			"properties": {
+				"value": { "$ref": "#/$defs/text" },
+				"label": { "$ref": "#/$defs/text" }
+			}
+		},
+		"condition": {
+			"description": "Applies when the named field on the same content type equals the value.",
+			"type": "object",
+			"required": [ "field", "equals" ],
+			"additionalProperties": false,
+			"properties": {
+				"field": { "$ref": "#/$defs/key" },
+				"equals": { "type": [ "string", "number", "boolean" ] }
+			}
+		},
+		"validate": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"min_length": { "type": "integer", "minimum": 0 },
+				"max_length": { "type": "integer", "minimum": 0 },
+				"min_words": { "type": "integer", "minimum": 0 },
+				"max_words": { "type": "integer", "minimum": 0 },
+				"min": { "type": "number" },
+				"max": { "type": "number" },
+				"pattern": { "type": "string", "minLength": 1, "format": "regex" }
+			}
+		},
+		"taxonomy": {
+			"title": "Taxonomy (taxonomies/<key>.json)",
+			"type": "object",
+			"required": [ "format", "key", "labels" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"key": {
+					"allOf": [
+						{ "$ref": "#/$defs/object_key" },
+						{ "maxLength": 32 }
+					]
+				},
+				"labels": { "$ref": "#/$defs/labels" },
+				"hierarchical": { "type": "boolean", "default": false },
+				"locked_terms": {
+					"description": "Only users with manage_options add terms.",
+					"type": "boolean",
+					"default": false
+				},
+				"terms": {
+					"description": "Seed terms.",
+					"type": "array",
+					"items": { "$ref": "#/$defs/term" }
+				},
+				"wp": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"rewrite_slug": { "$ref": "#/$defs/text" }
+					}
+				}
+			}
+		},
+		"term": {
+			"type": "object",
+			"required": [ "slug", "name" ],
+			"additionalProperties": false,
+			"properties": {
+				"slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+				"name": { "$ref": "#/$defs/text" }
+			}
+		},
+		"relationship": {
+			"title": "Relationship (relationships/<key>.json); validated only in Phase 1",
+			"type": "object",
+			"required": [ "format", "key", "from", "to", "cardinality" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"key": { "$ref": "#/$defs/key" },
+				"from": { "$ref": "#/$defs/key" },
+				"to": { "$ref": "#/$defs/key" },
+				"cardinality": { "enum": [ "one_to_many", "many_to_many" ] },
+				"storage": { "enum": [ "meta", "table" ], "default": "meta" }
+			}
+		}
+	}
+}

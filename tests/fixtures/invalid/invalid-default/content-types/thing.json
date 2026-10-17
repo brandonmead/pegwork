@@ -1,0 +1,2 @@
+{ "format": 1, "key": "thing", "labels": { "singular": "Thing", "plural": "Things" },
+  "fields": [ { "key": "free", "type": "boolean", "label": "Free", "default": "yes" } ] }

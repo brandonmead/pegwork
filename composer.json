@@ -13,6 +13,7 @@
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"opis/json-schema": "^2.4",
 		"phpcompatibility/phpcompatibility-wp": "^2.1",
 		"phpunit/phpunit": "^9.6",
 		"wp-coding-standards/wpcs": "^3.1",
@@ -22,7 +23,10 @@
 	"autoload": {
 		"psr-4": {
 			"Pegwork\\": "src/"
-		}
+		},
+		"files": [
+			"src/Api/constants.php"
+		]
 	},
 	"config": {
 		"allow-plugins": {
@@ -35,6 +39,7 @@
 	},
 	"scripts": {
 		"lint": "phpcs",
-		"test": "phpunit"
+		"test": "phpunit",
+		"schema-fixtures": "php bin/check-schema-fixtures.php"
 	}
 }

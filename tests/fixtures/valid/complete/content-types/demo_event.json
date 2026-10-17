@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "key": "demo_event",
+  "labels": { "singular": "Event", "plural": "Events" },
+  "public": false,
+  "taxonomies": [
+    { "key": "demo_topic" },
+    { "key": "demo_region", "select": "single", "required": true }
+  ],
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true, "wp": { "storage": "post_title" },
+      "validate": { "min_length": 3, "max_length": 120, "pattern": "^[A-Z]" } },
+    { "key": "summary", "type": "textarea", "label": "Summary", "validate": { "min_words": 5, "max_words": 50 } },
+    { "key": "body", "type": "rich_text", "label": "Body", "wp": { "storage": "post_content" } },
+    { "key": "link", "type": "url", "label": "Link", "default": "https://example.org" },
+    { "key": "organizer_email", "type": "email", "label": "Organizer email", "visibility": "private", "required": true },
+    { "key": "free", "type": "boolean", "label": "Free", "default": true },
+    { "key": "starts_on", "type": "date", "label": "Starts on", "default": "2026-01-01" },
+    { "key": "capacity", "type": "number", "label": "Capacity", "default": 25, "validate": { "min": 1, "max": 500.5 } },
+    { "key": "format", "type": "select", "label": "Format", "default": "online",
+      "options": [ { "value": "online", "label": "Online" }, { "value": "in_person", "label": "In person" } ] },
+    { "key": "ticket_link", "type": "url", "label": "Ticket link",
+      "show_when": { "field": "free", "equals": false }, "required_when": { "field": "free", "equals": false } },
+    { "key": "venue", "type": "text", "label": "Venue", "visibility": "public",
+      "show_when": { "field": "format", "equals": "in_person" } }
+  ],
+  "wp": {
+    "rest_base": "events",
+    "rewrite_slug": "events",
+    "has_archive": false,
+    "menu_icon": "dashicons-calendar",
+    "supports": ["title", "editor"],
+    "capability_type": "post",
+    "allowed_blocks": ["core/paragraph"]
+  }
+}

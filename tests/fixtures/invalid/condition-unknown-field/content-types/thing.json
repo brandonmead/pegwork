@@ -1,0 +1,2 @@
+{ "format": 1, "key": "thing", "labels": { "singular": "Thing", "plural": "Things" },
+  "fields": [ { "key": "ticket_link", "type": "url", "label": "Ticket link", "required_when": { "field": "free", "equals": false } } ] }

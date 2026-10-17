@@ -1,0 +1,2 @@
+{ "format": 1, "key": "thing", "labels": { "singular": "Thing", "plural": "Things" },
+  "fields": [ { "key": "count", "type": "number", "label": "Count", "validate": { "min_words": 2 } } ] }

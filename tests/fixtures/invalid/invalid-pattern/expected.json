@@ -1,0 +1,1 @@
+{ "code": "invalid_pattern", "file": "content-types/thing.json", "pointer": "/fields/0/validate/pattern", "schema": true }

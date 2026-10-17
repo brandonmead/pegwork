@@ -1,0 +1,1 @@
+{ "code": "invalid_type", "file": "content-types/thing.json", "pointer": "/fields/0/required", "schema": true }
