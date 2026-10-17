@@ -65,6 +65,12 @@ final class PostTypes {
 			'map_meta_cap'    => true,
 		);
 
+		// Core exposes registered meta over REST only for types that support custom-fields.
+		$has_meta = array() !== array_filter( $type['fields'], fn( array $field ) => ! isset( $field['wp']['storage'] ) );
+		if ( $has_meta && ! in_array( 'custom-fields', $args['supports'], true ) ) {
+			$args['supports'][] = 'custom-fields';
+		}
+
 		if ( isset( $wp['menu_icon'] ) ) {
 			$args['menu_icon'] = $wp['menu_icon'];
 		}

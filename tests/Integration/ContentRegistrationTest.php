@@ -9,6 +9,7 @@ namespace Pegwork\Tests\Integration;
 
 use Pegwork\Api\Registry;
 use Pegwork\Api\RegistryBuilder;
+use Pegwork\Content\PostTypes;
 use Pegwork\Content\Registrar;
 use Pegwork\Content\Taxonomies;
 use Pegwork\Plugin;
@@ -54,7 +55,7 @@ class ContentRegistrationTest extends WP_UnitTestCase {
 		$this->assertTrue( $type->map_meta_cap );
 		$this->assertSame( 'post', $type->capability_type );
 		$this->assertSame( 'edit_posts', $type->cap->edit_posts );
-		foreach ( array( 'title', 'editor', 'revisions' ) as $feature ) {
+		foreach ( array( 'title', 'editor', 'revisions', 'custom-fields' ) as $feature ) {
 			$this->assertTrue( post_type_supports( 'sifg_project', $feature ), $feature );
 		}
 		$this->assertFalse( post_type_supports( 'sifg_project', 'thumbnail' ) );
@@ -199,5 +200,30 @@ class ContentRegistrationTest extends WP_UnitTestCase {
 
 		$this->assertNull( get_post_type_object( 'sifg_project' ) );
 		$this->assertFalse( taxonomy_exists( 'sifg_impact' ) );
+	}
+
+	/**
+	 * Support for custom-fields is added only for types with meta-stored fields.
+	 */
+	public function test_custom_fields_support_only_with_meta_fields() {
+		$type = array(
+			'key'    => 'demo_note',
+			'labels' => array(
+				'singular' => 'Note',
+				'plural'   => 'Notes',
+			),
+			'public' => true,
+			'fields' => array(
+				array(
+					'key' => 'title',
+					'wp'  => array( 'storage' => 'post_title' ),
+				),
+			),
+			'wp'     => array( 'supports' => array( 'title' ) ),
+		);
+		$this->assertSame( array( 'title' ), PostTypes::args( $type )['supports'] );
+
+		$type['fields'][] = array( 'key' => 'note' );
+		$this->assertSame( array( 'title', 'custom-fields' ), PostTypes::args( $type )['supports'] );
 	}
 }
