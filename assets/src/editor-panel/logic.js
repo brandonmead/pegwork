@@ -93,6 +93,28 @@ export function countWords( content ) {
 	return text === '' ? 0 : text.split( /\s+/ ).length;
 }
 
+const NO_ERRORS = Object.freeze( {} );
+
+/**
+ * Per-field messages from a failed save.
+ *
+ * @param {unknown} error Last save error from core-data (REST error body), or null.
+ * @return {Object<string, string>} Messages keyed by field or taxonomy key; empty unless
+ *                                  the error is `pegwork_invalid_record`.
+ */
+export function saveErrors( error ) {
+	if (
+		! error ||
+		error.code !== 'pegwork_invalid_record' ||
+		! error.data ||
+		! error.data.fields ||
+		typeof error.data.fields !== 'object'
+	) {
+		return NO_ERRORS;
+	}
+	return error.data.fields;
+}
+
 /**
  * Word limits from a field's `validate` rules.
  *

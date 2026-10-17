@@ -48,6 +48,20 @@ export function FieldLabel( { field, required } ) {
 }
 
 /**
+ * Server validation message for a field.
+ *
+ * @param {Object} props         Props.
+ * @param {string} props.message Message from `pegwork_invalid_record` `data.fields`.
+ */
+export function FieldError( { message } ) {
+	return (
+		<span className="pegwork-editor-panel__error" role="alert">
+			{ message }
+		</span>
+	);
+}
+
+/**
  * Inline help for a field: required hint and private note.
  *
  * @param {Object}   field    The field.
@@ -92,6 +106,7 @@ function helpText( field, required, value, fields ) {
  * @param {unknown}                  props.value    Current value (or default).
  * @param {boolean}                  props.required Whether the field is required now.
  * @param {(value: unknown) => void} props.onChange Receives the new meta value.
+ * @param {string}                   [props.error]  Server validation message from the last save.
  */
 export default function FieldControl( {
 	field,
@@ -99,12 +114,17 @@ export default function FieldControl( {
 	value,
 	required,
 	onChange,
+	error,
 } ) {
 	const { control, inputType } = controlFor( field.type );
 	const Control = COMPONENTS[ control ];
 	const props = {
 		label: <FieldLabel field={ field } required={ required } />,
-		help: helpText( field, required, value, fields ),
+		help: error ? (
+			<FieldError message={ error } />
+		) : (
+			helpText( field, required, value, fields )
+		),
 		onChange: ( input ) =>
 			onChange( fromControlValue( field.type, input ) ),
 		__nextHasNoMarginBottom: true,

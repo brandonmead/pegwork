@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useEntityProp } from '@wordpress/core-data';
+import { store as coreStore, useEntityProp } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import {
 	PluginDocumentSettingPanel,
@@ -14,8 +14,14 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import { getTypeConfig } from './config';
-import FieldControl from './field-control';
-import { fieldValue, isRequired, isVisible, wordLimits } from './logic';
+import FieldControl, { FieldError } from './field-control';
+import {
+	fieldValue,
+	isRequired,
+	isVisible,
+	saveErrors,
+	wordLimits,
+} from './logic';
 import TaxonomyControl from './taxonomy-control';
 import WordCounter from './word-counter';
 
@@ -37,6 +43,16 @@ function TypePanel( { postType, typeConfig } ) {
 		);
 	}, [ taxonomies, removeEditorPanel ] );
 
+	const saveError = useSelect(
+		( select ) =>
+			select( coreStore ).getLastEntitySaveError(
+				'postType',
+				postType,
+				select( editorStore ).getCurrentPostId()
+			),
+		[ postType ]
+	);
+	const errors = saveErrors( saveError );
 	const values = meta || {};
 
 	return (
@@ -46,20 +62,34 @@ function TypePanel( { postType, typeConfig } ) {
 			className="pegwork-editor-panel"
 		>
 			{ fields.map( ( field ) => {
-				if ( field.storage === 'post_content' ) {
-					const limits = wordLimits( field );
-					return limits ? (
+				const error = errors[ field.key ];
+				const limits =
+					field.storage === 'post_content'
+						? wordLimits( field )
+						: null;
+				if ( limits ) {
+					return (
 						<WordCounter
 							key={ field.key }
 							field={ field }
 							limits={ limits }
+							error={ error }
 						/>
+					);
+				}
+				if ( field.storage !== 'meta' ) {
+					return error ? (
+						<p
+							key={ field.key }
+							className="pegwork-editor-panel__help"
+						>
+							<FieldError
+								message={ `${ field.label }: ${ error }` }
+							/>
+						</p>
 					) : null;
 				}
-				if (
-					field.storage !== 'meta' ||
-					! isVisible( field, fields, values )
-				) {
+				if ( ! isVisible( field, fields, values ) ) {
 					return null;
 				}
 				return (
@@ -72,11 +102,16 @@ function TypePanel( { postType, typeConfig } ) {
 						onChange={ ( value ) =>
 							setMeta( { ...values, [ field.meta_key ]: value } )
 						}
+						error={ error }
 					/>
 				);
 			} ) }
 			{ taxonomies.map( ( taxonomy ) => (
-				<TaxonomyControl key={ taxonomy.key } taxonomy={ taxonomy } />
+				<TaxonomyControl
+					key={ taxonomy.key }
+					taxonomy={ taxonomy }
+					error={ errors[ taxonomy.key ] }
+				/>
 			) ) }
 		</PluginDocumentSettingPanel>
 	);

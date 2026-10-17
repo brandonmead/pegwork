@@ -10,7 +10,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { FieldLabel } from './field-control';
+import { FieldError, FieldLabel } from './field-control';
 
 const NO_TERMS = [];
 
@@ -27,8 +27,9 @@ const TERM_QUERY = {
  *
  * @param {Object} props          Props.
  * @param {Object} props.taxonomy Taxonomy entry from the config.
+ * @param {string} [props.error]  Server validation message from the last save.
  */
-export default function TaxonomyControl( { taxonomy } ) {
+export default function TaxonomyControl( { taxonomy, error } ) {
 	const { terms, selected } = useSelect(
 		( select ) => ( {
 			terms: select( coreStore ).getEntityRecords(
@@ -52,9 +53,12 @@ export default function TaxonomyControl( { taxonomy } ) {
 			required={ taxonomy.required }
 		/>
 	);
-	const help = isMissing
-		? __( 'Required to publish.', 'pegwork' )
-		: undefined;
+	let help;
+	if ( error ) {
+		help = <FieldError message={ error } />;
+	} else if ( isMissing ) {
+		help = __( 'Required to publish.', 'pegwork' );
+	}
 
 	if ( terms === null ) {
 		return (

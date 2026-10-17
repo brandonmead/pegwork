@@ -12,9 +12,32 @@ import {
 	isEmpty,
 	isRequired,
 	isVisible,
+	saveErrors,
 	wordCountStatus,
 	wordLimits,
 } from '../logic';
+
+describe( 'saveErrors', () => {
+	it( 'returns data.fields of a pegwork_invalid_record error', () => {
+		const fields = { volunteer_link: 'Volunteer link is required.' };
+		expect(
+			saveErrors( {
+				code: 'pegwork_invalid_record',
+				data: { status: 400, fields },
+			} )
+		).toBe( fields );
+	} );
+
+	it( 'returns no messages for other errors or none', () => {
+		expect( saveErrors( null ) ).toEqual( {} );
+		expect( saveErrors( { code: 'rest_forbidden', data: {} } ) ).toEqual(
+			{}
+		);
+		expect( saveErrors( { code: 'pegwork_invalid_record' } ) ).toEqual(
+			{}
+		);
+	} );
+} );
 
 const needsVolunteers = {
 	key: 'needs_volunteers',

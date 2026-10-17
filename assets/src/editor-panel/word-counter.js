@@ -8,7 +8,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { FieldLabel } from './field-control';
+import { FieldError, FieldLabel } from './field-control';
 import { countWords, wordCountStatus } from './logic';
 
 /**
@@ -62,11 +62,12 @@ function message( count, limits ) {
 /**
  * Live word counter for a field stored in post_content.
  *
- * @param {Object}                       props        Props.
- * @param {Object}                       props.field  The field.
- * @param {{min: ?number, max: ?number}} props.limits Word limits.
+ * @param {Object}                       props         Props.
+ * @param {Object}                       props.field   The field.
+ * @param {{min: ?number, max: ?number}} props.limits  Word limits.
+ * @param {string}                       [props.error] Server validation message from the last save.
  */
-export default function WordCounter( { field, limits } ) {
+export default function WordCounter( { field, limits, error } ) {
 	const content = useSelect(
 		( select ) => select( editorStore ).getEditedPostAttribute( 'content' ),
 		[]
@@ -84,7 +85,11 @@ export default function WordCounter( { field, limits } ) {
 				{ message( count, limits ) }
 			</p>
 			<p className="pegwork-editor-panel__help">
-				{ __( 'Edit this in the main content area.', 'pegwork' ) }
+				{ error ? (
+					<FieldError message={ error } />
+				) : (
+					__( 'Edit this in the main content area.', 'pegwork' )
+				) }
 			</p>
 		</div>
 	);
