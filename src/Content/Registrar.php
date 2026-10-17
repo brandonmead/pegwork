@@ -12,7 +12,7 @@ namespace Pegwork\Content;
 use Pegwork\Api\Registry;
 
 /**
- * Registers post types and taxonomies on every request; flushes rewrites and seeds terms
+ * Registers post types, taxonomies, meta and record validation on every request; flushes rewrites and seeds terms
  * only when the registry hash changes.
  */
 final class Registrar {
@@ -37,6 +37,8 @@ final class Registrar {
 	public static function register( Registry $registry ): void {
 		PostTypes::register( $registry );
 		Taxonomies::register( $registry );
+		Meta::register( $registry );
+		RecordValidator::register( $registry );
 
 		if ( get_option( self::HASH_OPTION ) === self::hash( $registry ) ) {
 			return;

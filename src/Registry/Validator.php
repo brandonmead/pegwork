@@ -44,6 +44,11 @@ final class Validator {
 	public const DATE_PATTERN = '/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/';
 
 	/**
+	 * Meta key override (`wp.meta_key`): letters, digits and underscores, optionally after a leading underscore.
+	 */
+	public const META_KEY_PATTERN = '/^_?[A-Za-z][A-Za-z0-9_]*$/';
+
+	/**
 	 * Property names that look like PHP callables. Never allowed anywhere.
 	 */
 	public const CALLABLE_PATTERN = '/(callback|_cb|_class)$/';
@@ -379,7 +384,10 @@ final class Validator {
 				'wp'            => fn( $v, $p ) => $this->props(
 					$v,
 					$p,
-					array( 'storage' => fn( $w, $q ) => $this->enum( $w, $q, array( 'post_title', 'post_content' ) ) )
+					array(
+						'storage'  => fn( $w, $q ) => $this->enum( $w, $q, array( 'post_title', 'post_content' ) ),
+						'meta_key' => fn( $w, $q ) => $this->meta_key( $w, $q ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Schema property name, not a query.
+					)
 				),
 			),
 			array( 'key', 'type', 'label' )
@@ -388,6 +396,14 @@ final class Validator {
 		$type = $field['type'] ?? null;
 		if ( ! $is_object || ! in_array( $type, self::FIELD_TYPES, true ) ) {
 			return;
+		}
+
+		$wp = is_array( $field['wp'] ?? null ) ? $field['wp'] : array();
+		if ( isset( $wp['storage'], $wp['meta_key'] ) ) {
+			$this->add( 'invalid_meta_key', $pointer . '/wp/meta_key', __( '"meta_key" applies only to meta storage.', 'pegwork' ) );
+		}
+		if ( is_string( $wp['meta_key'] ?? null ) && 'private' === ( $field['visibility'] ?? null ) && ! str_starts_with( $wp['meta_key'], '_' ) ) {
+			$this->add( 'invalid_meta_key', $pointer . '/wp/meta_key', __( 'Private fields need a protected meta key (starting with "_").', 'pegwork' ) );
 		}
 
 		if ( 'select' === $type && ! array_key_exists( 'options', $field ) ) {
@@ -692,6 +708,18 @@ final class Validator {
 		} elseif ( self::FORMAT !== $value ) {
 			/* translators: 1: format found, 2: supported format. */
 			$this->add( 'unsupported_format', $pointer, sprintf( __( 'Format %1$d is not supported; expected %2$d.', 'pegwork' ), $value, self::FORMAT ) );
+		}
+	}
+
+	/**
+	 * Checks a `wp.meta_key` override.
+	 *
+	 * @param mixed  $value   Decoded value.
+	 * @param string $pointer JSON pointer of the value.
+	 */
+	private function meta_key( mixed $value, string $pointer ): void {
+		if ( $this->type( $value, $pointer, 'string' ) && ! preg_match( self::META_KEY_PATTERN, $value ) ) {
+			$this->add( 'invalid_meta_key', $pointer, __( 'Meta keys use letters, digits and underscores, optionally after one leading underscore.', 'pegwork' ) );
 		}
 	}
 

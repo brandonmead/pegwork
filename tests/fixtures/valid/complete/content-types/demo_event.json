@@ -12,7 +12,7 @@
       "validate": { "min_length": 3, "max_length": 120, "pattern": "^[A-Z]" } },
     { "key": "summary", "type": "textarea", "label": "Summary", "validate": { "min_words": 5, "max_words": 50 } },
     { "key": "body", "type": "rich_text", "label": "Body", "wp": { "storage": "post_content" } },
-    { "key": "link", "type": "url", "label": "Link", "default": "https://example.org" },
+    { "key": "link", "type": "url", "label": "Link", "default": "https://example.org", "wp": { "meta_key": "event_link" } },
     { "key": "organizer_email", "type": "email", "label": "Organizer email", "visibility": "private", "required": true },
     { "key": "free", "type": "boolean", "label": "Free", "default": true },
     { "key": "starts_on", "type": "date", "label": "Starts on", "default": "2026-01-01" },

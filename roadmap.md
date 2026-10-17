@@ -13,8 +13,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 ## Phase 1 PRs
 1. Scaffold (merged)
 2. Registry (in review)
-3. Content registration (in review)
-4. Fields and validation
+3. Content registration (merged)
+4. Fields and validation (in review)
 5. Editor panel
 6. Export/import and DB source
 7. Module loader and public API (in review)
