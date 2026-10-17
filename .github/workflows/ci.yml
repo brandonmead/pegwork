@@ -46,6 +46,14 @@ jobs:
 
       - run: composer schema-fixtures
 
+  module-boundary:
+    name: Module boundary
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: bash bin/check-module-boundary.sh modules tests/fixtures/modules
+
   test:
     name: Test (PHP ${{ matrix.php }}, WP ${{ matrix.wp }})
     runs-on: ubuntu-24.04

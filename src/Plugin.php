@@ -61,9 +61,20 @@ final class Plugin {
 	}
 
 	/**
-	 * Runs once all plugins are loaded. Module loading (PR 7) hooks in here.
+	 * Runs once all plugins are loaded: boots the enabled modules and registers the CLI commands.
 	 */
 	public static function plugins_loaded(): void {
+		Modules\Loader::load();
+		self::register_module_cli();
+	}
+
+	/**
+	 * Registers `wp pegwork module` when running under WP-CLI.
+	 */
+	private static function register_module_cli(): void {
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::add_command( 'pegwork module', Cli\ModuleCommand::class );
+		}
 	}
 
 	/**

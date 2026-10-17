@@ -17,7 +17,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 4. Fields and validation
 5. Editor panel
 6. Export/import and DB source
-7. Module loader and public API
+7. Module loader and public API (in review)
 8. sifg-config (in siforgood repo)
 
 ## Done
