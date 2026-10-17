@@ -1,0 +1,10 @@
+.DS_Store
+/vendor/
+/node_modules/
+/build/
+/assets/build/
+.phpunit.result.cache
+.phpcs-cache
+# Mead Drive sync duplicates
+* 2
+* 2.*
