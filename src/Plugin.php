@@ -61,7 +61,7 @@ final class Plugin {
 	}
 
 	/**
-	 * Runs once all plugins are loaded: boots the enabled modules and registers the CLI commands.
+	 * Runs once all plugins are loaded: loads the enabled modules (they boot on pegwork_loaded) and registers the CLI commands.
 	 */
 	public static function plugins_loaded(): void {
 		Modules\Loader::load();

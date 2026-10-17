@@ -29,8 +29,8 @@ interface Module {
 	public function requires(): array;
 
 	/**
-	 * Starts the module. Called once per request, only when the module is enabled and its
-	 * requirements are met.
+	 * Starts the module. Called once per request on pegwork_loaded (the registry is available),
+	 * only when the module is enabled and its requirements are met.
 	 */
 	public function boot(): void;
 }

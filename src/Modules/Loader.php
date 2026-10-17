@@ -30,6 +30,13 @@ final class Loader {
 	private static array $problems = array();
 
 	/**
+	 * Modules included by the last load() and waiting for boot(), in dependency order.
+	 *
+	 * @var array<string, Module>
+	 */
+	private static array $modules = array();
+
+	/**
 	 * The manifest: slug => label, description, requires, path. Filterable.
 	 *
 	 * @return array<string, array{label: string, description: string, requires: string[], path: string}>
@@ -74,12 +81,13 @@ final class Loader {
 	}
 
 	/**
-	 * Includes and boots every enabled module whose requirements are met.
+	 * Includes every enabled module whose requirements are met and collects its Module object.
+	 * Boot happens later, on pegwork_loaded (see boot()).
 	 *
 	 * Disabled modules' files are never included. Unknown slugs and modules with missing
 	 * requirements are skipped and reported in an admin notice.
 	 *
-	 * @return string[] Slugs of the modules that booted, in boot order.
+	 * @return string[] Slugs of the modules collected for boot, in boot order.
 	 */
 	public static function load(): array {
 		self::$problems = array();
@@ -98,12 +106,12 @@ final class Loader {
 			}
 		}
 
-		// Boot in dependency order: each pass loads the modules whose requirements already booted.
-		$booted = array();
+		// Resolve in dependency order: each pass includes the modules whose requirements already resolved.
+		self::$modules = array();
 		do {
 			$progress = false;
 			foreach ( $pending as $slug => $entry ) {
-				if ( array_diff( $entry['requires'], $booted ) ) {
+				if ( array_diff( $entry['requires'], array_keys( self::$modules ) ) ) {
 					continue;
 				}
 				unset( $pending[ $slug ] );
@@ -118,8 +126,7 @@ final class Loader {
 					);
 					continue;
 				}
-				$module->boot();
-				$booted[] = $slug;
+				self::$modules[ $slug ] = $module;
 			}
 		} while ( $progress && $pending );
 
@@ -127,7 +134,7 @@ final class Loader {
 			self::$problems[] = array(
 				'kind'   => 'requires',
 				'slug'   => $slug,
-				'detail' => implode( ', ', array_diff( $entry['requires'], $booted ) ),
+				'detail' => implode( ', ', array_diff( $entry['requires'], array_keys( self::$modules ) ) ),
 			);
 		}
 
@@ -135,7 +142,25 @@ final class Loader {
 			add_action( 'admin_notices', array( self::class, 'print_notices' ) );
 		}
 
-		return $booted;
+		// Modules need the registry, which exists once pegwork_loaded fires.
+		add_action( 'pegwork_loaded', array( self::class, 'boot' ) );
+
+		return array_keys( self::$modules );
+	}
+
+	/**
+	 * Boots the modules collected by load(), in dependency order. Hooked to pegwork_loaded.
+	 *
+	 * @return string[] Slugs of the modules that booted.
+	 */
+	public static function boot(): array {
+		$modules       = self::$modules;
+		self::$modules = array();
+
+		foreach ( $modules as $module ) {
+			$module->boot();
+		}
+		return array_keys( $modules );
 	}
 
 	/**

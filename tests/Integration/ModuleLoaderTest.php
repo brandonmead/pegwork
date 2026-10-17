@@ -81,13 +81,31 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An enabled module boots.
+	 * An enabled module is included on load but boots only when pegwork_loaded fires, once.
 	 */
-	public function test_enabled_module_boots() {
+	public function test_enabled_module_boots_on_pegwork_loaded() {
 		update_option( 'pegwork_modules', array( 'sample' ) );
 
 		$this->assertSame( array( 'sample' ), Loader::load() );
+		$this->assertSame( array(), $this->booted, 'boot() must not run before pegwork_loaded.' );
+
+		do_action( 'pegwork_loaded' );
 		$this->assertSame( array( 'sample' ), $this->booted );
+
+		do_action( 'pegwork_loaded' );
+		$this->assertSame( array( 'sample' ), $this->booted, 'boot() runs once.' );
+	}
+
+	/**
+	 * Module files are included at load time, before boot.
+	 */
+	public function test_module_file_is_included_before_boot() {
+		update_option( 'pegwork_modules', array( 'tripwire' ) );
+
+		Loader::load();
+
+		$this->assertTrue( $GLOBALS['pegwork_tripwire_included'] );
+		$this->assertSame( array(), $this->booted );
 	}
 
 	/**
@@ -97,9 +115,10 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 		update_option( 'pegwork_modules', array( 'sample' ) );
 
 		Loader::load();
+		do_action( 'pegwork_loaded' );
 
 		$this->assertArrayNotHasKey( 'pegwork_tripwire_included', $GLOBALS );
-		$this->assertNotContains( 'tripwire', $this->booted );
+		$this->assertSame( array( 'sample' ), $this->booted );
 
 		// Control: the tripwire does fire when its module is enabled.
 		update_option( 'pegwork_modules', array( 'sample', 'tripwire' ) );
@@ -114,6 +133,7 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 		update_option( 'pegwork_modules', array( 'needs-sample' ) );
 
 		$this->assertSame( array(), Loader::load() );
+		do_action( 'pegwork_loaded' );
 		$this->assertSame( array(), $this->booted );
 		$this->assertArrayNotHasKey( 'pegwork_needs_sample_included', $GLOBALS );
 	}
@@ -125,6 +145,7 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 		update_option( 'pegwork_modules', array( 'needs-sample', 'sample' ) );
 
 		$this->assertSame( array( 'sample', 'needs-sample' ), Loader::load() );
+		do_action( 'pegwork_loaded' );
 		$this->assertSame( array( 'sample', 'needs-sample' ), $this->booted );
 	}
 

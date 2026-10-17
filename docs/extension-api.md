@@ -35,9 +35,11 @@ A module is a directory containing `module.php`, listed in the module manifest. 
 interface Module {
 	public function id(): string;       // the manifest slug
 	public function requires(): array;  // slugs of modules that must be enabled first
-	public function boot(): void;       // called once, on plugins_loaded, when enabled
+	public function boot(): void;       // called once, on pegwork_loaded, when enabled
 }
 ```
+
+Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks requirements and includes each `module.php` (so top-level code in `module.php` runs then and must not need the registry). `boot()` runs later, on `pegwork_loaded` (`init` priority 5, after the registry is built), in dependency order, so `pegwork_registry()` is available inside it.
 
 The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships empty in Phase 1; add entries with the `pegwork_module_manifest` filter.
 
