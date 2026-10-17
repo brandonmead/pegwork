@@ -60,6 +60,7 @@ The JS parser (`config.js`) drops malformed entries and fills these defaults, so
 
 - `post_title` and `post_content` fields are not rendered; core UI edits them. A `post_content` field with `validate.min_words` or `max_words` gets a live counter ("142 of 50 to 300 words"), counted from `core/editor` content with block comments and tags stripped.
 - Empty number inputs store `null`, which deletes the meta value.
+- Save errors: when the last save failed with `pegwork_invalid_record` (400), each message in `data.fields` shows in red under its field or taxonomy (read from core-data `getLastEntitySaveError`). Messages for `post_title` fields, and for `post_content` fields without word limits, show as "Label: message" in the panel. Core's "Updating failed" notice still shows too.
 - Taxonomies: `single` renders `RadioControl` (plus "None" when not required); `multi` renders checkboxes. Terms come from `getEntityRecords( 'taxonomy', key, { per_page: -1, orderby: 'id' } )`, so seeded order is kept. Core panels are removed with `removeEditorPanel( 'taxonomy-panel-<key>' )`.
 
 ## PHP side
@@ -71,9 +72,9 @@ The JS parser (`config.js`) drops malformed entries and fills these defaults, so
 - Filter `pegwork_editor_panel_config` ( array `$config` ) adjusts the config before it is localized.
 - `allowed_block_types_all`: a content type with `wp.allowed_blocks` limits the editor to that list, intersected with any list already set; `false` stays `false`.
 
-Requirements on other PRs, for the panel to save end to end:
-- PR 3: taxonomies registered with `show_in_rest`; post type `supports` includes `custom-fields`, which core needs to expose `meta` in REST.
-- PR 4: meta registered with `show_in_rest` and an `auth_callback`. Keys start with `_`, so they are protected and the callback is required for REST writes.
+Depends on PR 3 (post types get `custom-fields` support so core exposes `meta` in REST; taxonomies have `show_in_rest`) and PR 4 (meta registered with `show_in_rest` and an `auth_callback`, required because `_` keys are protected; `RecordValidator::count_words()` matches `countWords()`).
+
+![Editor panel on a Project](screenshots/editor-panel.png)
 
 ## Build and test
 

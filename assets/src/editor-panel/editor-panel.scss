@@ -21,6 +21,15 @@
 	}
 }
 
+// Match BaseControl labels for the labels this panel renders itself.
+.pegwork-editor-panel__word-counter > .pegwork-editor-panel__label,
+fieldset.pegwork-editor-panel__taxonomy > legend {
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
 .pegwork-editor-panel__label {
 	align-items: center;
 	display: inline-flex;
