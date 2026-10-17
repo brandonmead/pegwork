@@ -3,7 +3,7 @@
 Purpose: planned work and goals with status; completed items move to changelog.md.
 
 ## Phases
-1. Foundation: schema registry, types, fields, taxonomies, REST, JSON export. Gate: config exports and re-imports cleanly. Status: PR 1 (scaffold) in progress.
+1. Foundation: schema registry, types, fields, taxonomies, REST, JSON export. Gate: config exports and re-imports cleanly. Status: PR 1 (scaffold) in review.
 2. Display: listings, templates, filters. Gate: directory fast with 500 test records.
 3. Forms. Gate: two weeks of real submissions without defects.
 4. Automation v1. Gate: one full staleness check cycle.
@@ -11,7 +11,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 6. Automation v2. Ongoing.
 
 ## Phase 1 PRs
-1. Scaffold (in progress)
+1. Scaffold (in review)
 2. Registry
 3. Content registration
 4. Fields and validation

@@ -1,0 +1,40 @@
+{
+	"name": "brandonmead/pegwork",
+	"description": "Pegwork Platform for WordPress: an application builder on one schema registry.",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "Brandon Mead"
+		}
+	],
+	"require": {
+		"php": ">=8.2"
+	},
+	"require-dev": {
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"phpcompatibility/phpcompatibility-wp": "^2.1",
+		"phpunit/phpunit": "^9.6",
+		"wp-coding-standards/wpcs": "^3.1",
+		"wp-phpunit/wp-phpunit": "^7.1",
+		"yoast/phpunit-polyfills": "^3.1"
+	},
+	"autoload": {
+		"psr-4": {
+			"Pegwork\\": "src/"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		},
+		"platform": {
+			"php": "8.2.0"
+		},
+		"sort-packages": true
+	},
+	"scripts": {
+		"lint": "phpcs",
+		"test": "phpunit"
+	}
+}
