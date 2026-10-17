@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+# Not shipped in release archives.
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/bin export-ignore
+/docs export-ignore
+/tests export-ignore
+/architecture.md export-ignore
+/changelog.md export-ignore
+/CLAUDE.md export-ignore
+/memory.md export-ignore
+/roadmap.md export-ignore
+/README.md export-ignore
+/composer.lock export-ignore
+/phpcs.xml.dist export-ignore
+/phpunit.xml.dist export-ignore
