@@ -144,7 +144,11 @@ final class Loader {
 
 		$collections = array_fill_keys( self::SECTIONS, array() );
 		$sources     = array();
+		$manifests   = array();
 		foreach ( $units as $unit ) {
+			if ( isset( $unit['manifest_data'] ) ) {
+				$manifests[ $unit['source'] ] = Normalizer::normalize( 'manifest', $unit['manifest_data'] );
+			}
 			foreach ( $unit['objects'] as $object ) {
 				$collections[ self::SECTIONS[ $object['kind'] ] ][ $object['key'] ] = Normalizer::normalize( $object['kind'], $object['data'] );
 				$sources[ $object['kind'] ][ $object['key'] ]                       = $unit['source'];
@@ -155,24 +159,29 @@ final class Loader {
 			new Registry( $collections['content_types'], $collections['taxonomies'], $collections['relationships'] ),
 			$sources,
 			$errors,
-			$shadowed
+			$shadowed,
+			$manifests
 		);
 	}
 
 	/**
-	 * Reads and validates one package directory on its own.
+	 * Reads and validates one package directory on its own. References to other packages are not checked.
+	 *
+	 * Used by load() and by the importer, so imported packages pass exactly the file package rules.
 	 *
 	 * @param string $dir Package directory.
-	 * @return array{source: string, manifest: string, objects: list<array<string, mixed>>, errors: ValidationError[]}
+	 * @return array{source: string, manifest: string, manifest_data: array<string, mixed>|null, objects: list<array<string, mixed>>, errors: ValidationError[]}
+	 *         `manifest` is the manifest file path; `manifest_data` the decoded manifest once it validates.
 	 */
-	private static function read_package( string $dir ): array {
+	public static function read_package( string $dir ): array {
 		$real          = realpath( $dir );
 		$manifest_file = ( false === $real ? $dir : $real ) . '/manifest.json';
 		$package       = array(
-			'source'   => false === $real ? $dir : basename( $real ),
-			'manifest' => $manifest_file,
-			'objects'  => array(),
-			'errors'   => array(),
+			'source'        => false === $real ? $dir : basename( $real ),
+			'manifest'      => $manifest_file,
+			'manifest_data' => null,
+			'objects'       => array(),
+			'errors'        => array(),
 		);
 
 		if ( false === $real || ! is_dir( $real ) ) {
@@ -190,7 +199,8 @@ final class Loader {
 			$package['errors'] = Validator::validate( 'manifest', $manifest, $manifest_file );
 		}
 		if ( ! $package['errors'] ) {
-			$package['source'] = $manifest['id'];
+			$package['source']        = $manifest['id'];
+			$package['manifest_data'] = $manifest;
 		}
 
 		$seen = array();

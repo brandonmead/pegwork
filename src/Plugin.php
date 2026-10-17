@@ -37,6 +37,13 @@ final class Plugin {
 	private static ?Result $result = null;
 
 	/**
+	 * Package directories added on the last init, in registration order.
+	 *
+	 * @var string[]
+	 */
+	private static array $packages = array();
+
+	/**
 	 * Registers the plugin's WordPress hooks. Safe to call more than once.
 	 */
 	public static function boot(): void {
@@ -92,8 +99,9 @@ final class Plugin {
 		 */
 		do_action( 'pegwork_register', $builder );
 
-		$db           = get_option( Loader::DB_OPTION, array() );
-		self::$result = Loader::load( $builder->packages(), is_array( $db ) ? $db : array() );
+		$db             = get_option( Loader::DB_OPTION, array() );
+		self::$packages = $builder->packages();
+		self::$result   = Loader::load( self::$packages, is_array( $db ) ? $db : array() );
 
 		Registrar::register( self::$result->registry );
 
@@ -108,6 +116,15 @@ final class Plugin {
 	 */
 	public static function result(): Result {
 		return self::$result ?? new Result( new Registry() );
+	}
+
+	/**
+	 * Package directories added through pegwork_register on the last init. Empty before init.
+	 *
+	 * @return string[]
+	 */
+	public static function packages(): array {
+		return self::$packages;
 	}
 
 	/**
