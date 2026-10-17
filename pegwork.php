@@ -93,5 +93,6 @@ if ( pegwork_unmet_requirements( PHP_VERSION, get_bloginfo( 'version' ) ) ) {
 }
 
 require_once PEGWORK_DIR . 'vendor/autoload.php';
+require_once PEGWORK_DIR . 'includes/functions.php';
 
 Pegwork\Plugin::boot();

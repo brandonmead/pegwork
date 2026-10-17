@@ -1,0 +1,7 @@
+{ "format": 1, "key": "sifg_project_type", "labels": { "singular": "Type", "plural": "Types" },
+  "hierarchical": false, "locked_terms": true, "wp": { "rewrite_slug": "project-type" },
+  "terms": [
+    { "slug": "individual", "name": "Individual" },
+    { "slug": "nonprofit", "name": "Nonprofit" },
+    { "slug": "community-group", "name": "Community group (informal)" },
+    { "slug": "corporation", "name": "Corporation" } ] }

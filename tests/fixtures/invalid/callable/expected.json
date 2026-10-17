@@ -1,0 +1,1 @@
+{ "code": "callable_not_allowed", "file": "content-types/thing.json", "pointer": "/fields/0/sanitize_callback", "schema": true }

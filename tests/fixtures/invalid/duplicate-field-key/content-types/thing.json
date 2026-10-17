@@ -1,0 +1,4 @@
+{ "format": 1, "key": "thing", "labels": { "singular": "Thing", "plural": "Things" },
+  "fields": [
+    { "key": "website", "type": "url", "label": "Website" },
+    { "key": "website", "type": "text", "label": "Website (text)" } ] }

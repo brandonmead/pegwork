@@ -1,0 +1,1 @@
+{ "code": "duplicate_key", "file": "content-types/thing.json", "pointer": "/fields/1/key", "schema": false }

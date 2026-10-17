@@ -1,0 +1,6 @@
+{ "format": 1, "key": "sifg_project_status", "labels": { "singular": "Project status", "plural": "Project statuses" },
+  "hierarchical": false, "locked_terms": true, "wp": { "rewrite_slug": "project-status" },
+  "terms": [
+    { "slug": "idea", "name": "Idea" }, { "slug": "building", "name": "Building" },
+    { "slug": "piloting", "name": "Piloting" }, { "slug": "active", "name": "Active" },
+    { "slug": "complete", "name": "Complete" }, { "slug": "paused", "name": "Paused" } ] }

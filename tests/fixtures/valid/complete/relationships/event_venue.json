@@ -1,0 +1,1 @@
+{ "format": 1, "key": "event_venue", "from": "demo_event", "to": "demo_venue", "cardinality": "one_to_many" }

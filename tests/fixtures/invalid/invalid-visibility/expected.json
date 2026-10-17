@@ -1,0 +1,1 @@
+{ "code": "invalid_value", "file": "content-types/thing.json", "pointer": "/fields/0/visibility", "schema": true }

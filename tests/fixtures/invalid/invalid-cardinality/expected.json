@@ -1,0 +1,1 @@
+{ "code": "invalid_value", "file": "relationships/thing_parent.json", "pointer": "/cardinality", "schema": true }

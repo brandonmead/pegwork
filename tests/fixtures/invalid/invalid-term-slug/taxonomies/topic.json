@@ -1,0 +1,2 @@
+{ "format": 1, "key": "topic", "labels": { "singular": "Topic", "plural": "Topics" },
+  "terms": [ { "slug": "Community Group", "name": "Community group" } ] }
