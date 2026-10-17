@@ -156,11 +156,21 @@
 						"storage": {
 							"description": "Store in a post column instead of meta.",
 							"enum": [ "post_title", "post_content" ]
+						},
+						"meta_key": {
+							"description": "Meta key override (default _{post_type}_{field}); meta storage only.",
+							"type": "string",
+							"pattern": "^_?[A-Za-z][A-Za-z0-9_]*$"
 						}
-					}
+					},
+					"not": { "required": [ "storage", "meta_key" ] }
 				}
 			},
 			"allOf": [
+				{
+					"if": { "required": [ "visibility", "wp" ], "properties": { "visibility": { "const": "private" }, "wp": { "required": [ "meta_key" ] } } },
+					"then": { "properties": { "wp": { "properties": { "meta_key": { "pattern": "^_" } } } } }
+				},
 				{
 					"if": { "required": [ "type" ], "properties": { "type": { "const": "select" } } },
 					"then": { "required": [ "options" ] },

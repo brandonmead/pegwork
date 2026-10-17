@@ -1,0 +1,1 @@
+{ "code": "invalid_meta_key", "file": "content-types/thing.json", "pointer": "/fields/0/wp/meta_key", "schema": true }
