@@ -14,8 +14,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Scaffold (merged)
 2. Registry (in review)
 3. Content registration (merged)
-4. Fields and validation (in review)
-5. Editor panel
+4. Fields and validation (merged)
+5. Editor panel (in review)
 6. Export/import and DB source
 7. Module loader and public API (in review)
 8. sifg-config (in siforgood repo)
