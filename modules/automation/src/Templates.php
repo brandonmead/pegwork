@@ -16,7 +16,8 @@ use WP_Term;
  *
  * Modes:
  * - `raw` (record values, idempotency keys): lists render as comma-separated slugs, booleans as 1/0.
- * - `text` (email subject and plain body): taxonomy keys render term names, lists join with ", ".
+ * - `text` (email subject and plain body): taxonomy keys render term names, lists join with ", ", and
+ *   HTML entities WordPress stores in titles and the site name (`&amp;`) are decoded.
  * - `html` (email HTML body): as `text`, then every value is escaped, URLs with esc_url and everything
  *   else with esc_html. The authored template itself is trusted (committed config, imported by CLI only).
  * - `log` (what the run log may show, such as the subject): as `text`, but private fields render as
@@ -117,8 +118,10 @@ final class Templates {
 		$text = self::text( $value, ', ' );
 
 		if ( self::HTML !== $mode ) {
-			return $text;
+			// WordPress stores titles and the site name HTML-encoded (&amp;); plain text shows them decoded, as core's own emails do.
+			return wp_specialchars_decode( $text, ENT_QUOTES );
 		}
+		// esc_html does not double-encode, so a stored &amp; still renders as "&".
 		return self::is_url( $path, $context ) ? esc_url( $text ) : esc_html( $text );
 	}
 

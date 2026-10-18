@@ -14,6 +14,7 @@ use PegworkAutomation\Engine;
 use PegworkAutomation\Manual;
 use PegworkAutomation\Schema;
 use PegworkAutomation\Steps\SendEmail;
+use PegworkAutomation\Templates;
 use WP_Error;
 
 require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
@@ -103,6 +104,33 @@ class AutomationEmailTest extends AutomationTestCase {
 			$steps[1]['summary']
 		);
 		$this->assertStringNotContainsString( 'owner@example.org', $this->stored( $run['id'] ), 'The log masks the private address.' );
+	}
+
+	/**
+	 * Titles and the site name are stored HTML-encoded; plain text shows them decoded, HTML not double-encoded.
+	 */
+	public function test_stored_entities_render_once() {
+		global $wpdb;
+		update_option( 'blogname', 'Tom & Jerry' );
+		$this->assertSame( 'Tom &amp; Jerry', get_option( 'blogname' ) );
+		$id = $this->record(
+			array(
+				'contact_email' => 'owner@example.org',
+				'website'       => 'https://example.org/',
+			),
+			'publish'
+		);
+		$wpdb->update( $wpdb->posts, array( 'post_title' => 'Q &amp; A' ), array( 'ID' => $id ) );
+		clean_post_cache( $id );
+		Records::update( $id, array( 'urgent' => true ) );
+		$this->drain();
+
+		$this->assertSame( 'Urgent: Q & A ()', $this->mails()[0]['subject'] );
+		$this->assertStringContainsString( '>Q &amp; A</a>', tests_retrieve_phpmailer_instance()->Body ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- PHPMailer property.
+
+		$context = new Context( $this->clock, Records::get( $id ) );
+		$this->assertSame( 'Q & A on Tom & Jerry', Templates::render( '{{record.title}} on {{site.name}}', $context, Templates::TEXT ) );
+		$this->assertSame( 'Q &amp; A on Tom &amp; Jerry', Templates::render( '{{record.title}} on {{site.name}}', $context, Templates::HTML ) );
 	}
 
 	/**
