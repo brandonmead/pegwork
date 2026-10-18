@@ -35,6 +35,8 @@ class AutomationWpCronTest extends AutomationTestCase {
 	public function tear_down() {
 		wp_unschedule_hook( Engine::RUN_HOOK );
 		wp_unschedule_hook( Engine::MAINTENANCE_HOOK );
+		wp_unschedule_hook( Engine::SCHEDULE_HOOK );
+		wp_unschedule_hook( Engine::SWEEP_HOOK );
 		parent::tear_down();
 	}
 
@@ -83,11 +85,50 @@ class AutomationWpCronTest extends AutomationTestCase {
 		$this->assertSame( current_time( 'Y-m-d' ), $this->value( $id, 'last_verified' ) );
 
 		do_action( Engine::RUN_HOOK, $run['id'] );
-		$this->assertCount( 1, $this->steps( $run['id'] ) );
+		$this->assertCount( 2, $this->steps( $run['id'] ), 'The duplicate firing ran no step again.' );
 
 		// job_verified was queued by the stamp; cron picks it up too.
 		$this->run_due_cron( Engine::RUN_HOOK );
 		$this->assertSame( 'completed', $this->only_run( 'job_verified' )['status'] );
+	}
+
+	/**
+	 * Schedule trigger on real WP-Cron: boot schedules the firing at 09:00 site time; when it fires it
+	 * reschedules itself, sweeps, and the run sends its email and waits on a WP-Cron event 30 days out.
+	 */
+	public function test_schedule_fires_on_wp_cron() {
+		reset_phpmailer_instance();
+		$next = wp_next_scheduled( Engine::SCHEDULE_HOOK, array( 'job_sweep' ) );
+		$this->assertNotFalse( $next );
+		$this->assertSame( '09:00', wp_date( 'H:i', $next ) );
+		$this->assertGreaterThan( time(), $next );
+
+		$id = \Pegwork\Api\Records::create(
+			'job',
+			array(
+				'title'         => 'Stale job',
+				'last_verified' => wp_date( 'Y-m-d', strtotime( '-2 years' ) ),
+				'contact_email' => 'owner@example.org',
+			),
+			'publish'
+		);
+		$this->run_due_cron( Engine::RUN_HOOK );
+
+		// Make the firing due, as if 09:00 had come, and run cron as wp-cron.php would.
+		( new WpCronScheduler() )->schedule( Engine::SCHEDULE_HOOK, array( 'job_sweep' ), time() - 1 );
+		$this->assertSame( 1, $this->run_due_cron( Engine::SCHEDULE_HOOK ) );
+		$this->assertSame( $next, wp_next_scheduled( Engine::SCHEDULE_HOOK, array( 'job_sweep' ) ), 'Rescheduled for the next 09:00.' );
+
+		$run = $this->only_run( 'job_sweep' );
+		$this->assertSame( $id, $run['record_id'] );
+		$this->run_due_cron( Engine::RUN_HOOK );
+
+		$run = $this->run_row( $run['id'] );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'owner@example.org', tests_retrieve_phpmailer_instance()->get_sent()->to[0][0] );
+		$resume = wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) );
+		$this->assertSame( strtotime( $run['resume_at'] . ' UTC' ), $resume );
+		$this->assertEqualsWithDelta( time() + 30 * DAY_IN_SECONDS, $resume, HOUR_IN_SECONDS + 60, 'About 30 days (DST may shift it by an hour).' );
 	}
 
 	/**
