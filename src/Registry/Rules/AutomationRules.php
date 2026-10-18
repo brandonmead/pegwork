@@ -17,8 +17,8 @@ use DateTimeZone;
  * templates use `{{ path }}` merge tags; both are data, checked here at load time so a typo fails
  * `wp pegwork schema validate` instead of a run. Definitions are inert data; the automation module runs them.
  *
- * validate() checks shape and everything inside the definition (step order, links, durations, template
- * syntax, path roots, condition limits). references() checks paths against the registry: record fields and
+ * Validation checks shape and everything inside the definition (step order, links, durations, template
+ * syntax, path roots, condition limits). The reference pass checks paths against the registry: record fields and
  * taxonomies exist, types fit the operators and values, and private fields stay out of public contexts.
  *
  * Used by Pegwork\Registry\Validator, whose helpers (props, type, key, add, ...) it calls.
@@ -185,6 +185,7 @@ trait AutomationRules {
 				'form'         => fn( $v, $p ) => $this->key( $v, $p ),
 				'when'         => fn( $v, $p ) => $this->automation_condition( $v, $p ),
 			);
+
 			$needed[] = 'event';
 		}
 		if ( 'schedule' === $type ) {
@@ -207,6 +208,7 @@ trait AutomationRules {
 					array( 'content_type' )
 				),
 			);
+
 			$needed[] = 'every';
 		}
 
@@ -429,6 +431,7 @@ trait AutomationRules {
 			),
 			array( 'var', 'op' )
 		);
+
 		$op = $node['op'] ?? null;
 		if ( ! $is_object || ! in_array( $op, self::CONDITION_OPS, true ) ) {
 			return;
@@ -522,7 +525,15 @@ trait AutomationRules {
 	 */
 	private static function seconds( string $duration ): int {
 		preg_match( self::DURATION_PATTERN, $duration, $parts );
-		$units = array( 1 => 'years', 2 => 'months', 3 => 'weeks', 4 => 'days', 6 => 'hours', 7 => 'minutes', 8 => 'seconds' );
+		$units = array(
+			1 => 'years',
+			2 => 'months',
+			3 => 'weeks',
+			4 => 'days',
+			6 => 'hours',
+			7 => 'minutes',
+			8 => 'seconds',
+		);
 		$start = new DateTimeImmutable( '2001-01-01 00:00:00', new DateTimeZone( 'UTC' ) );
 		$end   = $start;
 		foreach ( $units as $index => $unit ) {
@@ -946,16 +957,16 @@ trait AutomationRules {
 			$this->add( 'unknown_form', $pointer . '/trigger/form', sprintf( __( 'Form "%s" is not defined.', 'pegwork' ), $trigger['form'] ) );
 		}
 
-		foreach ( $this->automation_scan( $data, $pointer ) as $use ) {
-			$type = $use['type'] ?? null;
+		foreach ( $this->automation_scan( $data, $pointer ) as $found ) {
+			$type = $found['type'] ?? null;
 			if ( isset( $missing[ (string) $type ] ) ) {
 				continue;
 			}
-			match ( $use['use'] ) {
-				'record_key'    => $this->check_record_key( $use, $known ),
-				'form_value'    => $this->check_form_value( $use, $known ),
-				'leaf'          => $this->check_leaf( $use, $known ),
-				'write'         => $this->check_write( $use, $known ),
+			match ( $found['use'] ) {
+				'record_key'    => $this->check_record_key( $found, $known ),
+				'form_value'    => $this->check_form_value( $found, $known ),
+				'leaf'          => $this->check_leaf( $found, $known ),
+				'write'         => $this->check_write( $found, $known ),
 				default         => null,
 			};
 		}
@@ -997,44 +1008,44 @@ trait AutomationRules {
 	/**
 	 * Checks a record field or taxonomy reference: it exists, and is public in public contexts.
 	 *
-	 * @param array<string, mixed>                $use   Use from automation_scan().
+	 * @param array<string, mixed>                $found  Use from automation_scan().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
 	 */
-	private function check_record_key( array $use, array $known ): void {
-		$definition = $this->record_key_definition( $use['type'], $use['key'], $known );
+	private function check_record_key( array $found, array $known ): void {
+		$definition = $this->record_key_definition( $found['type'], $found['key'], $known );
 		if ( false === $definition ) {
 			$this->add(
 				'unknown_field',
-				$use['pointer'],
-				null === $use['type']
+				$found['pointer'],
+				null === $found['type']
 					/* translators: %s: field key. */
-					? sprintf( __( 'Field "%s" cannot be checked: name the trigger\'s "content_type" to use record fields.', 'pegwork' ), $use['key'] )
+					? sprintf( __( 'Field "%s" cannot be checked: name the trigger\'s "content_type" to use record fields.', 'pegwork' ), $found['key'] )
 					/* translators: 1: field key, 2: content type key. */
-					: sprintf( __( '"%1$s" is not a field or taxonomy of content type "%2$s".', 'pegwork' ), $use['key'], $use['type'] )
+					: sprintf( __( '"%1$s" is not a field or taxonomy of content type "%2$s".', 'pegwork' ), $found['key'], $found['type'] )
 			);
 			return;
 		}
-		if ( is_array( $definition ) && 'public' === $use['context'] && 'private' === ( $definition['visibility'] ?? 'public' ) ) {
+		if ( is_array( $definition ) && 'public' === $found['context'] && 'private' === ( $definition['visibility'] ?? 'public' ) ) {
 			/* translators: %s: field key. */
-			$this->add( 'automation_private_field', $use['pointer'], sprintf( __( 'Field "%s" is private and cannot appear in webhook bodies or link pages.', 'pegwork' ), $use['key'] ) );
+			$this->add( 'automation_private_field', $found['pointer'], sprintf( __( 'Field "%s" is private and cannot appear in webhook bodies or link pages.', 'pegwork' ), $found['key'] ) );
 		}
 	}
 
 	/**
 	 * Checks a `trigger.values.<key>` reference against the trigger's form.
 	 *
-	 * @param array<string, mixed>                $use   Use from automation_scan().
+	 * @param array<string, mixed>                $found  Use from automation_scan().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
 	 */
-	private function check_form_value( array $use, array $known ): void {
-		$form = $known['form'][ $use['form'] ] ?? null;
+	private function check_form_value( array $found, array $known ): void {
+		$form = $known['form'][ $found['form'] ] ?? null;
 		if ( ! is_array( $form ) ) {
 			return;
 		}
 		$keys = array_column( $this->form_items( $form, '' ), 'key' );
-		if ( ! in_array( $use['key'], $keys, true ) ) {
+		if ( ! in_array( $found['key'], $keys, true ) ) {
 			/* translators: 1: field key, 2: form key. */
-			$this->add( 'unknown_field', $use['pointer'], sprintf( __( 'Field "%1$s" is not a field of form "%2$s".', 'pegwork' ), $use['key'], $use['form'] ) );
+			$this->add( 'unknown_field', $found['pointer'], sprintf( __( 'Field "%1$s" is not a field of form "%2$s".', 'pegwork' ), $found['key'], $found['form'] ) );
 		}
 	}
 
@@ -1070,20 +1081,20 @@ trait AutomationRules {
 	/**
 	 * Checks a condition leaf's operator and literal operands against the var's type.
 	 *
-	 * @param array<string, mixed>                $use   Use from automation_scan().
+	 * @param array<string, mixed>                $found  Use from automation_scan().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
 	 */
-	private function check_leaf( array $use, array $known ): void {
-		$leaf       = $use['leaf'];
-		$definition = $this->var_definition( $leaf['var'], $use['type'], $known );
+	private function check_leaf( array $found, array $known ): void {
+		$leaf       = $found['leaf'];
+		$definition = $this->var_definition( $leaf['var'], $found['type'], $known );
 		if ( null === $definition ) {
 			return;
 		}
 		$type     = $definition['type'];
 		$op       = $leaf['op'];
-		$mismatch = function ( string $message ) use ( $use, $leaf ): void {
+		$mismatch = function ( string $message ) use ( $found, $leaf ): void {
 			/* translators: 1: var path, 2: reason. */
-			$this->add( 'condition_type_mismatch', $use['pointer'], sprintf( __( 'Condition on "%1$s": %2$s', 'pegwork' ), $leaf['var'], $message ) );
+			$this->add( 'condition_type_mismatch', $found['pointer'], sprintf( __( 'Condition on "%1$s": %2$s', 'pegwork' ), $leaf['var'], $message ) );
 		};
 
 		if ( in_array( $op, self::ORDER_OPS, true ) && ! in_array( $type, array( 'number', 'date' ), true ) ) {
@@ -1122,23 +1133,23 @@ trait AutomationRules {
 	/**
 	 * Checks a value written by update_record or create_record.
 	 *
-	 * @param array<string, mixed>                $use   Use from automation_scan().
+	 * @param array<string, mixed>                $found  Use from automation_scan().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
 	 */
-	private function check_write( array $use, array $known ): void {
-		if ( ! $use['known'] ) {
+	private function check_write( array $found, array $known ): void {
+		if ( ! $found['known'] ) {
 			return; // The record comes from a template; its type is known only at run time.
 		}
-		$definition = $this->record_key_definition( $use['type'], $use['key'], $known );
+		$definition = $this->record_key_definition( $found['type'], $found['key'], $known );
 		if ( false === $definition ) {
-			$this->check_record_key( $use + array( 'context' => 'private' ), $known );
+			$this->check_record_key( $found + array( 'context' => 'private' ), $known );
 			return;
 		}
 		if ( null === $definition ) {
 			return;
 		}
 
-		$value = $use['value'];
+		$value = $found['value'];
 		if ( is_string( $value ) && ( '' === $value || str_contains( $value, '{{' ) ) ) {
 			return; // Empty clears the field; templates are cast to the field type at run time.
 		}
@@ -1151,7 +1162,7 @@ trait AutomationRules {
 		}
 		if ( null !== $reason ) {
 			/* translators: 1: field key, 2: reason. */
-			$this->add( 'automation_value_type', $use['pointer'], sprintf( __( 'Value for "%1$s": %2$s', 'pegwork' ), $use['key'], $reason ) );
+			$this->add( 'automation_value_type', $found['pointer'], sprintf( __( 'Value for "%1$s": %2$s', 'pegwork' ), $found['key'], $reason ) );
 		}
 	}
 

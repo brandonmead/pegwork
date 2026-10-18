@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "published"
+  },
+  "steps": [
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "ops@example.org",
+      "subject": "Hi",
+      "text": "Hi"
+    }
+  ]
+}

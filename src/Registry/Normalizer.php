@@ -127,9 +127,9 @@ final class Normalizer {
 			$data['confirm'] += array( 'expires_hours' => 72 );
 		}
 
-		$items = fn( array $list ) => array_map(
+		$items = fn( array $entries ) => array_map(
 			fn( array $item ) => array_key_exists( 'bind', $item ) ? $item : self::without_empty( $item + array( 'required' => false ), array( 'validate' ) ),
-			$list
+			$entries
 		);
 		if ( isset( $data['fields'] ) ) {
 			$data['fields'] = $items( $data['fields'] );
@@ -165,9 +165,9 @@ final class Normalizer {
 			);
 		}
 
-		$steps         = fn( array $list ) => array_map(
+		$steps         = fn( array $entries ) => array_map(
 			fn( array $step ) => 'create_record' === $step['type'] ? $step + array( 'status' => 'draft' ) : $step,
-			$list
+			$entries
 		);
 		$data['steps'] = $steps( $data['steps'] );
 

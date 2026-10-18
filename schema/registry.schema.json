@@ -535,6 +535,15 @@
 					"then": { "required": [ "access" ], "properties": { "access": { "type": "object" } } }
 				},
 				{
+					"if": { "not": { "required": [ "target" ] } },
+					"then": {
+						"properties": {
+							"fields": { "items": { "not": { "required": [ "bind" ] } } },
+							"steps": { "items": { "properties": { "fields": { "items": { "not": { "required": [ "bind" ] } } } } } }
+						}
+					}
+				},
+				{
 					"if": { "required": [ "confirm" ] },
 					"then": {
 						"properties": {

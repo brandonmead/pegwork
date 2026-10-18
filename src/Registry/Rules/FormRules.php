@@ -413,8 +413,8 @@ trait FormRules {
 	/**
 	 * Reports form keys used twice (across all steps) and repeated step keys.
 	 *
-	 * @param array<string, mixed>     $form    Decoded form.
-	 * @param string                   $pointer JSON pointer of the form.
+	 * @param array<string, mixed>       $form    Decoded form.
+	 * @param string                     $pointer JSON pointer of the form.
 	 * @param list<array<string, mixed>> $items   Output of form_items().
 	 */
 	private function form_unique_keys( array $form, string $pointer, array $items ): void {

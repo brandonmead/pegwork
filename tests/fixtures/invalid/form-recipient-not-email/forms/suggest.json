@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "key": "suggest",
+  "label": "Suggest a thing",
+  "target": {
+    "content_type": "thing"
+  },
+  "fields": [
+    {
+      "bind": {
+        "field": "name"
+      }
+    }
+  ],
+  "notifications": [
+    {
+      "key": "mod",
+      "when": "submitted",
+      "to": "{field:name}",
+      "subject": "New",
+      "body": "New."
+    }
+  ]
+}

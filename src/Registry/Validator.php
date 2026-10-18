@@ -498,6 +498,7 @@ final class Validator {
 		}
 		if ( 'form' === $context ) {
 			$checks += $this->form_presentation_checks();
+
 			$checks['accept']      = fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->extension( $item, $q ) );
 			$checks['max_size_mb'] = function ( $v, $p ) {
 				if ( $this->type( $v, $p, 'number' ) && $v <= 0 ) {

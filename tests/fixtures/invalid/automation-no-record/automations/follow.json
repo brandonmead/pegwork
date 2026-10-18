@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "webhook"
+  },
+  "steps": [
+    {
+      "id": "mark",
+      "type": "update_record",
+      "values": {
+        "done": true
+      }
+    }
+  ]
+}

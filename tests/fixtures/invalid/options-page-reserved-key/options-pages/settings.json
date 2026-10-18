@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "siteurl",
+  "title": "Settings",
+  "fields": [
+    {
+      "key": "tagline",
+      "type": "text",
+      "label": "Tagline"
+    }
+  ]
+}
