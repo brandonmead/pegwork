@@ -10,13 +10,17 @@ module.exports = [
 	{
 		settings: {
 			'import/core-modules': [
+				'@wordpress/a11y',
 				'@wordpress/components',
+				'@wordpress/compose',
 				'@wordpress/core-data',
 				'@wordpress/data',
 				'@wordpress/editor',
 				'@wordpress/element',
+				'@wordpress/html-entities',
 				'@wordpress/i18n',
 				'@wordpress/plugins',
+				'@wordpress/url',
 			],
 		},
 	},

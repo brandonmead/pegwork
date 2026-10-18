@@ -73,6 +73,7 @@ class EditorPanelConfigTest extends TestCase {
 		$this->assertSame( '_book_isbn', $config['types']['book']['fields'][0]['meta_key'] );
 		$this->assertSame( 'isbn', $config['types']['book']['fields'][0]['label'] );
 		$this->assertSame( array(), $config['types']['book']['taxonomies'] );
+		$this->assertSame( array(), $config['types']['book']['relationships'] );
 	}
 
 	/**
@@ -95,6 +96,77 @@ class EditorPanelConfigTest extends TestCase {
 		);
 
 		$this->assertSame( 'legacy_isbn', $config['types']['book']['fields'][0]['meta_key'] );
+	}
+
+	/**
+	 * Relationships go on their "from" type only, with labels from the "to" type when not set.
+	 */
+	public function test_relationships_on_from_type() {
+		$config = EditorPanel::build_config(
+			array(
+				array(
+					'key'    => 'household',
+					'labels' => array(
+						'singular' => 'Household',
+						'plural'   => 'Households',
+					),
+				),
+				array(
+					'key'    => 'contact',
+					'labels' => array(
+						'singular' => 'Contact',
+						'plural'   => 'Contacts',
+					),
+				),
+			),
+			array(),
+			array(
+				'household_contacts' => array(
+					'from'        => 'household',
+					'to'          => 'contact',
+					'cardinality' => 'one_to_many',
+				),
+				'contact_venues'     => array(
+					'key'      => 'contact_venues',
+					'from'     => 'contact',
+					'to'       => 'venue',
+					'label'    => 'Usual venues',
+					'required' => true,
+				),
+				'orphan'             => array(
+					'from' => 'event',
+					'to'   => 'contact',
+				),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				array(
+					'key'               => 'household_contacts',
+					'meta_key'          => '_rel_household_contacts', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Fixture, not a query.
+					'to'                => 'contact',
+					'label'             => 'Contacts',
+					'to_label_singular' => 'Contact',
+					'cardinality'       => 'one_to_many',
+					'required'          => false,
+				),
+			),
+			$config['types']['household']['relationships']
+		);
+		$this->assertSame(
+			array(
+				'key'               => 'contact_venues',
+				'meta_key'          => '_rel_contact_venues', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Fixture, not a query.
+				'to'                => 'venue',
+				'label'             => 'Usual venues',
+				'to_label_singular' => 'venue',
+				'cardinality'       => 'many_to_many',
+				'required'          => true,
+			),
+			$config['types']['contact']['relationships'][0]
+		);
+		$this->assertSame( array( 'household', 'contact' ), array_keys( $config['types'] ) );
 	}
 
 	/**
