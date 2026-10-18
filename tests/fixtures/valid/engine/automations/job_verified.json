@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "job_verified",
+  "label": "Once per Last verified value: write it to Note",
+  "trigger": { "type": "event", "event": "record.updated", "content_type": "job",
+    "when": { "all": [ { "var": "record.last_verified", "op": "changed" }, { "var": "record.last_verified", "op": "not_empty" } ] } },
+  "idempotency": "{{record.id}}:{{record.last_verified}}",
+  "steps": [
+    { "id": "note", "type": "update_record", "values": { "note": "verified {{record.last_verified}}" } }
+  ]
+}
