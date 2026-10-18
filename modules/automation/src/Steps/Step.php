@@ -12,9 +12,10 @@ namespace PegworkAutomation\Steps;
 use PegworkAutomation\Context;
 
 /**
- * One step type (`update_record`, `create_record`, `condition`; email, webhook and wait arrive in later PRs).
- * A handler runs one attempt and reports a StepResult; the executor logs it, stores outputs and decides
- * what happens next. Handlers never output private values and never call time() (use the context clock).
+ * One step type (`update_record`, `create_record`, `condition`, `send_email`, `wait`; `call_webhook` arrives
+ * in a later PR). A handler runs one attempt and reports a StepResult; the executor logs it, stores outputs
+ * and decides what happens next (continue, stop, wait, retry or fail). Handlers never put private values in
+ * summaries or errors and never call time() (use the context clock).
  */
 interface Step {
 

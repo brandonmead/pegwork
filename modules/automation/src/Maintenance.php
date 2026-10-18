@@ -10,8 +10,9 @@ declare( strict_types=1 );
 namespace PegworkAutomation;
 
 /**
- * Daily (and, from PR 4, `wp pegwork automation tick`): re-schedules runs whose wake-up was lost, fails
- * runs stuck in `running` (never repeating a side effect automatically), and prunes old logs.
+ * Daily: re-schedules runs whose wake-up was lost, fails runs stuck in `running` (never repeating a side
+ * effect automatically), and prunes old logs. `wp pegwork automation tick` runs only the resume part, so a
+ * clock moved with `--now` never prunes or interrupts real runs.
  */
 final class Maintenance {
 
@@ -92,14 +93,7 @@ final class Maintenance {
 		$scheduler = $engine->scheduler();
 		$scheduler->schedule( Engine::MAINTENANCE_HOOK, array(), $this->next_time() );
 
-		$resumed = 0;
-		foreach ( $runs->orphans( $runs->stamp( $now->modify( '-' . self::ORPHAN_MINUTES . ' minutes' ) ) ) as $id ) {
-			if ( null === $scheduler->next( Engine::RUN_HOOK, array( $id ) ) ) {
-				$scheduler->schedule( Engine::RUN_HOOK, array( $id ), $now->getTimestamp() );
-				++$resumed;
-			}
-		}
-
+		$resumed     = count( $this->resume() );
 		$interrupted = 0;
 		$cutoff      = $runs->stamp( $now->modify( '-' . self::STALE_MINUTES . ' minutes' ) );
 		foreach ( $runs->stale( $cutoff ) as $id ) {
@@ -117,6 +111,29 @@ final class Maintenance {
 			'interrupted' => $interrupted,
 			'pruned'      => $pruned,
 		);
+	}
+
+	/**
+	 * Schedules a wake-up for now for waiting runs whose `resume_at` has passed and queued runs idle for
+	 * ORPHAN_MINUTES. Without $force only runs with no pending wake-up (a lost one); with $force every such
+	 * run, replacing a pending wake-up (`wp pegwork automation tick`, whose clock may be ahead of WP-Cron's).
+	 *
+	 * @param bool $force Replace pending wake-ups too.
+	 * @return int[] IDs of the runs scheduled.
+	 */
+	public function resume( bool $force = false ): array {
+		$runs      = $this->engine->runs();
+		$now       = $this->engine->clock()->now();
+		$scheduler = $this->engine->scheduler();
+		$resumed   = array();
+
+		foreach ( $runs->orphans( $runs->stamp( $now->modify( '-' . self::ORPHAN_MINUTES . ' minutes' ) ) ) as $id ) {
+			if ( $force || null === $scheduler->next( Engine::RUN_HOOK, array( $id ) ) ) {
+				$scheduler->schedule( Engine::RUN_HOOK, array( $id ), $now->getTimestamp() );
+				$resumed[] = $id;
+			}
+		}
+		return $resumed;
 	}
 
 	/**

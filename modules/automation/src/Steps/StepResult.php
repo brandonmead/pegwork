@@ -9,10 +9,13 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Steps;
 
+use DateTimeImmutable;
+
 /**
  * What a step attempt did. `ok` continues with the next step, `stop` ends the run as completed (a false
- * condition), `failed` ends it as failed. Later PRs add retry (status `retrying` plus a resume time) and
- * wait results here; the executor already logs any status string it gets.
+ * condition), `wait` pauses the run until a time (status `waiting`, then the next step), `failed` ends it
+ * as failed, or, when the failure is retryable and the step's retry policy has attempts left, pauses it
+ * and runs the same step again after the backoff (run-step status `retrying`).
  */
 final class StepResult {
 
@@ -31,6 +34,20 @@ final class StepResult {
 	public bool $stop = false;
 
 	/**
+	 * For a wait: when the run continues with the next step (UTC).
+	 *
+	 * @var DateTimeImmutable|null
+	 */
+	public ?DateTimeImmutable $resume_at = null;
+
+	/**
+	 * For a failure: whether another attempt could succeed (a transport error, not a configuration error).
+	 *
+	 * @var bool
+	 */
+	public bool $retryable = false;
+
+	/**
 	 * Outputs for `steps.<id>.<key>` paths.
 	 *
 	 * @var array<string, mixed>
@@ -38,7 +55,7 @@ final class StepResult {
 	public array $output = array();
 
 	/**
-	 * Log summary: no private values (keys, IDs, counts).
+	 * Log summary: no private values (keys, IDs, counts, masked addresses).
 	 *
 	 * @var array<string, mixed>
 	 */
@@ -86,16 +103,32 @@ final class StepResult {
 	}
 
 	/**
-	 * The step failed; the run fails.
+	 * The step succeeded and the run waits until a time before the next step.
 	 *
-	 * @param string               $code    Error code, such as pegwork_invalid_record.
-	 * @param string               $message Message (no private values).
-	 * @param array<string, mixed> $summary Log summary.
+	 * @param DateTimeImmutable    $resume_at When to continue.
+	 * @param array<string, mixed> $summary   Log summary.
 	 */
-	public static function fail( string $code, string $message, array $summary = array() ): self {
-		$result          = new self( 'failed' );
-		$result->error   = $code . ': ' . $message;
-		$result->summary = $summary;
+	public static function wait( DateTimeImmutable $resume_at, array $summary = array() ): self {
+		$result            = new self( 'ok' );
+		$result->resume_at = $resume_at;
+		$result->summary   = $summary;
+		return $result;
+	}
+
+	/**
+	 * The step failed; the run fails, or is retried per the step's policy when the failure is retryable.
+	 *
+	 * @param string               $code      Error code, such as pegwork_invalid_record.
+	 * @param string               $message   Message (no private values).
+	 * @param array<string, mixed> $summary   Log summary.
+	 * @param bool                 $retryable Whether another attempt could succeed (default true; false for
+	 *                                        configuration errors such as an invalid recipient).
+	 */
+	public static function fail( string $code, string $message, array $summary = array(), bool $retryable = true ): self {
+		$result            = new self( 'failed' );
+		$result->error     = $code . ': ' . $message;
+		$result->summary   = $summary;
+		$result->retryable = $retryable;
 		return $result;
 	}
 }
