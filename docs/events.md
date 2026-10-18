@@ -94,6 +94,27 @@ array(
 - A save rejected by validation emits nothing.
 - Limitation: a bare `update_post_meta()` or `wp_set_object_terms()` outside a save emits nothing. Use `Records::update()`.
 
+## Form events
+
+Emitted by the `forms` module (`docs/forms.md`).
+
+| Event | Hook | Payload |
+|---|---|---|
+| `form.submitted` | `pegwork_event_form_submitted` | `form, entry_id, record_id, values` |
+
+- Fires once per stored, non-spam entry, after its `submitted` notifications, before the redirect. Spam, invalid, rate-limited, duplicate and expired submissions emit nothing.
+- `form` (form key), `entry_id` (int, row in `{prefix}pegwork_entries`), `record_id` (int or null: the record the entry created or updated; always null until record mapping lands in Phase 3 PR 3), `values` (sanitized values by item key, only items whose `show_when` held: booleans bool, numbers int or float, other types string; file items will appear as `{name, size, mime}`, never contents or paths).
+- `form.confirmed` (same payload, after email confirmation creates the record) arrives with Phase 3 PR 3.
+
+```php
+array(
+	'form'      => 'request_help',
+	'entry_id'  => 12,
+	'record_id' => null,
+	'values'    => array( 'name' => 'Ada', 'email' => 'ada@example.org', 'organization' => '', 'need' => 'Grant writing.' ),
+)
+```
+
 ## Private fields
 
 Payloads may hold private field values (`old.contact_email`): the bus is in-process PHP, and the boundary is output. Never echo, log, return over REST, or send a payload as is; outbound contexts (webhooks, public pages) must select public fields.

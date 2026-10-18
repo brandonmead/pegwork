@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "key": "fr_contact",
+  "label": "Contact us",
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "autocomplete": "name" },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+    { "key": "topic", "type": "select", "label": "Topic", "display": "radio",
+      "options": [ { "value": "talks", "label": "Talks" }, { "value": "other", "label": "Something else" } ] },
+    { "key": "website", "type": "url", "label": "Website" },
+    { "key": "subscribe", "type": "boolean", "label": "Send me the newsletter" },
+    { "key": "frequency", "type": "select", "label": "How often", "show_when": { "field": "subscribe", "equals": true },
+      "required_when": { "field": "subscribe", "equals": true },
+      "options": [ { "value": "weekly", "label": "Weekly" }, { "value": "monthly", "label": "Monthly" } ] },
+    { "key": "message", "type": "textarea", "label": "Message", "required": true, "help": "A few sentences.", "validate": { "max_length": 200 } },
+    { "key": "consent", "type": "boolean", "label": "I agree to be contacted", "required": true }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "reply_to": "{field:email}",
+      "subject": "Contact: {field:name}", "body": "{all_fields}\n\nEntry {entry:id} on {site:name}: {entry:admin_url}{unknown_tag}" },
+    { "key": "moderator", "when": "submitted", "to": "{option:fr_settings.moderator_email}", "subject": "Moderate {form:label}", "body": "{field:message}" },
+    { "key": "submitter", "when": "submitted", "to": "{field:email}", "subject": "Thanks, {field:name}", "body": "We got your message about {field:topic}." }
+  ],
+  "messages": { "success": "Thanks. We will reply soon.", "submit_label": "Send message" }
+}

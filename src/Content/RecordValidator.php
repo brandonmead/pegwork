@@ -145,22 +145,24 @@ final class RecordValidator {
 
 	/**
 	 * Checks field values against their `required`, `required_when` and `validate` rules. Shared by
-	 * records and options pages, so both apply the same rules and messages.
+	 * records, options pages and forms (pegwork_validate_fields()), so all apply the same rules and messages.
 	 *
 	 * Type checks (a well-formed email, a real date) are not part of these rules: REST meta schemas do
-	 * them for records, Pegwork\Options\Values for options pages.
+	 * them for records, Pegwork\Options\Values for options pages, pegwork_sanitize_field() for forms.
 	 *
-	 * @param array<int, array<string, mixed>> $fields   Normalized fields.
-	 * @param array<string, mixed>             $values   Values by field key; missing, null or '' counts as empty.
-	 * @param bool                             $complete Whether completeness rules apply. Without them nothing is checked.
+	 * @param array<int, array<string, mixed>> $fields          Normalized fields.
+	 * @param array<string, mixed>             $values          Values by field key; missing, null or '' counts as empty.
+	 * @param bool                             $complete        Whether completeness rules apply. Without them nothing is checked.
+	 * @param bool                             $checked_boolean Whether a required boolean must be true (a consent box),
+	 *                                                          rather than only set (forms).
 	 * @return array<string, string> Error message by field key; empty when every field passes.
 	 */
-	public static function check_values( array $fields, array $values, bool $complete = true ): array {
+	public static function check_values( array $fields, array $values, bool $complete = true, bool $checked_boolean = false ): array {
 		$values = array_merge( $values, self::cast_all( $fields, $values ) );
 		$errors = array();
 
 		foreach ( $fields as $field ) {
-			$message = self::check_field( $field, $values, $complete );
+			$message = self::check_field( $field, $values, $complete, $checked_boolean );
 			if ( null !== $message ) {
 				$errors[ $field['key'] ] = $message;
 			}
@@ -260,9 +262,10 @@ final class RecordValidator {
 	 *
 	 * @param array<string, mixed> $field    Normalized field.
 	 * @param array<string, mixed> $values   Cast values by field key.
-	 * @param bool                 $complete Whether completeness rules apply.
+	 * @param bool                 $complete        Whether completeness rules apply.
+	 * @param bool                 $checked_boolean Whether a required boolean must be true.
 	 */
-	private static function check_field( array $field, array $values, bool $complete ): ?string {
+	private static function check_field( array $field, array $values, bool $complete, bool $checked_boolean = false ): ?string {
 		if ( ! $complete ) {
 			return null;
 		}
@@ -272,7 +275,11 @@ final class RecordValidator {
 		$empty = self::is_empty( $field, $value );
 
 		$condition = $field['required_when'] ?? null;
-		$required  = $field['required'] || ( is_array( $condition ) && ( $values[ $condition['field'] ] ?? null ) === $condition['equals'] );
+		$required  = ! empty( $field['required'] ) || ( is_array( $condition ) && ( $values[ $condition['field'] ] ?? null ) === $condition['equals'] );
+		if ( $checked_boolean && $required && 'boolean' === $field['type'] && true !== $value ) {
+			/* translators: %s: checkbox label. */
+			return sprintf( __( 'Check the box to confirm: %s', 'pegwork' ), $label );
+		}
 		if ( $empty ) {
 			/* translators: %s: field label. */
 			return $required ? sprintf( __( '%s is required.', 'pegwork' ), $label ) : null;

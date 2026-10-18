@@ -32,4 +32,10 @@ return array(
 		'requires'    => array(),
 		'path'        => PEGWORK_DIR . 'modules/automation',
 	),
+	'forms'      => array(
+		'label'       => 'Forms',
+		'description' => 'Registry forms on pages (the pegwork/form block): server-rendered, validated, spam-checked, stored as entries, with email notifications.',
+		'requires'    => array(),
+		'path'        => PEGWORK_DIR . 'modules/forms',
+	),
 );

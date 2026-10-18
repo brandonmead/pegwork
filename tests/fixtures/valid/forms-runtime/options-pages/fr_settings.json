@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "key": "fr_settings",
+  "title": "Forms runtime settings",
+  "fields": [
+    { "key": "moderator_email", "type": "email", "label": "Moderator email", "visibility": "private" }
+  ]
+}

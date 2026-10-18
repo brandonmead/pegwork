@@ -1,0 +1,128 @@
+/* Pegwork forms: minimal, theme-friendly styles. Colors inherit from the theme except errors. */
+.pegwork-form__field,
+.pegwork-form__step {
+	margin: 0 0 1.25em;
+}
+
+.pegwork-form__step {
+	border: 0;
+	padding: 0;
+}
+
+.pegwork-form__step-title {
+	font-size: 1.25em;
+	font-weight: 600;
+	padding: 0;
+}
+
+.pegwork-form__label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.25em;
+}
+
+.pegwork-form__field--boolean .pegwork-form__label,
+.pegwork-form__option label {
+	display: inline;
+	font-weight: 400;
+}
+
+fieldset.pegwork-form__field {
+	border: 0;
+	margin-left: 0;
+	margin-right: 0;
+	padding: 0;
+}
+
+.pegwork-form__required {
+	font-weight: 400;
+}
+
+.pegwork-form__help {
+	margin: 0 0 0.25em;
+}
+
+.pegwork-form__input,
+.pegwork-form__select,
+.pegwork-form__textarea {
+	border: 2px solid currentcolor;
+	box-sizing: border-box;
+	font: inherit;
+	max-width: 100%;
+	padding: 0.4em 0.5em;
+	width: 100%;
+}
+
+.pegwork-form__checkbox,
+.pegwork-form__option input {
+	height: 1.25em;
+	width: 1.25em;
+	vertical-align: middle;
+}
+
+.pegwork-form__option {
+	margin: 0.25em 0;
+}
+
+.pegwork-form input:focus-visible,
+.pegwork-form select:focus-visible,
+.pegwork-form textarea:focus-visible,
+.pegwork-form button:focus-visible,
+.pegwork-form a:focus-visible,
+.pegwork-form__errors:focus,
+.pegwork-form__status:focus,
+.pegwork-form__notice:focus {
+	outline: 3px solid #1e1e1e;
+	outline-offset: 2px;
+	box-shadow: 0 0 0 5px #fff;
+}
+
+.pegwork-form__error {
+	color: #b3261e;
+	font-weight: 600;
+	margin: 0 0 0.25em;
+}
+
+.pegwork-form__field--error .pegwork-form__input,
+.pegwork-form__field--error .pegwork-form__select,
+.pegwork-form__field--error .pegwork-form__textarea {
+	border-color: #b3261e;
+}
+
+.pegwork-form__errors,
+.pegwork-form__notice--problem {
+	border: 3px solid #b3261e;
+	margin: 0 0 1.5em;
+	padding: 1em;
+}
+
+.pegwork-form__errors-title {
+	font-size: 1.25em;
+	margin: 0 0 0.5em;
+}
+
+.pegwork-form__errors ul {
+	margin: 0;
+}
+
+.pegwork-form__errors a {
+	color: #b3261e;
+	font-weight: 600;
+}
+
+.pegwork-form__status {
+	border-left: 6px solid currentcolor;
+	padding: 0.5em 1em;
+}
+
+.pegwork-form__sr {
+	border: 0;
+	clip-path: inset(50%);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}

@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "fr_members",
+  "label": "Members only",
+  "access": { "capability": "edit_posts" },
+  "steps": [
+    { "key": "about", "label": "About you", "description": "Tell us who you are.", "fields": [
+      { "key": "nickname", "type": "text", "label": "Nickname", "required": true } ] },
+    { "key": "more", "label": "More", "fields": [
+      { "key": "age", "type": "number", "label": "Age", "validate": { "min": 18 } },
+      { "key": "start", "type": "date", "label": "Start date" } ] }
+  ]
+}

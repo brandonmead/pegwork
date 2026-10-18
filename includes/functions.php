@@ -74,6 +74,78 @@ function pegwork_validate_record( string $type, array $values, int $post_id = 0 
 }
 
 /**
+ * Sanitizes one untrusted value for a field definition, with the Phase 1 per-type sanitizers.
+ *
+ * @since 0.2.0
+ *
+ * @param array<string, mixed> $field Field definition (`type`, plus `options` for select).
+ * @param mixed                $value Raw value, for example from a form POST.
+ * @return bool|int|float|string Booleans bool (missing is false); numbers int or float, '' when empty or not
+ *                               numeric; other types a string, '' when empty or invalid (bad email, URL other
+ *                               than http or https, impossible date, undefined option). Arrays count as empty.
+ */
+function pegwork_sanitize_field( array $field, mixed $value ): bool|int|float|string {
+	return Pegwork\Content\Meta::sanitize( $field, $value );
+}
+
+/**
+ * Validates values against a list of field definitions (required, required_when, validate rules), as
+ * record validation does for a content type's fields. A required boolean must be true (a consent box).
+ *
+ * @since 0.2.0
+ *
+ * @param array<int, array<string, mixed>> $fields   Field definitions (`key`, `type`, `label`, `required`, ...).
+ * @param array<string, mixed>             $values   Sanitized values by field key.
+ * @param bool                             $complete Whether completeness rules apply; false accepts anything.
+ * @return true|WP_Error WP_Error `pegwork_invalid_fields` (status 400) with per-field messages in data `fields`.
+ */
+function pegwork_validate_fields( array $fields, array $values, bool $complete = true ): bool|WP_Error {
+	$errors = Pegwork\Content\RecordValidator::check_values( $fields, $values, $complete, true );
+	if ( array() === $errors ) {
+		return true;
+	}
+
+	return new WP_Error(
+		'pegwork_invalid_fields',
+		/* translators: %s: per-field error messages. */
+		sprintf( __( 'These values are not valid: %s', 'pegwork' ), implode( ' ', $errors ) ),
+		array(
+			'status' => 400,
+			'fields' => $errors,
+		)
+	);
+}
+
+/**
+ * Saves a site-local form definition (the `pegwork_schema` option), then rebuilds the registry.
+ *
+ * The definition passes the registry validator and its references resolve against the effective
+ * registry. Keys a file package defines are refused. No capability check: the caller authorizes.
+ *
+ * @since 0.2.0
+ *
+ * @param array<string, mixed> $definition Form definition (format 1).
+ * @return true|WP_Error `pegwork_invalid_form` (400, messages by JSON pointer in data `fields`) or
+ *                       `pegwork_form_file_defined` (409).
+ */
+function pegwork_save_form( array $definition ): bool|WP_Error {
+	return Pegwork\Registry\Forms::save( $definition );
+}
+
+/**
+ * Deletes a site-local form definition, then rebuilds the registry. Stored entries are kept.
+ * No capability check: the caller authorizes.
+ *
+ * @since 0.2.0
+ *
+ * @param string $key Form key.
+ * @return true|WP_Error `pegwork_form_file_defined` (409) or `pegwork_form_not_found` (404).
+ */
+function pegwork_delete_form( string $key ): bool|WP_Error {
+	return Pegwork\Registry\Forms::delete( $key );
+}
+
+/**
  * IDs of the records at the other end of a relationship. Direction follows the post's type
  * ("from" or "to"). Every status is included; callers filter.
  *
