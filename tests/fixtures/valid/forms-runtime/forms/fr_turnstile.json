@@ -1,0 +1,7 @@
+{
+  "format": 1,
+  "key": "fr_turnstile",
+  "label": "Needs Turnstile",
+  "captcha": "turnstile",
+  "fields": [ { "key": "note", "type": "text", "label": "Note" } ]
+}

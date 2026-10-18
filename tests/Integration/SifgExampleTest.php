@@ -131,7 +131,7 @@ class SifgExampleTest extends WP_UnitTestCase {
 		$this->assertSame( 'sifg_project', $settings['fields'][0]['post_type'] );
 
 		$this->assertFalse( shortcode_exists( 'submit_project' ) );
-		$this->assertFalse( get_option( 'sifg_settings' ), 'No runtime behavior: the options page stores nothing.' );
+		$this->assertFalse( get_option( 'sifg_settings', false ), 'Registering the options page stores nothing until it is saved.' );
 	}
 
 	/**

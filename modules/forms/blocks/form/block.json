@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/form",
+	"title": "Form",
+	"category": "pegwork",
+	"icon": "feedback",
+	"description": "Places a Pegwork registry form by its key.",
+	"keywords": [ "form", "contact", "pegwork" ],
+	"textdomain": "pegwork",
+	"attributes": {
+		"form": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false
+	},
+	"style": "file:./style.css"
+}

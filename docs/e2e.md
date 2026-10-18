@@ -4,9 +4,11 @@ Playwright specs in `tests/e2e/specs/`, with axe for accessibility. They run aga
 
 ```
 playwright.config.js
-.wp-env.json                          CI site: plugin plus the mu-plugin below
+.wp-env.json                          CI site: plugin plus the mu-plugins below
 bin/e2e-local-site.sh                 throwaway local site (no Docker)
 tests/e2e/mu-plugins/pegwork-e2e-sifg.php   registers examples/sifg as a file package
+tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, admin-only helper routes (docs/forms.md)
+tests/e2e/packages/                   file packages that only the browser tests register
 tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures
 tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest would run)
 ```
@@ -52,7 +54,7 @@ wp config create --dbname=wpenv_e2e --dbuser=root --dbpass=root --dbhost="localh
 wp db create        # needs Local's mysql client on PATH (the script adds it)
 wp core install --url=http://127.0.0.1:8121 --title=E2E --admin_user=admin --admin_password=<pw> --admin_email=e2e@example.com --skip-email
 ln -s <pegwork clone> ~/wp-envs/e2e/wp-content/plugins/pegwork
-ln -s <pegwork clone>/tests/e2e/mu-plugins/pegwork-e2e-sifg.php ~/wp-envs/e2e/wp-content/mu-plugins/
+ln -s <pegwork clone>/tests/e2e/mu-plugins/*.php ~/wp-envs/e2e/wp-content/mu-plugins/   # every test mu-plugin
 wp plugin activate pegwork
 wp rewrite structure '/%postname%/'
 wp server --host=127.0.0.1 --port=8121

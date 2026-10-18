@@ -110,6 +110,16 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - `getEntityRecords` for postType defaults to `context: 'edit'`, which 403s for users without `edit_posts` on the "to" type; the picker passes `context: 'view'` and decodes `title.rendered`.
 - Browser checks: throwaway sites `~/wp-envs/picker` (WP 7.1.3, DB `wpenv_picker`, port 8141) and `~/wp-envs/picker67` (WP 6.7, DB `wpenv_picker67`, port 8142), mu-plugin `pegwork-demo.php` registers `examples/sifg`; harness site `~/wp-envs/picker_e2e` (port 8143). PHPUnit core copy `~/wp-envs/picker-core`, DB `pegwork_tests_picker`.
 
+## Options pages (content builder PRs 4 and 5)
+- `docs/options-pages.md`. `src/Options/`: `Pages` (register_setting per page from `Registrar::register`, group `pegwork_{key}`, `option_page_capability_pegwork_{key}`), `Screen` (admin_menu default priority, hooked in `Plugin::boot` so it precedes module screens), `Values` (type checks, partial save), `BindingSource` (`pegwork/option`, core, no `uses_context`).
+- `RecordValidator::check_values( $fields, $values, $complete = true )` holds the shared required/validate rules; type checks stay with REST schemas (records) or `Values::check_type()` (options pages).
+- `register_setting()` adds a new `sanitize_option_{name}` closure each call: `Pages::register()` unregisters its own setting first, since tests and imports re-run `Plugin::init()`.
+- Core sanitizes twice on an option's first save (`update_option()` then `add_option()`); errors are deduplicated by code (`pegwork_field_{field}`).
+- `settings_errors()` prints messages unescaped: messages are `esc_html`ed when added (they quote submitted text); the screen renders its own notices, `settings_errors( 'general' )` only for core's "Settings saved.".
+- `get_option( $page )` returns the registered default (an array) when unset; pass an explicit default (`get_option( $page, false )`) to test for "never saved".
+- ComboboxControl `help` text fails axe color contrast on the admin background (#f0f0f1): the picker renders its own `p.description`.
+- Browser checks: harness site `~/wp-envs/options` (DB `wpenv_options`, port 8181). PHPUnit DB `pegwork_tests_options` against `~/wp-envs/core-latest` (WP 7.1.3); the bundled wp-phpunit does not run against `~/wp-envs/core-6.7` (missing `class-wp-phpmailer.php`), so 6.7 is CI only.
+
 ## Events and Records API (Phase 4 PR 1)
 - Contract and payloads: `docs/events.md`. `Pegwork\Api\VERSION` 0.2.0 for the whole build cycle (Phase 4 decision 7); never bump past it in this cycle.
 - `Events\RecordEvents` hooks: `rest_pre_insert_{type}` at priority 1000 (after RecordValidator, so rejected saves take no snapshot), `rest_after_insert_{type}`, `pre_post_update`, `wp_after_insert_post`, `before_delete_post`, `deleted_post`, plus `rest_request_before|after_callbacks` to track REST routes (source `rest`, autosave detection).
@@ -133,6 +143,17 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - CLI `run|tick|retry` logic is in `PegworkAutomation\Manual` (testable without WP-CLI). `--now` is refused when `wp_get_environment_type()` is `production`, which is WordPress's default when `WP_ENVIRONMENT_TYPE` is unset (true in the WP test suite and on `bin/e2e-local-site.sh` sites; `wp config set WP_ENVIRONMENT_TYPE local --type=constant` enables it). `--now`/`--sync` swap in `InlineScheduler`; manual runs never reschedule the regular firing, and `tick` never prunes or interrupts.
 - Gotchas: Records sanitizes text fields with `sanitize_text_field` (tags stripped), so escaping tests write markup with `$wpdb->update`. Tests that jump the clock by a year make every older record stale. The WP test env is `production`, so `Manual::clock()` takes an explicit environment in tests.
 - Local runs: test DB `pegwork_tests_autoemail` (core copy `~/wp-envs/autoemail-core`, WP 7.1.3); throwaway site `~/wp-envs/autoemail` (port 8191, DB `wpenv_autoemail`, `WP_ENVIRONMENT_TYPE` local, mu-plugins `pegwork-engine-fixture.php` and `mail-capture.php` logging `wp_mail()` to `wp-content/mail.log`).
+
+## Forms runtime (Phase 3 PR 2)
+- `docs/forms.md`. Module `forms` (`modules/forms`, `PegworkForms\`, `PEGWORK_FORMS_DIR`). Table `{prefix}pegwork_entries` (dbDelta on boot when option `pegwork_forms_db_version` != `Schema::VERSION` `1`); kept on uninstall, so no `modules/forms/uninstall.php`.
+- Core API (0.2.0, additive): `pegwork_sanitize_field()` (`Content\Meta::sanitize`, URLs http/https only), `pegwork_validate_fields()` (`RecordValidator::check_values()`, shared with records and options pages; its `$checked_boolean` makes a required boolean mean "must be true"), `pegwork_save_form()`/`pegwork_delete_form()` (`Registry\Forms`: Validator plus references against the effective registry, upsert into `pegwork_schema.forms`, `Plugin::init()`; file keys 409).
+- Fail closed: `Definition::unsupported()` keeps forms with `target`, `confirm`, `captcha`, bound or `file` items unrendered and unhandled until PR 3/4.
+- POST handled on `template_redirect` priority 1; inputs `pegwork[<key>]`, control fields `pegwork_form[key|token|nonce|url]` (honeypot `url`). Redirect 303 to `?pegwork_sent=<key>`.
+- No `#fragment` in the form action or the success URL: Chrome (per the HTML spec) skips `autofocus` when the URL targets an element, so the error summary and success region would not get focus (verified in the E2E spec 2026-10-18).
+- Rate limits in transients `pegwork_forms_rl_<hmac>`; IP limit counts spam too. Time token HMAC-SHA256 with `wp_salt( 'nonce' )`, 3 s floor, 7 day ceiling.
+- `wp_mail` refuses an empty body (PHPMailer "Message body empty"); a body that renders empty is replaced by `{all_fields}`. The WP test mailer turns `\n` into `\r\n` in bodies.
+- E2E: axe cannot inject into a JavaScript-off page (`page.evaluate` hangs), and `browser.newContext()` in a spec inherits `test.use( noJs )`; the spec re-serves the page HTML through `route.fulfill` to a context with `javaScriptEnabled: true`. axe excludes `.wp-block-navigation` (Twenty Twenty-Five's page list fails `list`, not Pegwork markup).
+- Local runs: test DB `pegwork_tests_forms` with core `~/wp-envs/core-latest` (read only); site `~/wp-envs/forms` (`bin/e2e-local-site.sh start forms 8161`, DB `wpenv_forms`). The script now links every `tests/e2e/mu-plugins/*.php`.
 
 ## Admin area (content builder PR 1)
 - Top-level menu slug `Pegwork\Api\ADMIN_MENU` (`pegwork`), `manage_options`: Overview (`pegwork`, `admin_menu` priority 9, position 0), Modules (`pegwork-modules`, priority 999 so it stays last). Submenu `position` is an index into the list built so far, not a sort key; contract in `docs/extension-api.md`.

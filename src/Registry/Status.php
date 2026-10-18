@@ -112,6 +112,28 @@ final class Status {
 	}
 
 	/**
+	 * Effective options pages.
+	 *
+	 * @return list<array{key: string, title: string, menu_title: string, capability: string, fields: int, private: int, source: string}>
+	 *         `fields` counts every field, `private` the private ones.
+	 */
+	public function options_pages(): array {
+		$rows = array();
+		foreach ( $this->result->registry->options_pages() as $key => $page ) {
+			$rows[] = array(
+				'key'        => $key,
+				'title'      => $page['title'],
+				'menu_title' => $page['menu_title'] ?? $page['title'],
+				'capability' => $page['capability'],
+				'fields'     => count( $page['fields'] ),
+				'private'    => count( array_filter( $page['fields'], fn( array $field ) => 'private' === $field['visibility'] ) ),
+				'source'     => $this->source( 'options_page', $key ),
+			);
+		}
+		return $rows;
+	}
+
+	/**
 	 * Rows for the optional sections: content type listings, forms, automations and options pages.
 	 *
 	 * @return list<array{kind: string, key: string, label: string, details: string, source: string}>

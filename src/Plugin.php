@@ -57,10 +57,12 @@ final class Plugin {
 		add_action( 'admin_notices', array( Notices::class, 'render' ) );
 		Admin\EditorPanel::register();
 		Admin\Menu::register();
+		Options\Screen::register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'pegwork schema', SchemaCommand::class );
 			\WP_CLI::add_command( 'pegwork relationship', Cli\RelationshipCommand::class );
+			\WP_CLI::add_command( 'pegwork options', Cli\OptionsCommand::class );
 		}
 	}
 
