@@ -152,6 +152,39 @@
 					"label": "Impact categories"
 				}
 			]
+		},
+		"sifg_story": {
+			"fields": [
+				{
+					"key": "title",
+					"type": "text",
+					"label": "Title",
+					"required": true,
+					"visibility": "public",
+					"meta_key": null,
+					"storage": "post_title",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "body",
+					"type": "rich_text",
+					"label": "Story",
+					"required": true,
+					"visibility": "public",
+					"meta_key": null,
+					"storage": "post_content",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				}
+			],
+			"taxonomies": []
 		}
 	}
 }

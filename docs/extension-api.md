@@ -29,6 +29,19 @@ Hook `pegwork_register` and add a directory of schema files (provided by the sch
 add_action( 'pegwork_register', fn( $b ) => $b->add_package( __DIR__ . '/schema' ) );
 ```
 
+## Reading records and relationships
+
+Global functions (`includes/functions.php`), available after `init` priority 5:
+
+| Function | Returns |
+|---|---|
+| `pegwork_registry()` | Read-only `Pegwork\Api\Registry`: `content_types()`, `content_type( $key )`, `fields( $type, $visibility )`, `taxonomies()`, `relationships()`, `relationships_for( $type )` (either end; API 0.2.0). |
+| `pegwork_validate_record( $type, $values, $post_id = 0 )` | `true` or a 400 `WP_Error` with per-field messages in `data.fields`. Relationship links go under the relationship key. |
+| `pegwork_related_ids( $post, $key )` | IDs at the other end of a relationship, from either end, all statuses. |
+| `pegwork_related_query_args( $post, $key )` | `WP_Query` args for the records at the other end; add status, order and paging. Matches nothing for an unknown key or unrelated post. |
+
+Details, REST and CLI: `docs/relationships.md`.
+
 ## Modules
 
 A module is a directory containing `module.php`, listed in the module manifest. `module.php` returns an object implementing `Pegwork\Api\Module`:

@@ -125,7 +125,7 @@ final class Loader {
 			$known = array();
 			foreach ( $units as $unit ) {
 				foreach ( $unit['objects'] as $object ) {
-					$known[ $object['kind'] ][ $object['key'] ] = true;
+					$known[ $object['kind'] ][ $object['key'] ] = $object['data'];
 				}
 			}
 			$dropped = false;

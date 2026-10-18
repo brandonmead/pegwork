@@ -123,8 +123,8 @@ class AdminOverviewTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'content-types/thing.json</code>', $html );
 		$this->assertStringContainsString( '<code>/key</code>', $html );
 
-		// Relationships: none in the example.
-		$this->assertStringContainsString( 'None registered. Add a schema package (see the extension API docs).', $html );
+		// Relationships: the example's story_projects, required.
+		$this->assertStringContainsString( '<th scope="row" class="column-key"><code>story_projects</code></th><td class="column-from">sifg_story</td><td class="column-to">sifg_project</td><td class="column-cardinality">many_to_many</td><td class="column-required">Yes</td>', $html );
 		$this->assertStringContainsString( 'wp pegwork schema import', $html );
 	}
 

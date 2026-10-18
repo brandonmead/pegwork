@@ -240,4 +240,65 @@ class ValidatorTest extends TestCase {
 		$this->assertCount( 1, $errors );
 		$this->assertSame( '/to', $errors[0]->pointer );
 	}
+
+	/**
+	 * Relationship properties: label and required are optional and typed; meta is the only storage; ends differ.
+	 */
+	public function test_relationship_rules() {
+		$relationship = array(
+			'format'      => 1,
+			'key'         => 'thing_other',
+			'from'        => 'thing',
+			'to'          => 'other',
+			'cardinality' => 'one_to_many',
+		);
+
+		$this->assertSame( array(), $this->codes( 'relationship', $relationship ) );
+		$this->assertSame(
+			array(),
+			$this->codes(
+				'relationship',
+				$relationship + array(
+					'label'    => 'Others',
+					'required' => true,
+					'storage'  => 'meta',
+				)
+			)
+		);
+		$this->assertSame( array( 'invalid_type' ), $this->codes( 'relationship', $relationship + array( 'label' => '' ) ) );
+		$this->assertSame( array( 'invalid_type' ), $this->codes( 'relationship', $relationship + array( 'required' => 1 ) ) );
+		$this->assertSame( array( 'storage_not_supported' ), $this->codes( 'relationship', $relationship + array( 'storage' => 'table' ) ) );
+		$this->assertSame( array( 'invalid_value' ), $this->codes( 'relationship', $relationship + array( 'storage' => 'custom' ) ) );
+		$this->assertSame( array( 'self_relationship' ), $this->codes( 'relationship', array( 'to' => 'thing' ) + $relationship ) );
+	}
+
+	/**
+	 * `_rel_{key}` may not be a field meta key on the "from" type; other types' fields and column fields do not count.
+	 */
+	public function test_relationship_meta_key_conflict() {
+		$relationship = array(
+			'key'  => 'thing_owner',
+			'from' => 'thing',
+			'to'   => 'other',
+		);
+		$known        = fn( array $fields ) => array(
+			'content_type' => array(
+				'thing' => $this->content_type( $fields ),
+				'other' => true,
+			),
+		);
+		$field        = fn( array $wp ) => array(
+			'key'   => 'owner',
+			'type'  => 'text',
+			'label' => 'Owner',
+			'wp'    => $wp,
+		);
+
+		$errors = Validator::references( 'relationship', $relationship, 'f', $known( array( $field( array( 'meta_key' => '_rel_thing_owner' ) ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Fixture, not a query.
+		$this->assertSame( array( 'meta_key_conflict' ), array_map( fn( $e ) => $e->code, $errors ) );
+		$this->assertSame( '/key', $errors[0]->pointer );
+
+		$this->assertSame( array(), Validator::references( 'relationship', $relationship, 'f', $known( array( $field( array( 'meta_key' => '_thing_owner' ) ) ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Fixture, not a query.
+		$this->assertSame( array(), Validator::references( 'relationship', $relationship, 'f', $known( array( $field( array( 'storage' => 'post_title' ) ) ) ) ) );
+	}
 }

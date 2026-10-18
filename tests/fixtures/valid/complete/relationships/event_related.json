@@ -1,1 +1,1 @@
-{ "format": 1, "key": "event_related", "from": "demo_event", "to": "demo_event", "cardinality": "many_to_many", "storage": "table" }
+{ "format": 1, "key": "event_related", "from": "demo_event", "to": "demo_venue", "cardinality": "many_to_many", "storage": "meta", "label": "Related venues", "required": true }

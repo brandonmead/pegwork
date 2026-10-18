@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "sifg_story",
+  "labels": { "singular": "Story", "plural": "Stories" },
+  "public": true,
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "body", "type": "rich_text", "label": "Story", "required": true, "wp": { "storage": "post_content" } }
+  ],
+  "wp": {
+    "rest_base": "stories",
+    "rewrite_slug": "stories",
+    "has_archive": false,
+    "menu_icon": "dashicons-format-quote",
+    "supports": ["title", "editor", "revisions"],
+    "capability_type": "post",
+    "allowed_blocks": ["core/paragraph", "core/list", "core/list-item", "core/heading", "core/quote"]
+  }
+}

@@ -107,15 +107,16 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Edit-context REST responses for the given Projects, by ID.
+	 * Edit-context REST responses for the given records, by ID.
 	 *
-	 * @param int[] $ids Project IDs.
+	 * @param int[]  $ids  Record IDs.
+	 * @param string $base REST base of their type.
 	 * @return array<int, array>
 	 */
-	private function responses( $ids ) {
+	private function responses( $ids, $base = 'projects' ) {
 		$responses = array();
 		foreach ( $ids as $id ) {
-			$response = $this->rest( 'GET', "/wp/v2/projects/$id", array( 'context' => 'edit' ) );
+			$response = $this->rest( 'GET', "/wp/v2/$base/$id", array( 'context' => 'edit' ) );
 			$this->assertSame( 200, $response->get_status() );
 			$responses[ $id ] = $response->get_data();
 		}
@@ -166,14 +167,41 @@ class ExportImportGateTest extends WP_UnitTestCase {
 			$this->assertSame( 201, $response->get_status(), $title );
 			$ids[] = $response->get_data()['id'];
 		}
-		$r1    = $this->responses( $ids );
+		$stories = array();
+		foreach ( array( array( $ids[0], $ids[1] ), array( $ids[2] ) ) as $projects ) {
+			$response = $this->rest(
+				'POST',
+				'/wp/v2/stories',
+				array(
+					'title'   => 'Story ' . count( $stories ),
+					'content' => '<!-- wp:paragraph --><p>It helped.</p><!-- /wp:paragraph -->',
+					'status'  => 'publish',
+					'meta'    => array( '_rel_story_projects' => $projects ),
+				)
+			);
+			$this->assertSame( 201, $response->get_status() );
+			$stories[] = $response->get_data()['id'];
+		}
+		$r1         = $this->responses( $ids );
+		$r1_stories = $this->responses( $stories, 'stories' );
+		$r1_links   = wp_list_pluck( wp_list_pluck( $r1_stories, 'meta' ), '_rel_story_projects' );
+		$this->assertEqualsCanonicalizing( array( $ids[0], $ids[1] ), $r1_links[ $stories[0] ] );
+		$this->assertSame( array( $ids[2] ), $r1_links[ $stories[1] ] );
 		$terms = $this->seed_term_count();
 		$this->assertSame( 27, $terms );
 
 		// 2. Export to A.
 		$a = $this->export();
 		$this->assertSame(
-			array( 'content-types/sifg_project.json', 'manifest.json', 'taxonomies/sifg_impact.json', 'taxonomies/sifg_project_status.json', 'taxonomies/sifg_project_type.json' ),
+			array(
+				'content-types/sifg_project.json',
+				'content-types/sifg_story.json',
+				'manifest.json',
+				'relationships/story_projects.json',
+				'taxonomies/sifg_impact.json',
+				'taxonomies/sifg_project_status.json',
+				'taxonomies/sifg_project_type.json',
+			),
 			array_keys( $this->tree( $a ) )
 		);
 
@@ -182,12 +210,13 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		delete_option( Loader::DB_OPTION );
 		$this->reregister();
 		$this->assertFalse( post_type_exists( 'sifg_project' ) );
+		$this->assertFalse( post_type_exists( 'sifg_story' ) );
 		$this->assertFalse( taxonomy_exists( 'sifg_impact' ) );
 
 		// 4. Import A, re-run registration, export to B.
 		$first = Importer::import( $a );
 		$this->assertTrue( $first->is_valid() );
-		$this->assertSame( 5, $first->count() ); // Manifest, 1 content type, 3 taxonomies; terms already exist.
+		$this->assertSame( 7, $first->count() ); // Manifest, 2 content types, 3 taxonomies, 1 relationship; terms already exist.
 		$this->assertSame( array(), $first->terms );
 		$this->reregister();
 		$this->assertTrue( post_type_exists( 'sifg_project' ) );
@@ -200,6 +229,11 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame( 0, Importer::import( $a )->count() );
 		$this->assertSame( 0, Importer::import( $b, true )->count() );
 		$this->assertSame( $r1, $this->responses( $ids ) );
+		$r2_stories = $this->responses( $stories, 'stories' );
+		$this->assertSame( $r1_stories, $r2_stories );
+		$this->assertSame( $r1_links, wp_list_pluck( wp_list_pluck( $r2_stories, 'meta' ), '_rel_story_projects' ) );
+		$this->assertSame( Loader::DB_SOURCE, Plugin::result()->sources['relationship']['story_projects'] );
+		$this->assertSame( array( $stories[0] ), pegwork_related_ids( $ids[0], 'story_projects' ) );
 		$this->assertSame( $terms, $this->seed_term_count() );
 
 		wp_set_current_user( 0 );
@@ -222,7 +256,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertTrue( $dry->is_valid() );
 		$this->assertFalse( get_option( Loader::DB_OPTION ) );
 		$this->assertFalse( post_type_exists( 'sifg_project' ) );
-		$this->assertSame( 5, count( $dry->changes ) );
+		$this->assertSame( 7, count( $dry->changes ) );
 
 		Importer::import( $dir );
 		$this->assertTrue( taxonomy_exists( 'sifg_impact' ) );
