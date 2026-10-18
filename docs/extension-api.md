@@ -56,7 +56,7 @@ Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks require
 
 The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships empty in Phase 1; add entries with the `pegwork_module_manifest` filter.
 
-Enabled slugs live in the `pegwork_modules` option. Manage them with WP-CLI:
+Enabled slugs live in the `pegwork_modules` option. Manage them on the Pegwork > Modules screen or with WP-CLI:
 
 ```
 wp pegwork module list
@@ -64,4 +64,29 @@ wp pegwork module enable <slug>
 wp pegwork module disable <slug>
 ```
 
-Behavior: a disabled module's files are never included. An enabled slug missing from the manifest is ignored. A module whose `requires` are not all booted is skipped. Each of these shows an admin notice. `enable` rejects unknown slugs and slugs whose requirements are not yet enabled.
+Behavior: a disabled module's files are never included. An enabled slug missing from the manifest is ignored. A module whose `requires` are not all booted is skipped. Each of these shows an admin notice. `enable` rejects unknown slugs and slugs whose requirements are not yet enabled (`pegwork_module_requires`). `disable` rejects a slug that an enabled module requires (`pegwork_module_required_by`). The screen and the CLI call the same `Modules\Loader` methods, so the rules are identical; the screen shows a blocked action as a disabled button with its reason ("Requires Sample", "Required by Needs sample").
+
+## Admin menu
+
+Pegwork adds a top-level menu, slug `Pegwork\Api\ADMIN_MENU` (`'pegwork'`), capability `manage_options`. Add a screen to it on `admin_menu` at the default priority:
+
+```php
+add_action(
+	'admin_menu',
+	fn() => add_submenu_page( Pegwork\Api\ADMIN_MENU, 'Forms', 'Forms', 'manage_options', 'my-forms', 'my_render_forms', 20 )
+);
+```
+
+| Position | Submenu | Slug | Owner |
+|---|---|---|---|
+| 0 | Overview | `pegwork` | core |
+| 10 to 19 | each options page | `pegwork-options-{key}` | core |
+| 20, 21 | Forms, Entries | module-defined | `forms` |
+| 30 | Automations | module-defined | `automation` |
+| 90 | Modules | `pegwork-modules` | core |
+
+WordPress treats `position` as an index into the submenu built so far, not a sort key. Pegwork therefore adds Overview first (`admin_menu` priority 9, position 0) and Modules last (priority 999); screens added at the default priority sit between them in the order they register. Pass the position from the table anyway.
+
+A screen may use a capability lower than `manage_options` (an options page for editors, for example). `add_submenu_page()` leaves out screens the user cannot open, so for such a user that screen is the menu's first item and the top-level Pegwork link opens it; Overview and Modules stay denied.
+
+Overview (read-only) lists content types with their fields, taxonomies, relationships, shadowed DB entries and rejected packages. Its data comes from the same service as `wp pegwork schema list` and `wp pegwork schema status`.

@@ -21,7 +21,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 8. sifg-config (in siforgood repo)
 
 ## Content builder completion PRs (`docs/content-builder-design.md` section 9)
-1. Admin skeleton: menu, Overview, Modules, `Registry\Status`, disable dependents rule (in review)
+1. Admin skeleton: menu, Overview, Modules, `Registry\Status`, disable dependents rule (merged, PR #13)
 2. Relationships backend (in review)
 3. Relationship picker plus E2E harness
 4. Options pages
