@@ -132,13 +132,16 @@ class DirectoryPerformanceTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Queries and HTML of one render with cold caches.
+	 * Queries and HTML of one render with a cold object cache. The same render runs once first, so
+	 * once-per-process work (WP 6.7 looks up theme roots on the first render after a flush) is never
+	 * counted against one page size only.
 	 *
 	 * @param callable $render Renders and returns HTML.
 	 * @return array{0: int, 1: string}
 	 */
 	private function measure( callable $render ) {
 		global $wpdb;
+		$render();
 		wp_cache_flush();
 		$sql     = array();
 		$collect = function ( $query ) use ( &$sql ) {
