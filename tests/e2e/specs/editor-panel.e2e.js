@@ -1,25 +1,19 @@
 const { test, expect } = require( '../utils/fixtures' );
 
 test.describe( 'Editor panel (Project)', () => {
-	test.beforeEach( async ( { page } ) => {
-		// Keep the welcome guide from covering the editor.
-		await page.addInitScript( () => {
-			window.localStorage.setItem(
-				'WP_PREFERENCES_USER_0',
-				JSON.stringify( {
-					'core/edit-post': {
-						welcomeGuide: false,
-						fullscreenMode: false,
-					},
-				} )
-			);
-		} );
-	} );
-
 	async function openProject( page, sifg ) {
 		const project = await sifg.createProject();
 		await page.goto(
 			`/wp-admin/post.php?post=${ project.id }&action=edit`
+		);
+		// A fresh user gets the welcome guide, which covers the editor. Turn it off once the editor is up.
+		await page.waitForFunction( () =>
+			window.wp?.data?.select( 'core/editor' )?.getCurrentPostId()
+		);
+		await page.evaluate( () =>
+			window.wp.data
+				.dispatch( 'core/preferences' )
+				.set( 'core/edit-post', 'welcomeGuide', false )
 		);
 		const panel = page.getByRole( 'button', {
 			name: 'Details',
