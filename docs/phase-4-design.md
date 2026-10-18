@@ -201,6 +201,11 @@ Visual canvas and branching (Phase 6); form-based definition editor; per-record 
 5. Forms event payloads: Forms design to include `form` and, when a record is created, `record_id` in `form.submitted` and `form.confirmed`.
 6. Reactivation restores the pre-pause status from `paused_from` (default `active`): confirm, rather than always setting Active.
 
+Decisions (2026-10-18, main session under Brandon's build goal; Brandon reviews at the end):
+1. Keep the WordPress 6.7 minimum Brandon approved: pin Action Scheduler 3.9.3 behind the `Scheduler` interface. Moving to WP 6.9 plus AS 4.2.x is on Brandon's review list; the interface keeps that a dependency bump, not a redesign. Before pinning, check AS 3.9.3 for known security advisories and confirm it loads cleanly on WP 6.7 and latest in CI; if it fails either, stop and report.
+2. Confirm step on: yes. 3. Pause notice with a fresh link: yes. 4. Launch backfill: yes, as a WP-CLI line in the SI for Good runbook. 5. Forms payloads include `form` and `record_id`: yes (Phase 3 design agrees). 6. Restore from `paused_from`: yes; the SI for Good pause steps also set Needs volunteers off and store the prior value in a private `paused_volunteers` field, restored on reactivation (config only).
+7. API version stays 0.2.0 for every addition in this build cycle. The `automations` registry section is built in one shared registry PR together with `listing`, `forms`, and `options_pages`, so PR 2 here moves into that shared PR. E2E tooling comes from one shared harness PR used by all phases.
+
 ## 13. PRs (each merges with CI green)
 
 1. Event bus and Records API (core): `Pegwork\Api\Events`, `Records`, `RecordEvents`, API docs, VERSION 0.2.0. Accept: a block-editor-style REST create then update with meta and terms emits exactly one `created` then one `updated` with correct `changed` and `old`; pending to publish adds `status_changed`; auto-draft emits nothing; trash and delete covered; `Records::update` emits one event with `origin.depth`; module-boundary check passes with a fixture module listening on `pegwork_event_record_updated`.
