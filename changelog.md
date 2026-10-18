@@ -3,6 +3,7 @@
 Purpose: dated, newest-first log of changes actually made.
 
 ## 2026-10-18
+- Phase 4 PR 1 event bus and Records API (in review): `Pegwork\Api\Events::emit()` (`pegwork_event`, `pegwork_event_{name}`), `Events\RecordEvents` (`record.created|updated|status_changed|deleted` with `changed`, `old`, `origin`; one event per logical save), `Pegwork\Api\Records::get|create|update`, `Content\RecordValues`; API `VERSION` 0.2.0; `docs/events.md`, extension API docs; fixture module `record-listener`; `RecordEventsTest`.
 - Phase 2 display design approved (`docs/phase-2-design.md`): Query Loop variation, `pegwork/field` bindings, `pegwork/filters` and `pegwork/conditional` blocks, registry `listing` section, no custom endpoints.
 - Design `docs/content-builder-design.md` approved (PR #8): relationships (meta storage, picker, REST param, query helpers), options pages (registry kind, Settings API screen, `pegwork/option` bindings), admin menu skeleton with Overview and Modules screens; schema editor UI deferred to Phase 5.
 
