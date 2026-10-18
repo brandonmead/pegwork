@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "key": "job_sweep",
+  "label": "Yearly still-active check: ask, wait 30 days, close if still stale",
+  "trigger": { "type": "schedule", "every": "day", "at": "09:00",
+    "for_each": { "content_type": "job", "status": [ "publish" ], "max_runs": 3, "where": { "all": [
+      { "var": "record.last_verified", "op": "not_empty" },
+      { "var": "record.last_verified", "op": "lte", "value": { "date": "today", "offset": "-P12M" } },
+      { "var": "record.job_stage", "op": "not_in", "value": [ "closed" ] } ] } } },
+  "idempotency": "{{record.id}}:{{record.last_verified}}",
+  "steps": [
+    { "id": "ask", "type": "send_email", "to": "{{record.contact_email}}",
+      "subject": "Is {{record.title}} still active?",
+      "text": "Last verified {{record.last_verified}}. Reply to keep {{record.permalink}} live." },
+    { "id": "grace", "type": "wait", "for": "P30D" },
+    { "id": "still_stale", "type": "condition",
+      "when": { "var": "record.last_verified", "op": "lte", "value": { "date": "today", "offset": "-P12M" } } },
+    { "id": "close", "type": "update_record", "values": { "job_stage": "closed" } },
+    { "id": "tell", "type": "send_email", "to": "{{record.contact_email}}",
+      "subject": "{{record.title}} is closed", "text": "We closed {{record.title}} on {{today}}." }
+  ]
+}

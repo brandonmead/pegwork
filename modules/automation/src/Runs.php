@@ -196,6 +196,50 @@ final class Runs {
 	}
 
 	/**
+	 * Pauses a running run until a time, to continue at a step (a wait, or a retry of the same step).
+	 *
+	 * @param int                  $id        Run ID.
+	 * @param string               $step      Step to run on resume.
+	 * @param DateTimeImmutable    $resume_at When it may resume.
+	 * @param array<string, mixed> $context   Context.
+	 * @param string|null          $error     Last error while waiting for a retry, else null.
+	 */
+	public function wait( int $id, string $step, DateTimeImmutable $resume_at, array $context, ?string $error = null ): void {
+		$this->update(
+			$id,
+			array(
+				'status'       => 'waiting',
+				'current_step' => $step,
+				'resume_at'    => $this->stamp( $resume_at ),
+				'context'      => self::encode_context( $context ),
+				'error'        => $error,
+			)
+		);
+	}
+
+	/**
+	 * Puts a failed run back in the queue at its failed step (`wp pegwork automation retry`). Atomic: only
+	 * a run that is still `failed` is reopened.
+	 *
+	 * @param int                  $id      Run ID.
+	 * @param array<string, mixed> $context Context (with the step's retry count reset).
+	 * @return bool Whether it was reopened.
+	 */
+	public function reopen( int $id, array $context ): bool {
+		global $wpdb;
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$this->runs} SET status = 'queued', error = NULL, finished_at = NULL, resume_at = NULL, claimed_at = %s, context = %s
+				WHERE id = %d AND status = 'failed'",
+				$this->stamp(),
+				self::encode_context( $context ),
+				$id
+			)
+		);
+		return 1 === (int) $wpdb->rows_affected;
+	}
+
+	/**
 	 * Finishes a run.
 	 *
 	 * @param int                       $id      Run ID.
@@ -263,6 +307,17 @@ final class Runs {
 	public function step_count( int $run_id ): int {
 		global $wpdb;
 		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->steps} WHERE run_id = %d", $run_id ) );
+	}
+
+	/**
+	 * Number of attempts of one step in a run.
+	 *
+	 * @param int    $run_id  Run ID.
+	 * @param string $step_id Step ID.
+	 */
+	public function attempts( int $run_id, string $step_id ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->steps} WHERE run_id = %d AND step_id = %s", $run_id, $step_id ) );
 	}
 
 	/**

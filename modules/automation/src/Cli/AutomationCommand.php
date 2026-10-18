@@ -10,20 +10,23 @@ declare( strict_types=1 );
 namespace PegworkAutomation\Cli;
 
 use PegworkAutomation\Engine;
+use PegworkAutomation\Manual;
 use PegworkAutomation\Overrides;
 use PegworkAutomation\Runs;
 use WP_CLI;
 
 /**
- * Lists automations, shows the run log and switches automations on or off for this site.
+ * Lists automations, shows the run log, runs, resumes and retries runs on demand (with optional time
+ * travel off production), and switches automations on or off for this site.
  *
  * Output never includes run contexts (trigger payloads may hold private field values) or field values:
- * only statuses, step summaries (keys, IDs) and error messages.
+ * only statuses, step summaries (keys, IDs, masked recipients, subjects with private fields hidden) and
+ * error messages.
  */
 final class AutomationCommand {
 
 	/**
-	 * Lists the automations with their trigger, enabled state and recent runs.
+	 * Lists the automations with their trigger, enabled state, recent runs and next schedule firing.
 	 *
 	 * ## OPTIONS
 	 *
@@ -43,6 +46,7 @@ final class AutomationCommand {
 
 		foreach ( pegwork_registry()->automations() as $key => $definition ) {
 			$stats   = $summary[ $key ] ?? array();
+			$next    = 'schedule' === $definition['trigger']['type'] ? $engine->scheduler()->next( Engine::SCHEDULE_HOOK, array( (string) $key ) ) : null;
 			$items[] = array(
 				'key'       => $key,
 				'label'     => $definition['label'],
@@ -53,10 +57,11 @@ final class AutomationCommand {
 				'last_run'  => isset( $stats['last_status'] ) ? $stats['last_status'] . ' ' . $stats['last_at'] . ' UTC' : '',
 				'open'      => ( $stats['queued'] ?? 0 ) + ( $stats['running'] ?? 0 ) + ( $stats['waiting'] ?? 0 ),
 				'failed_7d' => $stats['failed'] ?? 0,
+				'next'      => null === $next ? '' : wp_date( 'Y-m-d H:i T', $next ),
 			);
 		}
 
-		WP_CLI\Utils\format_items( $assoc_args['format'] ?? 'table', $items, array( 'key', 'label', 'trigger', 'json', 'override', 'enabled', 'last_run', 'open', 'failed_7d' ) );
+		WP_CLI\Utils\format_items( $assoc_args['format'] ?? 'table', $items, array( 'key', 'label', 'trigger', 'json', 'override', 'enabled', 'last_run', 'open', 'failed_7d', 'next' ) );
 	}
 
 	/**
@@ -130,6 +135,112 @@ final class AutomationCommand {
 	}
 
 	/**
+	 * Runs an automation now: a schedule fires once (without moving its regular schedule), sweeping its
+	 * records or only --record; an event automation starts one run against --record (its `when` is not
+	 * evaluated). Idempotency keys still apply, so a repeat creates nothing.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <key>
+	 * : Automation key.
+	 *
+	 * [--record=<id>]
+	 * : Record to run against (required for event automations).
+	 *
+	 * [--now=<datetime|offset>]
+	 * : Pretend it is this time, for this process only: a site-time datetime ("2027-11-02 09:00") or an
+	 * offset from now ("+12months", "+P30D"). Implies --sync. Refused when the environment type is production.
+	 *
+	 * [--sync]
+	 * : Execute the runs (and the runs they trigger) in this process instead of on WP-Cron.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork automation run sifg_staleness_check --now=+12months
+	 *     wp pegwork automation run sifg_project_approved --record=24 --sync
+	 *
+	 * @param string[]             $args       Positional arguments.
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function run( array $args, array $assoc_args ): void {
+		$manual = $this->manual( $assoc_args );
+		$result = $manual->run( $args[0], isset( $assoc_args['record'] ) ? (int) $assoc_args['record'] : null );
+		if ( is_wp_error( $result ) ) {
+			$manual->finish();
+			WP_CLI::error( $result->get_error_message() );
+		}
+
+		$done = $manual->finish();
+		WP_CLI::log(
+			sprintf(
+				'Matched %1$d, created %2$d run(s), %3$d already had a run for their idempotency key.%4$s%5$s',
+				$result['matched'],
+				count( $result['runs'] ),
+				$result['duplicates'],
+				$result['capped'] ? ' Stopped at max_runs; the rest are checked next sweep.' : '',
+				$result['continued'] ? ' The sweep continues in a chained wake-up.' : ''
+			)
+		);
+		$this->report( $result['runs'], $done );
+	}
+
+	/**
+	 * Resumes waits whose time has come (and queued runs idle for 10 minutes). The daily maintenance does
+	 * this too; tick is for system cron setups and for --now. It never prunes or interrupts runs.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--now=<datetime|offset>]
+	 * : Pretend it is this time, for this process only (see `run`). Implies --sync. Refused in production.
+	 *
+	 * [--sync]
+	 * : Execute the resumed runs in this process instead of on WP-Cron.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork automation tick --now=+13months
+	 *
+	 * @param string[]             $args       Positional arguments (unused).
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function tick( array $args, array $assoc_args ): void {
+		$manual = $this->manual( $assoc_args );
+		$ids    = $manual->tick();
+		$done   = $manual->finish();
+		WP_CLI::log( sprintf( 'Resumed %d run(s).', count( $ids ) ) );
+		$this->report( $ids, $done );
+	}
+
+	/**
+	 * Resumes a failed run from the step that failed, with that step's retry policy counted afresh. Steps
+	 * before it are not repeated.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <run>
+	 * : Run ID, as shown by `wp pegwork automation log`.
+	 *
+	 * [--now=<datetime|offset>]
+	 * : Pretend it is this time, for this process only (see `run`). Implies --sync. Refused in production.
+	 *
+	 * [--sync]
+	 * : Execute the run in this process instead of on WP-Cron.
+	 *
+	 * @param string[]             $args       Positional arguments.
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function retry( array $args, array $assoc_args ): void {
+		$manual = $this->manual( $assoc_args );
+		$result = $manual->retry( (int) $args[0] );
+		if ( is_wp_error( $result ) ) {
+			$manual->finish();
+			WP_CLI::error( $result->get_error_message() );
+		}
+		$done = $manual->finish();
+		$this->report( array( (int) $args[0] ), $done );
+	}
+
+	/**
 	 * Turns an automation on for this site, overriding its JSON `enabled`.
 	 *
 	 * ## OPTIONS
@@ -172,6 +283,49 @@ final class AutomationCommand {
 	}
 
 	/**
+	 * The manual-run helper for --now and --sync; exits with an error when --now is refused or unreadable.
+	 *
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	private function manual( array $assoc_args ): Manual {
+		$clock = null;
+		if ( isset( $assoc_args['now'] ) ) {
+			$clock = Manual::clock( (string) $assoc_args['now'] );
+			if ( is_wp_error( $clock ) ) {
+				WP_CLI::error( $clock->get_error_message() );
+			}
+			WP_CLI::log( sprintf( 'Clock for this process: %s (site time).', $clock->now()->setTimezone( wp_timezone() )->format( 'Y-m-d H:i:s T' ) ) );
+		}
+		return new Manual( $clock, isset( $assoc_args['sync'] ) );
+	}
+
+	/**
+	 * Prints the runs' statuses after a command.
+	 *
+	 * @param int[]                          $ids  Run IDs.
+	 * @param array{fired: int, handed: int} $done What finish() did.
+	 */
+	private function report( array $ids, array $done ): void {
+		$runs = Engine::instance()->runs();
+		$rows = array();
+		foreach ( $ids as $id ) {
+			$run = $runs->get( $id );
+			if ( null !== $run ) {
+				$rows[] = self::row( $run );
+			}
+		}
+		if ( array() !== $rows ) {
+			WP_CLI\Utils\format_items( 'table', $rows, array( 'id', 'automation', 'trigger', 'record', 'status', 'step', 'outcome', 'created_at', 'finished_at' ) );
+		}
+		if ( $done['fired'] > 0 || $done['handed'] > 0 ) {
+			WP_CLI::log( sprintf( 'Executed %1$d wake-up(s) in this process; %2$d later wake-up(s) left to WP-Cron.', $done['fired'], $done['handed'] ) );
+		} elseif ( array() !== $ids ) {
+			WP_CLI::log( 'Queued for WP-Cron (add --sync to run them now).' );
+		}
+		WP_CLI::success( 'Done.' );
+	}
+
+	/**
 	 * A run as a log row.
 	 *
 	 * @param array<string, mixed> $run Run.
@@ -204,7 +358,7 @@ final class AutomationCommand {
 				$filter = $trigger['content_type'] ?? ( $trigger['form'] ?? '' );
 				return $trigger['event'] . ( '' !== $filter ? ' (' . $filter . ')' : '' );
 			case 'schedule':
-				return 'every ' . $trigger['every'] . ( isset( $trigger['at'] ) ? ' at ' . $trigger['at'] : '' ) . ( isset( $trigger['for_each'] ) ? ' for each ' . $trigger['for_each']['content_type'] : '' ) . ' (not supported yet)';
+				return 'every ' . $trigger['every'] . ( isset( $trigger['at'] ) ? ' at ' . $trigger['at'] : '' ) . ( isset( $trigger['for_each'] ) ? ' for each ' . $trigger['for_each']['content_type'] : '' );
 		}
 		return $trigger['type'] . ' (not supported yet)';
 	}
