@@ -20,6 +20,7 @@ module.exports = [
 				'@wordpress/date',
 				'@wordpress/editor',
 				'@wordpress/element',
+				'@wordpress/hooks',
 				'@wordpress/html-entities',
 				'@wordpress/i18n',
 				'@wordpress/plugins',

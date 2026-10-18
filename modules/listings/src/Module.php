@@ -43,6 +43,8 @@ final class Module implements ModuleContract {
 	public function boot(): void {
 		BindingSource::register();
 		Conditional::register();
+		QueryHooks::register();
+		Patterns::register();
 		Editor::register();
 
 		if ( ! has_filter( 'block_categories_all', array( self::class, 'block_categories' ) ) ) {
