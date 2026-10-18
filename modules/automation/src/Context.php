@@ -173,6 +173,70 @@ final class Context {
 	}
 
 	/**
+	 * Whether a path reads a private field: `record.<key>` or `trigger.old.<key>` of a field with
+	 * visibility `private` (contexts that show values outside the email use this to hide them).
+	 *
+	 * @param string $path Dot path.
+	 */
+	public function is_private( string $path ): bool {
+		return 'private' === ( $this->field( $path )['visibility'] ?? null );
+	}
+
+	/**
+	 * Field type of a `record.<key>` or `trigger.old.<key>` path, or null when it is not a field.
+	 *
+	 * @param string $path Dot path.
+	 */
+	public function field_type( string $path ): ?string {
+		$field = $this->field( $path );
+		return null === $field ? null : (string) $field['type'];
+	}
+
+	/**
+	 * Taxonomy name when a `record.<key>` or `trigger.old.<key>` path is a taxonomy of the record's type.
+	 *
+	 * @param string $path Dot path.
+	 */
+	public function taxonomy( string $path ): ?string {
+		[ $type, $key ] = $this->path_key( $path );
+		if ( null === $type ) {
+			return null;
+		}
+		$definition = pegwork_registry()->content_type( $type );
+		$keys       = array_column( $definition['taxonomies'] ?? array(), 'key' );
+		return in_array( $key, $keys, true ) ? $key : null;
+	}
+
+	/**
+	 * Registry field behind a `record.<key>` or `trigger.old.<key>` path.
+	 *
+	 * @param string $path Dot path.
+	 * @return array<string, mixed>|null
+	 */
+	private function field( string $path ): ?array {
+		[ $type, $key ] = $this->path_key( $path );
+		return null === $type ? null : ( pegwork_registry()->fields( $type )[ $key ] ?? null );
+	}
+
+	/**
+	 * Content type and key a path reads: `record.<key>` (bound record) or `trigger.old.<key>` (payload type).
+	 *
+	 * @param string $path Dot path.
+	 * @return array{0: string|null, 1: string}
+	 */
+	private function path_key( string $path ): array {
+		$parts = explode( '.', $path );
+		if ( 2 === count( $parts ) && 'record' === $parts[0] && null !== $this->record ) {
+			return array( (string) $this->record['type'], $parts[1] );
+		}
+		if ( 3 === count( $parts ) && 'trigger' === $parts[0] && 'old' === $parts[1] ) {
+			$type = $this->trigger['type'] ?? ( $this->record['type'] ?? null );
+			return array( is_string( $type ) ? $type : null, $parts[2] );
+		}
+		return array( null, '' );
+	}
+
+	/**
 	 * A `record.*` value.
 	 *
 	 * @param string[] $parts Path after `record`.

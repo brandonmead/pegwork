@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "job_settings",
+  "title": "Job settings",
+  "capability": "manage_options",
+  "fields": [
+    { "key": "ops_email", "type": "email", "label": "Operations email", "visibility": "private" }
+  ]
+}

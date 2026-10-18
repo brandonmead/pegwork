@@ -17,3 +17,5 @@ foreach ( array( 'pegwork_run_steps', 'pegwork_runs' ) as $pegwork_table ) {
 
 wp_unschedule_hook( 'pegwork_automation_run' );
 wp_unschedule_hook( 'pegwork_automation_maintenance' );
+wp_unschedule_hook( 'pegwork_automation_schedule' );
+wp_unschedule_hook( 'pegwork_automation_sweep' );

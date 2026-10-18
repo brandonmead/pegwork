@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "job_mail",
+  "label": "Marked urgent: email the contact with the private note (text and HTML)",
+  "trigger": { "type": "event", "event": "record.updated", "content_type": "job",
+    "when": { "all": [ { "var": "record.urgent", "op": "changed" }, { "var": "record.urgent", "op": "eq", "value": true } ] } },
+  "steps": [
+    { "id": "send", "type": "send_email", "to": "{{record.contact_email}}", "reply_to": "desk@example.org",
+      "subject": "Urgent: {{record.title}} ({{record.note}})",
+      "text": "Note: {{record.note}}\nStage: {{record.job_stage}}\nSite: {{record.website}}\nLink: {{record.permalink}}",
+      "html": "<p>Note: {{record.note}}</p><p>Stage: {{record.job_stage}}</p><p><a href=\"{{record.website}}\">{{record.title}}</a></p><p><a href=\"{{record.permalink}}\">View</a></p>" }
+  ]
+}

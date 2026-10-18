@@ -1,11 +1,14 @@
 {
   "format": 1,
   "key": "job_approved",
-  "label": "Approval: stamp Last verified",
+  "label": "Approval: stamp Last verified and email the contact",
   "trigger": { "type": "event", "event": "record.status_changed", "content_type": "job",
     "when": { "all": [ { "var": "trigger.old_status", "op": "eq", "value": "pending" },
                        { "var": "trigger.new_status", "op": "eq", "value": "publish" } ] } },
   "steps": [
-    { "id": "verify", "type": "update_record", "values": { "last_verified": "{{today}}" } }
+    { "id": "verify", "type": "update_record", "values": { "last_verified": "{{today}}" } },
+    { "id": "notify", "type": "send_email", "to": "{{record.contact_email | default:\"ops@example.org\"}}",
+      "subject": "{{record.title}} is live on {{site.name}}",
+      "text": "Thanks for sharing {{record.title}}. It is now live: {{record.permalink}}" }
   ]
 }

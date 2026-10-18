@@ -119,6 +119,19 @@ final class Triggers {
 			);
 		}
 
+		return $this->enqueue( $run, $definition, $context );
+	}
+
+	/**
+	 * Inserts a queued run unless its idempotency key exists, and schedules its wake-up for now. Shared by
+	 * event triggers, schedules and `wp pegwork automation run`.
+	 *
+	 * @param array<string, mixed> $run        Run row for Runs::insert(), without status and key.
+	 * @param array<string, mixed> $definition Canonical automation.
+	 * @param Context              $context    Context the idempotency template renders in.
+	 * @return int Run ID, or 0 when the key exists.
+	 */
+	public function enqueue( array $run, array $definition, Context $context ): int {
 		if ( isset( $definition['idempotency'] ) ) {
 			$run['idempotency_key'] = self::key( Templates::render( (string) $definition['idempotency'], $context ) );
 		}
@@ -128,6 +141,37 @@ final class Triggers {
 			$this->engine->scheduler()->schedule( Engine::RUN_HOOK, array( $id ), $this->engine->clock()->now()->getTimestamp() );
 		}
 		return $id;
+	}
+
+	/**
+	 * Starts a run of an event automation against a record, outside any event (`wp pegwork automation run
+	 * --record`): `when` is not evaluated (there are no old values), the idempotency key applies, and the
+	 * payload is the record's `id`, `type` and `status` with origin source `cli`.
+	 *
+	 * @param string               $key        Automation key.
+	 * @param array<string, mixed> $definition Canonical automation.
+	 * @param array<string, mixed> $record     Records::get() shape.
+	 * @return int Run ID, or 0 when the key exists.
+	 */
+	public function manual( string $key, array $definition, array $record ): int {
+		$payload = array(
+			'id'     => (int) $record['id'],
+			'type'   => (string) $record['type'],
+			'status' => (string) $record['status'],
+			'origin' => array(
+				'source' => 'cli',
+				'depth'  => 0,
+			),
+		);
+		$run     = array(
+			'automation'      => $key,
+			'trigger_type'    => 'manual',
+			'record_id'       => (int) $record['id'],
+			'depth'           => 0,
+			'definition_hash' => self::hash( $definition ),
+			'context'         => array( 'trigger' => $payload ),
+		);
+		return $this->enqueue( $run, $definition, new Context( $this->engine->clock(), $record, $payload ) );
 	}
 
 	/**
