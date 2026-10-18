@@ -3,8 +3,8 @@
  */
 import apiFetch from '@wordpress/api-fetch';
 import { ComboboxControl, Spinner } from '@wordpress/components';
-import { useDebounce } from '@wordpress/compose';
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useDebounce, useInstanceId } from '@wordpress/compose';
+import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __, sprintf } from '@wordpress/i18n';
 
@@ -61,31 +61,36 @@ export default function PostPicker( {
 	const [ hasFailed, setFailed ] = useState( false );
 	const wrapper = useRef();
 	const request = useRef( 0 );
+	const helpId = `${ useInstanceId( PostPicker, 'pegwork-post-picker' ) }-help`;
 
-	const run = ( text ) => {
-		const id = ++request.current;
-		setSearching( true );
-		setFailed( false );
-		apiFetch( { path: searchPath( config, text ) } )
-			.then( ( records ) => {
-				if ( id !== request.current ) {
-					return;
-				}
-				setResults(
-					( Array.isArray( records ) ? records : [] ).map(
-						( record ) =>
-							toOption( record, decodeEntities, untitled )
-					)
-				);
-				setSearching( false );
-			} )
-			.catch( () => {
-				if ( id === request.current ) {
+	// Stable, so useDebounce keeps one debounced function across renders.
+	const run = useCallback(
+		( text ) => {
+			const id = ++request.current;
+			setSearching( true );
+			setFailed( false );
+			apiFetch( { path: searchPath( config, text ) } )
+				.then( ( records ) => {
+					if ( id !== request.current ) {
+						return;
+					}
+					setResults(
+						( Array.isArray( records ) ? records : [] ).map(
+							( record ) =>
+								toOption( record, decodeEntities, untitled )
+						)
+					);
 					setSearching( false );
-					setFailed( true );
-				}
-			} );
-	};
+				} )
+				.catch( () => {
+					if ( id === request.current ) {
+						setSearching( false );
+						setFailed( true );
+					}
+				} );
+		},
+		[ config ]
+	);
 	const debouncedRun = useDebounce( run, SEARCH_DELAY );
 
 	// The combobox input is created by ComboboxControl: point the row label at
@@ -98,7 +103,11 @@ export default function PostPicker( {
 		if ( label && input.id ) {
 			label.htmlFor = input.id;
 		}
-		const ids = [ describedBy, input.getAttribute( 'aria-describedby' ) ]
+		const ids = [
+			helpId,
+			describedBy,
+			input.getAttribute( 'aria-describedby' ),
+		]
 			.filter( Boolean )
 			.join( ' ' )
 			.split( ' ' );
@@ -134,12 +143,7 @@ export default function PostPicker( {
 	};
 
 	const options = mergeOptions( selected, results );
-	const status = searchStatus( {
-		search,
-		isSearching,
-		hasFailed,
-		count: results.length,
-	} );
+	const status = searchStatus( { search, isSearching, hasFailed } );
 
 	let statusLine = null;
 	if ( status === 'loading' ) {
@@ -151,12 +155,6 @@ export default function PostPicker( {
 		);
 	} else if ( status === 'error' ) {
 		statusLine = __( 'Search failed. Try again.', 'pegwork' );
-	} else if ( status === 'no-matches' ) {
-		statusLine = sprintf(
-			/* translators: %s: search text. */
-			__( 'No matches for "%s".', 'pegwork' ),
-			search.trim()
-		);
 	}
 
 	return (
@@ -168,7 +166,10 @@ export default function PostPicker( {
 				options={ options }
 				onChange={ onChange }
 				onFilterValueChange={ onFilterValueChange }
-				help={ sprintf(
+			/>
+			<input type="hidden" name={ name } value={ value ?? '' } />
+			<p className="description" id={ helpId }>
+				{ sprintf(
 					/* translators: %s: singular label of the content type, such as "Project". */
 					__(
 						'Type to search published items (%s). Clear to choose none.',
@@ -176,8 +177,7 @@ export default function PostPicker( {
 					),
 					config.singular
 				) }
-			/>
-			<input type="hidden" name={ name } value={ value ?? '' } />
+			</p>
 			<p className="pegwork-post-picker__status" aria-live="polite">
 				{ statusLine }
 			</p>

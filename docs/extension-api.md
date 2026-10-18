@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below and `pegwork_get_field()`).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()` and `pegwork_get_option()`).
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -42,8 +42,11 @@ Global functions (`includes/functions.php`), available after `init` priority 5:
 | `pegwork_validate_record( $type, $values, $post_id = 0 )` | `true` or a 400 `WP_Error` with per-field messages in `data.fields`. Relationship links go under the relationship key. |
 | `pegwork_related_ids( $post, $key )` | IDs at the other end of a relationship, from either end, all statuses. |
 | `pegwork_related_query_args( $post, $key )` | `WP_Query` args for the records at the other end; add status, order and paging. Matches nothing for an unknown key or unrelated post. |
+| `pegwork_get_option( $page, $field = null )` | An options page value, or all of a page's values, typed (API 0.2.0). See below. |
 
 Details, REST and CLI: `docs/relationships.md`.
+
+`pegwork_get_option( string $page, ?string $field = null ): mixed`: the stored value cast by field type, else the field default. Boolean fields bool; number fields int, float or null; `post` fields the post ID or null; other fields string (`''` when unset). Null `$field` returns every field's value by key. Null for an unknown page or field. Private fields are included (for server code such as notification recipients): never output them. Show public values with the `pegwork/option` binding source (`docs/display.md`). Guard calls from optional code with `function_exists( 'pegwork_get_option' )`. Screen, saving rules and CLI: `docs/options-pages.md`.
 
 Registry section accessors (API 0.2.0) return definitions only, in canonical form (defaults filled); the modules that render or run them read them here.
 
@@ -123,7 +126,9 @@ WordPress treats `position` as an index into the submenu built so far, not a sor
 
 A screen may use a capability lower than `manage_options` (an options page for editors, for example). `add_submenu_page()` leaves out screens the user cannot open, so for such a user that screen is the menu's first item and the top-level Pegwork link opens it; Overview and Modules stay denied.
 
-Overview (read-only) lists content types with their fields, taxonomies, relationships, shadowed DB entries and rejected packages. Its data comes from the same service as `wp pegwork schema list` and `wp pegwork schema status`.
+Options pages are added at the default `admin_menu` priority, one per registry options page in load order (positions 10 to 19), so a module screen registered later at the same priority falls after them.
+
+Overview (read-only) lists content types with their fields, taxonomies, relationships, options pages, shadowed DB entries and rejected packages. Its data comes from the same service as `wp pegwork schema list` and `wp pegwork schema status`.
 
 ## Events
 

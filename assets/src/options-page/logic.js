@@ -104,23 +104,18 @@ export function mergeOptions( selected, results ) {
 }
 
 /**
- * What the status line under the combobox says.
+ * What the status line under the combobox says. "No matches" is ComboboxControl's
+ * own "No items found" in the list, so it is not repeated here.
  *
- * @param {{search: ?string, isSearching: boolean, hasFailed: boolean, count: number}} state Search state.
- * @return {?('loading'|'error'|'no-matches')} Status, or null for none.
+ * @param {{search: ?string, isSearching: boolean, hasFailed: boolean}} state Search state.
+ * @return {?('loading'|'error')} Status, or null for none.
  */
-export function searchStatus( { search, isSearching, hasFailed, count } ) {
+export function searchStatus( { search, isSearching, hasFailed } ) {
 	if ( search === null ) {
 		return null;
 	}
 	if ( hasFailed ) {
 		return 'error';
 	}
-	if ( isSearching ) {
-		return 'loading';
-	}
-	if ( count === 0 && search.trim() !== '' ) {
-		return 'no-matches';
-	}
-	return null;
+	return isSearching ? 'loading' : null;
 }

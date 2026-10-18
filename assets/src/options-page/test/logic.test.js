@@ -135,25 +135,19 @@ describe( 'searchStatus', () => {
 		search: 'x',
 		isSearching: false,
 		hasFailed: false,
-		count: 0,
 	};
 
-	it( 'says nothing before the first search', () => {
+	it( 'says nothing before the first search or when done', () => {
 		expect( searchStatus( { ...base, search: null } ) ).toBeNull();
+		expect( searchStatus( base ) ).toBeNull();
 	} );
 
-	it( 'reports loading, failure and no matches', () => {
+	it( 'reports loading and failure (failure wins)', () => {
 		expect( searchStatus( { ...base, isSearching: true } ) ).toBe(
 			'loading'
 		);
 		expect(
 			searchStatus( { ...base, hasFailed: true, isSearching: true } )
 		).toBe( 'error' );
-		expect( searchStatus( base ) ).toBe( 'no-matches' );
-	} );
-
-	it( 'says nothing with results or an empty search', () => {
-		expect( searchStatus( { ...base, count: 3 } ) ).toBeNull();
-		expect( searchStatus( { ...base, search: '' } ) ).toBeNull();
 	} );
 } );
