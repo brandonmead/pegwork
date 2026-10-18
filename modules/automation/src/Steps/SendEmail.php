@@ -87,6 +87,10 @@ final class SendEmail implements Step {
 
 		$text = Templates::render( (string) ( $step['text'] ?? '' ), $context, Templates::TEXT );
 		$html = isset( $step['html'] ) ? Templates::render( (string) $step['html'], $context, Templates::HTML ) : null;
+		if ( '' === trim( $html ?? $text ) ) {
+			// PHPMailer refuses an empty body; no retry can fix it.
+			return StepResult::fail( 'empty_body', 'The email body rendered empty.', $summary, false );
+		}
 
 		$headers[]       = 'Content-Type: ' . ( null === $html ? 'text/plain' : 'text/html' ) . '; charset=UTF-8';
 		$summary['html'] = null !== $html;

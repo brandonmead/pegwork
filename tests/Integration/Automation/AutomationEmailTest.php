@@ -345,9 +345,34 @@ class AutomationEmailTest extends AutomationTestCase {
 		$empty = new SendEmail( fn() => '' );
 		$this->assertSame( 'no_recipient', $empty->recipients( '{option:job_settings.ops_email}', $context )->get_error_code() );
 
-		if ( ! function_exists( 'pegwork_get_option' ) ) {
-			$this->assertSame( 'options_unavailable', ( new SendEmail() )->recipients( '{option:job_settings.ops_email}', $context )->get_error_code() );
-		}
+		// The default reader is pegwork_get_option() (core options pages): fixture page job_settings.
+		$this->assertTrue( function_exists( 'pegwork_get_option' ) );
+		$this->assertSame( 'no_recipient', ( new SendEmail() )->recipients( '{option:job_settings.ops_email}', $context )->get_error_code(), 'Nothing saved yet.' );
+		update_option( 'job_settings', array( 'ops_email' => 'desk@example.org' ) );
+		$this->assertSame( array( 'desk@example.org' ), ( new SendEmail() )->recipients( '{option:job_settings.ops_email}', $context ) );
+		$this->assertSame( 'no_recipient', ( new SendEmail() )->recipients( '{option:no_such_page.ops_email}', $context )->get_error_code() );
+	}
+
+	/**
+	 * A body that renders empty fails without retry (PHPMailer refuses it).
+	 */
+	public function test_empty_body_fails_without_retry() {
+		$id      = $this->record( array( 'contact_email' => 'owner@example.org' ) );
+		$context = new Context( $this->clock, Records::get( $id ) );
+		$result  = ( new SendEmail() )->run(
+			array(
+				'id'      => 'm',
+				'type'    => 'send_email',
+				'to'      => '{{record.contact_email}}',
+				'subject' => 'Hi',
+				'text'    => '{{record.note}}',
+			),
+			$context,
+			array( 'id' => 1 )
+		);
+		$this->assertSame( 'empty_body: The email body rendered empty.', $result->error );
+		$this->assertFalse( $result->retryable );
+		$this->assertCount( 0, $this->mails() );
 	}
 
 	/**
