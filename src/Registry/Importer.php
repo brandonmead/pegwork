@@ -45,14 +45,14 @@ final class Importer {
 		$incoming = array_fill_keys( array_keys( Loader::SECTIONS ), array() );
 		foreach ( $package['objects'] as $object ) {
 			$incoming[ $object['kind'] ][ $object['key'] ] = Normalizer::normalize( $object['kind'], $object['data'] );
-			$known[ $object['kind'] ][ $object['key'] ]    = true;
+			$known[ $object['kind'] ][ $object['key'] ]    = $incoming[ $object['kind'] ][ $object['key'] ];
 		}
 
 		if ( ! $prune ) {
 			foreach ( Loader::SECTIONS as $kind => $section ) {
 				foreach ( self::entries( $db, $section ) as $entry ) {
 					if ( array() === Validator::validate( $kind, $entry, Loader::DB_SOURCE ) ) {
-						$known[ $kind ][ $entry['key'] ] = true;
+						$known[ $kind ][ $entry['key'] ] ??= Normalizer::normalize( $kind, $entry );
 					}
 				}
 			}
@@ -98,11 +98,13 @@ final class Importer {
 	 * @param bool   $dry_run Whether to only report what would change.
 	 */
 	public static function import( string $dir, bool $prune = false, bool $dry_run = false ): ImportPlan {
-		$known = array();
+		$known    = array();
+		$registry = Plugin::registry();
 		foreach ( Plugin::result()->sources as $kind => $keys ) {
+			$objects = $registry->{Loader::SECTIONS[ $kind ]}();
 			foreach ( $keys as $key => $from ) {
 				if ( Loader::DB_SOURCE !== $from ) {
-					$known[ $kind ][ $key ] = true;
+					$known[ $kind ][ $key ] = $objects[ $key ] ?? true;
 				}
 			}
 		}

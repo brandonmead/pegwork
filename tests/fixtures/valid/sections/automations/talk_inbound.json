@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "talk_inbound",
+  "label": "Create talks from an inbound webhook",
+  "enabled": false,
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "create", "type": "create_record", "content_type": "talk",
+      "values": { "title": "{{trigger.payload.title}}", "speaker_email": "{{trigger.payload.email}}" } },
+    { "id": "unrecorded", "type": "update_record", "record": "{{steps.create.record_id}}", "values": { "recorded": false } },
+    { "id": "tell", "type": "send_email", "to": "ops@example.org", "subject": "Talk {{steps.create.record_id}}", "text": "{{trigger.payload.title}}" }
+  ]
+}

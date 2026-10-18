@@ -52,7 +52,7 @@ class FixturesTest extends TestCase {
 		$this->assertSame( array(), array_map( 'strval', $result->errors ) );
 
 		$expected = count( glob( $dir . '/*/*.json' ) );
-		$loaded   = count( $result->registry->content_types() ) + count( $result->registry->taxonomies() ) + count( $result->registry->relationships() );
+		$loaded   = array_sum( array_map( fn( $section ) => count( $result->registry->$section() ), Loader::SECTIONS ) );
 		$this->assertSame( $expected, $loaded, 'Every object file is registered.' );
 	}
 
@@ -78,8 +78,8 @@ class FixturesTest extends TestCase {
 			$matches,
 			sprintf( "Expected %s at %s#%s. Got:\n%s", $expected['code'], $expected['file'], $expected['pointer'], implode( "\n", array_map( 'strval', $result->errors ) ) )
 		);
-		$this->assertSame( array(), $result->registry->content_types() );
-		$this->assertSame( array(), $result->registry->taxonomies() );
-		$this->assertSame( array(), $result->registry->relationships() );
+		foreach ( Loader::SECTIONS as $section ) {
+			$this->assertSame( array(), $result->registry->$section(), "No $section registered." );
+		}
 	}
 }

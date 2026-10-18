@@ -23,7 +23,7 @@ use Pegwork\Api\Registry;
 final class Loader {
 
 	/**
-	 * Option holding site-local definitions: `content_types`, `taxonomies`, `relationships` lists.
+	 * Option holding site-local definitions: one list per SECTIONS value, plus the imported `manifest`.
 	 */
 	public const DB_OPTION = 'pegwork_schema';
 
@@ -39,6 +39,9 @@ final class Loader {
 		'content_type' => 'content-types',
 		'taxonomy'     => 'taxonomies',
 		'relationship' => 'relationships',
+		'form'         => 'forms',
+		'automation'   => 'automations',
+		'options_page' => 'options-pages',
 	);
 
 	/**
@@ -48,6 +51,9 @@ final class Loader {
 		'content_type' => 'content_types',
 		'taxonomy'     => 'taxonomies',
 		'relationship' => 'relationships',
+		'form'         => 'forms',
+		'automation'   => 'automations',
+		'options_page' => 'options_pages',
 	);
 
 	/**
@@ -125,7 +131,7 @@ final class Loader {
 			$known = array();
 			foreach ( $units as $unit ) {
 				foreach ( $unit['objects'] as $object ) {
-					$known[ $object['kind'] ][ $object['key'] ] = $object['data'];
+					$known[ $object['kind'] ][ $object['key'] ] = Normalizer::normalize( $object['kind'], $object['data'] );
 				}
 			}
 			$dropped = false;
@@ -156,7 +162,15 @@ final class Loader {
 		}
 
 		return new Result(
-			new Registry( $collections['content_types'], $collections['taxonomies'], $collections['relationships'] ),
+			new Registry(
+				$collections['content_types'],
+				$collections['taxonomies'],
+				$collections['relationships'],
+				$collections['forms'],
+				$collections['automations'],
+				$collections['options_pages'],
+				$sources
+			),
 			$sources,
 			$errors,
 			$shadowed,

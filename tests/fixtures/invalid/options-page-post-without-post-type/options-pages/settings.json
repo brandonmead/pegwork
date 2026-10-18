@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "settings",
+  "title": "Settings",
+  "fields": [
+    {
+      "key": "featured",
+      "type": "post",
+      "label": "Featured"
+    }
+  ]
+}

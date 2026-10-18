@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "key": "talk_published",
+  "label": "Published: date it and tell the speaker",
+  "description": "Runs when a reviewer publishes a pending talk.",
+  "trigger": { "type": "event", "event": "record.status_changed", "content_type": "talk",
+    "when": { "all": [ { "var": "trigger.old_status", "op": "eq", "value": "pending" },
+                       { "var": "trigger.new_status", "op": "eq", "value": "publish" } ] } },
+  "steps": [
+    { "id": "stamp", "type": "update_record", "values": { "held_on": "{{today}}", "seats": 30, "talk_level": "intro" } },
+    { "id": "notify", "type": "send_email", "to": "{{record.speaker_email}}", "reply_to": "{{record.speaker_email}}",
+      "subject": "{{record.title}} is live on {{site.name}}", "text": "It is live: {{record.permalink}}",
+      "html": "<p>{{record.title}} is live.</p>", "retry": { "max": 3, "backoff": "PT10M" } },
+    { "id": "tell_n8n", "type": "call_webhook", "url": "https://hooks.example.org/talks", "fields": [ "title", "format" ],
+      "timeout": 10, "retry": { "max": 3, "backoff": [ "PT1M", "PT10M", "PT1H" ] } }
+  ]
+}

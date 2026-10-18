@@ -1,0 +1,87 @@
+{
+  "format": 1,
+  "key": "thing",
+  "labels": {
+    "singular": "Thing",
+    "plural": "Things"
+  },
+  "taxonomies": [
+    {
+      "key": "topic",
+      "select": "multi"
+    }
+  ],
+  "fields": [
+    {
+      "key": "name",
+      "type": "text",
+      "label": "Name",
+      "required": true
+    },
+    {
+      "key": "email",
+      "type": "email",
+      "label": "Email",
+      "visibility": "private"
+    },
+    {
+      "key": "done",
+      "type": "boolean",
+      "label": "Done"
+    },
+    {
+      "key": "link",
+      "type": "url",
+      "label": "Link",
+      "show_when": {
+        "field": "done",
+        "equals": true
+      }
+    },
+    {
+      "key": "kind",
+      "type": "select",
+      "label": "Kind",
+      "options": [
+        {
+          "value": "a",
+          "label": "A"
+        },
+        {
+          "value": "b",
+          "label": "B"
+        }
+      ]
+    },
+    {
+      "key": "tier",
+      "type": "select",
+      "label": "Tier",
+      "visibility": "private",
+      "options": [
+        {
+          "value": "gold",
+          "label": "Gold"
+        }
+      ]
+    },
+    {
+      "key": "count",
+      "type": "number",
+      "label": "Count"
+    },
+    {
+      "key": "due",
+      "type": "date",
+      "label": "Due"
+    }
+  ],
+  "listing": {
+    "filters": [
+      {
+        "key": "f",
+        "field": "count"
+      }
+    ]
+  }
+}

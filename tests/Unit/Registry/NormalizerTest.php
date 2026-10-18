@@ -101,6 +101,204 @@ class NormalizerTest extends TestCase {
 	}
 
 	/**
+	 * Listing defaults: search off, no filters; `multiple` follows the taxonomy's select, false for fields.
+	 */
+	public function test_listing_defaults() {
+		$type = Normalizer::normalize(
+			'content_type',
+			array(
+				'key'        => 'thing',
+				'taxonomies' => array(
+					array(
+						'key'    => 'topic',
+						'select' => 'multi',
+					),
+					array(
+						'key'    => 'level',
+						'select' => 'single',
+					),
+				),
+				'listing'    => array(
+					'filters' => array(
+						array(
+							'key'      => 'topic',
+							'taxonomy' => 'topic',
+						),
+						array(
+							'key'      => 'level',
+							'taxonomy' => 'level',
+						),
+						array(
+							'key'   => 'done',
+							'field' => 'done',
+						),
+					),
+				),
+			)
+		);
+
+		$this->assertFalse( $type['listing']['search'] );
+		$this->assertSame( array( true, false, false ), array_column( $type['listing']['filters'], 'multiple' ) );
+		$this->assertArrayNotHasKey( 'label', $type['listing']['filters'][0], 'Filter labels are resolved at runtime, not stored.' );
+
+		$this->assertArrayNotHasKey( 'listing', Normalizer::normalize( 'content_type', array( 'key' => 'thing' ) ) );
+	}
+
+	/**
+	 * Form defaults: open access, create as pending, 72-hour confirmation, unbound fields optional.
+	 */
+	public function test_form_defaults() {
+		$form = Normalizer::normalize(
+			'form',
+			array(
+				'key'      => 'suggest',
+				'target'   => array( 'content_type' => 'thing' ),
+				'confirm'  => array( 'field' => 'email' ),
+				'fields'   => array(
+					array( 'bind' => array( 'field' => 'name' ) ),
+					array(
+						'key'      => 'note',
+						'type'     => 'text',
+						'label'    => 'Note',
+						'validate' => array(),
+					),
+				),
+				'messages' => array(),
+			)
+		);
+
+		$this->assertSame( 'anyone', $form['access'] );
+		$this->assertSame(
+			array(
+				'action'       => 'create',
+				'content_type' => 'thing',
+				'status'       => 'pending',
+			),
+			$form['target']
+		);
+		$this->assertSame( 72, $form['confirm']['expires_hours'] );
+		$this->assertSame( array(), $form['notifications'] );
+		$this->assertSame( array( 'bind' => array( 'field' => 'name' ) ), $form['fields'][0], 'Bound items take their defaults from the content type.' );
+		$this->assertSame(
+			array(
+				'key'      => 'note',
+				'label'    => 'Note',
+				'required' => false,
+				'type'     => 'text',
+			),
+			$form['fields'][1]
+		);
+		$this->assertArrayNotHasKey( 'messages', $form );
+
+		$update = Normalizer::normalize(
+			'form',
+			array(
+				'key'    => 'edit',
+				'target' => array(
+					'content_type' => 'thing',
+					'action'       => 'update',
+				),
+			)
+		);
+		$this->assertArrayNotHasKey( 'status', $update['target'], 'Updates keep the record status.' );
+	}
+
+	/**
+	 * Automation defaults: enabled; for_each runs at most 200 published records; created records are drafts;
+	 * links ask for confirmation. Retry has no stored default.
+	 */
+	public function test_automation_defaults() {
+		$automation = Normalizer::normalize(
+			'automation',
+			array(
+				'key'     => 'follow',
+				'trigger' => array(
+					'type'     => 'schedule',
+					'every'    => 'day',
+					'for_each' => array( 'content_type' => 'thing' ),
+				),
+				'steps'   => array(
+					array(
+						'id'           => 'copy',
+						'type'         => 'create_record',
+						'content_type' => 'thing',
+						'values'       => array( 'name' => 'x' ),
+					),
+				),
+				'links'   => array(
+					'done' => array(
+						'expires' => 'P7D',
+						'steps'   => array(),
+					),
+				),
+				'ui'      => array(),
+			)
+		);
+
+		$this->assertTrue( $automation['enabled'] );
+		$this->assertSame(
+			array(
+				'content_type' => 'thing',
+				'max_runs'     => 200,
+				'status'       => array( 'publish' ),
+			),
+			$automation['trigger']['for_each']
+		);
+		$this->assertSame( 'draft', $automation['steps'][0]['status'] );
+		$this->assertArrayNotHasKey( 'retry', $automation['steps'][0] );
+		$this->assertTrue( $automation['links']['done']['confirm'] );
+		$this->assertArrayNotHasKey( 'ui', $automation );
+
+		$this->assertArrayNotHasKey(
+			'links',
+			Normalizer::normalize(
+				'automation',
+				array(
+					'key'   => 'follow',
+					'steps' => array(),
+					'links' => array(),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Options page defaults: manage_options; fields get the content type field defaults; menu_title is not stored.
+	 */
+	public function test_options_page_defaults() {
+		$this->assertSame(
+			array(
+				'capability' => 'manage_options',
+				'fields'     => array(
+					array(
+						'key'        => 'tagline',
+						'label'      => 'Tagline',
+						'required'   => false,
+						'type'       => 'text',
+						'visibility' => 'public',
+					),
+				),
+				'key'        => 'settings',
+				'title'      => 'Settings',
+			),
+			Normalizer::normalize(
+				'options_page',
+				array(
+					'key'    => 'settings',
+					'title'  => 'Settings',
+					'fields' => array(
+						array(
+							'key'   => 'tagline',
+							'type'  => 'text',
+							'label' => 'Tagline',
+						),
+					),
+				)
+			)
+		);
+	}
+
+	/**
 	 * Object keys are sorted at every depth and list order is kept.
 	 */
 	public function test_sorts_object_keys_and_keeps_list_order() {
@@ -131,15 +329,11 @@ class NormalizerTest extends TestCase {
 	 */
 	public function test_idempotent_on_fixtures() {
 		$root   = dirname( __DIR__, 3 );
-		$result = Loader::load( array( $root . '/examples/sifg', $root . '/tests/fixtures/valid/complete' ) );
+		$result = Loader::load( array( $root . '/examples/sifg', $root . '/tests/fixtures/valid/complete', $root . '/tests/fixtures/valid/sections' ) );
 		$this->assertTrue( $result->is_valid() );
 
-		$collections = array(
-			'content_type' => $result->registry->content_types(),
-			'taxonomy'     => $result->registry->taxonomies(),
-			'relationship' => $result->registry->relationships(),
-		);
-		foreach ( $collections as $kind => $objects ) {
+		foreach ( Loader::SECTIONS as $kind => $section ) {
+			$objects = $result->registry->$section();
 			$this->assertNotEmpty( $objects );
 			foreach ( $objects as $object ) {
 				$this->assertSame( wp_json_encode( $object ), wp_json_encode( Normalizer::normalize( $kind, $object ) ) );

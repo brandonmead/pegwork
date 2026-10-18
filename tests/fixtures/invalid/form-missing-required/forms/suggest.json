@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "key": "suggest",
+  "label": "Suggest a thing",
+  "target": {
+    "content_type": "thing"
+  },
+  "fields": [
+    {
+      "bind": {
+        "field": "done"
+      }
+    }
+  ]
+}

@@ -98,5 +98,56 @@ class RegistryTest extends TestCase {
 		$this->assertSame( array(), $empty->fields( 'x' ) );
 		$this->assertSame( array(), $empty->taxonomies() );
 		$this->assertSame( array(), $empty->relationships() );
+		$this->assertNull( $empty->listing( 'x' ) );
+		$this->assertSame( array(), $empty->forms() );
+		$this->assertNull( $empty->form( 'x' ) );
+		$this->assertNull( $empty->form_source( 'x' ) );
+		$this->assertSame( array(), $empty->automations() );
+		$this->assertNull( $empty->automation( 'x' ) );
+		$this->assertSame( array(), $empty->options_pages() );
+		$this->assertNull( $empty->options_page( 'x' ) );
+	}
+
+	/**
+	 * Listing, forms, automations and options pages; a form's source tells file packages from the DB option.
+	 */
+	public function test_sections() {
+		$db       = array(
+			'forms' => array(
+				array(
+					'format' => 1,
+					'key'    => 'site_contact',
+					'label'  => 'Contact',
+					'fields' => array(
+						array(
+							'key'   => 'message',
+							'type'  => 'textarea',
+							'label' => 'Message',
+						),
+					),
+				),
+			),
+		);
+		$registry = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/sections' ), $db )->registry;
+
+		$listing = $registry->listing( 'talk' );
+		$this->assertTrue( $listing['search'] );
+		$this->assertSame( array( 'track', 'level', 'recorded', 'talk_format' ), array_column( $listing['filters'], 'key' ) );
+		$this->assertNull( $this->registry->listing( 'demo_event' ) );
+		$this->assertNull( $registry->listing( 'missing' ) );
+
+		$this->assertSame( array( 'contact', 'submit_talk', 'site_contact' ), array_keys( $registry->forms() ) );
+		$this->assertSame( 'Submit a talk', $registry->form( 'submit_talk' )['label'] );
+		$this->assertSame( 'file:sections', $registry->form_source( 'submit_talk' ) );
+		$this->assertSame( 'db', $registry->form_source( 'site_contact' ) );
+		$this->assertNull( $registry->form_source( 'missing' ) );
+
+		$this->assertSame( array( 'contact_received', 'talk_followup', 'talk_inbound', 'talk_published', 'talk_updated' ), array_keys( $registry->automations() ) );
+		$this->assertFalse( $registry->automation( 'talk_inbound' )['enabled'] );
+		$this->assertNull( $registry->automation( 'missing' ) );
+
+		$this->assertSame( array( 'talk_settings' ), array_keys( $registry->options_pages() ) );
+		$this->assertSame( 'edit_others_posts', $registry->options_page( 'talk_settings' )['capability'] );
+		$this->assertNull( $registry->options_page( 'missing' ) );
 	}
 }

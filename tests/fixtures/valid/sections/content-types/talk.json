@@ -1,0 +1,31 @@
+{
+  "format": 1,
+  "key": "talk",
+  "labels": { "singular": "Talk", "plural": "Talks" },
+  "taxonomies": [
+    { "key": "talk_track", "select": "multi" },
+    { "key": "talk_level", "select": "single", "required": true }
+  ],
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "abstract", "type": "rich_text", "label": "Abstract", "validate": { "max_words": 300 }, "wp": { "storage": "post_content" } },
+    { "key": "speaker_email", "type": "email", "label": "Speaker email", "required": true, "visibility": "private" },
+    { "key": "recorded", "type": "boolean", "label": "Recorded", "default": false },
+    { "key": "recording_link", "type": "url", "label": "Recording link",
+      "show_when": { "field": "recorded", "equals": true }, "required_when": { "field": "recorded", "equals": true } },
+    { "key": "format", "type": "select", "label": "Format",
+      "options": [ { "value": "lightning", "label": "Lightning" }, { "value": "keynote", "label": "Keynote" }, { "value": "workshop", "label": "Workshop" } ] },
+    { "key": "seats", "type": "number", "label": "Seats", "validate": { "min": 1 } },
+    { "key": "held_on", "type": "date", "label": "Held on" },
+    { "key": "notes", "type": "textarea", "label": "Notes", "visibility": "private" }
+  ],
+  "listing": {
+    "search": true,
+    "filters": [
+      { "key": "track", "taxonomy": "talk_track" },
+      { "key": "level", "taxonomy": "talk_level", "label": "Level" },
+      { "key": "recorded", "field": "recorded" },
+      { "key": "talk_format", "field": "format", "multiple": true }
+    ]
+  }
+}

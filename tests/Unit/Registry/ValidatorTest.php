@@ -7,6 +7,7 @@
 
 namespace Pegwork\Tests\Unit\Registry;
 
+use Pegwork\Registry\Loader;
 use Pegwork\Registry\Validator;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
@@ -300,5 +301,194 @@ class ValidatorTest extends TestCase {
 
 		$this->assertSame( array(), Validator::references( 'relationship', $relationship, 'f', $known( array( $field( array( 'meta_key' => '_thing_owner' ) ) ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Fixture, not a query.
 		$this->assertSame( array(), Validator::references( 'relationship', $relationship, 'f', $known( array( $field( array( 'storage' => 'post_title' ) ) ) ) ) );
+	}
+
+	/**
+	 * One object from the sections fixture.
+	 *
+	 * @param string $path Path inside the fixture, such as "forms/contact.json".
+	 * @return array
+	 */
+	private function sections( $path ) {
+		return json_decode( file_get_contents( dirname( __DIR__, 2 ) . '/fixtures/valid/sections/' . $path ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+	}
+
+	/**
+	 * Known objects of the sections fixture, in normalized form, for reference checks.
+	 *
+	 * @return array
+	 */
+	private function sections_known() {
+		$registry = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/sections' ) )->registry;
+		$known    = array();
+		foreach ( Loader::SECTIONS as $kind => $section ) {
+			$known[ $kind ] = $registry->$section();
+		}
+		return $known;
+	}
+
+	/**
+	 * Codes and pointers from per-file and reference checks together.
+	 *
+	 * @param string $kind Kind.
+	 * @param array  $data Object.
+	 * @return string[]
+	 */
+	private function all_codes( $kind, array $data ) {
+		$errors = Validator::validate( $kind, $data, 'f' );
+		if ( ! $errors ) {
+			$errors = Validator::references( $kind, $data, 'f', $this->sections_known() );
+		}
+		return array_map( fn( $e ) => $e->code . ' ' . $e->pointer, $errors );
+	}
+
+	/**
+	 * Content type fields may not be keyed id, status or type; options page fields may.
+	 */
+	public function test_reserved_field_keys() {
+		foreach ( Validator::RESERVED_FIELD_KEYS as $key ) {
+			$field = array(
+				'key'   => $key,
+				'type'  => 'text',
+				'label' => 'X',
+			);
+			$this->assertSame( array( 'reserved_field_key' ), $this->codes( 'content_type', $this->content_type( array( $field ) ) ), $key );
+
+			$page             = $this->sections( 'options-pages/talk_settings.json' );
+			$page['fields'][] = $field;
+			$this->assertSame( array(), $this->codes( 'options_page', $page ), $key );
+		}
+	}
+
+	/**
+	 * `post` fields exist only on options pages and `file` fields only on forms.
+	 */
+	public function test_field_types_by_context() {
+		$this->assertContains( 'post', Validator::field_types( 'options_page' ) );
+		$this->assertNotContains( 'file', Validator::field_types( 'options_page' ) );
+		$this->assertContains( 'file', Validator::field_types( 'form' ) );
+		$this->assertNotContains( 'post', Validator::field_types( 'form' ) );
+		$this->assertNotContains( 'post', Validator::field_types( 'content_type' ) );
+
+		$file = array(
+			'key'    => 'upload',
+			'type'   => 'file',
+			'label'  => 'Upload',
+			'accept' => array( 'pdf' ),
+		);
+		$this->assertContains( 'invalid_value', $this->codes( 'content_type', $this->content_type( array( $file ) ) ) );
+
+		$form             = $this->sections( 'forms/contact.json' );
+		$form['fields'][] = array(
+			'key'   => 'pick',
+			'type'  => 'post',
+			'label' => 'Pick',
+		);
+		$this->assertSame( array( 'post_field_not_allowed' ), $this->codes( 'form', $form ) );
+	}
+
+	/**
+	 * Unbound select fields on forms: radio and select fit one value, checkboxes do not.
+	 */
+	public function test_unbound_form_display() {
+		$form = $this->sections( 'forms/contact.json' );
+		$this->assertSame( array(), $this->codes( 'form', $form ) );
+
+		$form['fields'][2]['display'] = 'radio';
+		$this->assertSame( array(), $this->codes( 'form', $form ) );
+
+		$form['fields'][2]['display'] = 'checkboxes';
+		$this->assertSame( array( 'form_display' ), $this->codes( 'form', $form ) );
+	}
+
+	/**
+	 * Form recipients: double-brace option tags get a hint; access is "anyone" or a capability object.
+	 */
+	public function test_form_recipients_and_access() {
+		$form                           = $this->sections( 'forms/contact.json' );
+		$form['notifications'][0]['to'] = '{{option:talk_settings.organizer_email}}';
+		$errors                         = Validator::validate( 'form', $form, 'f' );
+		$this->assertSame( 'invalid_recipient', $errors[0]->code );
+		$this->assertStringContainsString( '{option:talk_settings.organizer_email}', $errors[0]->message );
+
+		$form['notifications'][0]['to'] = '{option:talk_settings.organizer_email}';
+		$this->assertSame( array(), $this->all_codes( 'form', $form ) );
+
+		$form['notifications'][0]['to'] = '{option:talk_settings.intro}';
+		$this->assertSame( array( 'form_recipient_not_email /notifications/0/to' ), $this->all_codes( 'form', $form ) );
+
+		$form['access'] = 'anyone';
+		$this->assertSame( array(), $this->codes( 'form', $form ) );
+		$form['access'] = 'everyone';
+		$this->assertSame( array( 'invalid_value' ), $this->codes( 'form', $form ) );
+	}
+
+	/**
+	 * Durations are ISO 8601 between one hour and two years.
+	 */
+	public function test_duration_bounds() {
+		$automation = $this->sections( 'automations/talk_followup.json' );
+		foreach ( array( 'PT1H', 'P2Y', 'P1Y11M30D', 'P1W' ) as $ok ) {
+			$automation['steps'][1]['for'] = $ok;
+			$this->assertSame( array(), $this->codes( 'automation', $automation ), $ok );
+		}
+		foreach ( array( 'PT59M', 'P2YT1S', 'P3Y' ) as $out ) {
+			$automation['steps'][1]['for'] = $out;
+			$this->assertSame( array( 'duration_out_of_range' ), $this->codes( 'automation', $automation ), $out );
+		}
+		$automation['steps'][1]['for'] = 'P';
+		$this->assertSame( array( 'invalid_duration' ), $this->codes( 'automation', $automation ) );
+	}
+
+	/**
+	 * Step ids are unique within one step list; a link's steps are their own list.
+	 */
+	public function test_step_ids_unique_per_list() {
+		$automation = $this->sections( 'automations/talk_followup.json' );
+
+		$automation['links']['uploaded']['steps'][0]['id'] = 'ask';
+		$this->assertSame( array(), $this->codes( 'automation', $automation ) );
+
+		$automation['steps'][1]['id'] = 'ask';
+		$this->assertSame( array( 'duplicate_key' ), $this->codes( 'automation', $automation ) );
+	}
+
+	/**
+	 * `changed` needs a record.updated trigger; condition literals must fit the field type.
+	 */
+	public function test_automation_condition_types() {
+		$this->assertSame( array(), $this->all_codes( 'automation', $this->sections( 'automations/talk_updated.json' ) ) );
+
+		$published = $this->sections( 'automations/talk_published.json' );
+		$this->assertSame( array(), $this->all_codes( 'automation', $published ) );
+
+		$published['trigger']['when'] = array(
+			'var' => 'record.recorded',
+			'op'  => 'changed',
+		);
+		$this->assertSame( array( 'condition_type_mismatch /trigger/when/op' ), $this->all_codes( 'automation', $published ) );
+
+		$published['trigger']['when'] = array(
+			'var'   => 'record.held_on',
+			'op'    => 'lt',
+			'value' => 'soon',
+		);
+		$this->assertSame( array( 'condition_type_mismatch /trigger/when' ), $this->all_codes( 'automation', $published ) );
+
+		$published['trigger']['when']['value'] = '2026-10-18';
+		$this->assertSame( array(), $this->all_codes( 'automation', $published ) );
+	}
+
+	/**
+	 * Every forms, automations and options pages object in the sections fixture passes both checks.
+	 */
+	public function test_sections_fixture_objects() {
+		$files = glob( dirname( __DIR__, 2 ) . '/fixtures/valid/sections/{forms,automations,options-pages}/*.json', GLOB_BRACE );
+		$kinds = array_flip( Loader::DIRS );
+		$this->assertCount( 8, $files );
+		foreach ( $files as $file ) {
+			$kind = $kinds[ basename( dirname( $file ) ) ];
+			$this->assertSame( array(), $this->all_codes( $kind, json_decode( file_get_contents( $file ), true ) ), $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+		}
 	}
 }

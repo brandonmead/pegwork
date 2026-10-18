@@ -96,6 +96,45 @@ class SifgExampleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The directory listing, the two forms, the approval automation and the settings page load as data only.
+	 */
+	public function test_sifg_sections() {
+		$this->register( dirname( __DIR__, 2 ) . '/examples/sifg' );
+		$registry = pegwork_registry();
+
+		$listing = $registry->listing( 'sifg_project' );
+		$this->assertTrue( $listing['search'] );
+		$this->assertSame(
+			array(
+				'project_type'   => false,
+				'project_status' => false,
+				'impact'         => true,
+				'volunteers'     => false,
+			),
+			array_column( $listing['filters'], 'multiple', 'key' )
+		);
+		$this->assertNull( $registry->listing( 'sifg_story' ) );
+
+		$submit = $registry->form( 'submit_project' );
+		$this->assertSame( 'pending', $submit['target']['status'] );
+		$this->assertSame( 72, $submit['confirm']['expires_hours'] );
+		$this->assertSame( '{option:sifg_settings.moderator_email}', $submit['notifications'][0]['to'] );
+		$this->assertSame( 'file:sifg', $registry->form_source( 'submit_project' ) );
+		$this->assertArrayNotHasKey( 'target', $registry->form( 'request_help' ) );
+
+		$approved = $registry->automation( 'sifg_project_approved' );
+		$this->assertTrue( $approved['enabled'] );
+		$this->assertSame( array( 'verify', 'notify' ), array_column( $approved['steps'], 'id' ) );
+
+		$settings = $registry->options_page( 'sifg_settings' );
+		$this->assertSame( array( 'featured_project', 'moderator_email', 'review_criteria', 'contact_email' ), array_column( $settings['fields'], 'key' ) );
+		$this->assertSame( 'sifg_project', $settings['fields'][0]['post_type'] );
+
+		$this->assertFalse( shortcode_exists( 'submit_project' ) );
+		$this->assertFalse( get_option( 'sifg_settings' ), 'No runtime behavior: the options page stores nothing.' );
+	}
+
+	/**
 	 * The public API version constant is semver.
 	 */
 	public function test_api_version_constant() {

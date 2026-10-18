@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "record.published",
+    "content_type": "thing"
+  },
+  "steps": [
+    {
+      "id": "mark",
+      "type": "update_record",
+      "values": {
+        "count": "many"
+      }
+    }
+  ]
+}

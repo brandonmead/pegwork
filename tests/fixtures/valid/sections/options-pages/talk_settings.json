@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "key": "talk_settings",
+  "title": "Talk settings",
+  "menu_title": "Talks",
+  "capability": "edit_others_posts",
+  "fields": [
+    { "key": "featured_talk", "type": "post", "label": "Featured talk", "post_type": "talk" },
+    { "key": "organizer_email", "type": "email", "label": "Organizer email", "required": true, "visibility": "private" },
+    { "key": "intro", "type": "rich_text", "label": "Intro", "validate": { "max_words": 120 } },
+    { "key": "seats_default", "type": "number", "label": "Default seats", "default": 30, "validate": { "min": 1, "max": 500 } },
+    { "key": "mode", "type": "select", "label": "Mode", "default": "open",
+      "options": [ { "value": "open", "label": "Open" }, { "value": "closed", "label": "Closed" } ] },
+    { "key": "accepting", "type": "boolean", "label": "Accepting talks", "default": true },
+    { "key": "deadline", "type": "date", "label": "Deadline" }
+  ]
+}

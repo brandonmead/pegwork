@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "key": "settings",
+  "title": "Settings",
+  "fields": [
+    {
+      "key": "open",
+      "type": "boolean",
+      "label": "Open"
+    },
+    {
+      "key": "note",
+      "type": "text",
+      "label": "Note",
+      "show_when": {
+        "field": "open",
+        "equals": true
+      }
+    }
+  ]
+}

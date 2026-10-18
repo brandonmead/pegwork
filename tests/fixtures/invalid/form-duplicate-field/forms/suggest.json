@@ -1,0 +1,37 @@
+{
+  "format": 1,
+  "key": "suggest",
+  "label": "Suggest a thing",
+  "target": {
+    "content_type": "thing"
+  },
+  "steps": [
+    {
+      "key": "one",
+      "label": "One",
+      "fields": [
+        {
+          "bind": {
+            "field": "name"
+          }
+        },
+        {
+          "key": "extra",
+          "type": "text",
+          "label": "Extra"
+        }
+      ]
+    },
+    {
+      "key": "two",
+      "label": "Two",
+      "fields": [
+        {
+          "key": "extra",
+          "type": "text",
+          "label": "Extra again"
+        }
+      ]
+    }
+  ]
+}

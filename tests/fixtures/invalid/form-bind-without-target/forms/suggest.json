@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "suggest",
+  "label": "Suggest a thing",
+  "fields": [
+    {
+      "bind": {
+        "field": "name"
+      }
+    }
+  ]
+}

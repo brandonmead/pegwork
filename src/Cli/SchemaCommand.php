@@ -53,16 +53,20 @@ final class SchemaCommand {
 		$registry = $result->registry;
 		WP_CLI::success(
 			sprintf(
-				'Schema valid: %d content type(s), %d taxonomy(ies), %d relationship(s).',
+				'Schema valid: %d content type(s), %d taxonomy(ies), %d relationship(s), %d form(s), %d automation(s), %d options page(s).',
 				count( $registry->content_types() ),
 				count( $registry->taxonomies() ),
-				count( $registry->relationships() )
+				count( $registry->relationships() ),
+				count( $registry->forms() ),
+				count( $registry->automations() ),
+				count( $registry->options_pages() )
 			)
 		);
 	}
 
 	/**
-	 * Lists the effective content types, taxonomies and relationships with their source.
+	 * Lists the effective registry objects with their source: content types, taxonomies, relationships,
+	 * listings (one row per content type with a `listing` section), forms, automations and options pages.
 	 *
 	 * ## OPTIONS
 	 *
@@ -113,6 +117,7 @@ final class SchemaCommand {
 				'source'  => $relationship['source'],
 			);
 		}
+		array_push( $items, ...$status->sections() );
 
 		if ( ! $items ) {
 			WP_CLI::log( 'No schema registered.' );

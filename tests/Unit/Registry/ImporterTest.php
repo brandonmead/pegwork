@@ -114,7 +114,7 @@ class ImporterTest extends TestCase {
 			),
 			$this->changes( $plan->changes )
 		);
-		$this->assertSame( array( 'content_types', 'taxonomies', 'relationships', 'manifest' ), array_keys( $plan->option ) );
+		$this->assertSame( array( 'content_types', 'taxonomies', 'relationships', 'forms', 'automations', 'options_pages', 'manifest' ), array_keys( $plan->option ) );
 
 		$file = Loader::load( array( $dir ) );
 		$db   = Loader::load( array(), $plan->option );
@@ -123,6 +123,32 @@ class ImporterTest extends TestCase {
 		$this->assertSame( $file->registry->taxonomies(), $db->registry->taxonomies() );
 		$this->assertSame( $file->registry->relationships(), $db->registry->relationships() );
 		$this->assertSame( $file->manifests['complete'], $plan->option['manifest'] );
+
+		$again = Importer::plan( $dir, $plan->option );
+		$this->assertSame( 0, $again->count() );
+		$this->assertSame( $plan->option, $again->option );
+	}
+
+	/**
+	 * Listings, forms, automations and options pages import into their own sections and load from the DB
+	 * exactly as from files; a second import changes nothing.
+	 */
+	public function test_import_sections_round_trip() {
+		$dir  = dirname( __DIR__, 2 ) . '/fixtures/valid/sections';
+		$plan = Importer::plan( $dir, array() );
+
+		$this->assertTrue( $plan->is_valid(), implode( "\n", array_map( 'strval', $plan->errors ) ) );
+		$this->assertSame( array( 'contact', 'submit_talk' ), array_column( $plan->option['forms'], 'key' ) );
+		$this->assertSame( array( 'contact_received', 'talk_followup', 'talk_inbound', 'talk_published', 'talk_updated' ), array_column( $plan->option['automations'], 'key' ) );
+		$this->assertSame( array( 'talk_settings' ), array_column( $plan->option['options_pages'], 'key' ) );
+
+		$file = Loader::load( array( $dir ) );
+		$db   = Loader::load( array(), $plan->option );
+		$this->assertTrue( $db->is_valid(), implode( "\n", array_map( 'strval', $db->errors ) ) );
+		foreach ( Loader::SECTIONS as $section ) {
+			$this->assertSame( $file->registry->$section(), $db->registry->$section(), $section );
+		}
+		$this->assertSame( $file->registry->listing( 'talk' ), $db->registry->listing( 'talk' ) );
 
 		$again = Importer::plan( $dir, $plan->option );
 		$this->assertSame( 0, $again->count() );

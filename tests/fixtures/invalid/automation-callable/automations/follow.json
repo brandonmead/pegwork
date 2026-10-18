@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "record.published",
+    "content_type": "thing"
+  },
+  "steps": [
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "ops@example.org",
+      "subject": "Hi",
+      "text": "Hi"
+    }
+  ],
+  "ui": {
+    "render_callback": "my_render"
+  }
+}

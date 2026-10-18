@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "key": "suggest",
+  "label": "Suggest a thing",
+  "target": {
+    "content_type": "thing"
+  },
+  "fields": [
+    {
+      "bind": {
+        "field": "name"
+      }
+    }
+  ],
+  "confirm": {
+    "field": "name",
+    "subject": "Confirm",
+    "body": "{confirm_url}"
+  }
+}

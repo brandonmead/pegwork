@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "record.published",
+    "content_type": "thing"
+  },
+  "steps": [
+    {
+      "id": "pause",
+      "type": "wait",
+      "for": "PT1M"
+    },
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "ops@example.org",
+      "subject": "Hi",
+      "text": "Hi"
+    }
+  ]
+}

@@ -142,6 +142,44 @@ class ExporterTest extends TestCase {
 	}
 
 	/**
+	 * Forms, automations and options pages export to their own directories and load back byte-identical.
+	 */
+	public function test_export_sections_round_trip() {
+		$result = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/sections' ) );
+		$files  = Exporter::files( $result );
+
+		$this->assertSame(
+			array(
+				'automations/contact_received.json',
+				'automations/talk_followup.json',
+				'automations/talk_inbound.json',
+				'automations/talk_published.json',
+				'automations/talk_updated.json',
+				'content-types/talk.json',
+				'forms/contact.json',
+				'forms/submit_talk.json',
+				'manifest.json',
+				'options-pages/talk_settings.json',
+				'taxonomies/talk_level.json',
+				'taxonomies/talk_track.json',
+			),
+			array_keys( $files )
+		);
+		$this->assertSame( $result->registry->form( 'submit_talk' ), json_decode( $files['forms/submit_talk.json'], true ) );
+		$this->assertStringContainsString( '"listing": {', $files['content-types/talk.json'] );
+
+		$dir = $this->temp_dir();
+		Exporter::write( $dir, $files );
+		$again = Loader::load( array( $dir ) );
+
+		$this->assertTrue( $again->is_valid(), implode( "\n", array_map( 'strval', $again->errors ) ) );
+		foreach ( Loader::SECTIONS as $section ) {
+			$this->assertSame( $result->registry->$section(), $again->registry->$section(), $section );
+		}
+		$this->assertSame( $files, Exporter::files( $again ) );
+	}
+
+	/**
 	 * Unicode and slashes are written unescaped.
 	 */
 	public function test_unicode_and_slashes_unescaped() {

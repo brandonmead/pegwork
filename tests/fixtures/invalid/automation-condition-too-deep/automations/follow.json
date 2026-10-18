@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "record.published",
+    "content_type": "thing",
+    "when": {
+      "not": {
+        "not": {
+          "not": {
+            "not": {
+              "not": {
+                "not": {
+                  "var": "record.done",
+                  "op": "eq",
+                  "value": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "ops@example.org",
+      "subject": "Hi",
+      "text": "Hi"
+    }
+  ]
+}
