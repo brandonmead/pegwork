@@ -3,7 +3,8 @@
 Purpose: dated, newest-first log of changes actually made.
 
 ## 2026-10-18
-- Design draft `docs/content-builder-design.md` (PR #8, in review): relationships (meta storage, picker, REST param, query helpers), options pages (registry kind, Settings API screen, `pegwork/option` bindings), admin menu skeleton with Overview and Modules screens; schema editor UI deferred to Phase 5.
+- Phase 2 display design approved (`docs/phase-2-design.md`): Query Loop variation, `pegwork/field` bindings, `pegwork/filters` and `pegwork/conditional` blocks, registry `listing` section, no custom endpoints.
+- Design `docs/content-builder-design.md` approved (PR #8): relationships (meta storage, picker, REST param, query helpers), options pages (registry kind, Settings API screen, `pegwork/option` bindings), admin menu skeleton with Overview and Modules screens; schema editor UI deferred to Phase 5.
 
 ## 2026-10-17
 - PR 6 export/import (in review): `wp pegwork schema export [--dir] [--source=all|db|files]` and `import <dir> [--prune] [--dry-run]` (`docs/export-import.md`); `Registry\Exporter`, `Importer`, `ImportPlan`; `Loader::read_package` public, `Result::manifests`, `Plugin::packages()`; import stores the package manifest in `pegwork_schema.manifest`. Phase 1 gate test (`ExportImportGateTest`) plus unit tests. siforgood.local: export, dry run, import twice (second `0 changes`), DB export byte-identical to file export; option deleted after, Project 24 and pages 5-9 unchanged. Plugin symlink -> `pr6-export`.
