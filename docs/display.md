@@ -1,6 +1,6 @@
 # Pegwork display
 
-Field output and conditional display on standard blocks. Record fields (`pegwork/field`) and the "Show if" block are provided by the `listings` module:
+Field output, conditional display and directories on standard blocks. Record fields (`pegwork/field`), the "Show if" block and directories are provided by the `listings` module:
 
 ```
 wp pegwork module enable listings
@@ -8,7 +8,7 @@ wp pegwork module enable listings
 
 Options page values (`pegwork/option`, [below](#option-output-the-pegworkoption-binding-source)) are core and need no module.
 
-Design: `docs/phase-2-design.md` sections 4 and 5. Listings (Query Loop variation), filters and the `listing` registry section arrive in later Phase 2 PRs.
+Design: `docs/phase-2-design.md` sections 4 to 6 and 8. The `listing` registry section is in `docs/registry-reference.md`. The filters block arrives in a later Phase 2 PR; directories already feed its pipeline (see "Constraint pipeline").
 
 ## Field output: the `pegwork/field` binding source
 
@@ -123,3 +123,66 @@ The block renders nothing when any condition names an unknown or private field (
 ### Editor
 
 The inspector builds conditions from the content type's public fields and taxonomies: the context post type, the type of a `single-<type>` or `archive-<type>` template, or a type chosen in the panel. Private fields are never offered. The canvas shows a "Show if: ..." summary above the inner blocks, which always display in the editor, and a warning when a condition would make the block render nothing. The block supports Interactivity API client navigation, so it can sit inside directory cards.
+
+## Directories: Pegwork Query Loops
+
+A directory is a core Query Loop (`core/query`) with one extra attribute, `pegwork`. Layout, pagination, no-results and enhanced pagination stay core's, so themes style it like any Query Loop.
+
+```html
+<!-- wp:query {"queryId":726,"query":{"perPage":12,"postType":"sifg_project","inherit":false},"enhancedPagination":true,"pegwork":{"filters":true},"align":"wide"} -->
+...
+<!-- /wp:query -->
+```
+
+| `pegwork` key | Meaning |
+|---|---|
+| `filters` | `true`: the page's filters (filters module) narrow this loop. |
+| `where` | Presets, AND-ed: `{ "<field key>": value }` for public `boolean` (true or false) and `select` (one value or a list) fields stored in meta; `"post_in_option": "<options page>.<field>"` for the record chosen in an options page `post` field. |
+
+Any `pegwork` attribute, even `{}`, makes the loop list **published records only**, for every user (core would add private records for administrators). Unknown, private, post-column and other field types in `where` are ignored. `where` applies to custom loops only; an inherit Query Loop follows the main query (see "Archives").
+
+`post_in_option` is resolved with `pegwork_get_option()` (options pages). The field must be a public `post` field whose `post_type` is the loop's type. When the function is missing, the field is empty, or the record is not a published record of that type, the newest published record shows instead. Use it with `perPage: 1` for a featured slot.
+
+The query wrapper gets `data-pegwork-directory="<type>"` (the filters block finds its regions by it). Inherit Query Loops on the archive of a type with a `listing` get it too.
+
+### Inserter, variation and panel
+
+- "Projects directory" (one "<Plural> directory" variation per content type with a `listing`, category Pegwork): `pegwork.filters` on, enhanced pagination, wide, 12 per page, a card grid (columns at least 16rem wide, so it wraps on phones), pagination and the message "No projects match your search or filters.". Its card is a `core/pattern` block of `pegwork/<type>-card`, which the editor swaps for the registered card on insert, so a theme's card override applies.
+- Query Loops of a Pegwork type get a "Pegwork directory" inspector panel: a switch for the attribute, "Connect to filters", an "Only: <field>" select per preset field, and "Show the record chosen in" for options page `post` fields of the type.
+
+### Generated patterns
+
+Registered per content type with a `listing`, in pattern category Pegwork:
+
+| Pattern | Content |
+|---|---|
+| `pegwork/<type>-card` | Linked title (h3), 20-word excerpt, terms of each taxonomy with its label, public boolean fields as a badge, select and date fields as "Label: value". |
+| `pegwork/<type>-details` | Every public field with its label, url fields as buttons, `show_when` fields inside a "Show if" block, then the taxonomies. Offered for `single-<type>` templates. |
+| `pegwork/<type>-directory` | The variation above as markup, with the card inline. |
+| `pegwork/<type>-featured` | One record: `where.post_in_option` on the first public options page `post` field for the type (else `pegwork: {}`, the newest published record). No pagination. |
+| `pegwork/<type>-latest` | A plain core Query Loop (no `pegwork` attribute), 3 newest, card grid. |
+
+Overriding: Pegwork registers on `init` priority 20 and skips names already registered. A theme file `patterns/sifg-card.php` with `Slug: pegwork/sifg_project-card` (registered at `init` 10) replaces the card, and the directory, featured and latest patterns embed that card. Filter `pegwork_listing_pattern` changes a pattern or drops it (return `null`). Labels come from the registry and are not translated.
+
+Patterns are inserted as plain blocks; edit them freely afterwards. Nested `wp:pattern` blocks are resolved by the editor and in theme templates; in post content saved by hand they render without card context, so keep the card inline there.
+
+### Archives
+
+The main query of a post type archive (`/projects/`) whose type has a `listing` runs the same pipeline (`source` `main`), lists published records only, and keeps native paging (`/projects/page/2/`). A search constraint sets `s` after `parse_query`, so `is_search()` stays false and the archive template is kept.
+
+### Constraint pipeline
+
+One translator, `PegworkListings\Constraints::to_query_args()`, serves both paths. Constraints start from `where` (custom loops) or empty (archives), pass through the `pegwork_listing_constraints` filter (`docs/extension-api.md`), are re-checked against the registry, and are merged into the loop's own query: tax and meta queries AND, searches join, `post__in` intersects.
+
+| Constraint | Becomes |
+|---|---|
+| `taxonomies: { <taxonomy>: [slugs] }` | `tax_query` by slug, `IN` (any) per taxonomy, AND across taxonomies. Taxonomy must be used by the type and publicly queryable; slugs must be in slug form; at most 20. |
+| `fields: { <key>: value }` | `meta_query` on `Registry::meta_key()`: boolean true `= '1'`, false "not set or not '1'"; select `=` or `IN` over valid option values (at most 20). Public, meta-stored `boolean` and `select` fields only. |
+| `search: string` | `s`, plain text, at most 100 characters. |
+| `post__in: [ids]` | `post__in`; an empty list matches nothing. |
+
+Anything else is dropped. URL params never reach a query except through this filter (the filters module), so `?contact_email=` or `?meta_key=` on an archive does nothing.
+
+### Query budget (500 records)
+
+Fixture: `tests/perf/seed.php` (`wp eval-file tests/perf/seed.php [count] [seed]`, also used by PHPUnit). `tests/Integration/Listings/DirectoryPerformanceTest.php` renders the directory and the archive with cold caches and fails above 35 queries or when 12 and 48 per page differ. Set `PEGWORK_PERF_REPORT=1` to print the counts. Measured numbers: `architecture.md`.

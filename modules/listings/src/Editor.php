@@ -90,9 +90,14 @@ final class Editor {
 			}
 
 			$types[ $type_key ] = array(
-				'label'      => $type['labels']['singular'] ?? $type_key,
-				'fields'     => $fields,
-				'taxonomies' => $taxonomies,
+				'label'       => $type['labels']['singular'] ?? $type_key,
+				'plural'      => $type['labels']['plural'] ?? $type_key,
+				'fields'      => $fields,
+				'taxonomies'  => $taxonomies,
+				'listing'     => null !== $registry->listing( $type_key ),
+				'cardPattern' => Patterns::name( $type_key, 'card' ),
+				'noResults'   => Patterns::no_results( $type_key ),
+				'optionPosts' => Patterns::option_fields( $type_key ),
 			);
 		}
 
