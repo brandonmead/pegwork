@@ -93,7 +93,7 @@ The manifest maps `slug => [ label, description, requires[], path ]`, where `pat
 
 The `automation` module (`docs/automation.md`) runs registry automations. Sites and add-ons can tune it with filters; its PHP classes are internal.
 
-The `forms` module (`docs/forms.md`) renders registry forms and handles their submissions. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content), so it ships no `uninstall.php`.
+The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, and the daily WP-Cron event `pegwork_forms_cleanup`. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
 
 | Hook | Kind | Default | Use |
 |---|---|---|---|
@@ -131,7 +131,7 @@ add_action(
 |---|---|---|---|
 | 0 | Overview | `pegwork` | core |
 | 10 to 19 | each options page | `pegwork-options-{key}` | core |
-| 20, 21 | Forms, Entries | module-defined | `forms` |
+| 20, 21 | Forms, Entries | module-defined (Entries: `pegwork-entries`, capability `pegwork_forms_capability`) | `forms` |
 | 30 | Automations | module-defined | `automation` |
 | 90 | Modules | `pegwork-modules` | core |
 

@@ -30,6 +30,16 @@ final class EntriesAdmin {
 	private const NOTICE = 'pegwork_entries_notice_';
 
 	/**
+	 * ID of the GET form holding search and the form filter.
+	 */
+	public const FILTER_FORM = 'pegwork-entries-filter';
+
+	/**
+	 * Column widths of the entry screen's label/value tables (no stylesheet needed).
+	 */
+	private const COLUMNS = '<colgroup><col style="width:30%"><col></colgroup>';
+
+	/**
 	 * List arguments and their defaults, read from the query string (and echoed through action forms).
 	 */
 	private const LIST_DEFAULTS = array(
@@ -214,21 +224,14 @@ final class EntriesAdmin {
 
 		$table->views();
 
-		// Filters and search: a GET form of their own, so their URLs never carry the action nonce.
-		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '" class="pegwork-entries-filter">';
+		// Filters and search: a GET form of their own, so their URLs never carry the action nonce. The
+		// form filter sits in the table's top bar (EntriesTable::extra_tablenav) and joins this form
+		// through the `form` attribute.
+		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '" id="' . esc_attr( self::FILTER_FORM ) . '">';
 		echo '<input type="hidden" name="page" value="' . esc_attr( Notifications::ENTRIES_PAGE ) . '">';
 		echo '<input type="hidden" name="status" value="' . esc_attr( (string) $args['status'] ) . '">';
 		$table->search_box( __( 'Search by email', 'pegwork' ), 'pegwork-entries' );
-		echo '<div class="alignleft actions">';
-		echo '<label for="pegwork-entries-form" class="screen-reader-text">' . esc_html__( 'Filter by form', 'pegwork' ) . '</label>';
-		echo '<select name="form" id="pegwork-entries-form">';
-		echo '<option value="">' . esc_html__( 'All forms', 'pegwork' ) . '</option>';
-		foreach ( self::form_choices() as $key => $label ) {
-			echo '<option value="' . esc_attr( $key ) . '"' . selected( $key, $args['form'], false ) . '>' . esc_html( $label ) . '</option>';
-		}
-		echo '</select> ';
-		echo '<button type="submit" class="button" id="pegwork-entries-filter-submit">' . esc_html__( 'Filter', 'pegwork' ) . '</button>';
-		echo '</div><br class="clear"></form>';
+		echo '</form>';
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" id="pegwork-entries-list">';
 		echo '<input type="hidden" name="action" value="' . esc_attr( EntryActions::ACTION ) . '">';
@@ -269,7 +272,7 @@ final class EntriesAdmin {
 		echo $back; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts above.
 
 		echo '<h2>' . esc_html__( 'Submitted values', 'pegwork' ) . '</h2>';
-		echo '<table class="widefat striped pegwork-entry-values"><tbody>';
+		echo '<table class="widefat striped fixed pegwork-entry-values">' . self::COLUMNS . '<tbody>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Constant markup.
 		$columns = EntryFields::columns( $form, array( $entry ) );
 		if ( array() === $columns ) {
 			echo '<tr><td>' . esc_html__( 'This entry has no values.', 'pegwork' ) . '</td></tr>';
@@ -282,7 +285,7 @@ final class EntriesAdmin {
 		echo '</tbody></table>';
 
 		echo '<h2>' . esc_html__( 'Details', 'pegwork' ) . '</h2>';
-		echo '<table class="widefat striped pegwork-entry-details"><tbody>';
+		echo '<table class="widefat striped fixed pegwork-entry-details">' . self::COLUMNS . '<tbody>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Constant markup.
 		foreach ( self::details( $entry ) as $label => $html ) {
 			echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . $html . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- details() escapes every value.
 		}
@@ -388,7 +391,7 @@ final class EntriesAdmin {
 		} elseif ( 'processing' !== $entry['status'] ) {
 			echo '<button type="submit" class="button" name="op" value="spam">' . esc_html__( 'Mark as spam', 'pegwork' ) . '</button> ';
 		}
-		echo '<a class="button button-link-delete" href="' . esc_url(
+		echo '<a class="button" href="' . esc_url(
 			self::url(
 				array(
 					'delete'       => (string) $id,
@@ -453,6 +456,23 @@ final class EntriesAdmin {
 		echo '<p><button type="submit" class="button button-primary" id="pegwork-entries-delete-confirm">' . esc_html__( 'Delete permanently', 'pegwork' ) . '</button> ';
 		echo '<a class="button" href="' . esc_url( $cancel ) . '">' . esc_html__( 'Cancel', 'pegwork' ) . '</a></p>';
 		echo '</form>';
+	}
+
+	/**
+	 * Prints the form filter (a select and a Filter button that belong to the GET filter form).
+	 *
+	 * @param string $current Selected form key, or ''.
+	 */
+	public static function print_form_filter( string $current ): void {
+		$owner = ' form="' . esc_attr( self::FILTER_FORM ) . '"';
+		echo '<label for="pegwork-entries-form" class="screen-reader-text">' . esc_html__( 'Filter by form', 'pegwork' ) . '</label>';
+		echo '<select name="form" id="pegwork-entries-form"' . $owner . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $owner is escaped above.
+		echo '<option value="">' . esc_html__( 'All forms', 'pegwork' ) . '</option>';
+		foreach ( self::form_choices() as $key => $label ) {
+			echo '<option value="' . esc_attr( $key ) . '"' . selected( $key, $current, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select> ';
+		echo '<button type="submit" class="button" id="pegwork-entries-filter-submit"' . $owner . '>' . esc_html__( 'Filter', 'pegwork' ) . '</button>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $owner is escaped above.
 	}
 
 	/**

@@ -191,6 +191,20 @@ final class EntriesTable extends \WP_List_Table {
 	}
 
 	/**
+	 * The form filter beside the bulk actions (top only). Its controls belong to the GET filter form.
+	 *
+	 * @param string $which `top` or `bottom`.
+	 */
+	protected function extra_tablenav( $which ) {
+		if ( 'top' !== $which ) {
+			return;
+		}
+		echo '<div class="alignleft actions">';
+		EntriesAdmin::print_form_filter( (string) $this->list_args['form'] );
+		echo '</div>';
+	}
+
+	/**
 	 * Message when there is nothing to list.
 	 */
 	public function no_items() {

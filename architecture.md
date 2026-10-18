@@ -136,7 +136,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Local runs: test DB `pegwork_tests_automation`; throwaway site `~/wp-envs/automation` (port 8171, DB `wpenv_automation`, mu-plugin `pegwork-engine-fixture.php` registers `tests/fixtures/valid/engine`). WP 6.7 locally needs `wp-phpunit/wp-phpunit` 6.7.x as `WP_TESTS_DIR` (the 7.1 suite needs `class-wp-phpmailer.php`); even then about 30 existing Pegwork tests fail locally on 6.7 with or without the module's tests (environment, not code; CI's `install-wp-tests.sh` 6.7 job is the reference).
 
 ## Forms runtime (Phase 3 PR 2)
-- `docs/forms.md`. Module `forms` (`modules/forms`, `PegworkForms\`, `PEGWORK_FORMS_DIR`). Table `{prefix}pegwork_entries` (dbDelta on boot when option `pegwork_forms_db_version` != `Schema::VERSION` `1`); kept on uninstall, so no `modules/forms/uninstall.php`.
+- `docs/forms.md`. Module `forms` (`modules/forms`, `PegworkForms\`, `PEGWORK_FORMS_DIR`). Table `{prefix}pegwork_entries` (dbDelta on boot when option `pegwork_forms_db_version` != `Schema::VERSION` `1`); kept on uninstall (`modules/forms/uninstall.php`, PR 7, only clears the cleanup cron).
 - Core API (0.2.0, additive): `pegwork_sanitize_field()` (`Content\Meta::sanitize`, URLs http/https only), `pegwork_validate_fields()` (`RecordValidator::check_values()`, shared with records and options pages; its `$checked_boolean` makes a required boolean mean "must be true"), `pegwork_save_form()`/`pegwork_delete_form()` (`Registry\Forms`: Validator plus references against the effective registry, upsert into `pegwork_schema.forms`, `Plugin::init()`; file keys 409).
 - Fail closed: `Definition::unsupported()` keeps forms with `target`, `confirm`, `captcha`, bound or `file` items unrendered and unhandled until PR 3/4.
 - POST handled on `template_redirect` priority 1; inputs `pegwork[<key>]`, control fields `pegwork_form[key|token|nonce|url]` (honeypot `url`). Redirect 303 to `?pegwork_sent=<key>`.
@@ -145,6 +145,19 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - `wp_mail` refuses an empty body (PHPMailer "Message body empty"); a body that renders empty is replaced by `{all_fields}`. The WP test mailer turns `\n` into `\r\n` in bodies.
 - E2E: axe cannot inject into a JavaScript-off page (`page.evaluate` hangs), and `browser.newContext()` in a spec inherits `test.use( noJs )`; the spec re-serves the page HTML through `route.fulfill` to a context with `javaScriptEnabled: true`. axe excludes `.wp-block-navigation` (Twenty Twenty-Five's page list fails `list`, not Pegwork markup).
 - Local runs: test DB `pegwork_tests_forms` with core `~/wp-envs/core-latest` (read only); site `~/wp-envs/forms` (`bin/e2e-local-site.sh start forms 8161`, DB `wpenv_forms`). The script now links every `tests/e2e/mu-plugins/*.php`.
+
+## Entries admin and privacy (Phase 3 PR 7)
+- `docs/forms.md#entries-admin`. Classes `EntriesAdmin` (menu, screens, notices, nonce check), `EntriesTable` (`WP_List_Table`), `EntryActions` (one `admin-post.php?action=pegwork_entries` handler, `op` spam|not_spam|delete|create_post), `EntryFields` (labels and display text shared by screen, CSV and exporter), `Export`, `Privacy`, `Cleanup`. Table access only through `Entries`.
+- The list's action form posts to `admin-post.php`, so the bulk select is named `op` (`action` picks the admin-post hook) and renders at the top only. Nonce `bulk-pegwork_entries` is the one `WP_List_Table` prints for `plural` `pegwork_entries`; the entry and delete screens print it too. Filter and search are a separate GET form (`#pegwork-entries-filter`); the form select in the table bar joins it through the HTML `form` attribute, so filter URLs never carry a nonce.
+- Uses `wp-list-table` despite the small-screen note under Admin area: owner allowed it for this screen; at 782 px core's toggle buttons reveal the other cells with their `data-colname` labels; axe clean at 782.
+- Row actions go in `handle_row_actions()`: calling `row_actions()` from a column adds a second toggle button.
+- Sortable column `array( 'date', true, '', '', 'desc' )` (WP 6.3+ initial order) marks the default newest-first order in the header.
+- `wpdb::prepare()` with no placeholders is `_doing_it_wrong`: `Entries::query()`/`status_counts()` skip prepare when the WHERE has no values.
+- Nonce failures die with an explicit 403 (`EntriesAdmin::verify_nonce`); `check_admin_referer()` passes a bare int to `wp_die()`, which the WP test handler reports as code 0.
+- "Create post anyway" claims the entry with `Entries::change_status( [ id ], [ previous ], 'processing' )`, so a concurrent confirm claim (`WHERE status='unconfirmed'`) finds nothing; it ends `received`.
+- Cron `pegwork_forms_cleanup` scheduled on boot when missing; cleared by `modules/forms/uninstall.php` (table kept). A disabled module leaves the event scheduled with no callback (harmless).
+- E2E seed route `pegwork-e2e/v1/entries/seed` (mu-plugin `pegwork-e2e-entries.php`, mapped in `.wp-env.json`). The privacy E2E reads the export zip with the system `unzip`.
+- Local runs: test DB `pegwork_tests_formsentries` (core `~/wp-envs/core-latest`); site `~/wp-envs/formsentries` (`bin/e2e-local-site.sh start formsentries 8167`, DB `wpenv_formsentries`).
 
 ## Admin area (content builder PR 1)
 - Top-level menu slug `Pegwork\Api\ADMIN_MENU` (`pegwork`), `manage_options`: Overview (`pegwork`, `admin_menu` priority 9, position 0), Modules (`pegwork-modules`, priority 999 so it stays last). Submenu `position` is an index into the list built so far, not a sort key; contract in `docs/extension-api.md`.

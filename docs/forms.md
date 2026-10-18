@@ -2,7 +2,7 @@
 
 Module `forms` (`modules/forms`, namespace `PegworkForms\`): places registry forms on pages, handles submissions without JavaScript, stores entries, sends notifications and emits `form.submitted`. Design: `docs/phase-3-design.md`. Definitions: `docs/registry-reference.md#forms`.
 
-Status (Phase 3 PR 2): entry-only forms. Record mapping and email confirmation (PR 3), Turnstile and uploads (PR 4), the front-end script (PR 5), the builder (PR 6) and the entries admin (PR 7) come later.
+Status (Phase 3 PR 2): entry-only forms. Record mapping and email confirmation (PR 3), Turnstile and uploads (PR 4), the front-end script (PR 5) and the builder (PR 6) come later. The entries admin, CSV export, privacy tools and retention cleanup (PR 7) are below.
 
 ## Enable
 
@@ -76,7 +76,7 @@ Kept in transients `pegwork_forms_rl_<hmac>`, keyed by an HMAC of kind, form and
 
 ## Entries table
 
-`{prefix}pegwork_entries`, created and upgraded with `dbDelta` on module boot when option `pegwork_forms_db_version` differs from `PegworkForms\Schema::VERSION` (`1`). Uninstall keeps the table (entries are content); core uninstall removes the version option, so a reinstall re-runs the idempotent `dbDelta`.
+`{prefix}pegwork_entries`, created and upgraded with `dbDelta` on module boot when option `pegwork_forms_db_version` differs from `PegworkForms\Schema::VERSION` (`1`). Uninstall keeps the table (entries are content); core uninstall removes the version option, so a reinstall re-runs the idempotent `dbDelta`. `modules/forms/uninstall.php` only clears the `pegwork_forms_cleanup` event.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -95,6 +95,32 @@ Kept in transients `pegwork_forms_rl_<hmac>`, keyed by an HMAC of kind, form and
 
 Indexes: `form_status_created (form_key, status, created_at)`, `email (email(191))`, `post_id`, `fingerprint`.
 
+## Entries admin
+
+Pegwork > Entries (`admin.php?page=pegwork-entries`, submenu position 21). Every screen and action needs the forms capability (`pegwork_forms_capability`, default `manage_options`); others get a 403. Entries are personal data: widen the filter only for people who should read them.
+
+- List (`WP_List_Table`): views All (every status but spam), Received, Unconfirmed, Failed, Spam (Processing only while an entry is in it), with counts for the current form and search; filter by form (registry forms, then keys only entries still use, shown as "<key> (deleted form)"); search by part of the email; sort by date (newest first); 20 per page. Columns: submitted (links to the entry; row actions View, Delete), email, form, summary (first two text values, shortened), status, linked post (title, edit link when allowed, post status). Empty states: "No entries yet..." and "No entries match these filters.".
+- Bulk actions: Mark as spam (received, unconfirmed and failed entries; never `processing`, which a confirmation holds), Not spam (spam view; spam becomes `received`: it was never mailed and has no record), Delete permanently.
+- Entry (`&entry=<id>`, the `{entry:admin_url}` link): every value with its label from the current definition (bound items use the field or taxonomy label), then keys the definition no longer has; booleans Yes/No, select labels, lists joined by commas, multi-line text kept; then form, status, email, submitted and confirmed times (site time), linked post, who used "Create post anyway", submitter account, page, notification results, spam reasons, errors. Actions: Create post anyway, Mark as spam or Not spam, Delete permanently.
+- Delete (`&delete=<ids>`): always a confirmation screen listing the entries; only its POST deletes. Records created from entries are kept.
+- Create post anyway: for an entry without a post, not spam or processing, whose form has a draft type: `target.content_type` of a `create` form, or for an entry-only form the `pegwork_forms_draft_type` filter (SI for Good maps Share a story to `sifg_story`). Needs the type's `create_posts` too. Creates a Draft through `Pegwork\Api\Records::create()` from the values whose keys are fields or taxonomies of the type; values the type rejects are left out, so the admin always gets a draft to finish. The entry is claimed first (status `processing`), so a second click or the submitter's confirm link at the same moment cannot make a second post; afterwards it is `received`, linked by `post_id`, with `meta.post_created` (`by`, `at`, `from`). For held Submit a project entries this is the path for submitters who lost the confirmation email.
+- Every action is one `admin-post.php?action=pegwork_entries` handler (`op` `spam|not_spam|delete|create_post`, `entry[]`, nonce `bulk-pegwork_entries`, the list table's own bulk nonce). The filter and search form is a separate GET form, so filter URLs carry no nonce. Results show as a notice on the next screen.
+
+### CSV export
+
+"Export CSV" (shown once a form is chosen) downloads the chosen form's entries in the current view and search: `admin-post.php?action=pegwork_entries_export&form=<key>&status=<view>&s=<search>` with nonce `pegwork_entries_export`. UTF-8 with a BOM, oldest first. Columns: Entry ID, Submitted (UTC), Status, Email, Post ID, then one per item of the current definition (its label), then any other key found in the exported entries. Values as on the entry screen. Every cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading `'` (spreadsheet formula injection), headers included.
+
+### Privacy
+
+- Tools > Export Personal Data and Erase Personal Data include "Pegwork form entries" (ID `pegwork-forms`), matched by the entry's `email` column (the confirm field, else the form's first email item, lowercased), 50 per page.
+- The exporter lists form, entry ID, submitted, status, confirmed, the published record's URL when there is one, and every value.
+- The eraser deletes the entries. Records created from them are reported as retained ("...was kept: edit or delete it yourself..."): they are directory records, and changing them is a person's decision.
+- Settings > Privacy gets suggested policy text: what is stored (no IP address), the retention below, records created from submissions, and Turnstile's Cloudflare script.
+
+### Retention
+
+Daily WP-Cron event `pegwork_forms_cleanup` (scheduled on module boot when missing) deletes spam after 30 days and unconfirmed entries after 7 (filter `pegwork_forms_retention_days`, `array( 'spam' => 30, 'unconfirmed' => 7 )`; 0 keeps them), and received and failed entries after their form's `retention_days` when it sets one. Entries of deleted forms keep only the status limits. `processing` entries are never deleted by age. The admin delete, the eraser and the cleanup all go through `Entries::delete()`, where upload removal (PR 4) belongs.
+
 ## Event
 
 `form.submitted` after a non-spam entry is stored (`docs/events.md`):
@@ -112,15 +138,18 @@ array(
 
 | Hook | Purpose |
 |---|---|
-| `pegwork_forms_capability` | Capability that manages forms and sees manager notices (default `manage_options`). |
+| `pegwork_forms_capability` | Capability that manages forms, reads and acts on entries, and sees manager notices (default `manage_options`). |
+| `pegwork_forms_draft_type` | `( ?string $type, array $form )`: content type "Create post anyway" makes a Draft of; default `target.content_type` of `create` forms, null otherwise. Must be a registry type. |
+| `pegwork_forms_retention_days` | `( array $days )`: days to keep `spam` (30) and `unconfirmed` (7) entries; 0 keeps them. |
 | `pegwork_forms_spam_check` | `( string[] $reasons, array $form, array $values )`: add reasons to store a submission as spam. |
 | `pegwork_forms_rate_limits` | `( array $limits, string $form_key )`. |
 | `pegwork_forms_client_ip` | `( string $ip )`. |
 | `pegwork_event_form_submitted` | The event above. |
 
-Seams for the later PRs: `Definition::unsupported()` is the single gate that keeps target, confirm, Turnstile and file forms closed (PR 3 and PR 4 narrow it); `Submission::process()` returns the outcome for each branch and is where record mapping (`post_id`, `record_id`), the confirm hold (`unconfirmed`, `token_hash`) and Turnstile slot in; `Notifications::send( $form, 'confirmed', $context )` already accepts `post_id` and `confirm_url`; `Entries` is the table access the entries admin (PR 7) builds on, and `Notifications::ENTRIES_PAGE` (`pegwork-entries`) is the admin slug `{entry:admin_url}` already links to.
+Seams for the later PRs: `Definition::unsupported()` is the single gate that keeps target, confirm, Turnstile and file forms closed (PR 3 and PR 4 narrow it); `Submission::process()` returns the outcome for each branch and is where record mapping (`post_id`, `record_id`), the confirm hold (`unconfirmed`, `token_hash`) and Turnstile slot in; `Notifications::send( $form, 'confirmed', $context )` already accepts `post_id` and `confirm_url`; `Entries` is the only table access (the entries admin uses `query()`, `status_counts()`, `form_keys()`, `by_email()`, `ids_before()`, `change_status()` (conditional, so also an atomic claim), `link_post()` and `delete()`), and `Notifications::ENTRIES_PAGE` (`pegwork-entries`) is the admin slug `{entry:admin_url}` links to. Uploads (PR 4) add file links to the entry screen and file removal to `Entries::delete()`.
 
 ## Testing
 
-- PHPUnit: `tests/Integration/Forms/` (fixture package `tests/fixtures/valid/forms-runtime`). Mail through the WP test mailer (`tests_retrieve_phpmailer_instance()`).
+- PHPUnit: `tests/Integration/Forms/` (fixture package `tests/fixtures/valid/forms-runtime`). Mail through the WP test mailer (`tests_retrieve_phpmailer_instance()`). Entries admin, export, privacy and cleanup: `Entries*Test.php` on `tests/Support/EntriesTestCase.php`, which adds `tests/fixtures/valid/forms-entries` (types `fe_project`, `fe_story`; forms `fe_project` with a target, `fe_story` entry-only with `retention_days` 30).
+- E2E entries admin: `tests/e2e/specs/forms-entries.e2e.js` (keyboard list, filter, views, entry, spam, CSV, delete confirmation, Tools > Export and Erase Personal Data; axe at 1280 and 782 px). Mu-plugin `tests/e2e/mu-plugins/pegwork-e2e-entries.php` adds the admin-only route `pegwork-e2e/v1/entries/seed`.
 - E2E: `tests/e2e/specs/forms-no-js.e2e.js`, JavaScript off. The test-only mu-plugin `tests/e2e/mu-plugins/pegwork-e2e-forms.php` registers `tests/e2e/packages/forms` (form `e2e_contact`, with an item keyed `name`), logs mail to an option instead of sending it, and adds admin-only routes `pegwork-e2e/v1/mail`, `entries`, `reset` and `forms-module`. axe cannot inject into a JavaScript-off page, so the spec serves the page's exact HTML at the same URL to a JavaScript-on page and runs axe there.
