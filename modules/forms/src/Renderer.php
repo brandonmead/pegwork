@@ -91,7 +91,8 @@ final class Renderer {
 			$html .= self::summary( $base, $form, $errors );
 		}
 
-		$html .= '<form class="pegwork-form__form" method="post" action="' . esc_url( Submission::current_url() . '#' . $base ) . '" novalidate>';
+		// No #fragment in the action, so the re-render's `autofocus` on the error summary takes effect.
+		$html .= '<form class="pegwork-form__form" method="post" action="' . esc_url( Submission::current_url() ) . '" novalidate>';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[key]" value="' . esc_attr( $key ) . '">';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[token]" value="' . esc_attr( Token::create( $key, $now ) ) . '">';
 		if ( is_user_logged_in() ) {

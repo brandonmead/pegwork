@@ -384,7 +384,7 @@ class FormsSubmissionTest extends FormsTestCase {
 		} catch ( \RuntimeException $e ) {
 			$this->assertSame( 'redirected', $e->getMessage() );
 		}
-		$this->assertSame( array( 'http://example.org/contact/?utm=1&pegwork_sent=fr_contact#pegwork-fr_contact', 303 ), $redirect );
+		$this->assertSame( array( 'http://example.org/contact/?utm=1&pegwork_sent=fr_contact', 303 ), $redirect );
 		$this->assertSame( 1, $this->count_entries() );
 		$this->assertSame( $page, Entries::get( (int) $this->events[0][1]['entry_id'] )['meta']['page_id'] );
 

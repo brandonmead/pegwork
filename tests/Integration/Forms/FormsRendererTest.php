@@ -38,7 +38,7 @@ class FormsRendererTest extends FormsTestCase {
 		$html = $this->block( 'fr_contact' );
 
 		$this->assertStringContainsString( '<div class="wp-block-pegwork-form pegwork-form" id="pegwork-fr_contact">', $html );
-		$this->assertStringContainsString( 'method="post" action="http://example.org/contact/#pegwork-fr_contact" novalidate>', $html );
+		$this->assertStringContainsString( 'method="post" action="http://example.org/contact/" novalidate>', $html );
 		$this->assertStringContainsString( '<input type="hidden" name="pegwork_form[key]" value="fr_contact">', $html );
 		$this->assertMatchesRegularExpression( '/name="pegwork_form\[token\]" value="[0-9]+\.[a-f0-9]{64}"/', $html );
 		$this->assertStringNotContainsString( 'pegwork_form[nonce]', $html, 'Anonymous visitors get no nonce.' );

@@ -93,7 +93,9 @@ do_create() {
 
 	mkdir -p "$DIR/wp-content/mu-plugins"
 	ln -sfn "$REPO" "$DIR/wp-content/plugins/pegwork"
-	ln -sfn "$REPO/tests/e2e/mu-plugins/pegwork-e2e-sifg.php" "$DIR/wp-content/mu-plugins/pegwork-e2e-sifg.php"
+	for mu in "$REPO"/tests/e2e/mu-plugins/*.php; do
+		ln -sfn "$mu" "$DIR/wp-content/mu-plugins/$(basename "$mu")"
+	done
 	wp plugin activate pegwork --quiet 2>/dev/null || true
 	wp rewrite structure '/%postname%/' --quiet
 	echo "Site ready: http://127.0.0.1:$port (credentials: $ENVFILE)"

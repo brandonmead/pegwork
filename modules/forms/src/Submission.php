@@ -107,7 +107,9 @@ final class Submission {
 		$result = self::process( $form, $raw, $control, time(), get_queried_object_id() );
 
 		if ( in_array( $result['outcome'], array( 'sent', 'spam', 'duplicate' ), true ) ) {
-			$target = add_query_arg( self::SENT, $key, self::current_url() ) . '#pegwork-' . $key;
+			// No #fragment: browsers skip `autofocus` when the URL targets an element, and the focused
+			// success region scrolls itself into view.
+			$target = add_query_arg( self::SENT, $key, self::current_url() );
 			wp_safe_redirect( $target, 303 );
 			exit;
 		}
