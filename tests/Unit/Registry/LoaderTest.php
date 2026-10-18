@@ -204,12 +204,19 @@ class LoaderTest extends TestCase {
 			'format'      => 1,
 			'key'         => 'thing_link',
 			'from'        => 'thing',
-			'to'          => 'thing',
+			'to'          => 'venue',
 			'cardinality' => 'one_to_many',
 		);
-		$dependent    = $this->package( 'dependent', array( 'relationships' => array( $relationship ) ) );
+		$dependent    = $this->package(
+			'dependent',
+			array(
+				'content-types' => array( $this->type( 'venue', 'Venues' ) ),
+				'relationships' => array( $relationship ),
+			)
+		);
 		$result       = Loader::load( array( $types, $dependent ) );
-		$this->assertSame( array( 'unknown_taxonomy', 'unknown_content_type', 'unknown_content_type' ), array_map( fn( $e ) => $e->code, $result->errors ) );
+		$this->assertSame( array( 'unknown_taxonomy', 'unknown_content_type' ), array_map( fn( $e ) => $e->code, $result->errors ) );
+		$this->assertSame( '/from', $result->errors[1]->pointer );
 		$this->assertSame( array(), $result->registry->content_types() );
 		$this->assertSame( array(), $result->registry->relationships() );
 	}
