@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below and `pegwork_get_field()`).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()` and the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`).
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -45,6 +45,17 @@ Global functions (`includes/functions.php`), available after `init` priority 5:
 
 Details, REST and CLI: `docs/relationships.md`.
 
+Form functions (API 0.2.0, `includes/functions.php`). None checks capabilities: the caller authorizes.
+
+| Function | Returns |
+|---|---|
+| `pegwork_sanitize_field( array $field, mixed $value )` | The value sanitized for the field's `type` with the Phase 1 sanitizers: bool for booleans (missing is false); int or float for numbers; a string otherwise. `''` when empty or invalid (bad email, URL other than http/https, impossible date, undefined option, non-numeric number, any array). |
+| `pegwork_validate_fields( array $fields, array $values, bool $complete = true )` | `true`, or `WP_Error` `pegwork_invalid_fields` (400, messages by field key in `data.fields`). The record validator's field rules (`required`, `required_when`, `validate`), plus: a required boolean must be true (consent). `$complete = false` accepts anything. |
+| `pegwork_save_form( array $definition )` | `true`, or `WP_Error`: `pegwork_invalid_form` (400, messages by JSON pointer in `data.fields`, such as `/notifications/0/to`) or `pegwork_form_file_defined` (409). Validates like a file form, resolves references against the effective registry, upserts the canonical form into the `pegwork_schema` option (by key, in place) and rebuilds the registry. |
+| `pegwork_delete_form( string $key )` | `true`, or `WP_Error` `pegwork_form_file_defined` (409) or `pegwork_form_not_found` (404). Removes the DB definition; entries stay. |
+
+The forms module runtime (block, pipeline, entries table, notifications, hooks): `docs/forms.md`.
+
 Registry section accessors (API 0.2.0) return definitions only, in canonical form (defaults filled); the modules that render or run them read them here.
 
 | Method | Returns |
@@ -73,11 +84,13 @@ interface Module {
 
 Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks requirements and includes each `module.php` (so top-level code in `module.php` runs then and must not need the registry). `boot()` runs later, on `pegwork_loaded` (`init` priority 5, after the registry is built), in dependency order, so `pegwork_registry()` is available inside it.
 
-The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings`, `filters` (requires `listings`; a skeleton until later Phase 2 PRs) and `automation`; add entries with the `pegwork_module_manifest` filter. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`. A module that keeps its own tables or cron events ships `uninstall.php` in its directory; Pegwork's `uninstall.php` includes every `modules/*/uninstall.php` before deleting `pegwork_*` options.
+The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings`, `filters` (requires `listings`; a skeleton until later Phase 2 PRs), `automation` and `forms`; add entries with the `pegwork_module_manifest` filter. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`. A module that keeps its own tables or cron events ships `uninstall.php` in its directory; Pegwork's `uninstall.php` includes every `modules/*/uninstall.php` before deleting `pegwork_*` options.
 
 ## Automation hooks
 
 The `automation` module (`docs/automation.md`) runs registry automations. Sites and add-ons can tune it with filters; its PHP classes are internal.
+
+The `forms` module (`docs/forms.md`) renders registry forms and handles their submissions. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content), so it ships no `uninstall.php`.
 
 | Hook | Kind | Default | Use |
 |---|---|---|---|
