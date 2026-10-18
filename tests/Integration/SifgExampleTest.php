@@ -70,6 +70,32 @@ class SifgExampleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Stories link to one or more Projects through the required story_projects relationship.
+	 */
+	public function test_sifg_story_relates_to_projects() {
+		$this->register( dirname( __DIR__, 2 ) . '/examples/sifg' );
+		$registry = pegwork_registry();
+
+		$this->assertSame( 'Stories', $registry->content_type( 'sifg_story' )['labels']['plural'] );
+		$this->assertTrue( post_type_exists( 'sifg_story' ) );
+		$this->assertTrue( post_type_supports( 'sifg_story', 'custom-fields' ), 'Relationship meta needs custom-fields for REST.' );
+		$this->assertSame(
+			array(
+				'cardinality' => 'many_to_many',
+				'format'      => 1,
+				'from'        => 'sifg_story',
+				'key'         => 'story_projects',
+				'label'       => 'Projects',
+				'required'    => true,
+				'storage'     => 'meta',
+				'to'          => 'sifg_project',
+			),
+			$registry->relationships()['story_projects']
+		);
+		$this->assertSame( array( 'story_projects' ), array_keys( $registry->relationships_for( 'sifg_project' ) ) );
+	}
+
+	/**
 	 * The public API version constant is semver.
 	 */
 	public function test_api_version_constant() {

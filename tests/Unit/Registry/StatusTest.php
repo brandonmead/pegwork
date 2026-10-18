@@ -33,8 +33,7 @@ class StatusTest extends TestCase {
 		$status = new Status( Loader::load( array( $dir ) ), array( $dir ) );
 
 		$types = $status->content_types();
-		$this->assertCount( 1, $types );
-		$this->assertSame( 'sifg_project', $types[0]['key'] );
+		$this->assertSame( array( 'sifg_project', 'sifg_story' ), array_column( $types, 'key' ) );
 		$this->assertSame( 'Projects', $types[0]['label'] );
 		$this->assertSame( 'projects', $types[0]['rest_base'] );
 		$this->assertSame( 'sifg', $types[0]['source'] );
@@ -53,7 +52,20 @@ class StatusTest extends TestCase {
 		$this->assertTrue( $taxonomies['sifg_impact']['locked'] );
 		$this->assertSame( 'sifg', $taxonomies['sifg_impact']['source'] );
 
-		$this->assertSame( array(), $status->relationships() );
+		$this->assertSame(
+			array(
+				array(
+					'key'         => 'story_projects',
+					'from'        => 'sifg_story',
+					'to'          => 'sifg_project',
+					'cardinality' => 'many_to_many',
+					'storage'     => 'meta',
+					'required'    => true,
+					'source'      => 'sifg',
+				),
+			),
+			$status->relationships()
+		);
 		$this->assertSame( array(), $status->shadowed() );
 		$this->assertSame( array(), $status->rejected() );
 	}
@@ -78,7 +90,7 @@ class StatusTest extends TestCase {
 			),
 			$rows['event_venue']
 		);
-		$this->assertSame( 'table', $rows['event_related']['storage'] );
+		$this->assertTrue( $rows['event_related']['required'] );
 	}
 
 	/**

@@ -37,7 +37,7 @@ final class PostTypes {
 		self::$registered = array();
 
 		foreach ( $types as $key => $type ) {
-			$result = register_post_type( $key, self::args( $type ) );
+			$result = register_post_type( $key, self::args( $type, array() !== Relationships::from( $registry, $key ) ) );
 			if ( ! is_wp_error( $result ) ) {
 				self::$registered[] = $key;
 			}
@@ -47,10 +47,11 @@ final class PostTypes {
 	/**
 	 * Builds register_post_type() arguments from a normalized content type.
 	 *
-	 * @param array<string, mixed> $type Normalized content type.
+	 * @param array<string, mixed> $type      Normalized content type.
+	 * @param bool                 $links_out Whether the type is the "from" end of a relationship (stored as meta).
 	 * @return array<string, mixed>
 	 */
-	public static function args( array $type ): array {
+	public static function args( array $type, bool $links_out = false ): array {
 		$wp = $type['wp'] ?? array();
 
 		$args = array(
@@ -66,7 +67,7 @@ final class PostTypes {
 		);
 
 		// Core exposes registered meta over REST only for types that support custom-fields.
-		$has_meta = array() !== array_filter( $type['fields'], fn( array $field ) => ! isset( $field['wp']['storage'] ) );
+		$has_meta = $links_out || array() !== array_filter( $type['fields'], fn( array $field ) => ! isset( $field['wp']['storage'] ) );
 		if ( $has_meta && ! in_array( 'custom-fields', $args['supports'], true ) ) {
 			$args['supports'][] = 'custom-fields';
 		}

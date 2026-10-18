@@ -114,7 +114,7 @@ final class Records {
 			return new WP_Error( 'pegwork_record_not_found', sprintf( __( 'No record with ID %d.', 'pegwork' ), $id ), array( 'status' => 404 ) );
 		}
 
-		$write = self::prepare( Plugin::registry(), $record['type'], $values, $record['values'], $record['status'] );
+		$write = self::prepare( Plugin::registry(), $record['type'], $values, $record['values'], $record['status'], $id );
 		if ( is_wp_error( $write ) ) {
 			return $write;
 		}
@@ -136,9 +136,10 @@ final class Records {
 	 * @param array<string, mixed> $values   Values to write.
 	 * @param array<string, mixed> $current  Current (or default) values by key.
 	 * @param string               $status   Resulting status.
+	 * @param int                  $post_id  Record ID on update, 0 on create; validation reads its stored relationship links.
 	 * @return array{post: array<string, mixed>, meta: array<string, mixed>, terms: array<string, int[]>}|WP_Error
 	 */
-	private static function prepare( Registry $registry, string $type, array $values, array $current, string $status ): array|WP_Error {
+	private static function prepare( Registry $registry, string $type, array $values, array $current, string $status, int $post_id = 0 ): array|WP_Error {
 		$fields     = $registry->fields( $type );
 		$taxonomies = array_column( $registry->content_type( $type )['taxonomies'], null, 'key' );
 		$write      = array(
@@ -187,7 +188,7 @@ final class Records {
 		}
 
 		if ( array() === $errors ) {
-			$valid = RecordValidator::validate( $registry, $type, $current, in_array( $status, RecordValidator::COMPLETE_STATUSES, true ) );
+			$valid = RecordValidator::validate( $registry, $type, $current, in_array( $status, RecordValidator::COMPLETE_STATUSES, true ), $post_id );
 			if ( true === $valid ) {
 				return $write;
 			}

@@ -39,6 +39,7 @@ final class Registrar {
 		PostTypes::register( $registry );
 		Taxonomies::register( $registry );
 		Meta::register( $registry );
+		Relationships::register( $registry );
 		RecordValidator::register( $registry );
 		RecordEvents::register( $registry );
 
