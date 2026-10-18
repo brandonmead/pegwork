@@ -21,7 +21,8 @@ function pegwork_registry(): Pegwork\Api\Registry {
  *
  * @param string               $type    Content type key.
  * @param array<string, mixed> $values  Field values by field key (title and content included); term ID lists by taxonomy key;
- *                                      linked ID lists by relationship key (missing means no links).
+ *                                      linked ID lists by relationship key (missing means the record's stored links
+ *                                      when `$post_id` is set, else no links).
  * @param int                  $post_id ID of the record being validated, 0 for a new one; its own links do not count
  *                                      against `one_to_many` limits.
  * @return true|WP_Error WP_Error (status 400) with per-field messages in its data `fields`.

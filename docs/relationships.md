@@ -47,7 +47,9 @@ Validation errors (PHP validator; the JSON Schema covers the per-file rules):
 | `one_to_many`: no ID is linked from another "from" record | every save | `Venue "Town hall" is already linked from Event "Spring fair".` (titles only when the user can read the record, else `#ID`) |
 | `required`: at least one link | publish, pending, future | `At least one Project is required.` |
 
-`pegwork_validate_record( $type, $values, $post_id )` applies the same rules; pass linked IDs under the relationship key and the record's own ID so its existing links do not count against `one_to_many`.
+`pegwork_validate_record( $type, $values, $post_id )` applies the same rules; pass linked IDs under the relationship key and the record's own ID so its existing links do not count against `one_to_many`. With a post ID and no value for a relationship key, the stored links are checked.
+
+`Pegwork\Api\Records` does not write links yet. `Records::update()` validates against the stored links; `Records::create()` of a record with a `required` relationship fails unless the status is a draft (link it afterwards through REST or WP-CLI).
 
 ## REST
 

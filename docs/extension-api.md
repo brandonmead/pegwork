@@ -6,6 +6,8 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events` and `Records`).
+
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
 ## Declaring the dependency
@@ -90,3 +92,27 @@ WordPress treats `position` as an index into the submenu built so far, not a sor
 A screen may use a capability lower than `manage_options` (an options page for editors, for example). `add_submenu_page()` leaves out screens the user cannot open, so for such a user that screen is the menu's first item and the top-level Pegwork link opens it; Overview and Modules stay denied.
 
 Overview (read-only) lists content types with their fields, taxonomies, relationships, shadowed DB entries and rejected packages. Its data comes from the same service as `wp pegwork schema list` and `wp pegwork schema status`.
+
+## Events
+
+`Pegwork\Api\Events::emit( string $name, array $payload ): void` fires `pegwork_event` (name, payload) and `pegwork_event_{name with dots as underscores}` (payload). Core emits `record.created`, `record.updated`, `record.status_changed` and `record.deleted` for registry content types. Payloads, origins and timing: `docs/events.md`.
+
+```php
+add_action( 'pegwork_event_record_updated', function ( array $e ) {
+	if ( in_array( 'website', $e['changed'], true ) ) { /* ... */ }
+} );
+```
+
+Payloads may carry private field values: never output them as is.
+
+## Records
+
+`Pegwork\Api\Records` reads and writes records by registry key, through record validation and the event bus. Modules write records only through it.
+
+```php
+$record = Pegwork\Api\Records::get( 42 );            // { id, type, status, values, permalink } or null
+$id     = Pegwork\Api\Records::create( 'sifg_project', array( 'name' => 'Seed library' ) ); // int|WP_Error, draft
+$ok     = Pegwork\Api\Records::update( 42, array( 'last_verified' => '2026-10-18', 'sifg_project_status' => 'active' ), array( 'automation' => 'my_flow', 'run_id' => 7 ) );
+```
+
+No capability check: the caller authorizes. Details: `docs/events.md`.

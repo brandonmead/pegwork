@@ -86,7 +86,8 @@ final class RecordValidator {
 	 * @param Registry             $registry Effective registry.
 	 * @param string               $type     Content type key.
 	 * @param array<string, mixed> $values   Field values by field key; term ID or slug lists by taxonomy key;
-	 *                                       linked ID lists by relationship key (missing means no links).
+	 *                                       linked ID lists by relationship key (missing means the record's stored
+	 *                                       links when `$post_id` is set, else no links).
 	 * @param bool                 $complete Whether completeness rules apply (target status publish, pending or future).
 	 * @param int                  $post_id  ID of the record being saved, 0 for a new one; its own links do not count
 	 *                                       against `one_to_many` limits.
@@ -129,7 +130,8 @@ final class RecordValidator {
 		}
 
 		foreach ( array_keys( Relationships::from( $registry, $type ) ) as $key ) {
-			$message = self::check_relationship( $registry, $key, $values[ $key ] ?? array(), $complete, $post_id );
+			$linked  = array_key_exists( $key, $values ) ? $values[ $key ] : ( $post_id > 0 ? Relationships::stored_ids( $post_id, $key ) : array() );
+			$message = self::check_relationship( $registry, $key, $linked, $complete, $post_id );
 			if ( null !== $message ) {
 				$errors[ $key ] = $message;
 			}

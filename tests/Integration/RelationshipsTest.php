@@ -333,6 +333,29 @@ class RelationshipsTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The Records API, which does not write links, keeps a linked Story valid on update and enforces `required` on create.
+	 */
+	public function test_records_api_uses_stored_links() {
+		$project = $this->post( 'sifg_project', 'Clean water map' );
+		$story   = $this->rest( 'POST', '/wp/v2/stories', $this->story( array( $project ) ) )->get_data()['id'];
+
+		$this->assertTrue( \Pegwork\Api\Records::update( $story, array( 'title' => 'Renamed story' ) ) );
+		$this->assertSame( array( $project ), pegwork_related_ids( $story, 'story_projects' ) );
+
+		$values  = array(
+			'title' => 'New story',
+			'body'  => '<p>It helped.</p>',
+		);
+		$created = \Pegwork\Api\Records::create( 'sifg_story', $values, 'publish' );
+		$this->assertWPError( $created );
+		$this->assertSame( array( 'story_projects' => 'At least one Project is required.' ), $created->get_error_data()['fields'] );
+		$this->assertIsInt( \Pegwork\Api\Records::create( 'sifg_story', $values, 'draft' ) );
+
+		$this->assertTrue( pegwork_validate_record( 'sifg_story', $values, $story ) );
+		$this->assertWPError( pegwork_validate_record( 'sifg_story', $values ) );
+	}
+
+	/**
 	 * The helpers work from both ends and return all statuses; query args run as WP_Query.
 	 */
 	public function test_related_helpers() {
