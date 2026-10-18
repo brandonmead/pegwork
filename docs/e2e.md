@@ -8,7 +8,8 @@ playwright.config.js
 bin/e2e-local-site.sh                 throwaway local site (no Docker)
 tests/e2e/mu-plugins/pegwork-e2e-sifg.php   registers examples/sifg as a file package
 tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, admin-only helper routes (docs/forms.md)
-tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation module switch, Project and signed link helper routes (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, reset (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-links.php  signed link helpers: Project create and read, link mint, link rate limit raised (docs/automation.md)
 tests/e2e/packages/                   file packages that only the browser tests register
 tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures
 tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest would run)
@@ -69,4 +70,5 @@ The plugin clone is the checkout the script lives in (override with `PEGWORK_DIR
 - `utils/records.js`: `createRecord`, `deleteRecord` over REST (cookie plus nonce).
 - `utils/a11y.js`: `expectNoSeriousA11yViolations( page )` fails on serious or critical axe violations (WCAG 2 A and AA tags).
 - `utils/no-js.js`: `test.use( noJs )` runs a file with JavaScript off and as a visitor; import `test` from `@playwright/test` there, since the `sifg` fixture needs a login.
+- `utils/listings.js`: `enableModule( page, 'Listings' )` (Modules screen; modules start disabled on a fresh site), `recordTracker( request )` (published Projects passing publish validation, pages, cleanup), `seedProjects`, `patternContent`, `cardTitles`, `publishedProjects`.
 - Specs share one site and run serially (one worker). Clean up what you create.

@@ -358,6 +358,63 @@ final class Runs {
 	}
 
 	/**
+	 * One page of runs, newest first (the Automations screen's run log).
+	 *
+	 * @param string|null $automation Automation key filter.
+	 * @param string|null $status     Status filter.
+	 * @param int         $limit      Rows per page (1 to 1000).
+	 * @param int         $offset     Rows to skip.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function page( ?string $automation, ?string $status, int $limit, int $offset = 0 ): array {
+		global $wpdb;
+		[ $where, $values ] = self::filter( $automation, $status );
+		$values[]           = max( 1, min( 1000, $limit ) );
+		$values[]           = max( 0, $offset );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders -- $where holds fixed columns with placeholders, one per value.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->runs}{$where} ORDER BY id DESC LIMIT %d OFFSET %d", $values ), ARRAY_A );
+		return array_map( array( self::class, 'decode' ), $rows );
+	}
+
+	/**
+	 * Number of runs matching the filters.
+	 *
+	 * @param string|null $automation Automation key filter.
+	 * @param string|null $status     Status filter.
+	 */
+	public function count( ?string $automation = null, ?string $status = null ): int {
+		global $wpdb;
+		[ $where, $values ] = self::filter( $automation, $status );
+		if ( array() === $values ) {
+			return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->runs}" );
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders -- $where holds fixed columns with placeholders, one per value.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->runs}{$where}", $values ) );
+	}
+
+	/**
+	 * WHERE clause and values for the run log filters.
+	 *
+	 * @param string|null $automation Automation key filter.
+	 * @param string|null $status     Status filter.
+	 * @return array{0: string, 1: array<int, string|int>}
+	 */
+	private static function filter( ?string $automation, ?string $status ): array {
+		$clauses = array();
+		$values  = array();
+		if ( null !== $automation ) {
+			$clauses[] = 'automation = %s';
+			$values[]  = $automation;
+		}
+		if ( null !== $status ) {
+			$clauses[] = 'status = %s';
+			$values[]  = $status;
+		}
+		return array( array() === $clauses ? '' : ' WHERE ' . implode( ' AND ', $clauses ), $values );
+	}
+
+	/**
 	 * Per automation: the latest run, open run counts and failures since a time.
 	 *
 	 * @param string $failed_since UTC time.

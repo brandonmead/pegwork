@@ -81,6 +81,21 @@ export function parseConfig( raw ) {
 		}
 		types[ postType ] = {
 			label: isKey( type.label ) ? type.label : postType,
+			plural: isKey( type.plural ) ? type.plural : postType,
+			listing: type.listing === true,
+			cardPattern: isKey( type.cardPattern ) ? type.cardPattern : null,
+			noResults: isKey( type.noResults ) ? type.noResults : '',
+			optionPosts: toList( type.optionPosts )
+				.filter(
+					( option ) =>
+						isObject( option ) &&
+						isKey( option.value ) &&
+						option.value.includes( '.' )
+				)
+				.map( ( option ) => ( {
+					value: option.value,
+					label: isKey( option.label ) ? option.label : option.value,
+				} ) ),
 			fields: toList( type.fields ).map( parseField ).filter( Boolean ),
 			taxonomies: toList( type.taxonomies )
 				.map( parseTaxonomy )

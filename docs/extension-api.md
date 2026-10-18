@@ -67,11 +67,53 @@ Registry section accessors (API 0.2.0) return definitions only, in canonical for
 | `forms(): array`, `form( string $key ): ?array` | Forms by key, in load order; one form or null. |
 | `form_source( string $key ): ?string` | `file:<package id>` for a file package, `db` for the `pegwork_schema` option, null when undefined. File forms are read-only in a builder. |
 | `automations(): array`, `automation( string $key ): ?array` | Automations by key, in load order; one automation or null. |
+| `automation_source( string $key ): ?string` | Like `form_source()`: `file:<package id>`, `db`, or null when undefined (shown on Pegwork > Automations). |
 | `options_pages(): array`, `options_page( string $key ): ?array` | Options pages by key, in load order; one page or null. The key is also the option name. |
 
 `Registry::meta_key( $type, $field ): ?string` is the post meta key of a meta-stored field (`wp.meta_key`, else `_{type}_{field}`); null for unknown fields and `wp.storage` fields.
 
 `pegwork_get_field( int|WP_Post $post, string $key, string $context = 'view' ): mixed`: boolean fields return bool, number fields int, float or null when unset, everything else a string; registered defaults apply when unset. Private fields return null unless `$context` is `edit` and the current user can `edit_post`. Null for an unknown post or field. It applies no display rules (`show_when`, password, post status): display code such as the `pegwork/field` binding source adds those (`docs/display.md`).
+
+## Listing hooks
+
+Provided by the `listings` module (`docs/display.md`, "Directories"). Hook names are the contract; the module's classes are not.
+
+### `pegwork_listing_constraints` (filter)
+
+```php
+apply_filters( 'pegwork_listing_constraints', array $constraints, string $post_type, array $context );
+// $context: [ 'source' => 'main'|'block', 'filters' => bool ]
+```
+
+Runs for every Pegwork Query Loop (`source` `block`, once per block that builds the loop's query: post template, pagination, no results) and for the main query of a post type archive whose type has a `listing` (`source` `main`, `filters` always true). Return the constraints to apply:
+
+```php
+array(
+	'taxonomies' => array( 'sifg_impact' => array( 'sdg-04', 'sdg-13' ) ), // term slugs: any within a taxonomy, all across
+	'fields'     => array( 'needs_volunteers' => true ),                  // public boolean: bool; public select: value or list
+	'search'     => 'data',                                                // core search (s)
+	'post__in'   => array( 12 ),                                           // empty list matches nothing
+)
+```
+
+`$constraints` arrives holding the loop's `where` presets (as `fields` and `post__in`), or empty for `main`. Merge into it rather than replacing it. Return values are re-checked against the registry: private, unknown or non-filterable fields, taxonomies the type does not use, malformed slugs and values outside a select's options are dropped; at most 20 values per key, 100 characters of search. Queries always list published records only. The filters module adds URL constraints here when `filters` is true; it must be pure and cheap, since it runs several times per render.
+
+```php
+add_filter( 'pegwork_listing_constraints', function ( $constraints, $type, $context ) {
+	if ( 'sifg_project' === $type && $context['filters'] ) {
+		$constraints['taxonomies']['sifg_project_status'] = array( 'active' );
+	}
+	return $constraints;
+}, 10, 3 );
+```
+
+### `pegwork_listing_pattern` (filter)
+
+```php
+apply_filters( 'pegwork_listing_pattern', ?array $pattern, string $type, string $kind ); // kind: card|details|directory|featured|latest
+```
+
+Pattern properties for `register_block_pattern()` before Pegwork registers `pegwork/<type>-<kind>`; return null to skip it. A pattern of that name registered earlier (a theme `patterns/` file) wins and this filter is not called.
 
 ## Modules
 
@@ -91,7 +133,7 @@ The manifest maps `slug => [ label, description, requires[], path ]`, where `pat
 
 ## Automation hooks
 
-The `automation` module (`docs/automation.md`) runs registry automations. Sites and add-ons can tune it with filters; its PHP classes are internal.
+The `automation` module (`docs/automation.md`) runs registry automations and adds Pegwork > Automations (list, Enable/Disable, Run now, run log, Retry; `manage_options`). Sites and add-ons can tune it with filters; its PHP classes are internal.
 
 The `forms` module (`docs/forms.md`) renders registry forms and handles their submissions. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content), so it ships no `uninstall.php`.
 
@@ -132,7 +174,7 @@ add_action(
 | 0 | Overview | `pegwork` | core |
 | 10 to 19 | each options page | `pegwork-options-{key}` | core |
 | 20, 21 | Forms, Entries | module-defined | `forms` |
-| 30 | Automations | module-defined | `automation` |
+| 30 | Automations | `pegwork-automations` | `automation` |
 | 90 | Modules | `pegwork-modules` | core |
 
 WordPress treats `position` as an index into the submenu built so far, not a sort key. Pegwork therefore adds Overview first (`admin_menu` priority 9, position 0) and Modules last (priority 999); screens added at the default priority sit between them in the order they register. Pass the position from the table anyway.

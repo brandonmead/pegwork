@@ -1,12 +1,33 @@
 <?php
 /**
- * Plugin Name: Pegwork E2E automation helpers
- * Description: Test-only helpers for the signed link browser tests: admin-only REST routes to switch the automation module on or off, create an SI for Good Project, read it back (private fields included) and mint a link with the same code as `wp pegwork automation link`. Raises the link rate limit so a spec run never trips it. Not shipped.
+ * Plugin Name: Pegwork E2E automation
+ * Description: Test-only helpers for the Automations screen browser tests: registers tests/e2e/packages/automation, can make wp_mail() fail on demand, and exposes admin-only REST routes to toggle the automation module, run due automation wake-ups in process, and reset. Not shipped.
  *
  * @package Pegwork
  */
 
-add_filter( 'pegwork_automation_link_rate_limit', static fn() => 1000 );
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test helper clearing the module's own tables.
+
+add_action(
+	'pegwork_register',
+	static function ( $builder ) {
+		if ( defined( 'PEGWORK_DIR' ) ) {
+			$builder->add_package( PEGWORK_DIR . 'tests/e2e/packages/automation' );
+		}
+	}
+);
+
+// While the flag is set, every email fails (a retryable mail_failed); otherwise nothing is sent.
+add_filter(
+	'pre_wp_mail',
+	static function ( $result ) {
+		if ( get_option( 'pegwork_e2e_mail_fail' ) ) {
+			return false;
+		}
+		return null === $result ? true : $result;
+	},
+	20
+);
 
 add_action(
 	'rest_api_init',
@@ -22,68 +43,75 @@ add_action(
 				'permission_callback' => $admin,
 				'callback'            => static function ( WP_REST_Request $request ) {
 					$enabled = array_values( array_diff( (array) get_option( 'pegwork_modules', array() ), array( 'automation' ) ) );
-					if ( $request->get_param( 'enabled' ) ) {
+					if ( rest_sanitize_boolean( $request['enabled'] ) ) {
 						$enabled[] = 'automation';
 					}
 					update_option( 'pegwork_modules', $enabled );
-					return rest_ensure_response( array( 'modules' => $enabled ) );
+					return rest_ensure_response( $enabled );
 				},
 			)
 		);
 
-		// Creates a published, valid Project (status Active, Last verified a year ago).
+		// Switches the mail failure flag on or off.
 		register_rest_route(
 			'pegwork-e2e/v1',
-			'/project',
+			'/automation/mail-fail',
 			array(
 				'methods'             => 'POST',
 				'permission_callback' => $admin,
 				'callback'            => static function ( WP_REST_Request $request ) {
-					$id = Pegwork\Api\Records::create(
-						'sifg_project',
-						array(
-							'name'                => (string) $request->get_param( 'name' ),
-							'description'         => str_repeat( 'Neighbours share tools, seeds and time to grow food together. ', 6 ),
-							'contact_email'       => 'owner@example.org',
-							'last_verified'       => gmdate( 'Y-m-d', strtotime( '-13 months' ) ),
-							'sifg_project_type'   => array( 'nonprofit' ),
-							'sifg_project_status' => array( 'active' ),
-						),
-						'publish'
-					);
-					if ( is_wp_error( $id ) ) {
-						return $id;
-					}
-					return rest_ensure_response( array( 'id' => $id ) );
+					update_option( 'pegwork_e2e_mail_fail', rest_sanitize_boolean( $request['fail'] ) ? 1 : 0 );
+					return rest_ensure_response( true );
 				},
 			)
 		);
 
-		// Reads a Project through the Records API (test helper: private fields included).
+		// Runs the due automation wake-ups in this request, as wp-cron.php would (loopback cron is unreliable in containers).
 		register_rest_route(
 			'pegwork-e2e/v1',
-			'/project/(?P<id>\d+)',
-			array(
-				'methods'             => 'GET',
-				'permission_callback' => $admin,
-				'callback'            => static fn( WP_REST_Request $request ) => rest_ensure_response( Pegwork\Api\Records::get( (int) $request['id'] ) ),
-			)
-		);
-
-		// Mints the still_active link for a Project, optionally as of an offset (for an expired link).
-		register_rest_route(
-			'pegwork-e2e/v1',
-			'/link',
+			'/automation/cron',
 			array(
 				'methods'             => 'POST',
 				'permission_callback' => $admin,
-				'callback'            => static function ( WP_REST_Request $request ) {
-					if ( ! class_exists( 'PegworkAutomation\Links\Links' ) ) {
-						return new WP_Error( 'pegwork_e2e_module_off', 'The automation module is not enabled.', array( 'status' => 409 ) );
+				'callback'            => static function () {
+					$fired = 0;
+					foreach ( wp_get_ready_cron_jobs() as $timestamp => $hooks ) {
+						foreach ( array( 'pegwork_automation_run', 'pegwork_automation_sweep' ) as $hook ) {
+							foreach ( $hooks[ $hook ] ?? array() as $event ) {
+								wp_unschedule_event( $timestamp, $hook, $event['args'] );
+								do_action_ref_array( $hook, $event['args'] ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- The module's own hooks.
+								++$fired;
+							}
+						}
 					}
-					$now = new DateTimeImmutable( (string) ( $request->get_param( 'offset' ) ?? 'now' ) );
-					$url = PegworkAutomation\Links\Links::url( 'sifg_staleness_check', 'still_active', (int) $request->get_param( 'record' ), $now );
-					return rest_ensure_response( array( 'url' => $url ) );
+					return rest_ensure_response( $fired );
+				},
+			)
+		);
+
+		// Deletes the e2e automations' runs and overrides, and clears the mail flag.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/automation/reset',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function () {
+					global $wpdb;
+					delete_option( 'pegwork_e2e_mail_fail' );
+					$overrides = get_option( 'pegwork_automation_overrides', array() );
+					if ( is_array( $overrides ) ) {
+						unset( $overrides['e2e_digest'] );
+						update_option( 'pegwork_automation_overrides', $overrides );
+					}
+					$runs  = $wpdb->prefix . 'pegwork_runs';
+					$steps = $wpdb->prefix . 'pegwork_run_steps';
+					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $runs ) ) === $runs ) {
+						$wpdb->query( $wpdb->prepare( "DELETE s FROM {$steps} s JOIN {$runs} r ON r.id = s.run_id WHERE r.automation = %s", 'e2e_digest' ) );
+						$wpdb->query( $wpdb->prepare( "DELETE FROM {$runs} WHERE automation = %s", 'e2e_digest' ) );
+					}
+					wp_clear_scheduled_hook( 'pegwork_automation_schedule', array( 'e2e_digest' ) );
+					return rest_ensure_response( true );
 				},
 			)
 		);

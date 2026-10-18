@@ -3,9 +3,9 @@
  * press the button, see the thank-you page and the Project re-verified; the same link then says it was
  * already used; tampered and expired links get their own pages and change nothing; axe on every page.
  *
- * Needs tests/e2e/mu-plugins/pegwork-e2e-sifg.php (examples/sifg) and pegwork-e2e-automation.php
- * (module switch, Project and link helpers; links are minted by the same code as
- * `wp pegwork automation link`).
+ * Needs tests/e2e/mu-plugins/pegwork-e2e-sifg.php (examples/sifg), pegwork-e2e-automation.php
+ * (module switch) and pegwork-e2e-links.php (Project and link helpers; links are minted by the
+ * same code as `wp pegwork automation link`).
  */
 const { test, expect, request: requestFactory } = require( '@playwright/test' );
 const { noJs } = require( '../utils/no-js' );
