@@ -1,0 +1,1 @@
+{ "format": 1, "key": "thing_related", "from": "thing", "to": "thing", "cardinality": "many_to_many" }

@@ -30,7 +30,10 @@ describe( 'parseConfig', () => {
 		const { types } = parseConfig( fixture );
 		const project = types.sifg_project;
 
-		expect( Object.keys( types ) ).toEqual( [ 'sifg_project' ] );
+		expect( Object.keys( types ) ).toEqual( [
+			'sifg_project',
+			'sifg_story',
+		] );
 		expect( project.fields.map( ( field ) => field.key ) ).toEqual( [
 			'name',
 			'description',

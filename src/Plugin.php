@@ -59,6 +59,7 @@ final class Plugin {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'pegwork schema', SchemaCommand::class );
+			\WP_CLI::add_command( 'pegwork relationship', Cli\RelationshipCommand::class );
 		}
 	}
 

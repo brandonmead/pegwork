@@ -14,10 +14,11 @@ use WP_Error;
 use WP_REST_Request;
 
 /**
- * Enforces required, required_when, validate rules and taxonomy usage on records.
+ * Enforces required, required_when, validate rules, taxonomy usage and relationship links on records.
  *
  * Completeness rules apply only when the target status is publish, pending or future, so drafts
- * may be incomplete. Single-select term counts apply to every save.
+ * may be incomplete. Single-select term counts, relationship target types and `one_to_many`
+ * limits apply to every save.
  */
 final class RecordValidator {
 
@@ -74,7 +75,7 @@ final class RecordValidator {
 		$status   = $prepared->post_status ?? ( $existing ? $existing->post_status : 'draft' );
 		$values   = self::merge( $type, $prepared, $request, $existing );
 
-		$result = self::validate( self::$registry, $type, $values, in_array( $status, self::COMPLETE_STATUSES, true ) );
+		$result = self::validate( self::$registry, $type, $values, in_array( $status, self::COMPLETE_STATUSES, true ), (int) ( $prepared->ID ?? 0 ) );
 
 		return true === $result ? $prepared : $result;
 	}
@@ -84,11 +85,14 @@ final class RecordValidator {
 	 *
 	 * @param Registry             $registry Effective registry.
 	 * @param string               $type     Content type key.
-	 * @param array<string, mixed> $values   Field values by field key; term ID or slug lists by taxonomy key.
+	 * @param array<string, mixed> $values   Field values by field key; term ID or slug lists by taxonomy key;
+	 *                                       linked ID lists by relationship key (missing means no links).
 	 * @param bool                 $complete Whether completeness rules apply (target status publish, pending or future).
+	 * @param int                  $post_id  ID of the record being saved, 0 for a new one; its own links do not count
+	 *                                       against `one_to_many` limits.
 	 * @return true|WP_Error WP_Error with status 400 and per-field messages in data `fields`.
 	 */
-	public static function validate( Registry $registry, string $type, array $values, bool $complete = true ): bool|WP_Error {
+	public static function validate( Registry $registry, string $type, array $values, bool $complete = true, int $post_id = 0 ): bool|WP_Error {
 		$content_type = $registry->content_type( $type );
 		if ( null === $content_type ) {
 			/* translators: %s: content type key. */
@@ -124,6 +128,13 @@ final class RecordValidator {
 			}
 		}
 
+		foreach ( array_keys( Relationships::from( $registry, $type ) ) as $key ) {
+			$message = self::check_relationship( $registry, $key, $values[ $key ] ?? array(), $complete, $post_id );
+			if ( null !== $message ) {
+				$errors[ $key ] = $message;
+			}
+		}
+
 		if ( array() === $errors ) {
 			return true;
 		}
@@ -137,6 +148,80 @@ final class RecordValidator {
 				'fields' => $errors,
 			)
 		);
+	}
+
+	/**
+	 * Checks the links a "from" record would hold for one relationship. Returns the error message, or null when they pass.
+	 *
+	 * Every save: each ID is an existing record (trashed counts) of the "to" type, and for
+	 * `one_to_many` no ID is already linked from another "from" record. Complete saves: a
+	 * `required` relationship has at least one link.
+	 *
+	 * @param Registry $registry Effective registry.
+	 * @param string   $key      Relationship key.
+	 * @param mixed    $value    Linked IDs: a list, one ID, or null/empty for none.
+	 * @param bool     $complete Whether completeness rules apply.
+	 * @param int      $post_id  ID of the "from" record being saved, 0 for a new one.
+	 */
+	public static function check_relationship( Registry $registry, string $key, mixed $value, bool $complete, int $post_id = 0 ): ?string {
+		$relationship = $registry->relationships()[ $key ] ?? null;
+		if ( null === $relationship ) {
+			return null;
+		}
+
+		$to_label = $registry->content_type( $relationship['to'] )['labels']['singular'] ?? $relationship['to'];
+		$items    = is_array( $value ) ? $value : ( null === $value || '' === $value ? array() : array( $value ) );
+		$linked   = array();
+		foreach ( $items as $item ) {
+			$id   = is_int( $item ) || ( is_string( $item ) && ctype_digit( $item ) ) ? (int) $item : 0;
+			$post = $id > 0 ? get_post( $id ) : null;
+			if ( ! $post instanceof \WP_Post || $relationship['to'] !== $post->post_type ) {
+				/* translators: 1: record ID as given, 2: singular label of the linked content type. */
+				return sprintf( __( 'Record %1$s is not a %2$s.', 'pegwork' ), is_scalar( $item ) ? (string) $item : '?', $to_label );
+			}
+			$linked[ $id ] = $post;
+		}
+
+		if ( 'one_to_many' === $relationship['cardinality'] ) {
+			$from_label = $registry->content_type( $relationship['from'] )['labels']['singular'] ?? $relationship['from'];
+			foreach ( $linked as $id => $post ) {
+				$other = Relationships::linking_ids( $relationship, $key, $id, $post_id, 1 );
+				if ( $other ) {
+					return sprintf(
+						/* translators: 1: linked type label, 2: linked record title, 3: linking type label, 4: linking record title. */
+						__( '%1$s "%2$s" is already linked from %3$s "%4$s".', 'pegwork' ),
+						$to_label,
+						self::title( $post ),
+						$from_label,
+						self::title( get_post( $other[0] ) )
+					);
+				}
+			}
+		}
+
+		if ( $complete && $relationship['required'] && array() === $linked ) {
+			/* translators: %s: singular label of the linked content type. */
+			return sprintf( __( 'At least one %s is required.', 'pegwork' ), $to_label );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Title of a record for an error message: its title when the current user may read it, else its ID.
+	 *
+	 * @param \WP_Post|null $post Record.
+	 */
+	private static function title( ?\WP_Post $post ): string {
+		if ( null === $post ) {
+			return '';
+		}
+		if ( '' === $post->post_title || ! current_user_can( 'read_post', $post->ID ) ) {
+			/* translators: %d: post ID. */
+			return sprintf( __( '#%d', 'pegwork' ), $post->ID );
+		}
+
+		return $post->post_title;
 	}
 
 	/**
@@ -307,6 +392,13 @@ final class RecordValidator {
 				$terms = wp_get_object_terms( $existing->ID, $usage['key'], array( 'fields' => 'ids' ) );
 			}
 			$values[ $usage['key'] ] = is_array( $terms ) ? $terms : ( null === $terms || is_wp_error( $terms ) ? array() : array( $terms ) );
+		}
+
+		foreach ( array_keys( Relationships::from( self::$registry, $type ) ) as $key ) {
+			$meta_key       = Relationships::meta_key( $key );
+			$values[ $key ] = array_key_exists( $meta_key, $meta )
+				? $meta[ $meta_key ]
+				: ( $existing ? Relationships::stored_ids( $existing->ID, $key ) : array() );
 		}
 
 		return $values;

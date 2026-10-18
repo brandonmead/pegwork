@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace Pegwork\Registry;
 
+use Pegwork\Content\Meta;
+use Pegwork\Content\Relationships;
+
 /**
  * Validates decoded registry objects (manifest, content type, taxonomy, relationship).
  *
@@ -223,12 +226,14 @@ final class Validator {
 	}
 
 	/**
-	 * Checks that a valid object's references resolve to defined content types and taxonomies.
+	 * Checks that a valid object's references resolve to defined content types and taxonomies, and
+	 * that a relationship's `_rel_{key}` meta key is not a field meta key on its "from" type.
 	 *
 	 * @param string                              $kind    `content_type` or `relationship`; other kinds have no references.
 	 * @param array<string, mixed>                $data    Object that passed validate().
 	 * @param string                              $file    Source file path for error context.
-	 * @param array<string, array<string, mixed>> $known   Defined keys: `content_type` and `taxonomy`, each key => anything.
+	 * @param array<string, array<string, mixed>> $known   Defined keys: `content_type` and `taxonomy`, each key => its object
+	 *                                                     (or any non-array value, which skips the meta key check).
 	 * @param string                              $pointer JSON pointer of the object within the source.
 	 * @return ValidationError[] Empty when every reference resolves.
 	 */
@@ -256,6 +261,20 @@ final class Validator {
 						$pointer . '/' . $end,
 						/* translators: %s: content type key. */
 						sprintf( __( 'Content type "%s" is not defined.', 'pegwork' ), $data[ $end ] )
+					);
+				}
+			}
+
+			$from     = $known['content_type'][ $data['from'] ] ?? null;
+			$fields   = is_array( $from ) && is_array( $from['fields'] ?? null ) && isset( $data['key'] ) ? $from['fields'] : array();
+			$meta_key = Relationships::META_PREFIX . ( $data['key'] ?? '' );
+			foreach ( $fields as $field ) {
+				if ( Meta::is_meta( $field ) && Meta::key( $data['from'], $field ) === $meta_key ) {
+					$validator->add(
+						'meta_key_conflict',
+						$pointer . '/key',
+						/* translators: 1: meta key, 2: field key, 3: content type key. */
+						sprintf( __( 'Meta key "%1$s" is already used by field "%2$s" on content type "%3$s".', 'pegwork' ), $meta_key, $field['key'], $data['from'] )
 					);
 				}
 			}
@@ -476,13 +495,14 @@ final class Validator {
 	}
 
 	/**
-	 * Validates a relationship (shape only in Phase 1).
+	 * Validates a relationship. `from` and `to` must differ (self links need a direction model,
+	 * Phase 5), a rule JSON Schema cannot express.
 	 *
 	 * @param mixed  $data    Decoded relationship.
 	 * @param string $pointer JSON pointer of the object.
 	 */
 	private function relationship( mixed $data, string $pointer ): void {
-		$this->props(
+		$is_object = $this->props(
 			$data,
 			$pointer,
 			array(
@@ -491,10 +511,31 @@ final class Validator {
 				'from'        => fn( $v, $p ) => $this->key( $v, $p ),
 				'to'          => fn( $v, $p ) => $this->key( $v, $p ),
 				'cardinality' => fn( $v, $p ) => $this->enum( $v, $p, array( 'one_to_many', 'many_to_many' ) ),
-				'storage'     => fn( $v, $p ) => $this->enum( $v, $p, array( 'meta', 'table' ) ),
+				'storage'     => fn( $v, $p ) => $this->storage( $v, $p ),
+				'label'       => fn( $v, $p ) => $this->type( $v, $p, 'string' ),
+				'required'    => fn( $v, $p ) => $this->type( $v, $p, 'boolean' ),
 			),
 			array( 'format', 'key', 'from', 'to', 'cardinality' )
 		);
+
+		if ( $is_object && is_string( $data['from'] ?? null ) && ( $data['to'] ?? null ) === $data['from'] ) {
+			$this->add( 'self_relationship', $pointer . '/to', __( 'A relationship must link two different content types.', 'pegwork' ) );
+		}
+	}
+
+	/**
+	 * Checks a relationship's `storage`. `table` is reserved for Phase 5 and rejected until then,
+	 * so nothing registers as a silent no-op.
+	 *
+	 * @param mixed  $value   Value to check.
+	 * @param string $pointer JSON pointer of the value.
+	 */
+	private function storage( mixed $value, string $pointer ): void {
+		if ( 'table' === $value ) {
+			$this->add( 'storage_not_supported', $pointer, __( 'Table storage is not supported yet; use "meta".', 'pegwork' ) );
+			return;
+		}
+		$this->enum( $value, $pointer, array( 'meta' ) );
 	}
 
 	/**
