@@ -39,6 +39,7 @@ final class Module implements ModuleContract {
 	public function boot(): void {
 		Schema::maybe_install();
 		Engine::register();
+		Links\Handler::register();
 		Admin\Screen::register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( '\WP_CLI' ) ) {

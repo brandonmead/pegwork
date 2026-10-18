@@ -355,7 +355,7 @@ class FieldsTest extends WP_UnitTestCase {
 	public function test_meta_keys() {
 		$keys = array_keys( get_registered_meta_keys( 'post', 'sifg_project' ) );
 		sort( $keys );
-		$expected = array_map( fn( $f ) => '_sifg_project_' . $f, array( 'contact_email', 'github_link', 'last_verified', 'needs_volunteers', 'volunteer_link', 'website', 'who_for' ) );
+		$expected = array_map( fn( $f ) => '_sifg_project_' . $f, array( 'contact_email', 'github_link', 'last_verified', 'needs_volunteers', 'paused_from', 'paused_on', 'paused_volunteers', 'volunteer_link', 'website', 'who_for' ) );
 		$this->assertSame( $expected, $keys );
 		$this->assertSame( 'boolean', get_registered_meta_keys( 'post', 'sifg_project' )['_sifg_project_needs_volunteers']['type'] );
 		$this->assertSame( 'uri', get_registered_meta_keys( 'post', 'sifg_project' )['_sifg_project_website']['show_in_rest']['schema']['format'] );

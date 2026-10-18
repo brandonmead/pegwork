@@ -45,6 +45,9 @@ describe( 'parseConfig', () => {
 			'github_link',
 			'contact_email',
 			'last_verified',
+			'paused_on',
+			'paused_from',
+			'paused_volunteers',
 		] );
 		expect(
 			project.taxonomies.map( ( taxonomy ) => taxonomy.select )

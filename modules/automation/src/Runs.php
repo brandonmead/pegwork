@@ -135,6 +135,19 @@ final class Runs {
 	}
 
 	/**
+	 * The run of an automation with an idempotency key, with `context` decoded.
+	 *
+	 * @param string $automation Automation key.
+	 * @param string $key        Idempotency key as stored.
+	 * @return array<string, mixed>|null
+	 */
+	public function find_key( string $automation, string $key ): ?array {
+		global $wpdb;
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->runs} WHERE automation = %s AND idempotency_key = %s", $automation, $key ), ARRAY_A );
+		return is_array( $row ) ? self::decode( $row ) : null;
+	}
+
+	/**
 	 * Claims a run for execution: queued, or waiting and due. Atomic, so a duplicate wake-up (two WP-Cron
 	 * spawns, a re-entrant call) gets false and does nothing.
 	 *

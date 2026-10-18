@@ -102,7 +102,7 @@ class AdminOverviewTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '<th scope="row" class="column-key"><code>sifg_project</code></th>', $html );
 		$this->assertStringContainsString( '<code>projects</code>', $html );
 		$this->assertStringContainsString( '<details class="pegwork-fields" id="pegwork-fields-sifg_project">', $html );
-		$this->assertStringContainsString( 'Fields of Projects (sifg_project): 9 fields', $html );
+		$this->assertStringContainsString( 'Fields of Projects (sifg_project): 12 fields', $html );
 		$this->assertStringContainsString( '<code>_sifg_project_contact_email</code>', $html );
 		$this->assertStringContainsString( '<code>post_content</code>', $html );
 		$this->assertStringContainsString( '>Private</td>', $html );

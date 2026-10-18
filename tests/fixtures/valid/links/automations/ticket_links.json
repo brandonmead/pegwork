@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "key": "ticket_links",
+  "label": "Ticket links: email two links on publish",
+  "trigger": { "type": "event", "event": "record.status_changed", "content_type": "ticket",
+    "when": { "var": "trigger.new_status", "op": "eq", "value": "publish" } },
+  "steps": [
+    { "id": "send", "type": "send_email", "to": "{{record.owner_email}}",
+      "subject": "Links for {{record.title}} {{link.instant}}",
+      "text": "Confirm: {{link.confirmed}}\nInstant: {{link.instant}}",
+      "html": "<p><a href=\"{{link.confirmed}}\">Confirm</a></p>" }
+  ],
+  "links": {
+    "confirmed": { "expires": "P7D", "button": "Mark {{record.title}} verified",
+      "success_url": "/thanks/", "expired_url": "/expired/",
+      "steps": [ { "id": "verify", "type": "update_record", "values": { "verified": "{{today}}" } } ] },
+    "instant": { "expires": "P7D", "confirm": false,
+      "success_message": "Done for {{record.title}}.",
+      "steps": [ { "id": "mark", "type": "update_record", "values": { "marker": "clicked" } } ] },
+    "elsewhere": { "expires": "P7D", "confirm": false,
+      "steps": [ { "id": "other", "type": "update_record", "record": "{{record.id}}0", "values": { "marker": "other" } } ] }
+  }
+}
