@@ -1,10 +1,12 @@
 # Pegwork display
 
-Field output and conditional display on standard blocks. Provided by the `listings` module:
+Field output and conditional display on standard blocks. Record fields (`pegwork/field`) and the "Show if" block are provided by the `listings` module:
 
 ```
 wp pegwork module enable listings
 ```
+
+Options page values (`pegwork/option`, [below](#option-output-the-pegworkoption-binding-source)) are core and need no module.
 
 Design: `docs/phase-2-design.md` sections 4 and 5. Listings (Query Loop variation), filters and the `listing` registry section arrive in later Phase 2 PRs.
 
@@ -64,6 +66,32 @@ A block with several `pegwork/field` bindings renders when at least one resolves
 Post editor and Query Loops preview real values from the record being edited. Templates have no record, so bound blocks show the field label. Bound values are read-only in the block; edit them in the Pegwork panel of the record.
 
 The block inspector's Attributes panel lists Pegwork fields on WordPress 6.9 and later. On 6.7 and 6.8 core keeps field lists only for `core/post-meta`, so add bindings in the code editor or from a pattern there; preview works on all versions.
+
+## Option output: the `pegwork/option` binding source
+
+Binds an attribute of a core block to a public field of an options page (`docs/options-pages.md`). No block context is needed, so it works in any template, pattern or post. Same blocks and attributes as `pegwork/field`.
+
+```html
+<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"pegwork/option","args":{"page":"sifg_settings","field":"contact_email"}}}}} -->
+<p>hello@example.org</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:button {"metadata":{"bindings":{"url":{"source":"pegwork/option","args":{"page":"sifg_settings","field":"contact_email","format":"mailto"}}}}} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Email us</a></div>
+<!-- /wp:button -->
+```
+
+| Arg | Meaning |
+|---|---|
+| `page` | Options page key (required). |
+| `field` | Field key on that page (required). |
+| `format` | `mailto` on an email field: `mailto:` plus the address (for a button `url`; an email bound to `url` gets it anyway). On a date field: a PHP date format for `wp_date()`. |
+
+Output follows the `pegwork/field` table above: `esc_html` for text-like values, `wp_kses_post` for rich text, option labels for selects, the field label for a boolean that is on, `wp_date()` for dates; the `url` attribute takes url fields (`http`, `https`, `mailto` only) and email fields.
+
+Unlike `pegwork/field`, an unresolved binding keeps the block and its saved text, the fallback: the block's own markup shows when the page or field is unknown, the field is private (for every user, administrators included) or a `post` field (render the featured record with a Query Loop and `post__in` from `pegwork_get_option()`), or the value is empty. Write fallback text a visitor can read, or leave the block out of the pattern.
+
+There is no editor-side registration for this source yet (design: deferred), so the editor shows no live value: depending on the WordPress version it shows the saved text or the source label. Write the markup in patterns or the code editor.
 
 ## Conditional display: the "Show if" block (`pegwork/conditional`)
 

@@ -2,6 +2,8 @@
 
 Status: draft for owner review, 2026-10-18. Builds on `docs/phase-1-design.md` (approved 2026-10-17). Completes the spec's content builder row: relationships and options pages, plus the minimal Pegwork admin area that Phase 2 to 4 hang their screens on. Design only. Version claims unverified; confirm in the PR that first relies on them.
 
+As built (2026-10-18): PRs 1 to 3 merged; PRs 4 and 5 built together (branch `options-pages`). Deviations from section 3 and 4.4: the `post` field is a searchable combobox over REST with the 500-post select reduced to a 100-post no-JS fallback; `pegwork_get_option()` takes an optional field (`?string $field = null` returns the whole page); an email bound to a `url` attribute gets `mailto:` without `format`, as `pegwork/field` does. Reference: `docs/options-pages.md`, `docs/display.md`.
+
 ## 0. Key decisions
 
 - Relationships, options pages and the admin area are core, not modules. They are registry objects or registry views: listings, forms and automation all read them, and switching them off would orphan stored data and break `pegwork_get_option()` callers.

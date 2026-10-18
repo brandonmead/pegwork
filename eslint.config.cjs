@@ -11,6 +11,7 @@ module.exports = [
 		settings: {
 			'import/core-modules': [
 				'@wordpress/a11y',
+				'@wordpress/api-fetch',
 				'@wordpress/block-editor',
 				'@wordpress/blocks',
 				'@wordpress/components',

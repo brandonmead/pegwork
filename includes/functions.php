@@ -40,6 +40,25 @@ function pegwork_get_field( int|WP_Post $post, string $key, string $context = 'v
 }
 
 /**
+ * One options page value, or all of a page's values, as typed values.
+ *
+ * Private fields are included: this is for server code (notification recipients, for example). Never
+ * print a private value; the `pegwork/option` binding source is the way to show public ones.
+ *
+ * @since 0.2.0
+ *
+ * @param string      $page  Options page key (also the option name).
+ * @param string|null $field Field key, or null for every field of the page.
+ * @return mixed For one field: the stored value cast to its type, else its default. Boolean fields bool;
+ *               number fields int, float or null when unset; post fields the post ID or null; other fields
+ *               string ('' when unset). For null `$field`: an array of those by field key. Null for an
+ *               unknown page or field.
+ */
+function pegwork_get_option( string $page, ?string $field = null ): mixed {
+	return Pegwork\Options\Values::get( pegwork_registry(), $page, $field );
+}
+
+/**
  * Validates a record against its content type, as publishing would.
  *
  * @param string               $type    Content type key.
