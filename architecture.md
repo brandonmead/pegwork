@@ -124,6 +124,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Verified 2026-10-17: `register_meta` `label` arg present in WP 6.7, absent in 6.6; `registerBlockBindingsSource` public in 6.7.
 - JS: `@wordpress/scripts` 36.0.0 (Node `^22.22.2`), `test-unit-js` runs Vitest 5 (Jest is legacy as of scripts 36). Lockfile needs npm 11 (npm 10.9 crashes with `edgesOut` on the Vitest peer set): locally `npx -y npm@11.20.0 ci`. WordPress packages are externals, declared in `eslint.config.cjs` `import/core-modules`, not installed.
 - WP admin user `admin`. Password not stored: use Local's one-click admin or `wp user update`.
+- Browser E2E (`docs/e2e.md`): Playwright 1.63.0 + axe 4.13.0, specs `tests/e2e/specs/*.e2e.js` (not `.spec.js`, Vitest would run those), `npm run test:e2e`. CI job `E2E`: wp-env 11.16.0 (`.wp-env.json`, WP latest, PHP 8.2, mu-plugin `tests/e2e/mu-plugins/pegwork-e2e-sifg.php` registers `examples/sifg`), site on `localhost:8888`, admin/password. Locally: `PEGWORK_E2E_BASE_URL`, `PEGWORK_E2E_USER`, `PEGWORK_E2E_PASSWORD`; `bin/e2e-local-site.sh start <name> <port>` builds a throwaway site in `~/wp-envs/<name>` (DB `wpenv_<name>`, Local PHP and MySQL, `wp server`) and writes credentials to `~/wp-envs/<name>/.e2e-env`. `wp db create` needs Local's `mysql` client on PATH (the script adds `lightning-services/mysql-8.4.0+2`). Last verified 2026-10-18.
 
 ## Gotchas
 - Folder is under Mead Drive (synced), which creates "<name> 2.<ext>" duplicates, even inside .git. Stage with explicit paths, never `git add -A`.

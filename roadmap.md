@@ -38,6 +38,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 Follow-up in the siforgood repo: copy `examples/sifg/content-types/sifg_story.json` and `examples/sifg/relationships/story_projects.json` into `sifg-config/schema/` so the two stay byte-identical.
 
 ## Done
+- Shared browser E2E harness (2026-10-18, in review). Later feature PRs add specs under `tests/e2e/specs/`; the admin axe spec starts checking Pegwork admin screens once they land.
 - Choose product name: Pegwork (2026-10-17).
 
 ## Open questions
