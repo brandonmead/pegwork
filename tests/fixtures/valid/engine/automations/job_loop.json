@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "job_loop",
+  "label": "Self-triggering: rewrites Marker whenever Marker changes",
+  "trigger": { "type": "event", "event": "record.updated", "content_type": "job",
+    "when": { "var": "record.marker", "op": "changed" } },
+  "steps": [
+    { "id": "bump", "type": "update_record", "values": { "marker": "loop-{{run.id}}" } }
+  ]
+}
