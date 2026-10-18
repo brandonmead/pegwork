@@ -46,6 +46,12 @@ final class Module implements ModuleContract {
 		Block::register();
 		Editor::register();
 		Submission::register();
+		// Entries admin, CSV export, privacy tools and retention (Phase 3 PR 7).
+		EntriesAdmin::register();
+		EntryActions::register();
+		Export::register();
+		Privacy::register();
+		Cleanup::register();
 
 		if ( ! has_filter( 'block_categories_all', array( self::class, 'block_categories' ) ) ) {
 			add_filter( 'block_categories_all', array( self::class, 'block_categories' ) );

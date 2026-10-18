@@ -4,6 +4,7 @@
 	"mappings": {
 		"wp-content/mu-plugins/pegwork-e2e-sifg.php": "./tests/e2e/mu-plugins/pegwork-e2e-sifg.php",
 		"wp-content/mu-plugins/pegwork-e2e-forms.php": "./tests/e2e/mu-plugins/pegwork-e2e-forms.php",
+		"wp-content/mu-plugins/pegwork-e2e-entries.php": "./tests/e2e/mu-plugins/pegwork-e2e-entries.php",
 		"wp-content/mu-plugins/pegwork-e2e-automation.php": "./tests/e2e/mu-plugins/pegwork-e2e-automation.php"
 	},
 	"config": { "WP_DEBUG": true, "WP_DEBUG_LOG": true },

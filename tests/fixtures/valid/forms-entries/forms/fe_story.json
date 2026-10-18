@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "key": "fe_story",
+  "label": "Share a story",
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true },
+    { "key": "story", "type": "textarea", "label": "Your story", "required": true },
+    { "key": "email", "type": "email", "label": "Email", "required": true },
+    { "key": "kind", "type": "select", "label": "Kind",
+      "options": [ { "value": "win", "label": "A win" }, { "value": "lesson", "label": "A lesson" } ] },
+    { "key": "consent", "type": "boolean", "label": "You may publish this story", "required": true }
+  ],
+  "retention_days": 30
+}
