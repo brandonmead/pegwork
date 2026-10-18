@@ -137,6 +137,15 @@ jobs:
 
       - run: npm run build
 
+      # The plugin loads vendor/autoload.php; wp-env mounts this checkout, so it must exist.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      - run: composer install --no-dev --no-interaction --no-progress
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
