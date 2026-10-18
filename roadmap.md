@@ -20,6 +20,13 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 7. Module loader and public API (merged)
 8. sifg-config (in siforgood repo)
 
+## Content builder completion PRs (`docs/content-builder-design.md` section 9)
+1. Admin skeleton: menu, Overview, Modules, `Registry\Status`, disable dependents rule (in review)
+2. Relationships backend
+3. Relationship picker plus E2E harness
+4. Options pages
+5. Block Bindings and docs
+
 ## Done
 - Choose product name: Pegwork (2026-10-17).
 

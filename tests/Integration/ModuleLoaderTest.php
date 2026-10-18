@@ -196,6 +196,38 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Disabling a module that an enabled module requires is rejected and stores nothing.
+	 */
+	public function test_disable_rejects_while_an_enabled_module_requires_it() {
+		update_option( 'pegwork_modules', array( 'sample', 'needs-sample' ) );
+
+		$this->assertSame( array( 'needs-sample' ), Loader::dependents( 'sample' ) );
+		$this->assertSame( array(), Loader::dependents( 'needs-sample' ) );
+
+		$blocked = Loader::disable( 'sample' );
+		$this->assertWPError( $blocked );
+		$this->assertSame( 'pegwork_module_required_by', $blocked->get_error_code() );
+		$this->assertStringContainsString( 'needs-sample', $blocked->get_error_message() );
+		$this->assertSame( array( 'sample', 'needs-sample' ), Loader::enabled() );
+
+		$this->assertTrue( Loader::disable( 'needs-sample' ) );
+		$this->assertTrue( Loader::disable( 'sample' ) );
+		$this->assertSame( array(), Loader::enabled() );
+	}
+
+	/**
+	 * Missing requirements are the required slugs that are not enabled.
+	 */
+	public function test_missing_requirements() {
+		$this->assertSame( array( 'sample' ), Loader::missing_requirements( 'needs-sample' ) );
+		$this->assertSame( array(), Loader::missing_requirements( 'sample' ) );
+		$this->assertSame( array(), Loader::missing_requirements( 'nope' ) );
+
+		Loader::enable( 'sample' );
+		$this->assertSame( array(), Loader::missing_requirements( 'needs-sample' ) );
+	}
+
+	/**
 	 * Phase 1 ships no optional modules.
 	 */
 	public function test_shipped_manifest_is_empty() {
