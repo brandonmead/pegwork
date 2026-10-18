@@ -9,14 +9,25 @@ declare( strict_types=1 );
 
 namespace Pegwork\Registry;
 
+use Pegwork\Registry\Rules\AutomationRules;
+use Pegwork\Registry\Rules\FormRules;
+use Pegwork\Registry\Rules\ListingRules;
+use Pegwork\Registry\Rules\OptionsPageRules;
+
 /**
- * Validates decoded registry objects (manifest, content type, taxonomy, relationship).
+ * Validates decoded registry objects (manifest, content type, taxonomy, relationship, form, automation, options page).
  *
  * Works on PHP arrays as decoded by json_decode( ..., true ) or read from the DB option.
  * `schema/registry.schema.json` describes the same per-file rules; checks that need more than
- * one object (references, duplicate keys) exist only here.
+ * one object (references, duplicate keys) exist only here. The rules for the optional sections
+ * live in traits under `Rules/`, one per section.
  */
 final class Validator {
+
+	use AutomationRules;
+	use FormRules;
+	use ListingRules;
+	use OptionsPageRules;
 
 	/**
 	 * Current file format.
@@ -64,9 +75,24 @@ final class Validator {
 	public const TAXONOMY_MAX_LENGTH = 32;
 
 	/**
+	 * Limit for form, automation and options page keys.
+	 */
+	public const OBJECT_KEY_MAX_LENGTH = 64;
+
+	/**
 	 * Phase 1 field types.
 	 */
 	public const FIELD_TYPES = array( 'text', 'textarea', 'rich_text', 'url', 'email', 'boolean', 'date', 'number', 'select' );
+
+	/**
+	 * Field type holding one post ID. Options pages only; content types link records with relationships.
+	 */
+	public const POST_TYPE_FIELD = 'post';
+
+	/**
+	 * Field type for one uploaded file. Unbound form fields only.
+	 */
+	public const FILE_FIELD = 'file';
 
 	/**
 	 * Field types whose values are strings.
@@ -202,7 +228,7 @@ final class Validator {
 	/**
 	 * Validates one decoded object.
 	 *
-	 * @param string $kind    One of `manifest`, `content_type`, `taxonomy`, `relationship`.
+	 * @param string $kind    One of `manifest`, `content_type`, `taxonomy`, `relationship`, `form`, `automation`, `options_page`.
 	 * @param mixed  $data    Decoded object.
 	 * @param string $file    Source file path for error context.
 	 * @param string $pointer JSON pointer of the object within the source, empty for a whole file.
@@ -217,18 +243,24 @@ final class Validator {
 			'content_type' => $validator->content_type( $data, $pointer ),
 			'taxonomy'     => $validator->taxonomy( $data, $pointer ),
 			'relationship' => $validator->relationship( $data, $pointer ),
+			'form'         => $validator->form( $data, $pointer ),
+			'automation'   => $validator->automation( $data, $pointer ),
+			'options_page' => $validator->options_page( $data, $pointer ),
 		};
 
 		return $validator->errors;
 	}
 
 	/**
-	 * Checks that a valid object's references resolve to defined content types and taxonomies.
+	 * Checks that a valid object's references resolve, and the rules that need other objects.
 	 *
-	 * @param string                              $kind    `content_type` or `relationship`; other kinds have no references.
+	 * `$known` maps kind => key => the defined object in canonical form. A value that is not an array
+	 * (for example `true`) only proves the key exists; rules that need the object's contents are skipped for it.
+	 *
+	 * @param string                              $kind    Object kind; manifests and taxonomies have no references.
 	 * @param array<string, mixed>                $data    Object that passed validate().
 	 * @param string                              $file    Source file path for error context.
-	 * @param array<string, array<string, mixed>> $known   Defined keys: `content_type` and `taxonomy`, each key => anything.
+	 * @param array<string, array<string, mixed>> $known   Defined objects by kind, then key.
 	 * @param string                              $pointer JSON pointer of the object within the source.
 	 * @return ValidationError[] Empty when every reference resolves.
 	 */
@@ -260,6 +292,14 @@ final class Validator {
 				}
 			}
 		}
+
+		match ( $kind ) {
+			'content_type' => $validator->listing_references( $data, $pointer, $known ),
+			'form'         => $validator->form_references( $data, $pointer, $known ),
+			'automation'   => $validator->automation_references( $data, $pointer, $known ),
+			'options_page' => $validator->options_page_references( $data, $pointer, $known ),
+			default        => null,
+		};
 
 		return $validator->errors;
 	}
@@ -314,6 +354,7 @@ final class Validator {
 				'public'     => fn( $v, $p ) => $this->type( $v, $p, 'boolean' ),
 				'taxonomies' => fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->taxonomy_usage( $item, $q ) ),
 				'fields'     => fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->field( $item, $q ) ),
+				'listing'    => fn( $v, $p ) => $this->listing( $v, $p ),
 				'wp'         => fn( $v, $p ) => $this->props(
 					$v,
 					$p,
@@ -336,6 +377,7 @@ final class Validator {
 		}
 
 		$this->unique( $data['taxonomies'] ?? null, $pointer . '/taxonomies', 'key' );
+		$this->listing_targets( $data, $pointer );
 
 		$fields = $data['fields'] ?? null;
 		if ( ! is_array( $fields ) || ! array_is_list( $fields ) ) {
@@ -361,41 +403,101 @@ final class Validator {
 	}
 
 	/**
+	 * Field types allowed in a context.
+	 *
+	 * @param string $context `content_type`, `options_page` or `form` (unbound form fields).
+	 * @return string[]
+	 */
+	public static function field_types( string $context = 'content_type' ): array {
+		return match ( $context ) {
+			'options_page' => array_merge( self::FIELD_TYPES, array( self::POST_TYPE_FIELD ) ),
+			'form'         => array_merge( self::FIELD_TYPES, array( self::FILE_FIELD ) ),
+			default        => self::FIELD_TYPES,
+		};
+	}
+
+	/**
 	 * Validates one field.
+	 *
+	 * The same rules serve content type fields, options page fields and unbound form fields; the context
+	 * decides the allowed types and the context-only properties.
 	 *
 	 * @param mixed  $field   Decoded field.
 	 * @param string $pointer JSON pointer of the field.
+	 * @param string $context `content_type`, `options_page` or `form`.
 	 */
-	private function field( mixed $field, string $pointer ): void {
-		$is_object = $this->props(
-			$field,
-			$pointer,
-			array(
-				'key'           => fn( $v, $p ) => $this->key( $v, $p ),
-				'type'          => fn( $v, $p ) => $this->enum( $v, $p, self::FIELD_TYPES ),
-				'label'         => fn( $v, $p ) => $this->type( $v, $p, 'string' ),
-				'required'      => fn( $v, $p ) => $this->type( $v, $p, 'boolean' ),
-				'visibility'    => fn( $v, $p ) => $this->enum( $v, $p, array( 'public', 'private' ) ),
-				'default'       => fn() => null, // Checked below against the field type.
-				'options'       => fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->option( $item, $q ) ),
-				'required_when' => fn( $v, $p ) => $this->condition( $v, $p ),
-				'show_when'     => fn( $v, $p ) => $this->condition( $v, $p ),
-				'validate'      => fn( $v, $p ) => $this->rules( $v, $p ),
-				'wp'            => fn( $v, $p ) => $this->props(
-					$v,
-					$p,
-					array(
-						'storage'  => fn( $w, $q ) => $this->enum( $w, $q, array( 'post_title', 'post_content' ) ),
-						'meta_key' => fn( $w, $q ) => $this->meta_key( $w, $q ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Schema property name, not a query.
-					)
-				),
-			),
-			array( 'key', 'type', 'label' )
+	private function field( mixed $field, string $pointer, string $context = 'content_type' ): void {
+		$string = fn( $v, $p ) => $this->type( $v, $p, 'string' );
+		$checks = array(
+			'key'           => fn( $v, $p ) => $this->key( $v, $p ),
+			'type'          => fn( $v, $p ) => $this->field_type( $v, $p, $context ),
+			'label'         => $string,
+			'required'      => fn( $v, $p ) => $this->type( $v, $p, 'boolean' ),
+			'default'       => fn() => null, // Checked below against the field type.
+			'options'       => fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->option( $item, $q ) ),
+			'required_when' => fn( $v, $p ) => $this->condition( $v, $p ),
+			'show_when'     => fn( $v, $p ) => $this->condition( $v, $p ),
+			'validate'      => fn( $v, $p ) => $this->rules( $v, $p ),
 		);
 
+		if ( 'form' !== $context ) {
+			$checks['visibility'] = fn( $v, $p ) => $this->enum( $v, $p, array( 'public', 'private' ) );
+		}
+		if ( 'content_type' === $context ) {
+			$checks['wp'] = fn( $v, $p ) => $this->props(
+				$v,
+				$p,
+				array(
+					'storage'  => fn( $w, $q ) => $this->enum( $w, $q, array( 'post_title', 'post_content' ) ),
+					'meta_key' => fn( $w, $q ) => $this->meta_key( $w, $q ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Schema property name, not a query.
+				)
+			);
+		}
+		if ( 'options_page' === $context ) {
+			$checks['post_type'] = fn( $v, $p ) => $this->key( $v, $p );
+			foreach ( array( 'required_when', 'show_when', 'wp' ) as $name ) {
+				$checks[ $name ] = fn( $v, $p ) => $this->add(
+					'not_allowed_in_options_page',
+					$p,
+					/* translators: %s: property name. */
+					sprintf( __( '"%s" is not allowed in options page fields (settings screens have no conditions or storage mapping).', 'pegwork' ), $name )
+				);
+			}
+		}
+		if ( 'form' === $context ) {
+			$checks += $this->form_presentation_checks();
+			$checks['accept']      = fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->extension( $item, $q ) );
+			$checks['max_size_mb'] = function ( $v, $p ) {
+				if ( $this->type( $v, $p, 'number' ) && $v <= 0 ) {
+					$this->add( 'invalid_value', $p, __( '"max_size_mb" must be greater than 0.', 'pegwork' ) );
+				}
+			};
+		}
+
+		$is_object = $this->props( $field, $pointer, $checks, array( 'key', 'type', 'label' ) );
+
 		$type = $field['type'] ?? null;
-		if ( ! $is_object || ! in_array( $type, self::FIELD_TYPES, true ) ) {
+		if ( ! $is_object || ! in_array( $type, self::field_types( $context ), true ) ) {
 			return;
+		}
+
+		if ( self::POST_TYPE_FIELD === $type && ! array_key_exists( 'post_type', $field ) ) {
+			$this->add( 'missing_property', $pointer, __( 'Post fields need "post_type".', 'pegwork' ) );
+		}
+		if ( 'options_page' === $context && self::POST_TYPE_FIELD !== $type && array_key_exists( 'post_type', $field ) ) {
+			$this->add( 'unknown_property', $pointer . '/post_type', __( '"post_type" is only allowed on post fields.', 'pegwork' ) );
+		}
+		if ( self::FILE_FIELD === $type && ! array_key_exists( 'accept', $field ) ) {
+			$this->add( 'missing_property', $pointer, __( 'File fields need "accept" (the allowed file extensions).', 'pegwork' ) );
+		}
+		foreach ( array( 'accept', 'max_size_mb' ) as $name ) {
+			if ( 'form' === $context && self::FILE_FIELD !== $type && array_key_exists( $name, $field ) ) {
+				/* translators: %s: property name. */
+				$this->add( 'unknown_property', $pointer . '/' . $name, sprintf( __( '"%s" is only allowed on file fields.', 'pegwork' ), $name ) );
+			}
+		}
+		if ( 'form' === $context && isset( $field['display'] ) ) {
+			$this->form_display( $field['display'], 'select' === $type ? 'single' : null, $pointer . '/display' );
 		}
 
 		$wp = is_array( $field['wp'] ?? null ) ? $field['wp'] : array();
@@ -442,6 +544,22 @@ final class Validator {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Checks a field type for its context.
+	 *
+	 * @param mixed  $value   Value to check.
+	 * @param string $pointer JSON pointer of the value.
+	 * @param string $context `content_type`, `options_page` or `form`.
+	 */
+	private function field_type( mixed $value, string $pointer, string $context ): void {
+		if ( self::POST_TYPE_FIELD === $value && 'options_page' !== $context ) {
+			$this->add( 'post_field_not_allowed', $pointer, __( 'Field type "post" is only allowed on options pages. Link records with a relationship instead.', 'pegwork' ) );
+			return;
+		}
+
+		$this->enum( $value, $pointer, self::field_types( $context ) );
 	}
 
 	/**
@@ -877,6 +995,7 @@ final class Validator {
 	 */
 	private static function default_matches( string $type, mixed $value ): bool {
 		return match ( $type ) {
+			self::POST_TYPE_FIELD, self::FILE_FIELD => false, // Post IDs and uploads have no portable default.
 			'boolean' => is_bool( $value ),
 			'number'  => is_int( $value ) || is_float( $value ),
 			'date'    => is_string( $value ) && 1 === preg_match( self::DATE_PATTERN, $value ),

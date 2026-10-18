@@ -2,12 +2,15 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/brandonmead/pegwork/schema/registry.schema.json",
 	"title": "Pegwork registry package file",
-	"description": "One file of a Pegwork schema package: manifest.json, content-types/*.json, taxonomies/*.json or relationships/*.json. Validate a specific file against #/$defs/manifest, #/$defs/content_type, #/$defs/taxonomy or #/$defs/relationship. The PHP validator (src/Registry/Validator.php) is the runtime truth; checks that span objects (references, duplicate keys) exist only there.",
+	"description": "One file of a Pegwork schema package: manifest.json, content-types/*.json, taxonomies/*.json, relationships/*.json, forms/*.json, automations/*.json or options-pages/*.json. Validate a specific file against #/$defs/manifest, #/$defs/content_type, #/$defs/taxonomy, #/$defs/relationship, #/$defs/form, #/$defs/automation or #/$defs/options_page. The PHP validator (src/Registry/Validator.php) is the runtime truth; checks that span objects (references, duplicate keys, field types behind a reference) exist only there. Reference: docs/registry-reference.md.",
 	"anyOf": [
 		{ "$ref": "#/$defs/manifest" },
 		{ "$ref": "#/$defs/content_type" },
 		{ "$ref": "#/$defs/taxonomy" },
-		{ "$ref": "#/$defs/relationship" }
+		{ "$ref": "#/$defs/relationship" },
+		{ "$ref": "#/$defs/form" },
+		{ "$ref": "#/$defs/automation" },
+		{ "$ref": "#/$defs/options_page" }
 	],
 	"$defs": {
 		"format": {
@@ -18,6 +21,13 @@
 		"key": {
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"bounded_key": {
+			"description": "Form, automation and options page key: at most 64 characters.",
+			"allOf": [
+				{ "$ref": "#/$defs/key" },
+				{ "maxLength": 64 }
+			]
 		},
 		"object_key": {
 			"description": "Content type or taxonomy key: not a reserved WordPress term and not prefixed wp_.",
@@ -44,6 +54,32 @@
 				"withoutcomments", "year"
 			]
 		},
+		"reserved_option_name": {
+			"description": "Core option names (populate_options() plus a few added later). An options page key is its option name.",
+			"enum": [
+				"active_plugins", "admin_email", "admin_email_lifespan", "auto_plugin_theme_update_emails",
+				"auto_update_core_dev", "auto_update_core_major", "auto_update_core_minor", "avatar_default",
+				"avatar_rating", "blog_charset", "blog_public", "blogdescription", "blogname", "can_compress_scripts",
+				"category_base", "close_comments_days_old", "close_comments_for_old_posts", "comment_max_links",
+				"comment_moderation", "comment_order", "comment_previously_approved", "comment_registration",
+				"comments_notify", "comments_per_page", "cron", "date_format", "db_version", "default_category",
+				"default_comment_status", "default_comments_page", "default_email_category", "default_link_category",
+				"default_ping_status", "default_pingback_flag", "default_post_format", "default_role", "disallowed_keys",
+				"finished_splitting_shared_terms", "fresh_site", "gmt_offset", "hack_file", "home", "html_type",
+				"image_default_align", "image_default_link_type", "image_default_size", "initial_db_version",
+				"large_size_h", "large_size_w", "link_manager_enabled", "links_updated_date_format", "mailserver_login",
+				"mailserver_pass", "mailserver_port", "mailserver_url", "medium_large_size_h", "medium_large_size_w",
+				"medium_size_h", "medium_size_w", "moderation_keys", "moderation_notify", "page_comments",
+				"page_for_posts", "page_on_front", "permalink_structure", "ping_sites", "posts_per_page", "posts_per_rss",
+				"recently_activated", "recently_edited", "require_name_email", "rewrite_rules", "rss_use_excerpt",
+				"show_avatars", "show_comments_cookies_opt_in", "show_on_front", "sidebars_widgets", "site_icon",
+				"siteurl", "start_of_week", "sticky_posts", "stylesheet", "tag_base", "template", "theme_switched",
+				"thread_comments", "thread_comments_depth", "thumbnail_crop", "thumbnail_size_h", "thumbnail_size_w",
+				"time_format", "timezone_string", "uninstall_plugins", "upload_path", "upload_url_path",
+				"uploads_use_yearmonth_folders", "use_smilies", "use_trackback", "users_can_register",
+				"widget_categories", "widget_rss", "widget_text"
+			]
+		},
 		"text": {
 			"type": "string",
 			"minLength": 1
@@ -51,6 +87,20 @@
 		"texts": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/text" }
+		},
+		"capability": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"not_callable": {
+			"description": "Property names that look like PHP callables are never allowed.",
+			"not": { "pattern": "(callback|_cb|_class)$" }
+		},
+		"free": {
+			"description": "Free-form JSON data (reserved properties such as automation ui); callable-looking names are still rejected.",
+			"propertyNames": { "$ref": "#/$defs/not_callable" },
+			"additionalProperties": { "$ref": "#/$defs/free" },
+			"items": { "$ref": "#/$defs/free" }
 		},
 		"labels": {
 			"type": "object",
@@ -75,9 +125,9 @@
 				},
 				"label": { "$ref": "#/$defs/text" },
 				"requires": {
-					"description": "Version constraints by plugin slug, such as { \"pegwork\": \">=0.1.0\" }.",
+					"description": "Version constraints by plugin slug, such as { \"pegwork\": \">=0.2.0\" }.",
 					"type": "object",
-					"propertyNames": { "not": { "pattern": "(callback|_cb|_class)$" } },
+					"propertyNames": { "$ref": "#/$defs/not_callable" },
 					"additionalProperties": { "$ref": "#/$defs/text" }
 				}
 			}
@@ -105,6 +155,7 @@
 					"type": "array",
 					"items": { "$ref": "#/$defs/field" }
 				},
+				"listing": { "$ref": "#/$defs/listing" },
 				"wp": {
 					"description": "WordPress-only settings.",
 					"type": "object",
@@ -171,6 +222,12 @@
 					"if": { "required": [ "visibility", "wp" ], "properties": { "visibility": { "const": "private" }, "wp": { "required": [ "meta_key" ] } } },
 					"then": { "properties": { "wp": { "properties": { "meta_key": { "pattern": "^_" } } } } }
 				},
+				{ "$ref": "#/$defs/field_type_rules" }
+			]
+		},
+		"field_type_rules": {
+			"description": "Rules that follow from a field's type, shared by content type, options page and unbound form fields.",
+			"allOf": [
 				{
 					"if": { "required": [ "type" ], "properties": { "type": { "const": "select" } } },
 					"then": { "required": [ "options" ] },
@@ -197,8 +254,12 @@
 					"then": { "properties": { "default": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" } } }
 				},
 				{
-					"if": { "required": [ "type" ], "properties": { "type": { "enum": [ "boolean", "date", "select" ] } } },
+					"if": { "required": [ "type" ], "properties": { "type": { "enum": [ "boolean", "date", "select", "post", "file" ] } } },
 					"then": { "properties": { "validate": { "maxProperties": 0 } } }
+				},
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "enum": [ "post", "file" ] } } },
+					"then": { "properties": { "default": false } }
 				}
 			]
 		},
@@ -212,7 +273,7 @@
 			}
 		},
 		"condition": {
-			"description": "Applies when the named field on the same content type equals the value.",
+			"description": "Applies when the named field (on the same content type, or of the same form) equals the value.",
 			"type": "object",
 			"required": [ "field", "equals" ],
 			"additionalProperties": false,
@@ -233,6 +294,42 @@
 				"max": { "type": "number" },
 				"pattern": { "type": "string", "minLength": 1, "format": "regex" }
 			}
+		},
+		"listing": {
+			"description": "Phase 2 listing: what directories of this type may filter by. The public allowlist of URL parameters.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"search": { "description": "Enables the q parameter (core search).", "type": "boolean", "default": false },
+				"filters": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/listing_filter" }
+				}
+			}
+		},
+		"listing_filter": {
+			"type": "object",
+			"required": [ "key" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": {
+					"description": "URL parameter: not a WordPress query var, not q, not wp_*; also not a content type or taxonomy key (PHP only).",
+					"allOf": [
+						{ "$ref": "#/$defs/key" },
+						{ "not": { "const": "q" } },
+						{ "not": { "pattern": "^wp_" } },
+						{ "not": { "$ref": "#/$defs/reserved_key" } }
+					]
+				},
+				"taxonomy": { "$ref": "#/$defs/key" },
+				"field": { "$ref": "#/$defs/key" },
+				"label": { "$ref": "#/$defs/text" },
+				"multiple": { "type": "boolean" }
+			},
+			"oneOf": [
+				{ "required": [ "taxonomy" ] },
+				{ "required": [ "field" ] }
+			]
 		},
 		"taxonomy": {
 			"title": "Taxonomy (taxonomies/<key>.json)",
@@ -290,6 +387,588 @@
 				"cardinality": { "enum": [ "one_to_many", "many_to_many" ] },
 				"storage": { "enum": [ "meta", "table" ], "default": "meta" }
 			}
+		},
+		"options_page": {
+			"title": "Options page (options-pages/<key>.json): one option named by the key, edited on a settings screen",
+			"type": "object",
+			"required": [ "format", "key", "title", "fields" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"key": {
+					"allOf": [
+						{ "$ref": "#/$defs/bounded_key" },
+						{ "not": { "pattern": "^(wp_|pegwork_)" } },
+						{ "not": { "$ref": "#/$defs/reserved_option_name" } }
+					]
+				},
+				"title": { "$ref": "#/$defs/text" },
+				"menu_title": { "description": "Default: title.", "$ref": "#/$defs/text" },
+				"capability": { "$ref": "#/$defs/capability", "default": "manage_options" },
+				"fields": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/options_page_field" }
+				}
+			}
+		},
+		"options_page_field": {
+			"description": "Content type field rules plus type post (one post ID); no conditions and no wp storage mapping.",
+			"type": "object",
+			"required": [ "key", "type", "label" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": { "$ref": "#/$defs/key" },
+				"type": { "enum": [ "text", "textarea", "rich_text", "url", "email", "boolean", "date", "number", "select", "post" ] },
+				"label": { "$ref": "#/$defs/text" },
+				"required": { "type": "boolean", "default": false },
+				"visibility": { "enum": [ "public", "private" ], "default": "public" },
+				"default": {},
+				"options": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/option" }
+				},
+				"validate": { "$ref": "#/$defs/validate" },
+				"post_type": { "description": "Content type of a post field.", "$ref": "#/$defs/key" }
+			},
+			"allOf": [
+				{ "$ref": "#/$defs/field_type_rules" },
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "const": "post" } } },
+					"then": { "required": [ "post_type" ] },
+					"else": { "properties": { "post_type": false } }
+				}
+			]
+		},
+		"form": {
+			"title": "Form (forms/<key>.json)",
+			"type": "object",
+			"required": [ "format", "key", "label" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"key": { "$ref": "#/$defs/bounded_key" },
+				"label": { "$ref": "#/$defs/text" },
+				"target": {
+					"type": "object",
+					"required": [ "content_type" ],
+					"additionalProperties": false,
+					"properties": {
+						"content_type": { "$ref": "#/$defs/key" },
+						"action": { "enum": [ "create", "update" ], "default": "create" },
+						"status": { "enum": [ "draft", "pending", "publish" ], "description": "Default for create: pending." }
+					}
+				},
+				"access": {
+					"default": "anyone",
+					"oneOf": [
+						{ "const": "anyone" },
+						{
+							"type": "object",
+							"required": [ "capability" ],
+							"additionalProperties": false,
+							"properties": { "capability": { "$ref": "#/$defs/capability" } }
+						}
+					]
+				},
+				"confirm": {
+					"type": "object",
+					"required": [ "field", "subject", "body" ],
+					"additionalProperties": false,
+					"properties": {
+						"field": { "$ref": "#/$defs/key" },
+						"subject": { "$ref": "#/$defs/text" },
+						"body": { "type": "string", "pattern": "\\{confirm_url\\}" },
+						"expires_hours": { "type": "integer", "minimum": 1, "default": 72 }
+					}
+				},
+				"captcha": { "enum": [ "turnstile" ] },
+				"fields": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/form_item" }
+				},
+				"steps": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/form_step" }
+				},
+				"notifications": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/notification" }
+				},
+				"messages": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"success": { "$ref": "#/$defs/text" },
+						"submit_label": { "$ref": "#/$defs/text" }
+					}
+				},
+				"retention_days": { "type": "integer", "minimum": 1 }
+			},
+			"oneOf": [
+				{ "required": [ "fields" ] },
+				{ "required": [ "steps" ] }
+			],
+			"allOf": [
+				{
+					"if": {
+						"required": [ "target" ],
+						"properties": {
+							"target": {
+								"anyOf": [
+									{ "required": [ "status" ], "properties": { "status": { "const": "publish" } } },
+									{ "required": [ "action" ], "properties": { "action": { "const": "update" } } }
+								]
+							}
+						}
+					},
+					"then": { "required": [ "access" ], "properties": { "access": { "type": "object" } } }
+				},
+				{
+					"if": { "required": [ "confirm" ] },
+					"then": {
+						"properties": {
+							"notifications": {
+								"items": {
+									"if": { "required": [ "when" ], "properties": { "when": { "const": "submitted" } } },
+									"then": { "properties": { "to": { "not": { "pattern": "^\\{field:" } } } }
+								}
+							}
+						}
+					}
+				}
+			]
+		},
+		"form_step": {
+			"type": "object",
+			"required": [ "key", "label", "fields" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": { "$ref": "#/$defs/key" },
+				"label": { "$ref": "#/$defs/text" },
+				"description": { "$ref": "#/$defs/text" },
+				"fields": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/form_item" }
+				}
+			}
+		},
+		"form_item": {
+			"description": "A bound item (bind) or an unbound field.",
+			"if": { "required": [ "bind" ] },
+			"then": { "$ref": "#/$defs/form_bound_item" },
+			"else": { "$ref": "#/$defs/form_field" }
+		},
+		"form_display": { "enum": [ "radio", "checkboxes", "select" ] },
+		"form_bound_item": {
+			"description": "Inherits type, rules, conditions and options from the bound content type field or taxonomy; overrides are presentational.",
+			"type": "object",
+			"required": [ "bind" ],
+			"additionalProperties": false,
+			"properties": {
+				"bind": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"field": { "$ref": "#/$defs/key" },
+						"taxonomy": { "$ref": "#/$defs/key" }
+					},
+					"oneOf": [
+						{ "required": [ "field" ] },
+						{ "required": [ "taxonomy" ] }
+					]
+				},
+				"label": { "$ref": "#/$defs/text" },
+				"help": { "$ref": "#/$defs/text" },
+				"placeholder": { "$ref": "#/$defs/text" },
+				"autocomplete": { "$ref": "#/$defs/text" },
+				"display": { "$ref": "#/$defs/form_display" }
+			}
+		},
+		"form_field": {
+			"description": "Unbound form field: content type field rules plus type file; no visibility or wp.",
+			"type": "object",
+			"required": [ "key", "type", "label" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": { "$ref": "#/$defs/key" },
+				"type": { "enum": [ "text", "textarea", "rich_text", "url", "email", "boolean", "date", "number", "select", "file" ] },
+				"label": { "$ref": "#/$defs/text" },
+				"required": { "type": "boolean", "default": false },
+				"default": {},
+				"options": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/option" }
+				},
+				"required_when": { "$ref": "#/$defs/condition" },
+				"show_when": { "$ref": "#/$defs/condition" },
+				"validate": { "$ref": "#/$defs/validate" },
+				"help": { "$ref": "#/$defs/text" },
+				"placeholder": { "$ref": "#/$defs/text" },
+				"autocomplete": { "$ref": "#/$defs/text" },
+				"display": { "$ref": "#/$defs/form_display" },
+				"accept": {
+					"description": "Allowed file extensions, lowercase, without the dot.",
+					"type": "array",
+					"items": { "$ref": "#/$defs/extension" }
+				},
+				"max_size_mb": { "type": "number", "exclusiveMinimum": 0 }
+			},
+			"allOf": [
+				{ "$ref": "#/$defs/field_type_rules" },
+				{
+					"if": { "required": [ "type" ], "properties": { "type": { "const": "file" } } },
+					"then": { "required": [ "accept" ] },
+					"else": { "properties": { "accept": false, "max_size_mb": false } }
+				}
+			]
+		},
+		"extension": {
+			"type": "string",
+			"pattern": "^[a-z0-9]+$",
+			"not": { "pattern": "^(php[a-z0-9]*|phtml|pht|phar|html?|xhtml|shtml|svgz?|m?js|exe)$" }
+		},
+		"notification": {
+			"type": "object",
+			"required": [ "key", "when", "to", "subject", "body" ],
+			"additionalProperties": false,
+			"properties": {
+				"key": { "$ref": "#/$defs/key" },
+				"when": { "enum": [ "submitted", "confirmed" ] },
+				"to": { "$ref": "#/$defs/recipient" },
+				"reply_to": { "$ref": "#/$defs/recipient" },
+				"subject": { "$ref": "#/$defs/text" },
+				"body": { "$ref": "#/$defs/text" }
+			}
+		},
+		"recipient": {
+			"description": "An email address, {admin_email}, {field:<email field>} or {option:<page>.<email field>}.",
+			"type": "string",
+			"anyOf": [
+				{ "pattern": "^[^\\s@{}]+@[^\\s@{}]+\\.[^\\s@{}]+$" },
+				{ "pattern": "^\\{(?:admin_email|field:[a-z][a-z0-9_]*|option:[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)\\}$" }
+			]
+		},
+		"automation": {
+			"title": "Automation (automations/<key>.json)",
+			"type": "object",
+			"required": [ "format", "key", "label", "trigger", "steps" ],
+			"additionalProperties": false,
+			"properties": {
+				"format": { "$ref": "#/$defs/format" },
+				"key": { "$ref": "#/$defs/bounded_key" },
+				"label": { "$ref": "#/$defs/text" },
+				"description": { "$ref": "#/$defs/text" },
+				"enabled": { "type": "boolean", "default": true },
+				"trigger": { "$ref": "#/$defs/trigger" },
+				"steps": { "$ref": "#/$defs/steps" },
+				"idempotency": { "description": "Template; a run is not created when one with the same rendered key exists.", "$ref": "#/$defs/text" },
+				"links": {
+					"description": "Signed one-click links by name.",
+					"type": "object",
+					"propertyNames": { "allOf": [ { "$ref": "#/$defs/key" }, { "$ref": "#/$defs/not_callable" } ] },
+					"additionalProperties": { "$ref": "#/$defs/link" }
+				},
+				"ui": {
+					"description": "Reserved for the Phase 6 canvas; ignored by the engine, preserved by the normalizer.",
+					"type": "object",
+					"allOf": [ { "$ref": "#/$defs/free" } ]
+				}
+			}
+		},
+		"trigger": {
+			"type": "object",
+			"required": [ "type" ],
+			"properties": {
+				"type": { "enum": [ "event", "schedule", "webhook" ] }
+			},
+			"allOf": [
+				{
+					"if": { "properties": { "type": { "const": "event" } } },
+					"then": { "$ref": "#/$defs/trigger_event" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "schedule" } } },
+					"then": { "$ref": "#/$defs/trigger_schedule" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "webhook" } } },
+					"then": { "additionalProperties": false, "properties": { "type": true } }
+				}
+			]
+		},
+		"trigger_event": {
+			"required": [ "type", "event" ],
+			"additionalProperties": false,
+			"properties": {
+				"type": true,
+				"event": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$" },
+				"content_type": { "$ref": "#/$defs/key" },
+				"form": { "$ref": "#/$defs/key" },
+				"when": { "$ref": "#/$defs/expression" }
+			},
+			"allOf": [
+				{
+					"if": { "required": [ "content_type" ] },
+					"then": { "properties": { "event": { "pattern": "^record\\." } } }
+				},
+				{
+					"if": { "required": [ "form" ] },
+					"then": { "properties": { "event": { "pattern": "^form\\." } } }
+				}
+			]
+		},
+		"trigger_schedule": {
+			"required": [ "type", "every" ],
+			"additionalProperties": false,
+			"properties": {
+				"type": true,
+				"every": { "enum": [ "hour", "day", "week" ] },
+				"at": { "description": "Site time, HH:MM.", "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+				"for_each": {
+					"type": "object",
+					"required": [ "content_type" ],
+					"additionalProperties": false,
+					"properties": {
+						"content_type": { "$ref": "#/$defs/key" },
+						"status": {
+							"type": "array",
+							"items": { "enum": [ "publish", "future", "draft", "pending", "private" ] },
+							"default": [ "publish" ]
+						},
+						"where": { "$ref": "#/$defs/expression" },
+						"max_runs": { "type": "integer", "minimum": 1, "default": 200 }
+					}
+				}
+			}
+		},
+		"duration": {
+			"description": "ISO 8601 duration, such as P30D or PT1H. Waits and link expiry: PT1H to P2Y (PHP only).",
+			"type": "string",
+			"pattern": "^P(?!$)([0-9]+Y)?([0-9]+M)?([0-9]+W)?([0-9]+D)?(T(?=[0-9])([0-9]+H)?([0-9]+M)?([0-9]+S)?)?$"
+		},
+		"steps": {
+			"type": "array",
+			"minItems": 1,
+			"items": { "$ref": "#/$defs/step" }
+		},
+		"link_steps": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"allOf": [
+					{ "$ref": "#/$defs/step" },
+					{ "properties": { "type": { "enum": [ "update_record", "condition" ] } } }
+				]
+			}
+		},
+		"step": {
+			"type": "object",
+			"required": [ "id", "type" ],
+			"properties": {
+				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition" ] }
+			},
+			"allOf": [
+				{
+					"if": { "properties": { "type": { "const": "update_record" } } },
+					"then": {
+						"required": [ "values" ],
+						"additionalProperties": false,
+						"properties": {
+							"id": { "$ref": "#/$defs/key" },
+							"type": true,
+							"retry": { "$ref": "#/$defs/retry" },
+							"record": { "description": "Template for the record ID; default the bound record.", "$ref": "#/$defs/text" },
+							"values": { "$ref": "#/$defs/values" }
+						}
+					}
+				},
+				{
+					"if": { "properties": { "type": { "const": "create_record" } } },
+					"then": {
+						"required": [ "content_type", "values" ],
+						"additionalProperties": false,
+						"properties": {
+							"id": { "$ref": "#/$defs/key" },
+							"type": true,
+							"retry": { "$ref": "#/$defs/retry" },
+							"content_type": { "$ref": "#/$defs/key" },
+							"status": { "enum": [ "draft", "pending", "publish", "private" ], "default": "draft" },
+							"values": { "$ref": "#/$defs/values" }
+						}
+					}
+				},
+				{
+					"if": { "properties": { "type": { "const": "send_email" } } },
+					"then": {
+						"required": [ "to", "subject", "text" ],
+						"additionalProperties": false,
+						"properties": {
+							"id": { "$ref": "#/$defs/key" },
+							"type": true,
+							"retry": { "$ref": "#/$defs/retry" },
+							"to": { "$ref": "#/$defs/text" },
+							"subject": { "$ref": "#/$defs/text" },
+							"text": { "$ref": "#/$defs/text" },
+							"html": { "$ref": "#/$defs/text" },
+							"reply_to": { "$ref": "#/$defs/text" }
+						}
+					}
+				},
+				{
+					"if": { "properties": { "type": { "const": "call_webhook" } } },
+					"then": {
+						"required": [ "url" ],
+						"additionalProperties": false,
+						"properties": {
+							"id": { "$ref": "#/$defs/key" },
+							"type": true,
+							"retry": { "$ref": "#/$defs/retry" },
+							"url": { "type": "string", "pattern": "^https?://\\S+$" },
+							"fields": { "description": "Public fields of the bound record to send.", "type": "array", "items": { "$ref": "#/$defs/key" } },
+							"timeout": { "type": "number", "exclusiveMinimum": 0, "maximum": 15 }
+						}
+					}
+				},
+				{
+					"if": { "properties": { "type": { "const": "wait" } } },
+					"then": {
+						"required": [ "for" ],
+						"additionalProperties": false,
+						"properties": {
+							"id": { "$ref": "#/$defs/key" },
+							"type": true,
+							"retry": { "$ref": "#/$defs/retry" },
+							"for": { "$ref": "#/$defs/duration" }
+						}
+					}
+				},
+				{
+					"if": { "properties": { "type": { "const": "condition" } } },
+					"then": {
+						"required": [ "when" ],
+						"additionalProperties": false,
+						"properties": {
+							"id": { "$ref": "#/$defs/key" },
+							"type": true,
+							"retry": { "$ref": "#/$defs/retry" },
+							"when": { "$ref": "#/$defs/expression" }
+						}
+					}
+				}
+			]
+		},
+		"retry": {
+			"type": "object",
+			"required": [ "max" ],
+			"additionalProperties": false,
+			"properties": {
+				"max": { "type": "integer", "minimum": 0 },
+				"backoff": {
+					"anyOf": [
+						{ "$ref": "#/$defs/duration" },
+						{ "type": "array", "items": { "$ref": "#/$defs/duration" } }
+					]
+				}
+			}
+		},
+		"values": {
+			"description": "Values by registry field or taxonomy key: template strings or literals.",
+			"type": "object",
+			"minProperties": 1,
+			"propertyNames": { "$ref": "#/$defs/not_callable" },
+			"additionalProperties": {
+				"anyOf": [
+					{ "type": [ "string", "number", "boolean" ] },
+					{ "type": "array", "items": { "type": "string" } }
+				]
+			}
+		},
+		"link": {
+			"type": "object",
+			"required": [ "expires", "steps" ],
+			"additionalProperties": false,
+			"properties": {
+				"expires": { "$ref": "#/$defs/duration" },
+				"confirm": { "description": "GET shows a button that POSTs, so mail scanners cannot act.", "type": "boolean", "default": true },
+				"button": { "$ref": "#/$defs/text" },
+				"steps": { "$ref": "#/$defs/link_steps" },
+				"success_url": { "$ref": "#/$defs/text" },
+				"success_message": { "$ref": "#/$defs/text" },
+				"expired_url": { "$ref": "#/$defs/text" }
+			}
+		},
+		"expression": {
+			"description": "Automation condition: { all }, { any }, { not } or a { var, op, value } leaf. Depth and size limits are PHP only.",
+			"type": "object",
+			"oneOf": [
+				{
+					"required": [ "all" ],
+					"additionalProperties": false,
+					"properties": { "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/expression" } } }
+				},
+				{
+					"required": [ "any" ],
+					"additionalProperties": false,
+					"properties": { "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/expression" } } }
+				},
+				{
+					"required": [ "not" ],
+					"additionalProperties": false,
+					"properties": { "not": { "$ref": "#/$defs/expression" } }
+				},
+				{ "$ref": "#/$defs/expression_leaf" }
+			]
+		},
+		"var_path": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
+		},
+		"expression_leaf": {
+			"type": "object",
+			"required": [ "var", "op" ],
+			"additionalProperties": false,
+			"properties": {
+				"var": { "$ref": "#/$defs/var_path" },
+				"op": { "enum": [ "eq", "ne", "in", "not_in", "lt", "lte", "gt", "gte", "empty", "not_empty", "contains", "changed" ] },
+				"value": true
+			},
+			"allOf": [
+				{
+					"if": { "required": [ "op" ], "properties": { "op": { "enum": [ "empty", "not_empty", "changed" ] } } },
+					"then": { "not": { "required": [ "value" ] } }
+				},
+				{
+					"if": { "required": [ "op" ], "properties": { "op": { "enum": [ "in", "not_in" ] } } },
+					"then": {
+						"required": [ "value" ],
+						"properties": { "value": { "type": "array", "minItems": 1, "items": { "type": [ "string", "number", "boolean" ] } } }
+					}
+				},
+				{
+					"if": { "required": [ "op" ], "properties": { "op": { "enum": [ "eq", "ne", "lt", "lte", "gt", "gte", "contains" ] } } },
+					"then": { "required": [ "value" ], "properties": { "value": { "$ref": "#/$defs/operand" } } }
+				}
+			]
+		},
+		"operand": {
+			"anyOf": [
+				{ "type": [ "string", "number", "boolean" ] },
+				{
+					"type": "object",
+					"required": [ "var" ],
+					"additionalProperties": false,
+					"properties": { "var": { "$ref": "#/$defs/var_path" } }
+				},
+				{
+					"type": "object",
+					"required": [ "date" ],
+					"additionalProperties": false,
+					"properties": {
+						"date": { "enum": [ "today", "now" ] },
+						"offset": { "type": "string", "pattern": "^[-+]?P(?!$)([0-9]+Y)?([0-9]+M)?([0-9]+W)?([0-9]+D)?(T(?=[0-9])([0-9]+H)?([0-9]+M)?([0-9]+S)?)?$" }
+					}
+				}
+			]
 		}
 	}
 }

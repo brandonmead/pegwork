@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "key": "talk_updated",
+  "label": "Recording added",
+  "enabled": false,
+  "trigger": { "type": "event", "event": "record.updated", "content_type": "talk",
+    "when": { "any": [ { "var": "record.recorded", "op": "changed" },
+                       { "var": "trigger.old.format", "op": "ne", "value": { "var": "record.format" } } ] } },
+  "steps": [
+    { "id": "has_link", "type": "condition", "when": { "not": { "var": "record.recording_link", "op": "empty" } } },
+    { "id": "notify", "type": "send_email", "to": "{{record.speaker_email}}", "subject": "Recording of {{record.title}}",
+      "text": "Changed: {{trigger.changed}}. Was {{trigger.old.format}}." }
+  ]
+}

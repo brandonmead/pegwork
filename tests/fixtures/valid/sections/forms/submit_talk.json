@@ -1,0 +1,34 @@
+{
+  "format": 1,
+  "key": "submit_talk",
+  "label": "Submit a talk",
+  "target": { "content_type": "talk", "action": "create" },
+  "confirm": { "field": "speaker_email", "subject": "Confirm your talk", "body": "Confirm \"{field:title}\":\n{confirm_url}", "expires_hours": 48 },
+  "captcha": "turnstile",
+  "steps": [
+    { "key": "talk", "label": "Your talk", "description": "What you will present.", "fields": [
+      { "bind": { "field": "title" } },
+      { "bind": { "field": "abstract" }, "help": "Up to 300 words." },
+      { "bind": { "field": "format" }, "display": "radio" },
+      { "bind": { "taxonomy": "talk_track" }, "display": "checkboxes" },
+      { "bind": { "taxonomy": "talk_level" }, "display": "select", "label": "Audience level" },
+      { "bind": { "field": "recorded" } },
+      { "bind": { "field": "recording_link" }, "placeholder": "https://" } ] },
+    { "key": "contact", "label": "Contact", "fields": [
+      { "bind": { "field": "speaker_email" }, "autocomplete": "email", "help": "Private. Used only to confirm." },
+      { "key": "consent", "type": "boolean", "label": "I agree the talk can be listed publicly", "required": true },
+      { "key": "slides", "type": "file", "label": "Slides", "accept": [ "pdf", "pptx" ], "max_size_mb": 10 },
+      { "key": "size", "type": "select", "label": "Expected audience", "display": "radio",
+        "options": [ { "value": "small", "label": "Small" }, { "value": "large", "label": "Large" } ] },
+      { "key": "comments", "type": "textarea", "label": "Comments", "placeholder": "Anything else",
+        "show_when": { "field": "consent", "equals": true }, "validate": { "max_length": 2000 } } ] }
+  ],
+  "notifications": [
+    { "key": "organizer", "when": "confirmed", "to": "{option:talk_settings.organizer_email}", "reply_to": "{field:speaker_email}",
+      "subject": "New talk: {field:title}", "body": "{all_fields}\n\nReview: {post:edit_url}" },
+    { "key": "speaker", "when": "confirmed", "to": "{field:speaker_email}", "subject": "Your talk is in review",
+      "body": "Thanks. We will review \"{field:title}\"." }
+  ],
+  "messages": { "success": "Check your email to confirm.", "submit_label": "Send talk" },
+  "retention_days": 365
+}

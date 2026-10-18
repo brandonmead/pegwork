@@ -1,0 +1,1 @@
+{ "format": 1, "id": "sections", "version": "1.0.0", "label": "Every optional section", "requires": { "pegwork": ">=0.2.0" } }

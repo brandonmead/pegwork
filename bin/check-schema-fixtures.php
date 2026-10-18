@@ -27,6 +27,9 @@ exit(
 			'content-types' => 'content_type',
 			'taxonomies'    => 'taxonomy',
 			'relationships' => 'relationship',
+			'forms'         => 'form',
+			'automations'   => 'automation',
+			'options-pages' => 'options_page',
 		);
 
 		// Returns the files of a package that fail the JSON Schema, with the reason.

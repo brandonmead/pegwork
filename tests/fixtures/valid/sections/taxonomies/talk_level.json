@@ -1,0 +1,2 @@
+{ "format": 1, "key": "talk_level", "labels": { "singular": "Level", "plural": "Levels" }, "locked_terms": true,
+  "terms": [ { "slug": "intro", "name": "Intro" }, { "slug": "advanced", "name": "Advanced" } ] }

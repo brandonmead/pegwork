@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "key": "contact",
+  "label": "Contact us",
+  "access": { "capability": "read" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "autocomplete": "name" },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+    { "key": "topic", "type": "select", "label": "Topic", "display": "select",
+      "options": [ { "value": "talks", "label": "Talks" }, { "value": "other", "label": "Other" } ] },
+    { "key": "message", "type": "textarea", "label": "Message", "required": true, "validate": { "max_length": 5000 } }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "reply_to": "{field:email}", "subject": "Contact: {field:name}", "body": "{all_fields}" },
+    { "key": "team", "when": "submitted", "to": "team@example.org", "subject": "Contact form", "body": "{field:message}" }
+  ]
+}

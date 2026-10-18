@@ -19,13 +19,16 @@ final class Normalizer {
 	/**
 	 * Normalizes one object that passed validation.
 	 *
-	 * @param string               $kind One of `manifest`, `content_type`, `taxonomy`, `relationship`.
+	 * @param string               $kind One of `manifest`, `content_type`, `taxonomy`, `relationship`, `form`, `automation`, `options_page`.
 	 * @param array<string, mixed> $data Valid object.
 	 * @return array<string, mixed> Canonical object.
 	 */
 	public static function normalize( string $kind, array $data ): array {
 		$data = match ( $kind ) {
 			'content_type' => self::content_type( $data ),
+			'form'         => self::form( $data ),
+			'automation'   => self::automation( $data ),
+			'options_page' => self::options_page( $data ),
 			'taxonomy'     => self::without_empty(
 				$data + array(
 					'hierarchical' => false,
@@ -62,18 +65,129 @@ final class Normalizer {
 			$data['taxonomies']
 		);
 
-		$data['fields'] = array_map(
-			fn( array $field ) => self::without_empty(
-				$field + array(
-					'required'   => false,
-					'visibility' => 'public',
-				),
-				array( 'validate', 'wp' )
-			),
-			$data['fields']
-		);
+		$data['fields'] = array_map( array( self::class, 'field' ), $data['fields'] );
+
+		if ( isset( $data['listing'] ) ) {
+			$selects = array_column( $data['taxonomies'], 'select', 'key' );
+			$listing = $data['listing'] + array(
+				'search'  => false,
+				'filters' => array(),
+			);
+
+			$listing['filters'] = array_map(
+				fn( array $filter ) => $filter + array( 'multiple' => isset( $filter['taxonomy'] ) && 'multi' === ( $selects[ $filter['taxonomy'] ] ?? 'multi' ) ),
+				$listing['filters']
+			);
+			$data['listing']    = $listing;
+		}
 
 		return self::without_empty( $data, array( 'wp' ) );
+	}
+
+	/**
+	 * Fills content type and options page field defaults.
+	 *
+	 * @param array<string, mixed> $field Valid field.
+	 * @return array<string, mixed>
+	 */
+	private static function field( array $field ): array {
+		return self::without_empty(
+			$field + array(
+				'required'   => false,
+				'visibility' => 'public',
+			),
+			array( 'validate', 'wp' )
+		);
+	}
+
+	/**
+	 * Fills form defaults: access, notifications, target action and status, confirmation expiry, unbound `required`.
+	 *
+	 * Target status defaults to `pending` for `create` only; an `update` without a status keeps the record's status.
+	 *
+	 * @param array<string, mixed> $data Valid form.
+	 * @return array<string, mixed>
+	 */
+	private static function form( array $data ): array {
+		$data += array(
+			'access'        => 'anyone',
+			'notifications' => array(),
+		);
+
+		if ( isset( $data['target'] ) ) {
+			$data['target'] += array( 'action' => 'create' );
+			if ( 'create' === $data['target']['action'] ) {
+				$data['target'] += array( 'status' => 'pending' );
+			}
+		}
+		if ( isset( $data['confirm'] ) ) {
+			$data['confirm'] += array( 'expires_hours' => 72 );
+		}
+
+		$items = fn( array $list ) => array_map(
+			fn( array $item ) => array_key_exists( 'bind', $item ) ? $item : self::without_empty( $item + array( 'required' => false ), array( 'validate' ) ),
+			$list
+		);
+		if ( isset( $data['fields'] ) ) {
+			$data['fields'] = $items( $data['fields'] );
+		}
+		if ( isset( $data['steps'] ) ) {
+			$data['steps'] = array_map(
+				function ( array $step ) use ( $items ) {
+					$step['fields'] = $items( $step['fields'] );
+					return $step;
+				},
+				$data['steps']
+			);
+		}
+
+		return self::without_empty( $data, array( 'messages' ) );
+	}
+
+	/**
+	 * Fills automation defaults: enabled, sweep status and run cap, create_record status, link confirmation.
+	 *
+	 * Retry defaults are the engine's policy and are not written into the definition.
+	 *
+	 * @param array<string, mixed> $data Valid automation.
+	 * @return array<string, mixed>
+	 */
+	private static function automation( array $data ): array {
+		$data += array( 'enabled' => true );
+
+		if ( isset( $data['trigger']['for_each'] ) ) {
+			$data['trigger']['for_each'] += array(
+				'max_runs' => 200,
+				'status'   => array( 'publish' ),
+			);
+		}
+
+		$steps         = fn( array $list ) => array_map(
+			fn( array $step ) => 'create_record' === $step['type'] ? $step + array( 'status' => 'draft' ) : $step,
+			$list
+		);
+		$data['steps'] = $steps( $data['steps'] );
+
+		foreach ( $data['links'] ?? array() as $name => $link ) {
+			$link['steps']          = $steps( $link['steps'] );
+			$data['links'][ $name ] = $link + array( 'confirm' => true );
+		}
+
+		return self::without_empty( $data, array( 'links', 'ui' ) );
+	}
+
+	/**
+	 * Fills options page defaults: capability and field defaults. `menu_title` is resolved at runtime.
+	 *
+	 * @param array<string, mixed> $data Valid options page.
+	 * @return array<string, mixed>
+	 */
+	private static function options_page( array $data ): array {
+		$data += array( 'capability' => 'manage_options' );
+
+		$data['fields'] = array_map( array( self::class, 'field' ), $data['fields'] );
+
+		return $data;
 	}
 
 	/**

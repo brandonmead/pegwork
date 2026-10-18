@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "key": "talk_followup",
+  "label": "Ask for the recording a week later",
+  "trigger": { "type": "schedule", "every": "day", "at": "09:00",
+    "for_each": { "content_type": "talk", "status": [ "publish", "private" ], "max_runs": 50, "where": { "all": [
+      { "var": "record.held_on", "op": "not_empty" },
+      { "var": "record.held_on", "op": "lte", "value": { "date": "today", "offset": "-P7D" } },
+      { "var": "record.talk_track", "op": "contains", "value": "data" },
+      { "not": { "var": "record.recorded", "op": "eq", "value": true } },
+      { "any": [ { "var": "record.seats", "op": "gt", "value": 10 }, { "var": "record.format", "op": "in", "value": [ "workshop", "keynote" ] } ] },
+      { "var": "record.talk_level", "op": "not_in", "value": [ "advanced" ] },
+      { "var": "record.id", "op": "gte", "value": 1 } ] } } },
+  "idempotency": "{{record.id}}:{{record.held_on}}",
+  "steps": [
+    { "id": "ask", "type": "send_email", "to": "{{record.speaker_email}}", "subject": "Recording for {{record.title}}?",
+      "text": "One click when it is up: {{link.uploaded}}" },
+    { "id": "grace", "type": "wait", "for": "P14D" },
+    { "id": "still_missing", "type": "condition", "when": { "var": "record.recorded", "op": "eq", "value": false } },
+    { "id": "copy", "type": "create_record", "content_type": "talk", "status": "pending",
+      "values": { "title": "Follow-up: {{record.title}}", "speaker_email": "{{record.speaker_email}}", "talk_track": [ "data" ], "recorded": false } },
+    { "id": "tell", "type": "send_email", "to": "{{record.speaker_email}}", "subject": "Created {{steps.copy.record_id}}",
+      "text": "{{ record.title | default:\"Your talk\" }}: run {{run.id}} at {{now}} on {{site.name}} ({{site.url}}). Edit: {{record.edit_url}}" }
+  ],
+  "links": {
+    "uploaded": { "expires": "P90D", "button": "The recording is up",
+      "success_message": "Thanks for {{record.title}}.", "success_url": "/thanks/", "expired_url": "/link-expired/",
+      "steps": [
+        { "id": "mark", "type": "update_record", "values": { "recorded": true } },
+        { "id": "check", "type": "condition", "when": { "var": "record.recorded", "op": "eq", "value": true } } ] }
+  },
+  "ui": { "positions": { "ask": [ 0, 0 ], "grace": [ 0, 120 ] } }
+}

@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "contact_received",
+  "label": "Thank contact form senders",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "contact",
+    "when": { "var": "trigger.values.topic", "op": "eq", "value": "talks" } },
+  "steps": [
+    { "id": "thanks", "type": "send_email", "to": "{{trigger.values.email}}", "subject": "Thanks, {{trigger.values.name}}",
+      "text": "We got entry {{trigger.entry_id}}: {{trigger.values.message}}" }
+  ]
+}
