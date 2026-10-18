@@ -6,6 +6,8 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events` and `Records`).
+
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
 ## Declaring the dependency
@@ -43,7 +45,7 @@ Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks require
 
 The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships empty in Phase 1; add entries with the `pegwork_module_manifest` filter.
 
-Enabled slugs live in the `pegwork_modules` option. Manage them with WP-CLI:
+Enabled slugs live in the `pegwork_modules` option. Manage them on the Pegwork > Modules screen or with WP-CLI:
 
 ```
 wp pegwork module list
@@ -51,4 +53,53 @@ wp pegwork module enable <slug>
 wp pegwork module disable <slug>
 ```
 
-Behavior: a disabled module's files are never included. An enabled slug missing from the manifest is ignored. A module whose `requires` are not all booted is skipped. Each of these shows an admin notice. `enable` rejects unknown slugs and slugs whose requirements are not yet enabled.
+Behavior: a disabled module's files are never included. An enabled slug missing from the manifest is ignored. A module whose `requires` are not all booted is skipped. Each of these shows an admin notice. `enable` rejects unknown slugs and slugs whose requirements are not yet enabled (`pegwork_module_requires`). `disable` rejects a slug that an enabled module requires (`pegwork_module_required_by`). The screen and the CLI call the same `Modules\Loader` methods, so the rules are identical; the screen shows a blocked action as a disabled button with its reason ("Requires Sample", "Required by Needs sample").
+
+## Admin menu
+
+Pegwork adds a top-level menu, slug `Pegwork\Api\ADMIN_MENU` (`'pegwork'`), capability `manage_options`. Add a screen to it on `admin_menu` at the default priority:
+
+```php
+add_action(
+	'admin_menu',
+	fn() => add_submenu_page( Pegwork\Api\ADMIN_MENU, 'Forms', 'Forms', 'manage_options', 'my-forms', 'my_render_forms', 20 )
+);
+```
+
+| Position | Submenu | Slug | Owner |
+|---|---|---|---|
+| 0 | Overview | `pegwork` | core |
+| 10 to 19 | each options page | `pegwork-options-{key}` | core |
+| 20, 21 | Forms, Entries | module-defined | `forms` |
+| 30 | Automations | module-defined | `automation` |
+| 90 | Modules | `pegwork-modules` | core |
+
+WordPress treats `position` as an index into the submenu built so far, not a sort key. Pegwork therefore adds Overview first (`admin_menu` priority 9, position 0) and Modules last (priority 999); screens added at the default priority sit between them in the order they register. Pass the position from the table anyway.
+
+A screen may use a capability lower than `manage_options` (an options page for editors, for example). `add_submenu_page()` leaves out screens the user cannot open, so for such a user that screen is the menu's first item and the top-level Pegwork link opens it; Overview and Modules stay denied.
+
+Overview (read-only) lists content types with their fields, taxonomies, relationships, shadowed DB entries and rejected packages. Its data comes from the same service as `wp pegwork schema list` and `wp pegwork schema status`.
+
+## Events
+
+`Pegwork\Api\Events::emit( string $name, array $payload ): void` fires `pegwork_event` (name, payload) and `pegwork_event_{name with dots as underscores}` (payload). Core emits `record.created`, `record.updated`, `record.status_changed` and `record.deleted` for registry content types. Payloads, origins and timing: `docs/events.md`.
+
+```php
+add_action( 'pegwork_event_record_updated', function ( array $e ) {
+	if ( in_array( 'website', $e['changed'], true ) ) { /* ... */ }
+} );
+```
+
+Payloads may carry private field values: never output them as is.
+
+## Records
+
+`Pegwork\Api\Records` reads and writes records by registry key, through record validation and the event bus. Modules write records only through it.
+
+```php
+$record = Pegwork\Api\Records::get( 42 );            // { id, type, status, values, permalink } or null
+$id     = Pegwork\Api\Records::create( 'sifg_project', array( 'name' => 'Seed library' ) ); // int|WP_Error, draft
+$ok     = Pegwork\Api\Records::update( 42, array( 'last_verified' => '2026-10-18', 'sifg_project_status' => 'active' ), array( 'automation' => 'my_flow', 'run_id' => 7 ) );
+```
+
+No capability check: the caller authorizes. Details: `docs/events.md`.

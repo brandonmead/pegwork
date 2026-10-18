@@ -132,6 +132,8 @@ The theme writes this markup in patterns (WP 6.7 has no bindings picker UI). Edi
 
 An options page whose capability is lower than `manage_options` still appears: WordPress promotes the first accessible submenu when the parent capability fails (verified in PR 1 test).
 
+As built in PR 1: WordPress treats `position` as an index into the submenu built so far, not a sort key, so Modules is added at `admin_menu` priority 999 to stay last; screens between Overview and Modules appear in registration order. The promotion works because `add_submenu_page()` skips screens the user cannot open (`AdminMenuTest`).
+
 ### 4.2 Overview (read-only)
 
 Standard `.wrap`, one `widefat striped` table per section, each with `<caption>` and `scope` headers: Content types (key, label, REST base, fields, taxonomies, source), expandable per type with `<details>` listing fields (key, type, label, required, visibility, meta key); Taxonomies (terms, locked, source); Relationships (from, to, cardinality, required, source); Options pages (capability, fields, source); Shadowed DB entries and rejected packages (from `Result`, with each validation error's file and pointer). Empty state per section: "None registered. Add a schema package (see the extension API docs)." A footer names the CLI for changes (`wp pegwork schema import`). Data comes from a new `Registry\Status` service that `schema list` and `schema status` also use, so screen and CLI cannot disagree.
