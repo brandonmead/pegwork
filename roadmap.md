@@ -6,7 +6,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Foundation: schema registry, types, fields, taxonomies, REST, JSON export. Gate: config exports and re-imports cleanly. Status: PRs 1-5 and 7 merged; PR 6 (export/import, gate test) in review, done when merged; PR 8 (sifg-config sign-off) next.
 2. Display: listings, templates, filters. Gate: directory fast with 500 test records (budget in `docs/phase-2-design.md` section 10). Status: design drafted 2026-10-18, awaiting owner review.
 3. Forms. Gate: two weeks of real submissions without defects.
-4. Automation v1. Gate: one full staleness check cycle. Status: PR 1 (event bus, Records API) in review 2026-10-18; PR 3 (engine) next, codes against `docs/events.md`.
+4. Automation v1. Gate: one full staleness check cycle. Status: PR 1 (event bus, Records API) in review 2026-10-18; PR 3 (engine, WP-Cron scheduler) in review 2026-10-18, branch `automation-engine`; PR 4 (email, schedules, waits, retries, `run|tick|retry`) next. Owner review item: move the WordPress minimum to 6.9 and add an Action Scheduler 4.2+ adapter (design decision 8).
 5. BarnCRM foundation. Gate: pilot nonprofit runs daily work on it.
 6. Automation v2. Ongoing.
 

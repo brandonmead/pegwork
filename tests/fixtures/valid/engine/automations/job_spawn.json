@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "job_spawn",
+  "label": "New job titled Spawn: create a child job and link it",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "job" },
+  "steps": [
+    { "id": "gate", "type": "condition", "when": { "var": "record.title", "op": "eq", "value": "Spawn" } },
+    { "id": "child", "type": "create_record", "content_type": "job", "status": "draft",
+      "values": { "title": "Child of {{record.id}}", "note": "{{record.note | default:\"none\"}}", "job_stage": "open", "urgent": "{{record.urgent}}" } },
+    { "id": "link", "type": "update_record", "values": { "child_id": "{{steps.child.record_id}}" } }
+  ]
+}

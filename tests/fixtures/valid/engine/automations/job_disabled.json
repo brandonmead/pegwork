@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "job_disabled",
+  "label": "Disabled in JSON: notes every status change",
+  "enabled": false,
+  "trigger": { "type": "event", "event": "record.status_changed", "content_type": "job" },
+  "steps": [
+    { "id": "note", "type": "update_record", "values": { "note": "disabled ran" } }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "job_private",
+  "label": "Made private: a step type this release does not run",
+  "trigger": { "type": "event", "event": "record.status_changed", "content_type": "job",
+    "when": { "var": "trigger.new_status", "op": "eq", "value": "private" } },
+  "steps": [
+    { "id": "stage", "type": "update_record", "values": { "job_stage": "closed" } },
+    { "id": "mail", "type": "send_email", "to": "ops@example.org", "subject": "{{record.title}} is private", "text": "Done." }
+  ]
+}
