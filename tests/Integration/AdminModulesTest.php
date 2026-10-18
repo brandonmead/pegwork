@@ -143,6 +143,7 @@ class AdminModulesTest extends WP_UnitTestCase {
 	 */
 	public function test_empty_state() {
 		remove_all_filters( 'pegwork_module_manifest' );
+		add_filter( 'pegwork_module_manifest', '__return_empty_array' );
 
 		$this->assertStringContainsString( 'No modules available.', $this->render() );
 	}

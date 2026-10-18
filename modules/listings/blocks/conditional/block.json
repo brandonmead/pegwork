@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/conditional",
+	"title": "Show if",
+	"category": "pegwork",
+	"icon": "visibility",
+	"description": "Shows its inner blocks only when every condition on the current record holds.",
+	"keywords": [ "condition", "visibility", "pegwork" ],
+	"textdomain": "pegwork",
+	"attributes": {
+		"conditions": {
+			"type": "array",
+			"default": [],
+			"items": { "type": "object" }
+		}
+	},
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"interactivity": { "clientNavigation": true }
+	}
+}

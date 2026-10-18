@@ -20,6 +20,10 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 7. Module loader and public API (merged)
 8. sifg-config (in siforgood repo)
 
+## Phase 2 PRs (`docs/phase-2-design.md`)
+- Listings A: `pegwork/field` source, `pegwork/conditional`, block category, `Registry::meta_key()`, `pegwork_get_field()`, `listings`/`filters` module skeletons (in review, branch `listings-a`).
+- Listings B, Filters server, Filters client, Gate and docs: not started.
+
 ## Content builder completion PRs (`docs/content-builder-design.md` section 9)
 1. Admin skeleton: menu, Overview, Modules, `Registry\Status`, disable dependents rule (merged, PR #13)
 2. Relationships backend (in review)
@@ -30,6 +34,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 Follow-up in the siforgood repo: copy `examples/sifg/content-types/sifg_story.json` and `examples/sifg/relationships/story_projects.json` into `sifg-config/schema/` so the two stay byte-identical.
 
 ## Done
+- Shared browser E2E harness (2026-10-18, in review). Later feature PRs add specs under `tests/e2e/specs/`; the admin axe spec starts checking Pegwork admin screens once they land.
 - Choose product name: Pegwork (2026-10-17).
 
 ## Open questions
