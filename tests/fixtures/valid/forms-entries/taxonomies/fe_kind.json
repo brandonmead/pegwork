@@ -1,0 +1,2 @@
+{ "format": 1, "key": "fe_kind", "labels": { "singular": "Kind", "plural": "Kinds" }, "locked_terms": true,
+  "terms": [ { "slug": "tool", "name": "Tool" }, { "slug": "study", "name": "Study" } ] }

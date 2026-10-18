@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "key": "fe_project",
+  "label": "Submit a project",
+  "target": { "content_type": "fe_project", "action": "create", "status": "pending" },
+  "confirm": { "field": "contact_email", "subject": "Confirm", "body": "Confirm: {confirm_url}" },
+  "fields": [
+    { "bind": { "field": "title" } },
+    { "bind": { "field": "website" } },
+    { "bind": { "taxonomy": "fe_kind" }, "display": "radio" },
+    { "bind": { "field": "contact_email" } },
+    { "key": "consent", "type": "boolean", "label": "I may share this project", "required": true }
+  ]
+}

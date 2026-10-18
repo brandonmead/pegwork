@@ -99,4 +99,258 @@ final class Entries {
 
 		return null !== $found;
 	}
+
+	/**
+	 * Statuses an entry can have, in the order the admin views list them.
+	 */
+	public const STATUSES = array( 'received', 'unconfirmed', 'processing', 'failed', 'spam' );
+
+	/**
+	 * A page of entries, newest first, with decoded `values` and `meta`.
+	 *
+	 * @param array<string, mixed> $args `form` (key, '' for every form), `status` (a status, or `all` for every
+	 *                                   status but spam), `search` (part of the email), `order` (`desc` or `asc`
+	 *                                   by date), `per_page`, `page` (from 1).
+	 * @return array{items: array<int, array<string, mixed>>, total: int}
+	 */
+	public static function query( array $args ): array {
+		global $wpdb;
+
+		$where    = self::where( $args );
+		$per_page = max( 1, (int) ( $args['per_page'] ?? 20 ) );
+		$offset   = ( max( 1, (int) ( $args['page'] ?? 1 ) ) - 1 ) * $per_page;
+		$order    = 'asc' === ( $args['order'] ?? 'desc' ) ? 'ASC' : 'DESC';
+		$table    = Schema::table();
+
+		$count = "SELECT COUNT(*) FROM {$table} WHERE {$where[0]}";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom table; $where[0] holds only placeholders, its values are prepared here (prepare() refuses a query without any); $order is one of two literals.
+		$total = (int) $wpdb->get_var( array() === $where[1] ? $count : $wpdb->prepare( $count, ...$where[1] ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$where[0]} ORDER BY created_at {$order}, id {$order} LIMIT %d OFFSET %d", ...array_merge( $where[1], array( $per_page, $offset ) ) ), ARRAY_A );
+		// phpcs:enable
+
+		return array(
+			'items' => array_map( array( self::class, 'decode' ), is_array( $rows ) ? $rows : array() ),
+			'total' => $total,
+		);
+	}
+
+	/**
+	 * Number of entries by status for a form ('' for every form) and email search.
+	 *
+	 * @param string $form   Form key, or ''.
+	 * @param string $search Part of the email, or ''.
+	 * @return array<string, int> Count by status (every status in STATUSES present).
+	 */
+	public static function status_counts( string $form = '', string $search = '' ): array {
+		global $wpdb;
+
+		$where = self::where(
+			array(
+				'form'   => $form,
+				'status' => '',
+				'search' => $search,
+			)
+		);
+		$table = Schema::table();
+		$sql   = "SELECT status, COUNT(*) AS n FROM {$table} WHERE {$where[0]} GROUP BY status";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $where[0] holds only placeholders, prepared when there are values (prepare() refuses a query without any).
+		$rows = $wpdb->get_results( array() === $where[1] ? $sql : $wpdb->prepare( $sql, ...$where[1] ), ARRAY_A );
+
+		$counts = array_fill_keys( self::STATUSES, 0 );
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$counts[ (string) $row['status'] ] = (int) $row['n'];
+		}
+		return $counts;
+	}
+
+	/**
+	 * Distinct form keys that have entries (includes forms since deleted from the registry).
+	 *
+	 * @return string[]
+	 */
+	public static function form_keys(): array {
+		global $wpdb;
+
+		$table = Schema::table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix; no input.
+		$keys = $wpdb->get_col( "SELECT DISTINCT form_key FROM {$table} ORDER BY form_key" );
+
+		return array_map( 'strval', is_array( $keys ) ? $keys : array() );
+	}
+
+	/**
+	 * Entries whose `email` column matches an address (lowercased, exact), oldest first.
+	 *
+	 * @param string $email  Address.
+	 * @param int    $limit  Rows.
+	 * @param int    $offset Rows to skip.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function by_email( string $email, int $limit, int $offset = 0 ): array {
+		global $wpdb;
+
+		$table = Schema::table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s ORDER BY id ASC LIMIT %d OFFSET %d", strtolower( trim( $email ) ), $limit, $offset ), ARRAY_A );
+
+		return array_map( array( self::class, 'decode' ), is_array( $rows ) ? $rows : array() );
+	}
+
+	/**
+	 * IDs of entries in some statuses created before a time, optionally for one form.
+	 *
+	 * @param string[]    $statuses Statuses.
+	 * @param string      $before   UTC `Y-m-d H:i:s`.
+	 * @param string|null $form     Form key, or null for every form.
+	 * @param int         $limit    Rows.
+	 * @return int[]
+	 */
+	public static function ids_before( array $statuses, string $before, ?string $form, int $limit ): array {
+		global $wpdb;
+
+		if ( array() === $statuses ) {
+			return array();
+		}
+		$table  = Schema::table();
+		$params = array_values( $statuses );
+		$sql    = 'status IN (' . implode( ', ', array_fill( 0, count( $params ), '%s' ) ) . ') AND created_at < %s';
+		$params = array_merge( $params, array( $before ) );
+		if ( null !== $form ) {
+			$sql     .= ' AND form_key = %s';
+			$params[] = $form;
+		}
+		$params[] = $limit;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $sql holds only placeholders.
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$table} WHERE {$sql} ORDER BY id ASC LIMIT %d", ...$params ) );
+
+		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
+	}
+
+	/**
+	 * Sets the status of entries whose status is one of `$from`.
+	 *
+	 * Conditional, so it doubles as an atomic claim: two admins (or an admin and a submitter's confirm link)
+	 * cannot both move the same entry.
+	 *
+	 * @param int[]    $ids  Entry IDs.
+	 * @param string[] $from Statuses the entries must have now.
+	 * @param string   $to   New status.
+	 * @return int Rows changed.
+	 */
+	public static function change_status( array $ids, array $from, string $to ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+		if ( array() === $ids || array() === $from ) {
+			return 0;
+		}
+		$table = Schema::table();
+		$sql   = 'id IN (' . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ') AND status IN (' . implode( ', ', array_fill( 0, count( $from ), '%s' ) ) . ')';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $sql holds only placeholders.
+		$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = %s WHERE {$sql}", ...array_merge( array( $to ), $ids, array_values( $from ) ) ) );
+
+		return (int) $changed;
+	}
+
+	/**
+	 * Links an entry to the record created from it and sets its status.
+	 *
+	 * @param int    $id      Entry ID.
+	 * @param int    $post_id Post ID.
+	 * @param string $status  New status.
+	 */
+	public static function link_post( int $id, int $post_id, string $status ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table; update() prepares.
+		$wpdb->update(
+			Schema::table(),
+			array(
+				'post_id' => $post_id,
+				'status'  => $status,
+			),
+			array( 'id' => $id ),
+			array( '%d', '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Deletes entries. The single delete path for the admin, retention and the privacy eraser, so file
+	 * removal (uploads, Phase 3 PR 4) belongs here.
+	 *
+	 * @param int[] $ids Entry IDs.
+	 * @return int Rows deleted.
+	 */
+	public static function delete( array $ids ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+		if ( array() === $ids ) {
+			return 0;
+		}
+		$table = Schema::table();
+		$sql   = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom table; $sql holds only %d placeholders.
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE id IN ({$sql})", ...$ids ) );
+
+		return (int) $deleted;
+	}
+
+	/**
+	 * The WHERE clause (placeholders only) and its values for query() and status_counts().
+	 *
+	 * @param array<string, mixed> $args See query().
+	 * @return array{0: string, 1: array<int, string>}
+	 */
+	private static function where( array $args ): array {
+		global $wpdb;
+
+		$sql    = array( '1=1' );
+		$params = array();
+
+		$form = (string) ( $args['form'] ?? '' );
+		if ( '' !== $form ) {
+			$sql[]    = 'form_key = %s';
+			$params[] = $form;
+		}
+
+		$status = (string) ( $args['status'] ?? '' );
+		if ( 'all' === $status ) {
+			$sql[]    = 'status <> %s';
+			$params[] = 'spam';
+		} elseif ( '' !== $status ) {
+			$sql[]    = 'status = %s';
+			$params[] = $status;
+		}
+
+		$search = strtolower( trim( (string) ( $args['search'] ?? '' ) ) );
+		if ( '' !== $search ) {
+			$sql[]    = 'email LIKE %s';
+			$params[] = '%' . $wpdb->esc_like( $search ) . '%';
+		}
+
+		return array( implode( ' AND ', $sql ), $params );
+	}
+
+	/**
+	 * A row with typed IDs and decoded `values` and `meta` (the shape get() returns).
+	 *
+	 * @param array<string, mixed> $row Raw row.
+	 * @return array<string, mixed>
+	 */
+	private static function decode( array $row ): array {
+		$row['id']      = (int) $row['id'];
+		$row['post_id'] = null === $row['post_id'] ? null : (int) $row['post_id'];
+		$row['user_id'] = null === $row['user_id'] ? null : (int) $row['user_id'];
+		$row['values']  = json_decode( (string) $row['field_values'], true ) ?? array();
+		$row['meta']    = json_decode( (string) $row['meta'], true ) ?? array();
+		unset( $row['field_values'] );
+
+		return $row;
+	}
 }

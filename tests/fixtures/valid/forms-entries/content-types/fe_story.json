@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "fe_story",
+  "labels": { "singular": "Story", "plural": "Stories" },
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "story", "type": "textarea", "label": "Story" }
+  ]
+}
