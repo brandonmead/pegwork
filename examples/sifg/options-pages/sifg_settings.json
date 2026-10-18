@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "sifg_settings",
+  "title": "SI for Good settings",
+  "menu_title": "Site settings",
+  "capability": "manage_options",
+  "fields": [
+    { "key": "featured_project", "type": "post", "label": "Featured project", "post_type": "sifg_project" },
+    { "key": "moderator_email", "type": "email", "label": "Moderator notification email", "required": true, "visibility": "private" },
+    { "key": "review_criteria", "type": "rich_text", "label": "Review criteria" },
+    { "key": "contact_email", "type": "email", "label": "Contact email" }
+  ]
+}

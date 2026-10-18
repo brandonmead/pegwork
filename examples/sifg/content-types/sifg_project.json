@@ -22,6 +22,15 @@
     { "key": "contact_email", "type": "email", "label": "Contact email", "required": true, "visibility": "private" },
     { "key": "last_verified", "type": "date", "label": "Last verified" }
   ],
+  "listing": {
+    "search": true,
+    "filters": [
+      { "key": "project_type", "taxonomy": "sifg_project_type", "label": "Type" },
+      { "key": "project_status", "taxonomy": "sifg_project_status", "label": "Status" },
+      { "key": "impact", "taxonomy": "sifg_impact" },
+      { "key": "volunteers", "field": "needs_volunteers" }
+    ]
+  },
   "wp": {
     "rest_base": "projects",
     "rewrite_slug": "projects",

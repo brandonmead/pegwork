@@ -189,14 +189,30 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame( array( $ids[2] ), $r1_links[ $stories[1] ] );
 		$terms = $this->seed_term_count();
 		$this->assertSame( 27, $terms );
+		$registry = Plugin::registry();
+		$sections = array(
+			'listing'       => $registry->listing( 'sifg_project' ),
+			'forms'         => $registry->forms(),
+			'automations'   => $registry->automations(),
+			'options_pages' => $registry->options_pages(),
+		);
+		$this->assertSame( array( 'project_type', 'project_status', 'impact', 'volunteers' ), array_column( $sections['listing']['filters'], 'key' ) );
+		$this->assertSame( array( 'request_help', 'submit_project' ), array_keys( $sections['forms'] ) );
+		$this->assertSame( array( 'sifg_project_approved' ), array_keys( $sections['automations'] ) );
+		$this->assertSame( array( 'sifg_settings' ), array_keys( $sections['options_pages'] ) );
+		$this->assertSame( 'file:sifg', $registry->form_source( 'submit_project' ) );
 
 		// 2. Export to A.
 		$a = $this->export();
 		$this->assertSame(
 			array(
+				'automations/sifg_project_approved.json',
 				'content-types/sifg_project.json',
 				'content-types/sifg_story.json',
+				'forms/request_help.json',
+				'forms/submit_project.json',
 				'manifest.json',
+				'options-pages/sifg_settings.json',
 				'relationships/story_projects.json',
 				'taxonomies/sifg_impact.json',
 				'taxonomies/sifg_project_status.json',
@@ -216,7 +232,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		// 4. Import A, re-run registration, export to B.
 		$first = Importer::import( $a );
 		$this->assertTrue( $first->is_valid() );
-		$this->assertSame( 7, $first->count() ); // Manifest, 2 content types, 3 taxonomies, 1 relationship; terms already exist.
+		$this->assertSame( 11, $first->count() ); // Manifest, 2 content types, 3 taxonomies, 1 relationship, 2 forms, 1 automation, 1 options page; terms already exist.
 		$this->assertSame( array(), $first->terms );
 		$this->reregister();
 		$this->assertTrue( post_type_exists( 'sifg_project' ) );
@@ -235,6 +251,22 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame( Loader::DB_SOURCE, Plugin::result()->sources['relationship']['story_projects'] );
 		$this->assertSame( array( $stories[0] ), pegwork_related_ids( $ids[0], 'story_projects' ) );
 		$this->assertSame( $terms, $this->seed_term_count() );
+
+		// Listing, forms, automations and options pages come back unchanged, now from the DB source.
+		$registry = Plugin::registry();
+		$this->assertSame(
+			$sections,
+			array(
+				'listing'       => $registry->listing( 'sifg_project' ),
+				'forms'         => $registry->forms(),
+				'automations'   => $registry->automations(),
+				'options_pages' => $registry->options_pages(),
+			)
+		);
+		$this->assertSame( 'db', $registry->form_source( 'submit_project' ) );
+		foreach ( array( 'form', 'automation', 'options_page' ) as $kind ) {
+			$this->assertSame( array( Loader::DB_SOURCE ), array_values( array_unique( Plugin::result()->sources[ $kind ] ) ), $kind );
+		}
 
 		wp_set_current_user( 0 );
 		foreach ( $ids as $id ) {
@@ -256,7 +288,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertTrue( $dry->is_valid() );
 		$this->assertFalse( get_option( Loader::DB_OPTION ) );
 		$this->assertFalse( post_type_exists( 'sifg_project' ) );
-		$this->assertSame( 7, count( $dry->changes ) );
+		$this->assertSame( 11, count( $dry->changes ) );
 
 		Importer::import( $dir );
 		$this->assertTrue( taxonomy_exists( 'sifg_impact' ) );

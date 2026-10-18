@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "key": "request_help",
+  "label": "Request help",
+  "captcha": "turnstile",
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "autocomplete": "name" },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+    { "key": "organization", "type": "text", "label": "Organization" },
+    { "key": "need", "type": "textarea", "label": "What do you need help with?", "required": true, "validate": { "max_length": 5000 } }
+  ],
+  "notifications": [
+    { "key": "moderator", "when": "submitted", "to": "{option:sifg_settings.moderator_email}", "reply_to": "{field:email}",
+      "subject": "Help request: {field:name}", "body": "{all_fields}" }
+  ],
+  "retention_days": 365
+}

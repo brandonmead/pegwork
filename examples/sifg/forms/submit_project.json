@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "key": "submit_project",
+  "label": "Submit a project",
+  "target": { "content_type": "sifg_project", "action": "create", "status": "pending" },
+  "confirm": { "field": "contact_email", "subject": "Confirm your SI for Good submission",
+    "body": "Confirm \"{field:name}\" within 72 hours:\n{confirm_url}" },
+  "captcha": "turnstile",
+  "steps": [
+    { "key": "project", "label": "Your project", "fields": [
+      { "bind": { "field": "name" } },
+      { "bind": { "field": "description" }, "help": "50 to 300 words." },
+      { "bind": { "field": "who_for" } },
+      { "bind": { "taxonomy": "sifg_project_type" }, "display": "radio" },
+      { "bind": { "taxonomy": "sifg_project_status" }, "display": "radio" },
+      { "bind": { "taxonomy": "sifg_impact" }, "display": "checkboxes" } ] },
+    { "key": "links", "label": "Links", "fields": [
+      { "bind": { "field": "website" } },
+      { "bind": { "field": "github_link" } },
+      { "bind": { "field": "needs_volunteers" } },
+      { "bind": { "field": "volunteer_link" } } ] },
+    { "key": "contact", "label": "Contact", "fields": [
+      { "bind": { "field": "contact_email" }, "autocomplete": "email",
+        "help": "Private. Used only to confirm and to reach you about this listing." },
+      { "key": "consent", "type": "boolean", "required": true,
+        "label": "I have permission to share this project and agree it can be listed publicly" } ] }
+  ],
+  "notifications": [
+    { "key": "moderator", "when": "confirmed", "to": "{option:sifg_settings.moderator_email}", "reply_to": "{field:contact_email}",
+      "subject": "Project to review: {field:name}", "body": "{all_fields}\n\nReview: {post:edit_url}" },
+    { "key": "submitter", "when": "confirmed", "to": "{field:contact_email}",
+      "subject": "Your project is in review", "body": "Thanks. A person will review \"{field:name}\" before it goes live." }
+  ],
+  "messages": { "success": "Check your email to confirm your submission. The link expires in 72 hours." },
+  "retention_days": 365
+}
