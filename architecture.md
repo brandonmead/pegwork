@@ -53,9 +53,20 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - JSON Schema agreement: `composer schema-fixtures` (`bin/check-schema-fixtures.php`). Each `tests/fixtures/invalid/*` has `expected.json` (`code`, `file`, `pointer`, `schema`); `schema: false` marks cross-object rules JSON Schema cannot express, which must then pass the JSON Schema.
 
 ## Registry (PR 2)
-- `pegwork_schema` option shape (written by `wp pegwork schema import`): `{ content_types: [], taxonomies: [], relationships: [], manifest: {} }`, each list holding objects in the file format (canonical form when imported); `manifest` is the last imported package's manifest, read only by export. Source label and error file `option:pegwork_schema`.
+- `pegwork_schema` option shape (written by `wp pegwork schema import`): `{ content_types: [], taxonomies: [], relationships: [], forms: [], automations: [], options_pages: [], manifest: {} }`, each list holding objects in the file format (canonical form when imported); `manifest` is the last imported package's manifest, read only by export. Source label and error file `option:pegwork_schema`. Kind to directory and section maps: `Loader::DIRS`, `Loader::SECTIONS` (Exporter, Importer, fixture tests iterate them).
 - Load order: packages in registration order, then DB entries. Rejection is per package (or per DB entry); references resolve across all accepted sources.
 - Decoding to PHP arrays cannot tell `{}` from `[]`; the PHP validator accepts an empty array as either, the JSON Schema does not. Normalizer drops empty optional objects so canonical output never holds `{}`.
+- Every kind and property: `docs/registry-reference.md`.
+
+## Registry sections (shared registry sections PR, 2026-10-18)
+- Optional, additive format-1 sections: `listing` on content types, `options-pages/`, `forms/`, `automations/`. Data only: no runtime behavior; the listings, forms and automation modules and the options page screen read them through `Pegwork\Api\Registry`. API stays 0.2.0; registry hash (`Registrar::hash`) unchanged by them.
+- Rules live in traits used by `Validator`: `src/Registry/Rules/ListingRules.php`, `OptionsPageRules.php`, `FormRules.php`, `AutomationRules.php`. Shared field checks stay in `Validator::field( $field, $pointer, $context )`, context `content_type|options_page|form` (`Validator::field_types( $context )`: `post` only on options pages, `file` only on forms).
+- `Validator::references( $kind, $data, $file, $known )`: `$known[kind][key]` is the normalized object (Loader and Importer both), so cross-object rules read defaults (taxonomy `select`, field `visibility`). A non-array value means "exists" only (tests, `Importer::import` known keys).
+- Content type field keys `id`, `status`, `type` are `reserved_field_key` (record event payloads and automation `record.*` paths use them for the post).
+- Automation paths, payload keys per event and condition limits are constants on `AutomationRules` (`RECORD_EVENT_KEYS`, `FORM_EVENT_KEYS`, `CONDITION_MAX_DEPTH` 5, `CONDITION_MAX_NODES` 50, `DURATION_MIN` PT1H, `DURATION_MAX` P2Y); keep `RECORD_EVENT_KEYS` in step with `docs/events.md`.
+- Options page reserved names: `OptionsPageRules::RESERVED_OPTION_NAMES` (WP 7.1 `populate_options()` plus core-managed options such as `cron`), and `wp_`/`pegwork_` prefixes.
+- `wp pegwork schema list` rows for the sections come from `Registry\Status::sections()`.
+- Fixtures: `tests/fixtures/valid/sections` uses every section; one invalid fixture per rule (generated fixtures are ordinary files, edit them directly).
 
 ## Export and import (PR 6)
 - `wp pegwork schema export|import` (`docs/export-import.md`). Export writes one package dir (canonical JSON, sorted keys, trailing newline, no paths); manifest from the only contributing source, else generic `site` 0.0.0. Import validates with `Loader::read_package` (file package rules), upserts by key, `--prune` touches DB entries only, re-runs `Plugin::init()` and seeds missing terms; never deletes terms, posts or meta.
@@ -89,7 +100,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Core REST only exposes meta for types supporting `custom-fields`; `PostTypes::args()` adds it for "from" types too, not just types with meta fields.
 - REST meta values are schema-validated in `update_value`, after `rest_pre_insert`, so RecordValidator sees raw IDs first (ID 0 gives `pegwork_invalid_record`, not `rest_invalid_param`).
 - `one_to_many` and reverse lookups query all post statuses (trash included), so trash and restore never break the limit.
-- Registry `Validator::references()` gets each known object's data (not `true`) so `meta_key_conflict` can read the "from" type's fields.
+- Registry `Validator::references()` gets each known object's normalized data (not `true`) so `meta_key_conflict` can read the "from" type's fields.
 - `RecordValidator::validate()` with a post ID and no value for a relationship key uses the stored links, so `Pegwork\Api\Records::update()` (which passes the ID and has no relationship values) keeps existing links valid. The Records API does not write links yet.
 
 ## Events and Records API (Phase 4 PR 1)

@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()` and `pegwork_get_field()`).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below and `pegwork_get_field()`).
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -29,19 +29,31 @@ Hook `pegwork_register` and add a directory of schema files (provided by the sch
 add_action( 'pegwork_register', fn( $b ) => $b->add_package( __DIR__ . '/schema' ) );
 ```
 
+Every object kind and property a package can declare (content types, fields, listings, taxonomies, relationships, options pages, forms, automations): `docs/registry-reference.md`.
+
 ## Reading records and relationships
 
 Global functions (`includes/functions.php`), available after `init` priority 5:
 
 | Function | Returns |
 |---|---|
-| `pegwork_registry()` | Read-only `Pegwork\Api\Registry`: `content_types()`, `content_type( $key )`, `fields( $type, $visibility )`, `meta_key( $type, $field )` (API 0.2.0), `taxonomies()`, `relationships()`, `relationships_for( $type )` (either end; API 0.2.0). |
+| `pegwork_registry()` | Read-only `Pegwork\Api\Registry`: `content_types()`, `content_type( $key )`, `fields( $type, $visibility )`, `meta_key( $type, $field )` (API 0.2.0), `taxonomies()`, `relationships()`, `relationships_for( $type )` (either end; API 0.2.0), plus the section accessors below. |
 | `pegwork_get_field( $post, $key, $context = 'view' )` | One field as a typed value (API 0.2.0). See below. |
 | `pegwork_validate_record( $type, $values, $post_id = 0 )` | `true` or a 400 `WP_Error` with per-field messages in `data.fields`. Relationship links go under the relationship key. |
 | `pegwork_related_ids( $post, $key )` | IDs at the other end of a relationship, from either end, all statuses. |
 | `pegwork_related_query_args( $post, $key )` | `WP_Query` args for the records at the other end; add status, order and paging. Matches nothing for an unknown key or unrelated post. |
 
 Details, REST and CLI: `docs/relationships.md`.
+
+Registry section accessors (API 0.2.0) return definitions only, in canonical form (defaults filled); the modules that render or run them read them here.
+
+| Method | Returns |
+|---|---|
+| `listing( string $type ): ?array` | The type's `listing` (`search`, `filters[]` with `key`, `taxonomy` or `field`, `multiple`, optional `label`), or null when the type is unknown or declares none. |
+| `forms(): array`, `form( string $key ): ?array` | Forms by key, in load order; one form or null. |
+| `form_source( string $key ): ?string` | `file:<package id>` for a file package, `db` for the `pegwork_schema` option, null when undefined. File forms are read-only in a builder. |
+| `automations(): array`, `automation( string $key ): ?array` | Automations by key, in load order; one automation or null. |
+| `options_pages(): array`, `options_page( string $key ): ?array` | Options pages by key, in load order; one page or null. The key is also the option name. |
 
 `Registry::meta_key( $type, $field ): ?string` is the post meta key of a meta-stored field (`wp.meta_key`, else `_{type}_{field}`); null for unknown fields and `wp.storage` fields.
 
