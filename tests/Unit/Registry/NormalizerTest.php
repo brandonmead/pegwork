@@ -89,7 +89,15 @@ class NormalizerTest extends TestCase {
 		);
 
 		$relationship = Normalizer::normalize( 'relationship', array( 'key' => 'rel' ) );
-		$this->assertSame( 'meta', $relationship['storage'] );
+		$this->assertSame(
+			array(
+				'key'      => 'rel',
+				'required' => false,
+				'storage'  => 'meta',
+			),
+			$relationship
+		);
+		$this->assertArrayNotHasKey( 'label', $relationship, 'The label default is resolved at runtime, not stored.' );
 	}
 
 	/**

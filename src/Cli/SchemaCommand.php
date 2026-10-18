@@ -14,6 +14,7 @@ use Pegwork\Registry\Exporter;
 use Pegwork\Registry\Importer;
 use Pegwork\Registry\Loader;
 use Pegwork\Registry\Result;
+use Pegwork\Registry\Status;
 use WP_CLI;
 
 use function WP_CLI\Utils\format_items;
@@ -87,38 +88,37 @@ final class SchemaCommand {
 	 * @param array<string, string> $assoc_args Associative arguments.
 	 */
 	public function list_( array $args, array $assoc_args ): void {
-		$result   = Plugin::result();
-		$registry = $result->registry;
-		$items    = array();
+		$status = Status::current();
+		$items  = array();
 
-		foreach ( $registry->content_types() as $key => $type ) {
+		foreach ( $status->content_types() as $type ) {
 			$items[] = array(
 				'kind'    => 'content_type',
-				'key'     => $key,
-				'label'   => $type['labels']['plural'],
+				'key'     => $type['key'],
+				'label'   => $type['label'],
 				'details' => sprintf( '%d field(s), %d taxonomy(ies)', count( $type['fields'] ), count( $type['taxonomies'] ) ),
-				'source'  => $result->sources['content_type'][ $key ],
+				'source'  => $type['source'],
 			);
 		}
-		foreach ( $registry->taxonomies() as $key => $taxonomy ) {
+		foreach ( $status->taxonomies() as $taxonomy ) {
 			$items[] = array(
 				'kind'    => 'taxonomy',
-				'key'     => $key,
-				'label'   => $taxonomy['labels']['plural'],
-				'details' => sprintf( '%d term(s)', count( $taxonomy['terms'] ) ),
-				'source'  => $result->sources['taxonomy'][ $key ],
+				'key'     => $taxonomy['key'],
+				'label'   => $taxonomy['label'],
+				'details' => sprintf( '%d term(s)', $taxonomy['terms'] ) . ( $taxonomy['locked'] ? ', locked' : '' ),
+				'source'  => $taxonomy['source'],
 			);
 		}
-		foreach ( $registry->relationships() as $key => $relationship ) {
+		foreach ( $status->relationships() as $relationship ) {
 			$items[] = array(
 				'kind'    => 'relationship',
-				'key'     => $key,
+				'key'     => $relationship['key'],
 				'label'   => $relationship['from'] . ' -> ' . $relationship['to'],
-				'details' => $relationship['cardinality'] . ', ' . $relationship['storage'],
-				'source'  => $result->sources['relationship'][ $key ],
+				'details' => $relationship['cardinality'] . ', ' . $relationship['storage'] . ', ' . ( $relationship['required'] ? 'required' : 'optional' ),
+				'source'  => $relationship['source'],
 			);
 		}
-		array_push( $items, ...self::section_items( $result ) );
+		array_push( $items, ...self::section_items( Plugin::result() ) );
 
 		if ( ! $items ) {
 			WP_CLI::log( 'No schema registered.' );
@@ -129,12 +129,14 @@ final class SchemaCommand {
 	}
 
 	/**
-	 * Reports DB entries shadowed by file packages with the same key.
+	 * Reports DB entries shadowed by file packages with the same key, and rejected packages and DB entries.
+	 *
+	 * Prints one table per section that has rows: shadowed entries, then rejection errors.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--format=<format>]
-	 * : Output format.
+	 * : Output format of each table.
 	 * ---
 	 * default: table
 	 * options:
@@ -148,15 +150,31 @@ final class SchemaCommand {
 	 * @param array<string, string> $assoc_args Associative arguments.
 	 */
 	public function status( array $args, array $assoc_args ): void {
-		$shadowed = Plugin::result()->shadowed;
+		$status   = Status::current();
+		$format   = $assoc_args['format'] ?? 'table';
+		$shadowed = $status->shadowed();
+		$rejected = $status->rejected();
 
-		if ( ! $shadowed ) {
+		if ( $shadowed ) {
+			WP_CLI::warning( sprintf( '%d DB entry(ies) in the %s option are shadowed by file packages and ignored.', count( $shadowed ), Loader::DB_OPTION ) );
+			format_items( $format, $shadowed, array( 'kind', 'key', 'by' ) );
+		} else {
 			WP_CLI::success( 'No shadowed DB entries.' );
+		}
+
+		if ( ! $rejected ) {
+			WP_CLI::success( 'No rejected packages or DB entries.' );
 			return;
 		}
 
-		WP_CLI::warning( sprintf( '%d DB entry(ies) in the %s option are shadowed by file packages and ignored.', count( $shadowed ), Loader::DB_OPTION ) );
-		format_items( $assoc_args['format'] ?? 'table', $shadowed, array( 'kind', 'key', 'by' ) );
+		$errors = array();
+		foreach ( $rejected as $group ) {
+			foreach ( $group['errors'] as $error ) {
+				$errors[] = array( 'source' => $group['source'] ) + $error;
+			}
+		}
+		WP_CLI::warning( sprintf( '%d source(s) rejected with %d error(s); their objects are not registered.', count( $rejected ), count( $errors ) ) );
+		format_items( $format, $errors, array( 'source', 'code', 'file', 'pointer', 'message' ) );
 	}
 
 	/**

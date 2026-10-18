@@ -37,7 +37,10 @@ final class Normalizer {
 				),
 				array( 'wp' )
 			),
-			'relationship' => $data + array( 'storage' => 'meta' ),
+			'relationship' => $data + array(
+				'required' => false,
+				'storage'  => 'meta',
+			),
 			default        => self::without_empty( $data, array( 'requires' ) ),
 		};
 

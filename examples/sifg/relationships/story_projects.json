@@ -1,0 +1,2 @@
+{ "format": 1, "key": "story_projects", "from": "sifg_story", "to": "sifg_project",
+  "cardinality": "many_to_many", "label": "Projects", "required": true }

@@ -100,6 +100,19 @@ final class Registry {
 	}
 
 	/**
+	 * Relationships with the given content type at either end.
+	 *
+	 * @param string $type Content type key.
+	 * @return array<string, array<string, mixed>> Relationships by key, in load order, where `from` or `to` is the type.
+	 */
+	public function relationships_for( string $type ): array {
+		return array_filter(
+			$this->relationships,
+			fn( array $relationship ) => $type === $relationship['from'] || $type === $relationship['to']
+		);
+	}
+
+	/**
 	 * The `listing` section of a content type: what its directories may filter by.
 	 *
 	 * @param string $type Content type key.

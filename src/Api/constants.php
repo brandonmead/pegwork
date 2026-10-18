@@ -13,3 +13,8 @@ namespace Pegwork\Api;
  * Semver of the public `Pegwork\Api` surface. Everything outside `Pegwork\Api` is internal.
  */
 const VERSION = '0.2.0';
+
+/**
+ * Slug of the top-level Pegwork admin menu. Add screens with `add_submenu_page( Pegwork\Api\ADMIN_MENU, ... )`.
+ */
+const ADMIN_MENU = 'pegwork';

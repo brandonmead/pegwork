@@ -187,7 +187,13 @@
 			"required": [ "key", "type", "label" ],
 			"additionalProperties": false,
 			"properties": {
-				"key": { "$ref": "#/$defs/key" },
+				"key": {
+					"description": "Not id, status or type: record events and automation paths use those for the post itself.",
+					"allOf": [
+						{ "$ref": "#/$defs/key" },
+						{ "not": { "enum": [ "id", "status", "type" ] } }
+					]
+				},
 				"type": { "enum": [ "text", "textarea", "rich_text", "url", "email", "boolean", "date", "number", "select" ] },
 				"label": { "$ref": "#/$defs/text" },
 				"required": { "type": "boolean", "default": false },
@@ -375,7 +381,7 @@
 			}
 		},
 		"relationship": {
-			"title": "Relationship (relationships/<key>.json); validated only in Phase 1",
+			"title": "Relationship (relationships/<key>.json). Stored as one _rel_<key> meta row per linked ID on the \"from\" record. The PHP validator also rejects from equal to to, and a _rel_<key> that is already a field meta key on the \"from\" type.",
 			"type": "object",
 			"required": [ "format", "key", "from", "to", "cardinality" ],
 			"additionalProperties": false,
@@ -384,8 +390,13 @@
 				"key": { "$ref": "#/$defs/key" },
 				"from": { "$ref": "#/$defs/key" },
 				"to": { "$ref": "#/$defs/key" },
-				"cardinality": { "enum": [ "one_to_many", "many_to_many" ] },
-				"storage": { "enum": [ "meta", "table" ], "default": "meta" }
+				"cardinality": {
+					"description": "many_to_many: no limit. one_to_many: each \"to\" record is linked from at most one \"from\" record.",
+					"enum": [ "one_to_many", "many_to_many" ]
+				},
+				"storage": { "description": "table is reserved for Phase 5.", "enum": [ "meta" ], "default": "meta" },
+				"label": { "description": "Picker heading on the \"from\" editor. Default: the \"to\" type's plural label.", "$ref": "#/$defs/text" },
+				"required": { "description": "At least one link on publish, pending and future.", "type": "boolean", "default": false }
 			}
 		},
 		"options_page": {

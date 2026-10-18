@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace Pegwork\Registry;
 
+use Pegwork\Content\Meta;
+use Pegwork\Content\Relationships;
 use Pegwork\Registry\Rules\AutomationRules;
 use Pegwork\Registry\Rules\FormRules;
 use Pegwork\Registry\Rules\ListingRules;
@@ -63,6 +65,12 @@ final class Validator {
 	 * Property names that look like PHP callables. Never allowed anywhere.
 	 */
 	public const CALLABLE_PATTERN = '/(callback|_cb|_class)$/';
+
+	/**
+	 * Content type field keys that collide with record properties: `status` in record event `changed` lists
+	 * (docs/events.md), and `id`, `status`, `type` in automation `record.*` paths.
+	 */
+	public const RESERVED_FIELD_KEYS = array( 'id', 'status', 'type' );
 
 	/**
 	 * WordPress limit for post type keys.
@@ -252,7 +260,8 @@ final class Validator {
 	}
 
 	/**
-	 * Checks that a valid object's references resolve, and the rules that need other objects.
+	 * Checks that a valid object's references resolve, and the rules that need other objects (for example
+	 * that a relationship's `_rel_{key}` meta key is not a field meta key on its "from" type).
 	 *
 	 * `$known` maps kind => key => the defined object in canonical form. A value that is not an array
 	 * (for example `true`) only proves the key exists; rules that need the object's contents are skipped for it.
@@ -260,7 +269,7 @@ final class Validator {
 	 * @param string                              $kind    Object kind; manifests and taxonomies have no references.
 	 * @param array<string, mixed>                $data    Object that passed validate().
 	 * @param string                              $file    Source file path for error context.
-	 * @param array<string, array<string, mixed>> $known   Defined objects by kind, then key.
+	 * @param array<string, array<string, mixed>> $known   Defined objects by kind, then key (non-array values skip content checks).
 	 * @param string                              $pointer JSON pointer of the object within the source.
 	 * @return ValidationError[] Empty when every reference resolves.
 	 */
@@ -288,6 +297,20 @@ final class Validator {
 						$pointer . '/' . $end,
 						/* translators: %s: content type key. */
 						sprintf( __( 'Content type "%s" is not defined.', 'pegwork' ), $data[ $end ] )
+					);
+				}
+			}
+
+			$from     = $known['content_type'][ $data['from'] ] ?? null;
+			$fields   = is_array( $from ) && is_array( $from['fields'] ?? null ) && isset( $data['key'] ) ? $from['fields'] : array();
+			$meta_key = Relationships::META_PREFIX . ( $data['key'] ?? '' );
+			foreach ( $fields as $field ) {
+				if ( Meta::is_meta( $field ) && Meta::key( $data['from'], $field ) === $meta_key ) {
+					$validator->add(
+						'meta_key_conflict',
+						$pointer . '/key',
+						/* translators: 1: meta key, 2: field key, 3: content type key. */
+						sprintf( __( 'Meta key "%1$s" is already used by field "%2$s" on content type "%3$s".', 'pegwork' ), $meta_key, $field['key'], $data['from'] )
 					);
 				}
 			}
@@ -429,7 +452,16 @@ final class Validator {
 	private function field( mixed $field, string $pointer, string $context = 'content_type' ): void {
 		$string = fn( $v, $p ) => $this->type( $v, $p, 'string' );
 		$checks = array(
-			'key'           => fn( $v, $p ) => $this->key( $v, $p ),
+			'key'           => function ( $v, $p ) use ( $context ) {
+				if ( $this->key( $v, $p ) && 'content_type' === $context && in_array( $v, self::RESERVED_FIELD_KEYS, true ) ) {
+					$this->add(
+						'reserved_field_key',
+						$p,
+						/* translators: %s: field key. */
+						sprintf( __( 'Field key "%s" is reserved: record events and automation paths use it for the post\'s own id, status and type.', 'pegwork' ), $v )
+					);
+				}
+			},
 			'type'          => fn( $v, $p ) => $this->field_type( $v, $p, $context ),
 			'label'         => $string,
 			'required'      => fn( $v, $p ) => $this->type( $v, $p, 'boolean' ),
@@ -594,13 +626,14 @@ final class Validator {
 	}
 
 	/**
-	 * Validates a relationship (shape only in Phase 1).
+	 * Validates a relationship. `from` and `to` must differ (self links need a direction model,
+	 * Phase 5), a rule JSON Schema cannot express.
 	 *
 	 * @param mixed  $data    Decoded relationship.
 	 * @param string $pointer JSON pointer of the object.
 	 */
 	private function relationship( mixed $data, string $pointer ): void {
-		$this->props(
+		$is_object = $this->props(
 			$data,
 			$pointer,
 			array(
@@ -609,10 +642,31 @@ final class Validator {
 				'from'        => fn( $v, $p ) => $this->key( $v, $p ),
 				'to'          => fn( $v, $p ) => $this->key( $v, $p ),
 				'cardinality' => fn( $v, $p ) => $this->enum( $v, $p, array( 'one_to_many', 'many_to_many' ) ),
-				'storage'     => fn( $v, $p ) => $this->enum( $v, $p, array( 'meta', 'table' ) ),
+				'storage'     => fn( $v, $p ) => $this->storage( $v, $p ),
+				'label'       => fn( $v, $p ) => $this->type( $v, $p, 'string' ),
+				'required'    => fn( $v, $p ) => $this->type( $v, $p, 'boolean' ),
 			),
 			array( 'format', 'key', 'from', 'to', 'cardinality' )
 		);
+
+		if ( $is_object && is_string( $data['from'] ?? null ) && ( $data['to'] ?? null ) === $data['from'] ) {
+			$this->add( 'self_relationship', $pointer . '/to', __( 'A relationship must link two different content types.', 'pegwork' ) );
+		}
+	}
+
+	/**
+	 * Checks a relationship's `storage`. `table` is reserved for Phase 5 and rejected until then,
+	 * so nothing registers as a silent no-op.
+	 *
+	 * @param mixed  $value   Value to check.
+	 * @param string $pointer JSON pointer of the value.
+	 */
+	private function storage( mixed $value, string $pointer ): void {
+		if ( 'table' === $value ) {
+			$this->add( 'storage_not_supported', $pointer, __( 'Table storage is not supported yet; use "meta".', 'pegwork' ) );
+			return;
+		}
+		$this->enum( $value, $pointer, array( 'meta' ) );
 	}
 
 	/**

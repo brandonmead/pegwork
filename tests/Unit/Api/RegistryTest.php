@@ -41,6 +41,18 @@ class RegistryTest extends TestCase {
 	}
 
 	/**
+	 * Relationships for a type include both ends.
+	 */
+	public function test_relationships_for() {
+		$this->assertSame( array( 'event_related', 'event_venue' ), array_keys( $this->registry->relationships_for( 'demo_event' ) ) );
+		$this->assertSame( array( 'event_related', 'event_venue' ), array_keys( $this->registry->relationships_for( 'demo_venue' ) ) );
+		$this->assertSame( array(), $this->registry->relationships_for( 'missing' ) );
+		$this->assertSame( 'Related venues', $this->registry->relationships()['event_related']['label'] );
+		$this->assertTrue( $this->registry->relationships()['event_related']['required'] );
+		$this->assertFalse( $this->registry->relationships()['event_venue']['required'] );
+	}
+
+	/**
 	 * One content type, or null.
 	 */
 	public function test_content_type() {
