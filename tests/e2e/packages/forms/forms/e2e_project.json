@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "key": "e2e_project",
+  "label": "E2E submit a project",
+  "target": { "content_type": "sifg_project", "action": "create", "status": "pending" },
+  "confirm": { "field": "contact_email", "subject": "Confirm your E2E project",
+    "body": "Confirm \"{field:name}\":\n{confirm_url}" },
+  "steps": [
+    { "key": "project", "label": "Your project", "fields": [
+      { "bind": { "field": "name" } },
+      { "bind": { "field": "description" }, "help": "50 to 300 words." },
+      { "bind": { "taxonomy": "sifg_project_type" }, "display": "radio" },
+      { "bind": { "taxonomy": "sifg_project_status" }, "display": "radio" },
+      { "bind": { "taxonomy": "sifg_impact" }, "display": "checkboxes" } ] },
+    { "key": "links", "label": "Links", "fields": [
+      { "bind": { "field": "website" } },
+      { "bind": { "field": "needs_volunteers" } },
+      { "bind": { "field": "volunteer_link" } } ] },
+    { "key": "contact", "label": "Contact", "fields": [
+      { "bind": { "field": "contact_email" }, "autocomplete": "email",
+        "help": "Private. Used only to confirm and to reach you about this listing." },
+      { "key": "consent", "type": "boolean", "required": true,
+        "label": "I have permission to share this project and agree it can be listed publicly" } ] }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "confirmed", "to": "{admin_email}", "reply_to": "{field:contact_email}",
+      "subject": "E2E project to review: {field:name}", "body": "{all_fields}\n\nReview: {post:edit_url}" }
+  ],
+  "messages": { "success": "Check your email to confirm your submission. The link expires in 72 hours.", "submit_label": "Submit project" }
+}

@@ -63,7 +63,7 @@ add_action(
 					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
 						return rest_ensure_response( array() );
 					}
-					$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, form_key, status, email, field_values, meta FROM {$table} WHERE form_key = %s ORDER BY id DESC LIMIT 20", (string) $request['form'] ), ARRAY_A );
+					$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, form_key, status, email, post_id, field_values, meta FROM {$table} WHERE form_key = %s ORDER BY id DESC LIMIT 20", (string) $request['form'] ), ARRAY_A );
 					foreach ( $rows as &$row ) {
 						$row['values'] = json_decode( $row['field_values'], true );
 						$row['meta']   = json_decode( $row['meta'], true );
@@ -74,7 +74,7 @@ add_action(
 			)
 		);
 
-		// Clears the mail log, rate-limit transients and the e2e form's entries.
+		// Clears the mail log, rate-limit transients and the e2e forms' entries (which also resets the confirmation email cap).
 		register_rest_route(
 			'pegwork-e2e/v1',
 			'/reset',
@@ -88,7 +88,7 @@ add_action(
 					wp_cache_flush();
 					$table = $wpdb->prefix . 'pegwork_entries';
 					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {
-						$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE form_key = %s", 'e2e_contact' ) );
+						$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE form_key IN (%s, %s)", 'e2e_contact', 'e2e_project' ) );
 					}
 					return rest_ensure_response( true );
 				},
