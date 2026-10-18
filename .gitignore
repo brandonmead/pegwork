@@ -5,6 +5,11 @@
 /assets/build/
 .phpunit.result.cache
 .phpcs-cache
+# Playwright output
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 # Mead Drive sync duplicates
 * 2
 * 2.*
