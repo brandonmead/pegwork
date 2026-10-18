@@ -1,6 +1,7 @@
 <?php
 /**
- * Listings module: the pegwork/field binding source and the pegwork/conditional block.
+ * Listings module: the pegwork/field binding source, the pegwork/conditional block, and directories
+ * (the `pegwork` Query Loop attribute, constraint pipeline and generated patterns).
  *
  * Uses only Pegwork\Api and the global pegwork_* functions (bin/check-module-boundary.sh).
  *
