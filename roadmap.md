@@ -4,7 +4,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## Phases
 1. Foundation: schema registry, types, fields, taxonomies, REST, JSON export. Gate: config exports and re-imports cleanly. Status: PRs 1-5 and 7 merged; PR 6 (export/import, gate test) in review, done when merged; PR 8 (sifg-config sign-off) next.
-2. Display: listings, templates, filters. Gate: directory fast with 500 test records.
+2. Display: listings, templates, filters. Gate: directory fast with 500 test records (budget in `docs/phase-2-design.md` section 10). Status: design drafted 2026-10-18, awaiting owner review.
 3. Forms. Gate: two weeks of real submissions without defects.
 4. Automation v1. Gate: one full staleness check cycle.
 5. BarnCRM foundation. Gate: pilot nonprofit runs daily work on it.

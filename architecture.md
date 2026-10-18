@@ -10,6 +10,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 ## Canonical sources
 - BMemory is canonical: `specification/wordpress-platform-plugin.md`, `decision/wordpress-platform-plugin-packaging.md`. Local docs are copies.
 - Phase 1 technical design: `docs/phase-1-design.md` (approved 2026-10-17).
+- Phase 2 technical design: `docs/phase-2-design.md` (draft for owner review, 2026-10-18).
 
 ## Packaging
 - One plugin with switchable modules.
