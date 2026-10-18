@@ -296,36 +296,10 @@ class DirectoryQueryTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Featured preset without pegwork_get_option() (options pages not loaded): the newest published record.
-	 * Runs before the option tests below, which may declare a test double of that function.
-	 */
-	public function test_featured_falls_back_without_option_function() {
-		if ( function_exists( 'pegwork_get_option' ) ) {
-			$this->markTestSkipped( 'pegwork_get_option() exists; covered by the option tests.' );
-		}
-		$this->project( 'Older', array(), array(), array( 'post_date' => '2026-01-01 00:00:00' ) );
-		$this->project( 'Newest', array(), array(), array( 'post_date' => '2026-03-01 00:00:00' ) );
-		$this->project( 'Newer draft', array(), array(), array( 'post_status' => 'draft' ) );
-
-		$this->assertSame( array( 'Newest' ), self::titles( do_blocks( Patterns::featured( 'sifg_project' ) ) ) );
-	}
-
-	/**
-	 * Declares a pegwork_get_option() test double when the options pages code is not on this branch.
-	 * It reads the options page array option, the storage the options pages design specifies.
-	 */
-	private static function require_option_function() {
-		if ( ! function_exists( 'pegwork_get_option' ) ) {
-			require_once __DIR__ . '/pegwork-get-option-double.php';
-		}
-	}
-
-	/**
-	 * Featured preset: only the record chosen on the options page; empty, unpublished or foreign choices
-	 * fall back to the newest published record.
+	 * Featured preset (real pegwork_get_option()): only the record chosen on the options page; empty,
+	 * unpublished or foreign choices fall back to the newest published record.
 	 */
 	public function test_featured_uses_option_and_falls_back() {
-		self::require_option_function();
 		$chosen = $this->project( 'Chosen', array(), array(), array( 'post_date' => '2026-01-01 00:00:00' ) );
 		$this->project( 'Newest', array(), array(), array( 'post_date' => '2026-03-01 00:00:00' ) );
 		$draft = $this->project( 'Draft pick', array(), array(), array( 'post_status' => 'draft' ) );

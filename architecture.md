@@ -100,7 +100,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - core/query gets attribute `pegwork` and provides it as context `pegwork/listing`; every block type whose `uses_context` has `query` gets it through `get_block_type_uses_context` (WP 6.5+). So post template, pagination next/previous/numbers, no results and query total all build the same constrained `WP_Query` via `query_loop_block_query_vars`. No `pre_render_block` global state (design said `pre_render_block`; context is per block, so pagination page counts always match).
 - `WP_Block_Type::$uses_context` is a magic property (getter filter); appending to it fails ("Indirect modification of overloaded property"). Already registered core/query is patched through its public `attributes`/`provides_context` (tests boot the module after core blocks register).
 - `build_query_vars_from_query_block()` sets no `post_status`, so core lists private records to users who can read them; the pipeline forces `publish`. Core also caches identical `WP_Query` runs, so the extra pagination queries cost no SQL.
-- Featured: `pegwork_get_option()` guarded with `function_exists` (options pages PR in parallel). Test double `tests/Integration/Listings/pegwork-get-option-double.php` reads `get_option( '<page>' )['<field>']` and loads only when the real function is missing; when options pages lands the same test runs against the real function.
+- Featured: `pegwork_get_option()` (core since the options pages merge) guarded with `function_exists`; the reference must name a public `post` field whose `post_type` is the listing type, else newest published. Tested against the real function.
 - Newest-record fallback cached in non-persistent group `pegwork_listings`, keyed on `wp_cache_get_last_changed( 'posts' )`.
 - PHPUnit classes that seed terms in `wpSetUpBeforeClass` must delete `Registrar::HASH_OPTION` after the class: class data deletion removes the terms but not the hash, so later classes would never re-seed them (locked taxonomies then block `wp_set_object_terms`).
 - Editor: the variation's card is `core/pattern {slug}`; the editor replaces it on insert (verified 7.1.3 E2E). `render_block_core_pattern()` uses `do_blocks()` without parent context, so generated patterns inline the card for server rendering.
@@ -122,6 +122,16 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Core `TokenInput` (the combobox input) sets `aria-owns`, not `aria-controls`, while expanded: axe `aria-required-attr` (critical) only with the list open. `expandOnFocus` is off so programmatic focus after a removal does not open it; the E2E axe check runs with the list closed.
 - `getEntityRecords` for postType defaults to `context: 'edit'`, which 403s for users without `edit_posts` on the "to" type; the picker passes `context: 'view'` and decodes `title.rendered`.
 - Browser checks: throwaway sites `~/wp-envs/picker` (WP 7.1.3, DB `wpenv_picker`, port 8141) and `~/wp-envs/picker67` (WP 6.7, DB `wpenv_picker67`, port 8142), mu-plugin `pegwork-demo.php` registers `examples/sifg`; harness site `~/wp-envs/picker_e2e` (port 8143). PHPUnit core copy `~/wp-envs/picker-core`, DB `pegwork_tests_picker`.
+
+## Options pages (content builder PRs 4 and 5)
+- `docs/options-pages.md`. `src/Options/`: `Pages` (register_setting per page from `Registrar::register`, group `pegwork_{key}`, `option_page_capability_pegwork_{key}`), `Screen` (admin_menu default priority, hooked in `Plugin::boot` so it precedes module screens), `Values` (type checks, partial save), `BindingSource` (`pegwork/option`, core, no `uses_context`).
+- `RecordValidator::check_values( $fields, $values, $complete = true )` holds the shared required/validate rules; type checks stay with REST schemas (records) or `Values::check_type()` (options pages).
+- `register_setting()` adds a new `sanitize_option_{name}` closure each call: `Pages::register()` unregisters its own setting first, since tests and imports re-run `Plugin::init()`.
+- Core sanitizes twice on an option's first save (`update_option()` then `add_option()`); errors are deduplicated by code (`pegwork_field_{field}`).
+- `settings_errors()` prints messages unescaped: messages are `esc_html`ed when added (they quote submitted text); the screen renders its own notices, `settings_errors( 'general' )` only for core's "Settings saved.".
+- `get_option( $page )` returns the registered default (an array) when unset; pass an explicit default (`get_option( $page, false )`) to test for "never saved".
+- ComboboxControl `help` text fails axe color contrast on the admin background (#f0f0f1): the picker renders its own `p.description`.
+- Browser checks: harness site `~/wp-envs/options` (DB `wpenv_options`, port 8181). PHPUnit DB `pegwork_tests_options` against `~/wp-envs/core-latest` (WP 7.1.3); the bundled wp-phpunit does not run against `~/wp-envs/core-6.7` (missing `class-wp-phpmailer.php`), so 6.7 is CI only.
 
 ## Events and Records API (Phase 4 PR 1)
 - Contract and payloads: `docs/events.md`. `Pegwork\Api\VERSION` 0.2.0 for the whole build cycle (Phase 4 decision 7); never bump past it in this cycle.
