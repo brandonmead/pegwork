@@ -44,6 +44,31 @@ final class EntryState {
 	}
 
 	/**
+	 * Sets the status of entries whose status is one of `$from` (the entries admin's bulk spam and not
+	 * spam). Conditional like claim(), so an entry a confirmation holds (`processing`) is left alone.
+	 *
+	 * @param int[]    $ids  Entry IDs.
+	 * @param string[] $from Statuses the entries must have now.
+	 * @param string   $to   New status.
+	 * @return int Rows changed.
+	 */
+	public static function transition( array $ids, array $from, string $to ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+		if ( array() === $ids || array() === $from ) {
+			return 0;
+		}
+		$table = Schema::table();
+		$sql   = 'id IN (' . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ') AND status IN (' . implode( ', ', array_fill( 0, count( $from ), '%s' ) ) . ')';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $sql holds only placeholders.
+		$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = %s WHERE {$sql}", ...array_merge( array( $to ), $ids, array_values( $from ) ) ) );
+
+		return (int) $changed;
+	}
+
+	/**
 	 * Sets lifecycle columns of an entry. Unknown columns are ignored.
 	 *
 	 * @param int                  $id      Entry ID.

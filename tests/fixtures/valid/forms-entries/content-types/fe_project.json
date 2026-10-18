@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "fe_project",
+  "labels": { "singular": "Project", "plural": "Projects" },
+  "taxonomies": [ { "key": "fe_kind", "select": "single" } ],
+  "fields": [
+    { "key": "title", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "website", "type": "url", "label": "Website" },
+    { "key": "contact_email", "type": "email", "label": "Contact email", "required": true, "visibility": "private" }
+  ]
+}
