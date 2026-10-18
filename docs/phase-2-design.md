@@ -171,6 +171,15 @@ Open questions (recommended answer first):
 5. Phase 1 deferred a module toggle admin screen to Phase 2; no consumer requirement needs it. Recommend defer; enable once per environment with WP-CLI.
 6. Paused projects with Needs volunteers still on would match the volunteers filter but show no button. Recommend an editorial rule (turn it off when pausing) rather than code.
 
+Decisions (2026-10-18, main session under Brandon's build goal; Brandon reviews at the end):
+1. Keep the WordPress 6.7 minimum Brandon approved. No `core/query-total` dependency: `pegwork/filters` renders the result count (from the main or bound query's `found_posts`) inside its own live region. No `pegwork/result-count` block. Raising the minimum is on Brandon's review list.
+2. Featured project comes from the options page field `sifg_settings.featured_project` (content builder design, `post` field type). The `where` preset gains `post_in_option: "<page>.<field>"`, resolved with `pegwork_get_option()`; empty or unpublished falls back to the newest published record. No `featured` boolean.
+3. Resources: both paths stay supported; the SI for Good choice follows the content PR.
+4. Impact matches any (OR).
+5. Module toggle screen is built by the content builder PR 1 (admin skeleton); not in this phase.
+6. Config, not code: SI for Good's pause automation also sets Needs volunteers off and records it privately; reactivation restores it (Phase 4 config).
+7. API version stays 0.2.0 for every addition in this build cycle. Registry sections for this phase are built in one shared registry PR together with `forms`, `automations`, and `options_pages`, so Phase 2 PR 1 reduces to `Registry::meta_key()`, `pegwork_get_field()`, and module skeletons (moved into PR 2). E2E tooling (Playwright, axe, wp-env in CI) comes from one shared harness PR used by all phases.
+
 PRs (each merges with CI green):
 1. Registry `listing` and API 0.2.0: JSON Schema, Validator, Normalizer, export/import, fixtures, `Registry::meta_key()`, `pegwork_get_field()`, manifest entries, module skeletons, WordPress minimum per question 1. Accept: fixtures agree in both validators; a filter on `contact_email` is rejected; round trip byte-identical; `pegwork_get_field( $p, 'contact_email' )` is null for an administrator in view context.
 2. Listings A: `pegwork/field` source (server and editor), formats, hide-empty, `pegwork/conditional`, block category. Accept: the SI for Good detail template shows every public field; contact email absent for all roles; volunteer matrix correct; `<script>` in Who it's for renders as text; `javascript:` URL renders no button; editor preview shows values.
