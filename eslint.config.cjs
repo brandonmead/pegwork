@@ -10,9 +10,12 @@ module.exports = [
 	{
 		settings: {
 			'import/core-modules': [
+				'@wordpress/block-editor',
+				'@wordpress/blocks',
 				'@wordpress/components',
 				'@wordpress/core-data',
 				'@wordpress/data',
+				'@wordpress/date',
 				'@wordpress/editor',
 				'@wordpress/element',
 				'@wordpress/i18n',

@@ -37,9 +37,10 @@
 		</properties>
 	</rule>
 
-	<!-- PSR-4 class files (src/) and PHPUnit test classes (tests/) use class-name file names. -->
+	<!-- PSR-4 class files (src/, modules/*/src/) and PHPUnit test classes (tests/) use class-name file names. -->
 	<rule ref="WordPress.Files.FileName">
 		<exclude-pattern>/src/*</exclude-pattern>
+		<exclude-pattern>/modules/*/src/*</exclude-pattern>
 		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>
 </ruleset>
