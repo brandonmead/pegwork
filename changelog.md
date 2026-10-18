@@ -3,6 +3,7 @@
 Purpose: dated, newest-first log of changes actually made.
 
 ## 2026-10-18
+- Content builder PR 1, admin skeleton (in review): top-level Pegwork menu (`Pegwork\Api\ADMIN_MENU`), Overview screen (content types with field lists, taxonomies, relationships, shadowed DB entries, rejected packages), Modules screen (per-slug nonce toggles via `admin-post.php`, blocked actions shown as `aria-disabled` buttons with reasons), `Registry\Status` shared by Overview and `wp pegwork schema list|status` (`status` now also lists rejected packages and DB entries), `Modules\Loader::disable` rejects a slug an enabled module requires (`pegwork_module_required_by`), Loader messages translatable. Checked on a throwaway site (`~/wp-envs/admin`, port 8111): Playwright keyboard flow, bad nonce 403, editor promotion, axe 0 violations at 1280 and 782 px. Screenshots `docs/screenshots/admin-overview.png`, `admin-modules.png`.
 - Design draft `docs/content-builder-design.md` (PR #8, in review): relationships (meta storage, picker, REST param, query helpers), options pages (registry kind, Settings API screen, `pegwork/option` bindings), admin menu skeleton with Overview and Modules screens; schema editor UI deferred to Phase 5.
 
 ## 2026-10-17

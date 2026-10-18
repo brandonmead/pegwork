@@ -210,7 +210,8 @@ final class Overview {
 	 * @param string                           $none    Empty state text.
 	 */
 	private static function table( string $caption, array $columns, array $rows, string $none ): void {
-		echo '<table class="wp-list-table widefat striped pegwork-table">';
+		// Not wp-list-table: its small-screen CSS stacks cells without their headers.
+		echo '<table class="widefat striped pegwork-table">';
 		echo '<caption class="screen-reader-text">' . esc_html( $caption ) . '</caption>';
 		echo '<thead><tr>';
 		foreach ( $columns as $key => $header ) {
