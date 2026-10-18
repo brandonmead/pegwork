@@ -21,6 +21,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 8. sifg-config (in siforgood repo)
 
 ## Done
+- Shared browser E2E harness (2026-10-18, in review). Later feature PRs add specs under `tests/e2e/specs/`; the admin axe spec starts checking Pegwork admin screens once they land.
 - Choose product name: Pegwork (2026-10-17).
 
 ## Open questions

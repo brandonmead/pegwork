@@ -118,3 +118,43 @@ jobs:
         run: composer test
         env:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm install -g npm@11.20.0
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # WordPress latest on PHP 8.2 in Docker; .wp-env.json maps the plugin and the sifg mu-plugin.
+      - name: Start wp-env
+        run: npx wp-env start
+
+      - name: Run E2E specs
+        run: npm run test:e2e
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+            !test-results/.auth/
+          retention-days: 7
+          if-no-files-found: ignore

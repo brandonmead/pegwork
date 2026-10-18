@@ -3,6 +3,7 @@
 Purpose: dated, newest-first log of changes actually made.
 
 ## 2026-10-18
+- Shared browser E2E harness (`docs/e2e.md`): Playwright and axe dev dependencies, `playwright.config.js`, helpers and `sifg` fixture in `tests/e2e/utils/`, seed specs (editor panel, admin axe that skips until Pegwork admin screens exist, no-JS smoke), CI job `E2E` on wp-env, `bin/e2e-local-site.sh` for a Docker-free local site.
 - Phase 2 display design approved (`docs/phase-2-design.md`): Query Loop variation, `pegwork/field` bindings, `pegwork/filters` and `pegwork/conditional` blocks, registry `listing` section, no custom endpoints.
 - Design `docs/content-builder-design.md` approved (PR #8): relationships (meta storage, picker, REST param, query helpers), options pages (registry kind, Settings API screen, `pegwork/option` bindings), admin menu skeleton with Overview and Modules screens; schema editor UI deferred to Phase 5.
 
