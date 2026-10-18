@@ -1,8 +1,8 @@
 # Automation module
 
-Module `automation` (`modules/automation/`, namespace `PegworkAutomation\`): runs the registry's automations (`docs/registry-reference.md#automations`) in the background, logs every run, and adds `wp pegwork automation`. Design: `docs/phase-4-design.md` section 6 and its 2026-10-18 decisions. Uses only `Pegwork\Api` (Records, Module), `pegwork_registry()` and WordPress.
+Module `automation` (`modules/automation/`, namespace `PegworkAutomation\`): runs the registry's automations (`docs/registry-reference.md#automations`) in the background, logs every run, and adds `wp pegwork automation` and Pegwork > Automations. Design: `docs/phase-4-design.md` sections 6 and 8 and its 2026-10-18 decisions. Uses only `Pegwork\Api` (Records, Module, `ADMIN_MENU`), `pegwork_registry()` and WordPress.
 
-Status (Phase 4 PR 4): event and schedule triggers (`for_each` sweeps); steps `update_record`, `create_record`, `condition`, `send_email`, `wait`; retries; WP-Cron wake-ups; maintenance; CLI `list`, `log`, `run`, `tick`, `retry`, `enable`, `disable` (`--now`, `--sync`). Not yet: `call_webhook`, webhook triggers, signed links (`{{link.*}}` renders empty), admin screens. A run that reaches a step type this release does not run fails with `unsupported_step` (earlier steps keep their effect; no retry).
+Status (Phase 4 PR 6): event and schedule triggers (`for_each` sweeps); steps `update_record`, `create_record`, `condition`, `send_email`, `wait`; retries; WP-Cron wake-ups; maintenance; CLI `list`, `log`, `run`, `tick`, `retry`, `enable`, `disable` (`--now`, `--sync`); admin screens (list, toggles, Run now, run log and detail, Retry). Not yet: `call_webhook`, webhook triggers, signed links (`{{link.*}}` renders empty). A run that reaches a step type this release does not run fails with `unsupported_step` (earlier steps keep their effect; no retry).
 
 Enable: `wp pegwork module enable automation` (or Pegwork > Modules). Disabled, nothing is included: no listener, no tables touched, no runs.
 
@@ -116,7 +116,7 @@ wp pegwork automation enable <key>
 wp pegwork automation disable <key>
 ```
 
-`list`: key, label, trigger, JSON `enabled`, site override, effective state, last run (status, UTC time), open runs (queued, running, waiting), failures in the last 7 days, next schedule firing (site time). `log --run=<id>`: the run, then each step attempt (status, duration, summary, error). `disable` stops new runs; queued runs are cancelled when they wake. CLI access implies admin; the admin screens (PR 6) will check `manage_options` and nonces.
+`list`: key, label, trigger, JSON `enabled`, site override, effective state, last run (status, UTC time), open runs (queued, running, waiting), failures in the last 7 days, next schedule firing (site time). `log --run=<id>`: the run, then each step attempt (status, duration, summary, error). `disable` stops new runs; queued runs are cancelled when they wake. CLI access implies admin; the admin screens check `manage_options` and nonces (below).
 
 - `run`: a schedule automation fires once now (sweeping its records, or only `--record`, filters still applied) without moving its regular schedule; an event automation starts one run against `--record` (`trigger_type` `manual`, payload `id`, `type`, `status`, origin source `cli`; `when` is not evaluated, the idempotency key applies). Disabled automations are refused.
 - `tick`: resumes waiting runs whose `resume_at` has passed and queued runs idle for 10 minutes, replacing pending wake-ups. It never prunes or interrupts runs.
@@ -126,8 +126,28 @@ wp pegwork automation disable <key>
 
 Local runbook (one staleness cycle): `wp pegwork automation run <sweep> --now=+12months`, check the email, `wp pegwork automation tick --now=+13months`, check the record, `wp pegwork automation log <sweep>`.
 
+## Admin screens
+
+Pegwork > Automations (`modules/automation/src/Admin/`, slug `pegwork-automations`, submenu position 30, added on `admin_menu` at the default priority while the module is enabled). Capability `manage_options` on every view and action: other users get 403 from WordPress on the views and from the handlers on the actions. Standard markup: `wrap`, `h1` with a `page-title-action` link, notices, `widefat striped` tables with captions and row headers (not `WP_List_Table`, whose small-screen CSS stacks cells without their headers, as on Modules). No JavaScript: every action is a form, so the screens are keyboard operable as they are. Times show in site time inside `<time datetime>`.
+
+- List (`admin.php?page=pegwork-automations`): per automation, label, key and source (`Registry::automation_source()`: file package id or "Database (imported)"); trigger summary; enabled state as a badge with the JSON default and the site override; last run (status, time), open runs, failures in the last 7 days (`Runs::summary()`); next schedule firing (`Scheduler::next()`); actions Enable/Disable, Run now (schedule triggers only; `aria-disabled` with a visible reason while disabled) and View runs. Empty state when no automation is registered.
+- Run log (`&view=log`): GET filters by automation (removed automations keep their runs) and status, 20 runs per page newest first (`Runs::page()`, `Runs::count()`), page links in a labelled `nav`. Columns: run (link to detail), automation, trigger (type and event name), record (ID and title, linked to its edit screen when the user may edit it), status, outcome (stopped condition or error), created. Empty states for no runs and no matching runs.
+- Run detail (`&view=run&run=<id>`): the run (automation, status, trigger, record, current step, outcome or error, resume time while waiting, depth, created, started, finished), Retry for failed runs, then one row per step attempt: step ID and type, attempt, status, started, duration, summary (key and value list) and error.
+
+Actions post to `admin-post.php` with a nonce per row (`pegwork_automation_toggle_<key>`, `pegwork_automation_run_<key>`, `pegwork_automation_retry_<run id>`), then redirect with a one-time notice (transient per user). They call what the CLI calls, so both apply identical rules:
+- Enable/Disable: `Overrides::toggle()` (as `enable|disable`; unknown keys refused).
+- Run now: `Manual::run( $key )` without `--sync`, so a sweep's runs are queued for WP-Cron (spawned at shutdown) and the regular schedule does not move; idempotency keys apply; disabled automations are refused. Event automations have no Run now (they need a record). Redirects to the run log filtered to the automation.
+- Retry: `Manual::retry( $run )` (failed runs only; resumes at the failed step, retry policy counted afresh), queued for WP-Cron. Redirects to the run.
+
+Privacy: the views never read `context.trigger`. They show statuses, trigger type and event name, record ID and post title, `context.outcome` or the error, and step summaries, which already hold only keys, IDs, masked recipients and subjects with private fields as `[private]`.
+
+![Automations list](screenshots/automation-list.png)
+
+![A failed run with Retry](screenshots/automation-run-failed.png)
+
 ## Testing
 
 - Unit: `tests/Unit/Automation/ConditionsTest.php` (operators, operands, dates in site time, templates, `FrozenClock` across DST); `SchedulesTest.php` (next firing times including DST and week start, durations, retry policy, `InlineScheduler`).
 - Integration: `tests/Integration/Automation/` with fixture package `tests/fixtures/valid/engine` (type `job` with private `note` and `contact_email`, `url` field `website`; automations `job_approved` (stamp and email), `job_loop`, `job_spawn`, `job_disabled`, `job_verified`, `job_private` (unsupported `call_webhook`), `job_mail` (HTML email with a private field), `job_sweep` (daily sweep, wait P30D, condition, close, email; `max_runs` 3), `job_digest` (hourly, no record, custom retry); options page `job_settings` for `{option:...}` recipients), `FrozenClock` and `tests/Support/FakeScheduler.php` (`drain( $until, $hooks )`); emails through the WP test suite's mock PHPMailer, failures through `pre_wp_mail`. `AutomationEmailTest` (recipients, escaping, privacy of the log, retries, `retry`), `AutomationScheduleTest` (one email per record per cycle, wait resumes after 30 days and not before, `max_runs`, chained sweep, `--now` refusal, `run`/`tick` with time travel). `AutomationWpCronTest` runs the default engine on real WP-Cron events, firing them as `wp-cron.php` does (approval, schedule firing, wait wake-up 30 days out).
+- Admin: `AutomationAdminTest` (submenu, list cells, empty states, toggle writes the same option as `Overrides::toggle()`, Run now creates a logged run and keeps the schedule, refusals for event and disabled automations, run detail and Retry to completion, log filters and pages, no private value or run context in any view, 403 for editor and subscriber on every view and action, bad or other-row nonces refused). E2E `tests/e2e/specs/automation-admin.e2e.js` with mu-plugin `pegwork-e2e-automation.php` and package `tests/e2e/packages/automation` (`e2e_digest`, daily, one email, `retry.max` 0): Disable and Enable, Run now while mail fails, open the run, Retry once mail works, filter the log, all by keyboard; axe and no horizontal scroll at 1280 and 782 px; an editor gets 403. Screenshots `docs/screenshots/automation-*.png`.
 - Local site check: `bin/e2e-local-site.sh start <name> <port>`, mu-plugins registering the fixture package and logging `wp_mail()` to a file (`pre_wp_mail`), `wp pegwork module enable automation`; publish a pending `job` and let WP-Cron run; `wp pegwork automation run job_sweep --now=+12months`, `tick --now=+14months`, `log`.

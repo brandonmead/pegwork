@@ -104,6 +104,7 @@ class RegistryTest extends TestCase {
 		$this->assertNull( $empty->form_source( 'x' ) );
 		$this->assertSame( array(), $empty->automations() );
 		$this->assertNull( $empty->automation( 'x' ) );
+		$this->assertNull( $empty->automation_source( 'x' ) );
 		$this->assertSame( array(), $empty->options_pages() );
 		$this->assertNull( $empty->options_page( 'x' ) );
 	}
@@ -113,7 +114,25 @@ class RegistryTest extends TestCase {
 	 */
 	public function test_sections() {
 		$db       = array(
-			'forms' => array(
+			'automations' => array(
+				array(
+					'format'  => 1,
+					'key'     => 'site_digest',
+					'label'   => 'Digest',
+					'trigger' => array(
+						'type'  => 'schedule',
+						'every' => 'day',
+					),
+					'steps'   => array(
+						array(
+							'id'   => 'pause',
+							'type' => 'wait',
+							'for'  => 'PT1H',
+						),
+					),
+				),
+			),
+			'forms'       => array(
 				array(
 					'format' => 1,
 					'key'    => 'site_contact',
@@ -142,9 +161,12 @@ class RegistryTest extends TestCase {
 		$this->assertSame( 'db', $registry->form_source( 'site_contact' ) );
 		$this->assertNull( $registry->form_source( 'missing' ) );
 
-		$this->assertSame( array( 'contact_received', 'talk_followup', 'talk_inbound', 'talk_published', 'talk_updated' ), array_keys( $registry->automations() ) );
+		$this->assertSame( array( 'contact_received', 'talk_followup', 'talk_inbound', 'talk_published', 'talk_updated', 'site_digest' ), array_keys( $registry->automations() ) );
 		$this->assertFalse( $registry->automation( 'talk_inbound' )['enabled'] );
 		$this->assertNull( $registry->automation( 'missing' ) );
+		$this->assertSame( 'file:sections', $registry->automation_source( 'talk_published' ) );
+		$this->assertSame( 'db', $registry->automation_source( 'site_digest' ) );
+		$this->assertNull( $registry->automation_source( 'missing' ) );
 
 		$this->assertSame( array( 'talk_settings' ), array_keys( $registry->options_pages() ) );
 		$this->assertSame( 'edit_others_posts', $registry->options_page( 'talk_settings' )['capability'] );

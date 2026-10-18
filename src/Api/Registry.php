@@ -197,6 +197,23 @@ final class Registry {
 	}
 
 	/**
+	 * Where an automation is defined: `file:<package id>` for a file package, `db` for the `pegwork_schema` option.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param string $key Automation key.
+	 * @return string|null Source, or null when the automation is not defined.
+	 */
+	public function automation_source( string $key ): ?string {
+		$source = $this->sources['automation'][ $key ] ?? null;
+		if ( null === $source || ! isset( $this->automations[ $key ] ) ) {
+			return null;
+		}
+
+		return self::DB_SOURCE === $source ? 'db' : 'file:' . $source;
+	}
+
+	/**
 	 * All options pages.
 	 *
 	 * @return array<string, array<string, mixed>> Options pages by key, in load order.

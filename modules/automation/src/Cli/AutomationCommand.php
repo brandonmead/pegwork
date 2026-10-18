@@ -275,10 +275,10 @@ final class AutomationCommand {
 	 * @param string $value on or off.
 	 */
 	private function toggle( string $key, string $value ): void {
-		if ( null === pegwork_registry()->automation( $key ) ) {
-			WP_CLI::error( sprintf( 'Unknown automation: %s.', $key ) );
+		$result = Overrides::toggle( $key, $value );
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result->get_error_message() );
 		}
-		Overrides::set( $key, $value );
 		WP_CLI::success( sprintf( '%s automation %s for this site.', 'on' === $value ? 'Enabled' : 'Disabled', $key ) );
 	}
 
