@@ -73,7 +73,22 @@ interface Module {
 
 Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks requirements and includes each `module.php` (so top-level code in `module.php` runs then and must not need the registry). `boot()` runs later, on `pegwork_loaded` (`init` priority 5, after the registry is built), in dependency order, so `pegwork_registry()` is available inside it.
 
-The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings` and `filters` (requires `listings`; a skeleton until later Phase 2 PRs); add entries with the `pegwork_module_manifest` filter. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`.
+The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings`, `filters` (requires `listings`; a skeleton until later Phase 2 PRs) and `automation`; add entries with the `pegwork_module_manifest` filter. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`. A module that keeps its own tables or cron events ships `uninstall.php` in its directory; Pegwork's `uninstall.php` includes every `modules/*/uninstall.php` before deleting `pegwork_*` options.
+
+## Automation hooks
+
+The `automation` module (`docs/automation.md`) runs registry automations. Sites and add-ons can tune it with filters; its PHP classes are internal.
+
+| Hook | Kind | Default | Use |
+|---|---|---|---|
+| `pegwork_automation_max_depth` | filter | 3 | Loop cap: triggers at this origin depth or deeper are logged as skipped |
+| `pegwork_automation_time_budget` | filter | 20 | Seconds per executor wake-up before the run is re-queued |
+| `pegwork_automation_retention_days` | filter | `{ done: 90, failed: 180 }` | Run log retention; also option `pegwork_automation_retention_days` |
+| `pegwork_automation_spawn_cron` | filter | true | Spawn WP-Cron at shutdown after queueing a run; return false with a system cron |
+| `pegwork_automation_run` | action (WP-Cron) | | Fired with a run ID to execute it |
+| `pegwork_automation_maintenance` | action (WP-Cron) | | Daily maintenance job |
+
+Records written by automation runs carry `origin.automation`, `origin.run_id` and `origin.depth` (run depth plus 1) in their record events.
 
 Enabled slugs live in the `pegwork_modules` option. Manage them on the Pegwork > Modules screen or with WP-CLI:
 

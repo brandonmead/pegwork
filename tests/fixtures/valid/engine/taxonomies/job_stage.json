@@ -1,0 +1,2 @@
+{ "format": 1, "key": "job_stage", "labels": { "singular": "Stage", "plural": "Stages" }, "hierarchical": false, "locked_terms": true,
+  "terms": [ { "slug": "open", "name": "Open" }, { "slug": "closed", "name": "Closed" } ] }
