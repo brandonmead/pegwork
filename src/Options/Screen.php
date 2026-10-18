@@ -77,8 +77,9 @@ final class Screen {
 			}
 			$hook = add_submenu_page(
 				ADMIN_MENU,
-				$page['title'],
-				$page['menu_title'] ?? $page['title'],
+				esc_html( $page['title'] ),
+				// Core prints submenu titles unescaped; registry strings may come from the DB source.
+				esc_html( $page['menu_title'] ?? $page['title'] ),
 				$page['capability'],
 				self::slug( $key ),
 				fn() => self::render( $key ),
