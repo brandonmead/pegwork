@@ -13,7 +13,6 @@ use Pegwork\Plugin;
 use Pegwork\Registry\Exporter;
 use Pegwork\Registry\Importer;
 use Pegwork\Registry\Loader;
-use Pegwork\Registry\Result;
 use Pegwork\Registry\Status;
 use WP_CLI;
 
@@ -118,7 +117,7 @@ final class SchemaCommand {
 				'source'  => $relationship['source'],
 			);
 		}
-		array_push( $items, ...self::section_items( Plugin::result() ) );
+		array_push( $items, ...$status->sections() );
 
 		if ( ! $items ) {
 			WP_CLI::log( 'No schema registered.' );
@@ -305,70 +304,5 @@ final class SchemaCommand {
 				$dry_run ? 'to create' : 'created'
 			)
 		);
-	}
-
-	/**
-	 * `schema list` rows for the optional sections: listings, forms, automations and options pages.
-	 *
-	 * @param Result $result Loaded registry with sources.
-	 * @return list<array<string, string>> Rows with kind, key, label, details and source.
-	 */
-	private static function section_items( Result $result ): array {
-		$registry = $result->registry;
-		$items    = array();
-
-		foreach ( $registry->content_types() as $key => $type ) {
-			$listing = $registry->listing( $key );
-			if ( null !== $listing ) {
-				$items[] = array(
-					'kind'    => 'listing',
-					'key'     => $key,
-					'label'   => $type['labels']['plural'],
-					'details' => sprintf( '%d filter(s)%s', count( $listing['filters'] ), $listing['search'] ? ', search' : '' ),
-					'source'  => $result->sources['content_type'][ $key ],
-				);
-			}
-		}
-		foreach ( $registry->forms() as $key => $form ) {
-			$items[] = array(
-				'kind'    => 'form',
-				'key'     => $key,
-				'label'   => $form['label'],
-				'details' => isset( $form['target'] )
-					? sprintf( '%s %s (%s)', $form['target']['action'], $form['target']['content_type'], isset( $form['steps'] ) ? count( $form['steps'] ) . ' step(s)' : count( $form['fields'] ) . ' field(s)' )
-					: sprintf( 'entry only (%s)', isset( $form['steps'] ) ? count( $form['steps'] ) . ' step(s)' : count( $form['fields'] ) . ' field(s)' ),
-				'source'  => $result->sources['form'][ $key ],
-			);
-		}
-		foreach ( $registry->automations() as $key => $automation ) {
-			$trigger = $automation['trigger'];
-			$items[] = array(
-				'kind'    => 'automation',
-				'key'     => $key,
-				'label'   => $automation['label'],
-				'details' => sprintf(
-					'%s, %d step(s)%s',
-					match ( $trigger['type'] ) {
-						'event'    => 'on ' . $trigger['event'],
-						'schedule' => 'every ' . $trigger['every'],
-						default    => 'webhook',
-					},
-					count( $automation['steps'] ),
-					$automation['enabled'] ? '' : ', disabled'
-				),
-				'source'  => $result->sources['automation'][ $key ],
-			);
-		}
-		foreach ( $registry->options_pages() as $key => $page ) {
-			$items[] = array(
-				'kind'    => 'options_page',
-				'key'     => $key,
-				'label'   => $page['title'],
-				'details' => sprintf( '%d field(s), %s', count( $page['fields'] ), $page['capability'] ),
-				'source'  => $result->sources['options_page'][ $key ],
-			);
-		}
-
-		return $items;
 	}
 }

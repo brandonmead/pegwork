@@ -94,6 +94,36 @@ class StatusTest extends TestCase {
 	}
 
 	/**
+	 * Listings, forms, automations and options pages each get a row with a short summary and their source.
+	 */
+	public function test_section_rows() {
+		$dir    = $this->fixtures() . '/valid/sections';
+		$status = new Status( Loader::load( array( $dir ) ), array( $dir ) );
+
+		$rows = array();
+		foreach ( $status->sections() as $row ) {
+			$this->assertSame( 'sections', $row['source'] );
+			$rows[ $row['kind'] . ' ' . $row['key'] ] = $row['details'];
+		}
+		$this->assertSame(
+			array(
+				'listing talk'                => '4 filter(s), search',
+				'form contact'                => 'entries only, 4 field(s)',
+				'form submit_talk'            => 'create talk, 2 step(s)',
+				'automation contact_received' => 'on form.submitted, 1 step(s)',
+				'automation talk_followup'    => 'every day, 5 step(s)',
+				'automation talk_inbound'     => 'webhook, 3 step(s), disabled',
+				'automation talk_published'   => 'on record.status_changed, 3 step(s)',
+				'automation talk_updated'     => 'on record.updated, 2 step(s), disabled',
+				'options_page talk_settings'  => '7 field(s), edit_others_posts',
+			),
+			$rows
+		);
+
+		$this->assertSame( array(), ( new Status( Loader::load( array( $this->fixtures() . '/valid/complete' ) ) ) )->sections() );
+	}
+
+	/**
 	 * Shadowed DB entries are listed; rejected errors are grouped by package directory, then the DB source.
 	 */
 	public function test_shadowed_and_rejected() {

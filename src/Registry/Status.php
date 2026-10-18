@@ -112,6 +112,71 @@ final class Status {
 	}
 
 	/**
+	 * Rows for the optional sections: content type listings, forms, automations and options pages.
+	 *
+	 * @return list<array{kind: string, key: string, label: string, details: string, source: string}>
+	 *         `kind` is listing, form, automation or options_page; a listing row's key is its content type.
+	 */
+	public function sections(): array {
+		$registry = $this->result->registry;
+		$rows     = array();
+		$size     = fn( array $form ) => isset( $form['steps'] ) ? count( $form['steps'] ) . ' step(s)' : count( $form['fields'] ) . ' field(s)';
+
+		foreach ( $registry->content_types() as $key => $type ) {
+			$listing = $registry->listing( $key );
+			if ( null !== $listing ) {
+				$rows[] = array(
+					'kind'    => 'listing',
+					'key'     => $key,
+					'label'   => $type['labels']['plural'],
+					'details' => sprintf( '%d filter(s)%s', count( $listing['filters'] ), $listing['search'] ? ', search' : '' ),
+					'source'  => $this->source( 'content_type', $key ),
+				);
+			}
+		}
+		foreach ( $registry->forms() as $key => $form ) {
+			$rows[] = array(
+				'kind'    => 'form',
+				'key'     => $key,
+				'label'   => $form['label'],
+				'details' => isset( $form['target'] )
+					? sprintf( '%s %s, %s', $form['target']['action'], $form['target']['content_type'], $size( $form ) )
+					: sprintf( 'entries only, %s', $size( $form ) ),
+				'source'  => $this->source( 'form', $key ),
+			);
+		}
+		foreach ( $registry->automations() as $key => $automation ) {
+			$trigger = $automation['trigger'];
+			$rows[]  = array(
+				'kind'    => 'automation',
+				'key'     => $key,
+				'label'   => $automation['label'],
+				'details' => sprintf(
+					'%s, %d step(s)%s',
+					match ( $trigger['type'] ) {
+						'event'    => 'on ' . $trigger['event'],
+						'schedule' => 'every ' . $trigger['every'],
+						default    => 'webhook',
+					},
+					count( $automation['steps'] ),
+					$automation['enabled'] ? '' : ', disabled'
+				),
+				'source'  => $this->source( 'automation', $key ),
+			);
+		}
+		foreach ( $registry->options_pages() as $key => $page ) {
+			$rows[] = array(
+				'kind'    => 'options_page',
+				'key'     => $key,
+				'label'   => $page['title'],
+				'details' => sprintf( '%d field(s), %s', count( $page['fields'] ), $page['capability'] ),
+				'source'  => $this->source( 'options_page', $key ),
+			);
+		}
+		return $rows;
+	}
+
+	/**
 	 * DB entries hidden by a file package with the same key.
 	 *
 	 * @return list<array{kind: string, key: string, by: string}>
