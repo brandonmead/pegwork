@@ -144,6 +144,37 @@ final class Meta {
 	}
 
 	/**
+	 * Sanitizes one untrusted value (public form input) for a field, as a typed value.
+	 *
+	 * Booleans return bool (missing is false); numbers int or float, '' when empty or not numeric;
+	 * every other type a string, '' when empty or invalid (a malformed email, URL or date, an option
+	 * the field does not define). URLs keep only http and https. Arrays and objects count as empty.
+	 *
+	 * @param array<string, mixed> $field Normalized field.
+	 * @param mixed                $value Raw value.
+	 * @return bool|int|float|string
+	 */
+	public static function sanitize( array $field, mixed $value ): bool|int|float|string {
+		if ( 'boolean' === $field['type'] ) {
+			return is_scalar( $value ) && rest_sanitize_boolean( $value );
+		}
+		if ( ! is_scalar( $value ) || '' === $value ) {
+			return '';
+		}
+		$value = (string) $value;
+
+		return match ( $field['type'] ) {
+			'url'    => esc_url_raw( trim( $value ), array( 'http', 'https' ) ),
+			'email'  => is_email( trim( $value ) ) ? sanitize_email( trim( $value ) ) : '',
+			'select' => in_array( $value, array_map( 'strval', array_column( $field['options'] ?? array(), 'value' ) ), true ) ? $value : '',
+			'number' => self::sanitize_number( $value ),
+			'date'   => self::sanitize_date( trim( $value ) ),
+			'file'   => '',
+			default  => (string) call_user_func( self::sanitizer( $field ), $value ),
+		};
+	}
+
+	/**
 	 * Sanitize callback for a field's type.
 	 *
 	 * @param array<string, mixed> $field Normalized field.

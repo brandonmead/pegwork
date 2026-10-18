@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "key": "e2e_contact",
+  "label": "E2E contact",
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "autocomplete": "name" },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+    { "key": "topic", "type": "select", "label": "Topic", "display": "radio",
+      "options": [ { "value": "help", "label": "Getting help" }, { "value": "other", "label": "Something else" } ] },
+    { "key": "message", "type": "textarea", "label": "Message", "required": true, "help": "A few sentences.", "validate": { "max_length": 2000 } },
+    { "key": "consent", "type": "boolean", "label": "You may contact me about this message", "required": true }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "reply_to": "{field:email}",
+      "subject": "E2E contact: {field:name}", "body": "{all_fields}" }
+  ],
+  "messages": { "success": "Thanks. Your message is on its way.", "submit_label": "Send message" }
+}
