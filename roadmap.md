@@ -30,8 +30,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## Content builder completion PRs (`docs/content-builder-design.md` section 9)
 1. Admin skeleton: menu, Overview, Modules, `Registry\Status`, disable dependents rule (merged, PR #13)
-2. Relationships backend (in review)
-3. Relationship picker plus E2E harness
+2. Relationships backend (merged, PR #15)
+3. Relationship picker plus E2E harness (harness merged, PR #12; picker in review, branch `rel-picker`)
 4. Options pages (registry kind and `post` field type in the shared registry sections PR; screen, settings and CLI remain)
 5. Block Bindings and docs
 

@@ -11,6 +11,7 @@ import {
 	getTypeConfig,
 	parseConfig,
 	parseField,
+	parseRelationship,
 	parseTaxonomy,
 } from '../config';
 
@@ -125,6 +126,51 @@ describe( 'parseConfig', () => {
 			label: 'genre',
 		} );
 		expect( parseTaxonomy( { select: 'single' } ) ).toBeNull();
+	} );
+
+	it( 'parses the sifg_story relationship built by PHP', () => {
+		const { types } = parseConfig( fixture );
+
+		expect( types.sifg_project.relationships ).toEqual( [] );
+		expect( types.sifg_story.relationships ).toEqual( [
+			{
+				key: 'story_projects',
+				meta_key: '_rel_story_projects',
+				to: 'sifg_project',
+				label: 'Projects',
+				to_label_singular: 'Project',
+				cardinality: 'many_to_many',
+				required: true,
+			},
+		] );
+	} );
+
+	it( 'applies relationship defaults and drops malformed entries', () => {
+		expect(
+			parseRelationship( {
+				key: 'household_contacts',
+				meta_key: '_rel_household_contacts',
+				to: 'contact',
+				cardinality: 'one_to_many',
+			} )
+		).toEqual( {
+			key: 'household_contacts',
+			meta_key: '_rel_household_contacts',
+			to: 'contact',
+			label: 'contact',
+			to_label_singular: 'contact',
+			cardinality: 'one_to_many',
+			required: false,
+		} );
+		expect(
+			parseRelationship( { key: 'a', meta_key: '_rel_a' } )
+		).toBeNull();
+		expect( parseRelationship( { key: 'a', to: 'b' } ) ).toBeNull();
+		expect( parseRelationship( 'a' ) ).toBeNull();
+		expect(
+			parseConfig( { types: { book: { relationships: 'nope' } } } ).types
+				.book.relationships
+		).toEqual( [] );
 	} );
 } );
 

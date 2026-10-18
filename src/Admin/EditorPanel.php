@@ -1,6 +1,6 @@
 <?php
 /**
- * Block editor panel for Pegwork fields and taxonomies.
+ * Block editor panel for Pegwork fields, taxonomies and relationships.
  *
  * @package Pegwork
  */
@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace Pegwork\Admin;
 
 use Pegwork\Api\Registry;
+use Pegwork\Content\Relationships;
 use WP_Block_Editor_Context;
 use WP_Post;
 
@@ -82,7 +83,7 @@ final class EditorPanel {
 		/**
 		 * Filters the editor panel config localized as window.pegworkEditor.
 		 *
-		 * @param array $config Config: `types` keyed by post type, each with `fields` and `taxonomies`.
+		 * @param array $config Config: `types` keyed by post type, each with `fields`, `taxonomies` and `relationships`.
 		 */
 		$config = apply_filters( 'pegwork_editor_panel_config', $config );
 
@@ -98,7 +99,7 @@ final class EditorPanel {
 	 * @return array{types: array<string, array<string, mixed>>} Config.
 	 */
 	public static function from_registry( Registry $registry ): array {
-		return self::build_config( $registry->content_types(), $registry->taxonomies() );
+		return self::build_config( $registry->content_types(), $registry->taxonomies(), $registry->relationships() );
 	}
 
 	/**
@@ -106,15 +107,18 @@ final class EditorPanel {
 	 *
 	 * @param array<array-key, array<string, mixed>> $content_types Content types (registry shape).
 	 * @param array<string, array<string, mixed>>    $taxonomies    Taxonomies by key (registry shape), for labels.
+	 * @param array<array-key, array<string, mixed>> $relationships Relationships (registry shape); each goes on its "from" type.
 	 * @return array{types: array<string, array<string, mixed>>} Config.
 	 */
-	public static function build_config( array $content_types, array $taxonomies = array() ): array {
-		$types = array();
+	public static function build_config( array $content_types, array $taxonomies = array(), array $relationships = array() ): array {
+		$types  = array();
+		$by_key = array();
 
 		foreach ( $content_types as $array_key => $type ) {
-			$post_type = (string) ( $type['key'] ?? $array_key );
-			$fields    = array();
-			$usages    = array();
+			$post_type            = (string) ( $type['key'] ?? $array_key );
+			$by_key[ $post_type ] = $type;
+			$fields               = array();
+			$usages               = array();
 
 			foreach ( $type['fields'] ?? array() as $field ) {
 				$fields[] = self::field_config( $post_type, $field );
@@ -125,9 +129,18 @@ final class EditorPanel {
 			}
 
 			$types[ $post_type ] = array(
-				'fields'     => $fields,
-				'taxonomies' => $usages,
+				'fields'        => $fields,
+				'taxonomies'    => $usages,
+				'relationships' => array(),
 			);
+		}
+
+		foreach ( $relationships as $array_key => $relationship ) {
+			$from = (string) ( $relationship['from'] ?? '' );
+			if ( isset( $types[ $from ] ) ) {
+				$key                               = (string) ( $relationship['key'] ?? $array_key );
+				$types[ $from ]['relationships'][] = self::relationship_config( $key, $relationship, $by_key[ $relationship['to'] ?? '' ] ?? array() );
+			}
 		}
 
 		return array( 'types' => $types );
@@ -225,6 +238,31 @@ final class EditorPanel {
 			'select'    => $select,
 			'required'  => (bool) ( $usage['required'] ?? false ),
 			'label'     => $label,
+		);
+	}
+
+	/**
+	 * Config entry for one relationship, on its "from" type.
+	 *
+	 * Labels follow Relationships::label(): the relationship's `label`, else the "to" type's plural label.
+	 *
+	 * @param string               $key          Relationship key.
+	 * @param array<string, mixed> $relationship Relationship (registry shape).
+	 * @param array<string, mixed> $to_type      The "to" content type (registry shape), or empty.
+	 * @return array<string, mixed> Relationship entry.
+	 */
+	private static function relationship_config( string $key, array $relationship, array $to_type ): array {
+		$to     = (string) ( $relationship['to'] ?? '' );
+		$labels = $to_type['labels'] ?? array();
+
+		return array(
+			'key'               => $key,
+			'meta_key'          => Relationships::meta_key( $key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Config key, not a query.
+			'to'                => $to,
+			'label'             => $relationship['label'] ?? $labels['plural'] ?? $to,
+			'to_label_singular' => $labels['singular'] ?? $to,
+			'cardinality'       => 'one_to_many' === ( $relationship['cardinality'] ?? '' ) ? 'one_to_many' : 'many_to_many',
+			'required'          => (bool) ( $relationship['required'] ?? false ),
 		);
 	}
 
