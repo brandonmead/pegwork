@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "key": "job",
+  "labels": { "singular": "Job", "plural": "Jobs" },
+  "taxonomies": [ { "key": "job_stage", "select": "single" } ],
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "last_verified", "type": "date", "label": "Last verified" },
+    { "key": "marker", "type": "text", "label": "Marker" },
+    { "key": "note", "type": "text", "label": "Note", "visibility": "private" },
+    { "key": "child_id", "type": "number", "label": "Child ID" },
+    { "key": "urgent", "type": "boolean", "label": "Urgent", "default": false }
+  ]
+}

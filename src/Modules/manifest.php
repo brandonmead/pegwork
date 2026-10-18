@@ -14,16 +14,22 @@ declare( strict_types=1 );
 
 // Plain strings: the manifest is read on plugins_loaded, before translations may load.
 return array(
-	'listings' => array(
+	'listings'   => array(
 		'label'       => 'Listings',
 		'description' => 'Field output on core blocks (the pegwork/field binding source) and the Show if block.',
 		'requires'    => array(),
 		'path'        => PEGWORK_DIR . 'modules/listings',
 	),
-	'filters'  => array(
+	'filters'    => array(
 		'label'       => 'Filters',
 		'description' => 'Search and filters for listings (skeleton; built in later Phase 2 PRs).',
 		'requires'    => array( 'listings' ),
 		'path'        => PEGWORK_DIR . 'modules/filters',
+	),
+	'automation' => array(
+		'label'       => 'Automation',
+		'description' => 'Runs registry automations in the background (WP-Cron), with a run log and wp pegwork automation.',
+		'requires'    => array(),
+		'path'        => PEGWORK_DIR . 'modules/automation',
 	),
 );
