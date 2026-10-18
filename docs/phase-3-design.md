@@ -171,6 +171,12 @@ Open questions for the owner (recommended answers):
 6. Turnstile on the four contact forms: off at launch so they work without JS; turn on per form if the soak shows spam.
 7. Mail delivery: configure SMTP on the host (or a free transactional tier) before launch; the soak depends on it.
 
+Decisions (2026-10-18, main session under Brandon's build goal; Brandon reviews at the end):
+1. Notification recipients may be a literal address or a merge tag resolving an options page field (`{{option:sifg_settings.moderator_email}}`, content builder design), falling back to the site admin email. SI for Good ships the merge tag, so no personal address lands in git. The shared inbox itself is on Brandon's review list.
+2. `manage_options`: yes. 3. Retention 365/30/7: yes. 4. Consent checkbox: yes. 6. Turnstile off on the contact forms: yes; on Local, use Cloudflare's published test keys for the Submit a project form. 7. SMTP is a launch item on Brandon's review list; on Local, Local's Mailpit catches mail for testing.
+5. Share a story: entry only, plus the entries screen's "Create post anyway" targeting `sifg_story` (the type the content builder design adds), as a Draft.
+8. API version stays 0.2.0 for every addition in this build cycle. The `forms` registry section is built in one shared registry PR together with `listing`, `automations`, and `options_pages`, so PR 1 here reduces to the public form API functions (moved into PR 2). E2E tooling (Playwright, axe, wp-env) comes from one shared harness PR, so PR 2 does not set it up.
+
 PRs (each merges with CI green; PR 1 to 7 in pegwork, PR 8 in siforgood; Events PR from Phase 4 merges before PR 2):
 1. Registry `forms` section: JSON Schema, Validator, Normalizer, Exporter, Importer, fixtures, `Registry` methods, public API functions, Api 0.2.0. Accept: valid fixture with two forms passes both validators; one invalid fixture per section 2 rule fails with the expected pointer; gate test round-trips forms byte-identical and second import reports 0 changes; `pegwork_save_form` refuses a file-defined key.
 2. Module runtime without JS: manifest entry, entries table, `pegwork/form` block, renderer (single-step, all types but file), pipeline for entry-only forms, honeypot, time token, nonce, rate limit, fingerprint, notifications, `form.submitted`, PRG; Playwright, wp-env and axe in CI. Accept: E2E 1 passes with JS disabled; a field keyed `name` does not 404; axe clean; module disabled renders nothing and handles nothing.
