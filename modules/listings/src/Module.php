@@ -12,7 +12,8 @@ namespace PegworkListings;
 use Pegwork\Api\Module as ModuleContract;
 
 /**
- * Registers the binding source, the conditional block, the block category and the editor script.
+ * Registers the binding source, the conditional block, the directory query hooks and patterns, the block
+ * category and the editor script.
  */
 final class Module implements ModuleContract {
 
@@ -43,6 +44,8 @@ final class Module implements ModuleContract {
 	public function boot(): void {
 		BindingSource::register();
 		Conditional::register();
+		QueryHooks::register();
+		Patterns::register();
 		Editor::register();
 
 		if ( ! has_filter( 'block_categories_all', array( self::class, 'block_categories' ) ) ) {
