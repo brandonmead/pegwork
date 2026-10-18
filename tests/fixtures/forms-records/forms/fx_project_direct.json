@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "key": "fx_project_direct",
+  "label": "Add a project (no confirmation)",
+  "target": { "content_type": "sifg_project" },
+  "fields": [
+    { "bind": { "field": "name" }, "label": "Project name" },
+    { "bind": { "field": "description" } },
+    { "bind": { "taxonomy": "sifg_project_type" } },
+    { "bind": { "taxonomy": "sifg_project_status" }, "display": "radio" },
+    { "bind": { "taxonomy": "sifg_impact" }, "display": "select" },
+    { "bind": { "field": "needs_volunteers" } },
+    { "bind": { "field": "volunteer_link" } },
+    { "bind": { "field": "contact_email" } },
+    { "key": "note", "type": "text", "label": "Note to reviewers" }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "subject": "New project: {field:name}", "body": "{all_fields}\n\nEdit: {post:edit_url}" }
+  ]
+}

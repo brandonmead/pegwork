@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "fx_newsletter",
+  "label": "Newsletter",
+  "confirm": { "field": "email", "subject": "Confirm your subscription", "body": "Confirm: {confirm_url}", "expires_hours": 1 },
+  "fields": [
+    { "key": "email", "type": "email", "label": "Email", "required": true }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "confirmed", "to": "{admin_email}", "subject": "New subscriber", "body": "{field:email}" }
+  ]
+}

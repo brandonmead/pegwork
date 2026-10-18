@@ -229,56 +229,6 @@ final class Entries {
 	}
 
 	/**
-	 * Sets the status of entries whose status is one of `$from`.
-	 *
-	 * Conditional, so it doubles as an atomic claim: two admins (or an admin and a submitter's confirm link)
-	 * cannot both move the same entry.
-	 *
-	 * @param int[]    $ids  Entry IDs.
-	 * @param string[] $from Statuses the entries must have now.
-	 * @param string   $to   New status.
-	 * @return int Rows changed.
-	 */
-	public static function change_status( array $ids, array $from, string $to ): int {
-		global $wpdb;
-
-		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
-		if ( array() === $ids || array() === $from ) {
-			return 0;
-		}
-		$table = Schema::table();
-		$sql   = 'id IN (' . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ') AND status IN (' . implode( ', ', array_fill( 0, count( $from ), '%s' ) ) . ')';
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $sql holds only placeholders.
-		$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = %s WHERE {$sql}", ...array_merge( array( $to ), $ids, array_values( $from ) ) ) );
-
-		return (int) $changed;
-	}
-
-	/**
-	 * Links an entry to the record created from it and sets its status.
-	 *
-	 * @param int    $id      Entry ID.
-	 * @param int    $post_id Post ID.
-	 * @param string $status  New status.
-	 */
-	public static function link_post( int $id, int $post_id, string $status ): void {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table; update() prepares.
-		$wpdb->update(
-			Schema::table(),
-			array(
-				'post_id' => $post_id,
-				'status'  => $status,
-			),
-			array( 'id' => $id ),
-			array( '%d', '%s' ),
-			array( '%d' )
-		);
-	}
-
-	/**
 	 * Deletes entries. The single delete path for the admin, retention and the privacy eraser, so file
 	 * removal (uploads, Phase 3 PR 4) belongs here.
 	 *

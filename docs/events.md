@@ -101,10 +101,12 @@ Emitted by the `forms` module (`docs/forms.md`).
 | Event | Hook | Payload |
 |---|---|---|
 | `form.submitted` | `pegwork_event_form_submitted` | `form, entry_id, record_id, values` |
+| `form.confirmed` | `pegwork_event_form_confirmed` | `form, entry_id, record_id, values` |
 
-- Fires once per stored, non-spam entry, after its `submitted` notifications, before the redirect. Spam, invalid, rate-limited, duplicate and expired submissions emit nothing.
-- `form` (form key), `entry_id` (int, row in `{prefix}pegwork_entries`), `record_id` (int or null: the record the entry created or updated; always null until record mapping lands in Phase 3 PR 3), `values` (sanitized values by item key, only items whose `show_when` held: booleans bool, numbers int or float, other types string; file items will appear as `{name, size, mime}`, never contents or paths).
-- `form.confirmed` (same payload, after email confirmation creates the record) arrives with Phase 3 PR 3.
+- `form.submitted` fires once per stored, non-spam entry, after its `submitted` notifications, before the redirect. Spam, invalid, rate-limited, duplicate and expired submissions emit nothing, and neither does a submission whose record write failed (entry `failed`). For a `confirm` form it fires when the entry is held as `unconfirmed`, with `record_id` null.
+- `form.confirmed` fires once per entry, when the submitter confirms by email and the record (if the form has a `target`) was written as defined, after the `confirmed` notifications. A second confirmation, an expired or wrong link, and a confirmation whose re-validation failed (entry `failed`, a draft instead) emit nothing.
+- `form` (form key), `entry_id` (int, row in `{prefix}pegwork_entries`), `record_id` (int or null: the record the entry created or updated; null for entry-only forms and for `form.submitted` of a `confirm` form), `values` (sanitized values by item key, only items whose `show_when` held: booleans bool, numbers int or float, multi-select taxonomies lists of term slugs, other types string; file items will appear as `{name, size, mime}`, never contents or paths).
+- The record write emits its own `record.created` or `record.updated` first (origin empty), so automations can react to either.
 
 ```php
 array(

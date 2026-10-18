@@ -12,6 +12,7 @@ namespace Pegwork\Tests\Integration\Forms;
 use Pegwork\Tests\Support\EntriesTestCase;
 use PegworkForms\Cleanup;
 use PegworkForms\Entries;
+use PegworkForms\EntryState;
 use PegworkForms\Privacy;
 
 require_once dirname( __DIR__, 2 ) . '/Support/EntriesTestCase.php';
@@ -87,7 +88,7 @@ class EntriesPrivacyTest extends EntriesTestCase {
 		$plain  = $this->entry();
 		$linked = $this->entry( array( 'form_key' => 'fe_project' ) );
 		$post   = self::factory()->post->create( array( 'post_title' => 'Seed library' ) );
-		Entries::link_post( $linked, $post, 'received' );
+		EntryState::set( $linked, array( 'post_id' => $post ) );
 		$other = $this->entry( array( 'email' => 'someone@example.org' ) );
 
 		$result = Privacy::erase( 'ada@example.org' );

@@ -13,6 +13,7 @@ use Pegwork\Tests\Support\EntriesTestCase;
 use PegworkForms\EntriesAdmin;
 use PegworkForms\Entries;
 use PegworkForms\EntryActions;
+use PegworkForms\EntryState;
 use PegworkForms\Export;
 use PegworkForms\Notifications;
 
@@ -491,7 +492,7 @@ class EntriesAdminTest extends EntriesTestCase {
 			}
 		);
 		$this->assertIsInt( EntryActions::create_post( $id ) );
-		$this->assertSame( 0, Entries::change_status( array( $id ), array( 'unconfirmed' ), 'processing' ), 'A confirm claim now finds nothing.' );
+		$this->assertFalse( EntryState::claim( $id, 'unconfirmed', 'processing' ), 'A confirm claim now finds nothing.' );
 	}
 
 	/**

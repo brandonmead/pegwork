@@ -40,7 +40,7 @@ final class EntryFields {
 	}
 
 	/**
-	 * Items by value key with `type` and `label` filled in for bound items.
+	 * Items by value key (bound items resolved by Definition), each with a `label`.
 	 *
 	 * @param array<string, mixed>|null $form Canonical form, or null.
 	 * @return array<string, array<string, mixed>>
@@ -50,32 +50,9 @@ final class EntryFields {
 			return array();
 		}
 
-		$type   = (string) ( $form['target']['content_type'] ?? '' );
-		$fields = '' !== $type ? pegwork_registry()->fields( $type ) : array();
-		$taxes  = pegwork_registry()->taxonomies();
-		$items  = array();
-
-		foreach ( Definition::items( $form ) as $item ) {
-			if ( isset( $item['bind']['field'] ) ) {
-				$key   = (string) $item['bind']['field'];
-				$field = $fields[ $key ] ?? array();
-				$item += array(
-					'key'     => $key,
-					'type'    => $field['type'] ?? 'text',
-					'label'   => $field['label'] ?? $key,
-					'options' => $field['options'] ?? array(),
-				);
-			} elseif ( isset( $item['bind']['taxonomy'] ) ) {
-				$key   = (string) $item['bind']['taxonomy'];
-				$item += array(
-					'key'   => $key,
-					'type'  => 'taxonomy',
-					'label' => $taxes[ $key ]['labels']['singular'] ?? $key,
-				);
-			}
-			if ( isset( $item['key'] ) ) {
-				$items[ (string) $item['key'] ] = $item + array( 'label' => (string) $item['key'] );
-			}
+		$items = array();
+		foreach ( Definition::items_by_key( $form ) as $key => $item ) {
+			$items[ (string) $key ] = $item + array( 'label' => (string) $key );
 		}
 		return $items;
 	}

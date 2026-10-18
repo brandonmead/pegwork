@@ -322,7 +322,10 @@ test( 'Tools > Erase Personal Data removes the address entries', async ( {
 
 	const row = page.locator( 'tr', { hasText: email } );
 	await press( row.getByRole( 'button', { name: /Erase personal data/ } ) );
-	await expect( row.getByText( 'Erasure completed.' ) ).toBeVisible();
+	// Core runs every registered eraser over admin-ajax first; allow for a slow full-suite site.
+	await expect( row.getByText( 'Erasure completed.' ) ).toBeVisible( {
+		timeout: 20000,
+	} );
 	await expect(
 		page.locator( '.request-results' ).filter( { hasText: /erased/ } )
 	).toBeVisible();

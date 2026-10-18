@@ -137,7 +137,7 @@ final class EntryActions {
 	 * @return int Entries changed.
 	 */
 	public static function mark_spam( array $ids ): int {
-		return Entries::change_status( $ids, array( 'received', 'unconfirmed', 'failed' ), 'spam' );
+		return EntryState::transition( $ids, array( 'received', 'unconfirmed', 'failed' ), 'spam' );
 	}
 
 	/**
@@ -148,7 +148,7 @@ final class EntryActions {
 	 * @return int Entries changed.
 	 */
 	public static function mark_not_spam( array $ids ): int {
-		return Entries::change_status( $ids, array( 'spam' ), 'received' );
+		return EntryState::transition( $ids, array( 'spam' ), 'received' );
 	}
 
 	/**
@@ -191,10 +191,13 @@ final class EntryActions {
 	/**
 	 * Creates a Draft of the form's content type from an entry's values and links it.
 	 *
-	 * Values go through Pegwork\Api\Records (sanitized and type-checked; drafts skip completeness rules).
-	 * Keys the type does not have are left out, and so is any value the type rejects, so an admin always
-	 * gets a draft to finish. The entry is claimed first (status `processing`), so a second click or a
-	 * submitter confirming at the same moment cannot create a second post; it ends `received`.
+	 * Forms with a create target go through RecordWriter::draft() (bound items only, `post_content` as
+	 * paragraph blocks, rejected keys dropped and retried once), as the admin, so the admin is the author.
+	 * Entry-only forms given a type by the filter keep the values whose keys the type has. Either way
+	 * Pegwork\Api\Records sanitizes and type-checks, drafts skip completeness rules, and an admin always
+	 * gets a draft to finish. The entry is claimed first (EntryState::claim() to `processing`), so a second
+	 * click or a submitter confirming at the same moment cannot create a second post; it ends `received`.
+	 * Confirm::complete() is not used: it would send `confirmed` notifications to an unproven address.
 	 *
 	 * @param int $id Entry ID.
 	 * @return int|WP_Error Post ID.
@@ -208,28 +211,25 @@ final class EntryActions {
 			return new WP_Error( 'pegwork_entry_not_postable', __( 'A post cannot be created from this entry: it already has one, is spam, or its form has no content type.', 'pegwork' ) );
 		}
 
-		$type   = (string) self::draft_type( pegwork_registry()->form( (string) $entry['form_key'] ) );
+		$form   = (array) pegwork_registry()->form( (string) $entry['form_key'] );
+		$type   = (string) self::draft_type( $form );
 		$object = get_post_type_object( $type );
 		if ( null === $object || ! current_user_can( $object->cap->create_posts ) ) {
 			return new WP_Error( 'pegwork_entry_cannot_create', __( 'You are not allowed to create posts of this type.', 'pegwork' ) );
 		}
 
 		$previous = (string) $entry['status'];
-		if ( 1 !== Entries::change_status( array( $id ), array( $previous ), 'processing' ) ) {
+		if ( ! EntryState::claim( $id, $previous, 'processing' ) ) {
 			return new WP_Error( 'pegwork_entry_busy', __( 'This entry changed in the meantime. Reload and try again.', 'pegwork' ) );
 		}
 
-		$known  = array_merge( array_keys( pegwork_registry()->fields( $type ) ), array_column( pegwork_registry()->content_type( $type )['taxonomies'], 'key' ) );
-		$values = array_intersect_key( (array) $entry['values'], array_flip( $known ) );
-
-		$post_id = Records::create( $type, $values );
-		if ( $post_id instanceof WP_Error && 'pegwork_invalid_record' === $post_id->get_error_code() ) {
-			$rejected = array_keys( (array) ( $post_id->get_error_data()['fields'] ?? array() ) );
-			$post_id  = Records::create( $type, array_diff_key( $values, array_flip( $rejected ) ) );
-		}
-		if ( $post_id instanceof WP_Error ) {
-			Entries::change_status( array( $id ), array( 'processing' ), $previous );
-			return $post_id;
+		$values  = (array) $entry['values'];
+		$post_id = Definition::target_type( $form ) === $type
+			? RecordWriter::draft( $form, $values, get_current_user_id() )
+			: self::draft_unbound( $type, $values );
+		if ( null === $post_id ) {
+			EntryState::claim( $id, 'processing', $previous );
+			return new WP_Error( 'pegwork_entry_draft_failed', __( 'The draft could not be created.', 'pegwork' ) );
 		}
 
 		$meta                 = (array) $entry['meta'];
@@ -239,9 +239,43 @@ final class EntryActions {
 			'from' => $previous,
 		);
 		Entries::update_meta( $id, $meta );
-		Entries::link_post( $id, $post_id, 'received' );
+		EntryState::set(
+			$id,
+			array(
+				'post_id' => $post_id,
+				'status'  => 'received',
+			)
+		);
 
 		return $post_id;
+	}
+
+	/**
+	 * A Draft for an entry-only form given a type by `pegwork_forms_draft_type`: the values whose keys
+	 * the type has as fields or taxonomies (`post_content` as paragraph blocks), rejected keys dropped
+	 * and retried once.
+	 *
+	 * @param string               $type   Registry content type.
+	 * @param array<string, mixed> $values Entry values by item key.
+	 * @return int|null Draft ID, or null when even the reduced draft fails.
+	 */
+	private static function draft_unbound( string $type, array $values ): ?int {
+		$fields = pegwork_registry()->fields( $type );
+		$known  = array_merge( array_keys( $fields ), array_column( (array) pegwork_registry()->content_type( $type )['taxonomies'], 'key' ) );
+		$values = array_intersect_key( $values, array_flip( $known ) );
+		foreach ( $values as $key => $value ) {
+			if ( 'post_content' === ( $fields[ $key ]['wp']['storage'] ?? null ) && is_string( $value ) ) {
+				$values[ $key ] = RecordWriter::paragraphs( $value );
+			}
+		}
+
+		$post_id = Records::create( $type, $values );
+		if ( $post_id instanceof WP_Error && 'pegwork_invalid_record' === $post_id->get_error_code() ) {
+			$rejected = array_keys( (array) ( $post_id->get_error_data()['fields'] ?? array() ) );
+			$post_id  = Records::create( $type, array_diff_key( $values, array_flip( $rejected ) ) );
+		}
+
+		return is_int( $post_id ) ? $post_id : null;
 	}
 
 	/**

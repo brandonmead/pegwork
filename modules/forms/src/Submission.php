@@ -1,6 +1,6 @@
 <?php
 /**
- * Submission pipeline for entry-only forms.
+ * Submission pipeline.
  *
  * @package Pegwork
  */
@@ -15,10 +15,12 @@ use Pegwork\Api\Events;
  * Handles a same-page POST on template_redirect, then redirects (POST-redirect-GET) or leaves the
  * outcome for the renderer to re-render the form with errors and the visitor's values.
  *
- * Order: resolve the form from the registry (never from the request), access, nonce (logged-in users
- * only), signed time token, IP rate limit, collect and sanitize values (conditions false: ignored),
- * spam layers (honeypot, time trap, `pegwork_forms_spam_check`), validation, email rate limit,
- * duplicate fingerprint, store, notify, emit `form.submitted`.
+ * Order: resolve the form from the registry (never from the request), access, record to update
+ * (`edit_post`), nonce (logged-in users only), signed time token, IP rate limit, collect and sanitize
+ * values (conditions false: ignored), spam layers (honeypot, time trap, `pegwork_forms_spam_check`),
+ * validation (unbound items with pegwork_validate_fields(), bound ones with pegwork_validate_record()),
+ * email rate limit, duplicate fingerprint, confirmation email cap, store, then either hold for email
+ * confirmation or write the target record, notify, emit `form.submitted`.
  */
 final class Submission {
 
@@ -61,6 +63,7 @@ final class Submission {
 		if ( ! has_action( 'template_redirect', array( self::class, 'handle' ) ) ) {
 			add_action( 'template_redirect', array( self::class, 'handle' ), 1 );
 		}
+		Confirm::register();
 	}
 
 	/**
@@ -78,6 +81,7 @@ final class Submission {
 	 */
 	public static function reset(): void {
 		self::$state = array();
+		Confirm::reset();
 	}
 
 	/**
@@ -131,7 +135,9 @@ final class Submission {
 	 * @param int                  $page_id Page that held the form, 0 if none.
 	 * @return array<string, mixed> `outcome`: `sent`, `spam`, `duplicate` (all redirect to the success state),
 	 *                              or `invalid`, `denied`, `expired`, `rate_limited`, `failed` (re-render, nothing
-	 *                              stored); plus `entry_id`, `errors` (message by item key) and `values` (posted text).
+	 *                              stored), `record_failed` (re-render; the entry is stored as `failed` and the admin
+	 *                              told); plus `entry_id`, `record_id`, `errors` (message by item key) and `values`
+	 *                              (posted text).
 	 */
 	public static function process( array $form, mixed $raw, mixed $control, int $now, int $page_id = 0 ): array {
 		$key     = (string) $form['key'];
@@ -146,6 +152,13 @@ final class Submission {
 
 		if ( ! Access::allowed( $form ) ) {
 			return $fail( 'denied' );
+		}
+		$record_id = 0;
+		if ( Definition::updates( $form ) ) {
+			$record_id = is_scalar( $control['record'] ?? null ) ? absint( $control['record'] ) : 0;
+			if ( ! RecordWriter::editable( $form, $record_id ) ) {
+				return $fail( 'denied' );
+			}
 		}
 		if ( is_user_logged_in() && ! wp_verify_nonce( is_string( $control['nonce'] ?? null ) ? $control['nonce'] : '', Renderer::nonce_action( $key ) ) ) {
 			return $fail( 'expired' );
@@ -206,7 +219,7 @@ final class Submission {
 			);
 		}
 
-		$errors = $format_errors + self::validate( $form, $values );
+		$errors = $format_errors + self::validate( $form, $values, $record_id );
 		if ( $errors ) {
 			return $fail( 'invalid', self::ordered( $form, $errors ) );
 		}
@@ -220,22 +233,43 @@ final class Submission {
 				'entry_id' => 0,
 			);
 		}
+		$confirm = isset( $form['confirm'] );
+		if ( $confirm && Confirm::cap_reached( $email, $now ) ) {
+			return $fail( 'rate_limited' );
+		}
 
-		$entry_id = Entries::insert( $base + array( 'status' => 'received' ) + array( 'meta' => $meta ) );
+		if ( $record_id > 0 ) {
+			$meta['record'] = $record_id;
+		}
+		$entry_id = Entries::insert( $base + array( 'status' => $confirm ? 'unconfirmed' : 'received' ) + array( 'meta' => $meta ) );
 		if ( 0 === $entry_id ) {
 			return $fail( 'failed' );
 		}
 		RateLimit::hit( 'ip', $key, $ip, $now );
 		RateLimit::hit( 'email', $key, $email, $now );
 
-		$meta['notifications'] = Notifications::send(
-			$form,
-			'submitted',
-			array(
-				'entry_id' => $entry_id,
-				'values'   => $values,
-			)
+		$context = array(
+			'entry_id' => $entry_id,
+			'values'   => $values,
 		);
+		$written = null;
+		if ( $confirm ) {
+			$meta = Confirm::start( $form, $entry_id, $values, $page_id, $now, $meta );
+		} elseif ( null !== Definition::target_type( $form ) ) {
+			$result = RecordWriter::write( $form, $values, get_current_user_id(), $record_id );
+			if ( is_wp_error( $result ) ) {
+				$meta['errors']         = self::error_messages( $result );
+				$meta['failure_notice'] = Notifications::failure( $form, $entry_id, null, $meta['errors'] );
+				EntryState::set( $entry_id, array( 'status' => 'failed' ) );
+				Entries::update_meta( $entry_id, $meta );
+				return $fail( 'record_failed' ) + array( 'entry_id' => $entry_id );
+			}
+			$written            = $result;
+			$context['post_id'] = $written;
+			EntryState::set( $entry_id, array( 'post_id' => $written ) );
+		}
+
+		$meta['notifications'] = Notifications::send( $form, 'submitted', $context );
 		Entries::update_meta( $entry_id, $meta );
 
 		Events::emit(
@@ -243,15 +277,28 @@ final class Submission {
 			array(
 				'form'      => $key,
 				'entry_id'  => $entry_id,
-				'record_id' => null,
+				'record_id' => $written,
 				'values'    => $values,
 			)
 		);
 
 		return array(
-			'outcome'  => 'sent',
-			'entry_id' => $entry_id,
+			'outcome'   => 'sent',
+			'entry_id'  => $entry_id,
+			'record_id' => $written,
 		);
+	}
+
+	/**
+	 * Messages of a failed record write, by key (`''` for a message that names no field).
+	 *
+	 * @param \WP_Error $error Error.
+	 * @return array<string, string>
+	 */
+	public static function error_messages( \WP_Error $error ): array {
+		$fields = $error->get_error_data()['fields'] ?? null;
+
+		return is_array( $fields ) && array() !== $fields ? array_map( 'strval', $fields ) : array( '' => $error->get_error_message() );
 	}
 
 	/**
@@ -267,7 +314,14 @@ final class Submission {
 		$errors = array();
 
 		foreach ( $by_key as $key => $item ) {
-			$value         = $raw[ $key ] ?? null;
+			$value = $raw[ $key ] ?? null;
+			if ( ! empty( $item['multiple'] ) ) {
+				[ $clean[ $key ], $valid ] = self::choices( $item, $value );
+				if ( ! $valid ) {
+					$errors[ $key ] = self::format_message( $item );
+				}
+				continue;
+			}
 			$clean[ $key ] = pegwork_sanitize_field( $item, $value );
 
 			$given = is_scalar( $value ) && '' !== trim( (string) $value );
@@ -310,21 +364,65 @@ final class Submission {
 	}
 
 	/**
-	 * Field errors from pegwork_validate_fields() for the collected (visible) items.
+	 * A multi-choice item's posted values: the unique chosen option values, and whether every posted
+	 * value was an option.
 	 *
-	 * @param array<string, mixed> $form   Canonical form.
-	 * @param array<string, mixed> $values Collected values.
-	 * @return array<string, string>
+	 * @param array<string, mixed> $item  Item with `options`.
+	 * @param mixed                $value Posted value: a list of strings, or missing.
+	 * @return array{0: string[], 1: bool}
 	 */
-	private static function validate( array $form, array $values ): array {
-		$fields = array_values( array_filter( Definition::items( $form ), fn( array $item ) => array_key_exists( $item['key'] ?? '', $values ) ) );
-		$result = pegwork_validate_fields( $fields, $values );
-		if ( true === $result ) {
-			return array();
+	private static function choices( array $item, mixed $value ): array {
+		if ( null === $value || '' === $value ) {
+			return array( array(), true );
 		}
-		$data = $result->get_error_data();
+		if ( ! is_array( $value ) ) {
+			return array( array(), false );
+		}
 
-		return is_array( $data['fields'] ?? null ) ? $data['fields'] : array();
+		$allowed = array_map( fn( array $option ) => (string) $option['value'], $item['options'] ?? array() );
+		$chosen  = array();
+		$valid   = true;
+		foreach ( $value as $choice ) {
+			if ( is_string( $choice ) && in_array( $choice, $allowed, true ) ) {
+				$chosen[ $choice ] = $choice;
+			} elseif ( '' !== $choice ) {
+				$valid = false;
+			}
+		}
+
+		// Keep the options' order, so equal choices give equal values (and fingerprints).
+		return array( array_values( array_intersect( $allowed, $chosen ) ), $valid );
+	}
+
+	/**
+	 * Field errors for the collected (visible) items: unbound items through pegwork_validate_fields(),
+	 * bound items through pegwork_validate_record() on the target type (its rules live once, in the
+	 * registry). Confirmation re-runs this against the current definition.
+	 *
+	 * @param array<string, mixed> $form      Canonical form.
+	 * @param array<string, mixed> $values    Collected values.
+	 * @param int                  $record_id Record being updated, 0 for none.
+	 * @return array<string, string> Message by item key; a record rule on a field the form does not bind keeps that field's key.
+	 */
+	public static function validate( array $form, array $values, int $record_id = 0 ): array {
+		$fields = array_values(
+			array_filter(
+				Definition::items( $form ),
+				fn( array $item ) => ! isset( $item['bind'] ) && array_key_exists( $item['key'] ?? '', $values )
+			)
+		);
+		$errors = array();
+		$result = pegwork_validate_fields( $fields, $values );
+		if ( true !== $result ) {
+			$data   = $result->get_error_data();
+			$errors = is_array( $data['fields'] ?? null ) ? $data['fields'] : array();
+		}
+
+		if ( null !== Definition::target_type( $form ) ) {
+			$errors += RecordWriter::errors( $form, $values, $record_id );
+		}
+
+		return $errors;
 	}
 
 	/**
@@ -352,7 +450,7 @@ final class Submission {
 	}
 
 	/**
-	 * Errors in form order.
+	 * Errors in form order; errors for keys the form does not show (a record rule on an unbound field) last.
 	 *
 	 * @param array<string, mixed>  $form   Canonical form.
 	 * @param array<string, string> $errors Errors by item key.
@@ -365,20 +463,23 @@ final class Submission {
 				$ordered[ $key ] = $errors[ $key ];
 			}
 		}
-		return $ordered;
+		return $ordered + $errors;
 	}
 
 	/**
-	 * Posted values as plain strings, for refilling the form on a re-render (escaped at output).
+	 * Posted values as plain strings (lists of strings for multi-choice items), for refilling the form
+	 * on a re-render (escaped at output).
 	 *
 	 * @param array<string, mixed> $form Canonical form.
 	 * @param array<string, mixed> $raw  Posted values.
-	 * @return array<string, string>
+	 * @return array<string, string|string[]>
 	 */
 	private static function posted_text( array $form, array $raw ): array {
 		$text = array();
-		foreach ( array_keys( Definition::items_by_key( $form ) ) as $key ) {
-			if ( isset( $raw[ $key ] ) && is_scalar( $raw[ $key ] ) ) {
+		foreach ( Definition::items_by_key( $form ) as $key => $item ) {
+			if ( ! empty( $item['multiple'] ) && isset( $raw[ $key ] ) && is_array( $raw[ $key ] ) ) {
+				$text[ $key ] = array_values( array_map( fn( $v ) => mb_substr( (string) $v, 0, 200 ), array_filter( $raw[ $key ], 'is_string' ) ) );
+			} elseif ( isset( $raw[ $key ] ) && is_scalar( $raw[ $key ] ) ) {
 				$text[ $key ] = mb_substr( (string) $raw[ $key ], 0, self::MAX_LENGTH );
 			}
 		}
@@ -410,7 +511,8 @@ final class Submission {
 	}
 
 	/**
-	 * The current URL on the site's origin, without the success arg.
+	 * The current URL on the site's origin, without the success and confirmation args (a form sent
+	 * from a confirmation page must not carry the old token along).
 	 */
 	public static function current_url(): string {
 		$home   = wp_parse_url( home_url() );
@@ -418,6 +520,6 @@ final class Submission {
 		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		$uri    = '' === $uri || '/' !== $uri[0] ? '/' : $uri;
 
-		return remove_query_arg( self::SENT, $origin . $uri );
+		return remove_query_arg( array( self::SENT, Confirm::QUERY, Confirm::DONE ), $origin . $uri );
 	}
 }
