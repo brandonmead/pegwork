@@ -202,6 +202,20 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame( array( 'sifg_settings' ), array_keys( $sections['options_pages'] ) );
 		$this->assertSame( 'file:sifg', $registry->form_source( 'submit_project' ) );
 
+		// Options page values, saved as the settings screen saves them (sanitize callback via update_option).
+		update_option(
+			'sifg_settings',
+			array(
+				'featured_project' => (string) $ids[0],
+				'moderator_email'  => 'mod@example.org',
+				'review_criteria'  => '<p>Clear impact.</p>',
+				'contact_email'    => 'hello@example.org',
+			)
+		);
+		$settings = pegwork_get_option( 'sifg_settings' );
+		$this->assertSame( $ids[0], $settings['featured_project'] );
+		$this->assertSame( 'pegwork_sifg_settings', get_registered_settings()['sifg_settings']['group'] );
+
 		// 2. Export to A.
 		$a = $this->export();
 		$this->assertSame(
@@ -228,6 +242,9 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertFalse( post_type_exists( 'sifg_project' ) );
 		$this->assertFalse( post_type_exists( 'sifg_story' ) );
 		$this->assertFalse( taxonomy_exists( 'sifg_impact' ) );
+		$this->assertArrayNotHasKey( 'sifg_settings', get_registered_settings() );
+		$this->assertNull( pegwork_get_option( 'sifg_settings' ) );
+		$this->assertSame( 'hello@example.org', get_option( 'sifg_settings' )['contact_email'], 'Removing the page keeps its stored values.' );
 
 		// 4. Import A, re-run registration, export to B.
 		$first = Importer::import( $a );
@@ -267,6 +284,21 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		foreach ( array( 'form', 'automation', 'options_page' ) as $kind ) {
 			$this->assertSame( array( Loader::DB_SOURCE ), array_values( array_unique( Plugin::result()->sources[ $kind ] ) ), $kind );
 		}
+
+		// The options page is a setting again, with the same values; the binding reads them.
+		$this->assertSame( 'pegwork_sifg_settings', get_registered_settings()['sifg_settings']['group'] );
+		$this->assertSame( $settings, pegwork_get_option( 'sifg_settings' ) );
+		$this->assertSame(
+			'hello@example.org',
+			\Pegwork\Options\BindingSource::resolve(
+				$registry,
+				array(
+					'page'  => 'sifg_settings',
+					'field' => 'contact_email',
+				),
+				'content'
+			)
+		);
 
 		wp_set_current_user( 0 );
 		foreach ( $ids as $id ) {

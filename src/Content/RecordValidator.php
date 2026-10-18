@@ -100,16 +100,7 @@ final class RecordValidator {
 			return new WP_Error( 'pegwork_unknown_type', sprintf( __( 'Unknown content type "%s".', 'pegwork' ), $type ), array( 'status' => 400 ) );
 		}
 
-		$fields = $content_type['fields'];
-		$values = array_merge( $values, self::cast_all( $fields, $values ) );
-		$errors = array();
-
-		foreach ( $fields as $field ) {
-			$message = self::check_field( $field, $values, $complete );
-			if ( null !== $message ) {
-				$errors[ $field['key'] ] = $message;
-			}
-		}
+		$errors = self::check_values( $content_type['fields'], $values, $complete );
 
 		$taxonomies = $registry->taxonomies();
 		foreach ( $content_type['taxonomies'] as $usage ) {
@@ -150,6 +141,32 @@ final class RecordValidator {
 				'fields' => $errors,
 			)
 		);
+	}
+
+	/**
+	 * Checks field values against their `required`, `required_when` and `validate` rules. Shared by
+	 * records and options pages, so both apply the same rules and messages.
+	 *
+	 * Type checks (a well-formed email, a real date) are not part of these rules: REST meta schemas do
+	 * them for records, Pegwork\Options\Values for options pages.
+	 *
+	 * @param array<int, array<string, mixed>> $fields   Normalized fields.
+	 * @param array<string, mixed>             $values   Values by field key; missing, null or '' counts as empty.
+	 * @param bool                             $complete Whether completeness rules apply. Without them nothing is checked.
+	 * @return array<string, string> Error message by field key; empty when every field passes.
+	 */
+	public static function check_values( array $fields, array $values, bool $complete = true ): array {
+		$values = array_merge( $values, self::cast_all( $fields, $values ) );
+		$errors = array();
+
+		foreach ( $fields as $field ) {
+			$message = self::check_field( $field, $values, $complete );
+			if ( null !== $message ) {
+				$errors[ $field['key'] ] = $message;
+			}
+		}
+
+		return $errors;
 	}
 
 	/**

@@ -11,6 +11,8 @@ namespace Pegwork\Content;
 
 use Pegwork\Api\Registry;
 use Pegwork\Events\RecordEvents;
+use Pegwork\Options\BindingSource;
+use Pegwork\Options\Pages;
 
 /**
  * Registers post types, taxonomies, meta and record validation on every request; flushes rewrites and seeds terms
@@ -42,6 +44,8 @@ final class Registrar {
 		Relationships::register( $registry );
 		RecordValidator::register( $registry );
 		RecordEvents::register( $registry );
+		Pages::register( $registry );
+		BindingSource::register( $registry );
 
 		if ( get_option( self::HASH_OPTION ) === self::hash( $registry ) ) {
 			return;

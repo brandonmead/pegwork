@@ -136,7 +136,7 @@ class AdminOverviewTest extends WP_UnitTestCase {
 
 		$html = $this->render();
 
-		$this->assertSame( 3, substr_count( $html, 'None registered. Add a schema package (see the extension API docs).' ) );
+		$this->assertSame( 4, substr_count( $html, 'None registered. Add a schema package (see the extension API docs).' ) );
 		$this->assertStringContainsString( 'No shadowed DB entries.', $html );
 		$this->assertStringContainsString( 'No rejected packages or DB entries.', $html );
 		$this->assertStringNotContainsString( '<details', $html );
