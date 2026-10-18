@@ -13,7 +13,7 @@ use Pegwork\Api\Module as ModuleContract;
 
 /**
  * Installs the run log tables, listens on the event bus, executes runs on scheduler wake-ups and
- * registers `wp pegwork automation`. Nothing runs while the module is disabled.
+ * registers `wp pegwork automation` and Pegwork > Automations. Nothing runs while the module is disabled.
  */
 final class Module implements ModuleContract {
 
@@ -39,6 +39,7 @@ final class Module implements ModuleContract {
 	public function boot(): void {
 		Schema::maybe_install();
 		Engine::register();
+		Admin\Screen::register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( '\WP_CLI' ) ) {
 			\WP_CLI::add_command( 'pegwork automation', Cli\AutomationCommand::class );

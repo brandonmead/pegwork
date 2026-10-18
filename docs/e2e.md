@@ -8,6 +8,7 @@ playwright.config.js
 bin/e2e-local-site.sh                 throwaway local site (no Docker)
 tests/e2e/mu-plugins/pegwork-e2e-sifg.php   registers examples/sifg as a file package
 tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, admin-only helper routes (docs/forms.md)
+tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, reset (docs/automation.md)
 tests/e2e/packages/                   file packages that only the browser tests register
 tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures
 tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest would run)

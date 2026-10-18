@@ -9,10 +9,12 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation;
 
+use WP_Error;
+
 /**
  * Option `pegwork_automation_overrides` (`key => on|off`) overrides an automation's JSON `enabled`
- * without a deploy. Set by `wp pegwork automation enable|disable` (later also the admin screen, with
- * `manage_options` and a nonce).
+ * without a deploy. Set through toggle() by `wp pegwork automation enable|disable` and by the
+ * Automations screen (`manage_options` and a nonce).
  */
 final class Overrides {
 
@@ -55,6 +57,22 @@ final class Overrides {
 		$all[ $key ] = 'on' === $value ? 'on' : 'off';
 		ksort( $all );
 		update_option( self::OPTION, $all, true );
+	}
+
+	/**
+	 * Turns a registered automation on or off for this site: the one rule `wp pegwork automation
+	 * enable|disable` and the Automations screen share.
+	 *
+	 * @param string $key   Automation key.
+	 * @param string $value on or off.
+	 * @return true|WP_Error
+	 */
+	public static function toggle( string $key, string $value ): bool|WP_Error {
+		if ( null === pegwork_registry()->automation( $key ) ) {
+			return new WP_Error( 'pegwork_unknown_automation', sprintf( 'Unknown automation: %s.', $key ) );
+		}
+		self::set( $key, $value );
+		return true;
 	}
 
 	/**
