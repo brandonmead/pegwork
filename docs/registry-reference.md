@@ -195,6 +195,8 @@ Fields take the [content type field](#fields) properties, except `show_when`, `r
 
 Field type `post` (options pages only): one post ID, `post_type` required (`missing_property`) and must be a registry content type (`unknown_content_type`). `post_type` on any other field type is `unknown_property`.
 
+Behavior (settings screen, saving rules, `pegwork_get_option()`, CLI): `docs/options-pages.md`; front-end output: `pegwork/option` in `docs/display.md`.
+
 ## Forms
 
 A form either creates or updates a record of a content type (`target`) or, without `target`, only stores entries.

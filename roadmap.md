@@ -32,8 +32,10 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Admin skeleton: menu, Overview, Modules, `Registry\Status`, disable dependents rule (merged, PR #13)
 2. Relationships backend (merged, PR #15)
 3. Relationship picker plus E2E harness (harness merged, PR #12; picker in review, branch `rel-picker`)
-4. Options pages (registry kind and `post` field type in the shared registry sections PR; screen, settings and CLI remain)
-5. Block Bindings and docs
+4. Options pages (registry kind in the shared registry sections PR, merged #18; runtime, screen, post picker and CLI in review, branch `options-pages`, combined with 5)
+5. Block Bindings and docs: `pegwork/option` source (in review, branch `options-pages`)
+
+Follow-up in the siforgood repo: copy `examples/sifg/options-pages/sifg_settings.json` into `sifg-config/schema/`; the theme binds the footer contact email (`format: "mailto"` on the button) and review criteria with `pegwork/option` (`docs/display.md`).
 
 Follow-up in the siforgood repo: copy `examples/sifg/content-types/sifg_story.json` and `examples/sifg/relationships/story_projects.json` into `sifg-config/schema/` so the two stay byte-identical.
 

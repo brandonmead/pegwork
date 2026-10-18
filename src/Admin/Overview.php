@@ -74,6 +74,32 @@ final class Overview {
 		);
 
 		self::section(
+			'pegwork-options-pages',
+			__( 'Options pages', 'pegwork' ),
+			array(
+				'key'        => __( 'Key (option name)', 'pegwork' ),
+				'title'      => __( 'Title', 'pegwork' ),
+				'menu_title' => __( 'Menu item', 'pegwork' ),
+				'capability' => __( 'Capability', 'pegwork' ),
+				'fields'     => __( 'Fields', 'pegwork' ),
+				'source'     => __( 'Source', 'pegwork' ),
+			),
+			array_map(
+				fn( array $row ) => array(
+					'fields' => sprintf(
+						/* translators: 1: number of fields, 2: number of private fields. */
+						__( '%1$s (%2$s private)', 'pegwork' ),
+						number_format_i18n( $row['fields'] ),
+						number_format_i18n( $row['private'] )
+					),
+				) + $row,
+				$status->options_pages()
+			),
+			$none,
+			__( 'Each page is one settings screen in this menu, saved as one option named by its key.', 'pegwork' )
+		);
+
+		self::section(
 			'pegwork-shadowed',
 			__( 'Shadowed DB entries', 'pegwork' ),
 			array(
@@ -227,7 +253,7 @@ final class Overview {
 			$first = true;
 			foreach ( array_keys( $columns ) as $key ) {
 				$value = (string) ( $row[ $key ] ?? '' );
-				$cell  = in_array( $key, array( 'key', 'source', 'by', 'file', 'pointer', 'stored_as', 'rest_base' ), true ) && '' !== $value
+				$cell  = in_array( $key, array( 'key', 'source', 'by', 'file', 'pointer', 'stored_as', 'rest_base', 'capability' ), true ) && '' !== $value
 					? '<code>' . esc_html( $value ) . '</code>'
 					: esc_html( $value );
 				$tag   = $first ? 'th scope="row"' : 'td';

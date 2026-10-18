@@ -329,6 +329,23 @@ class FormsSubmissionTest extends FormsTestCase {
 	}
 
 	/**
+	 * `{option:page.field}` recipients resolve through pegwork_get_option(); an invalid value falls back to the admin email.
+	 */
+	public function test_option_recipient() {
+		update_option( 'fr_settings', array( 'moderator_email' => 'moderator@example.org' ) );
+		$this->assertSame( 'moderator@example.org', Notifications::recipient( '{option:fr_settings.moderator_email}', array() ) );
+
+		$result = $this->submit( $this->contact_values() );
+		$this->assertSame( 'moderator@example.org', $this->sent_mail()[1]['to'][0][0] );
+		$this->assertSame( 'sent', Entries::get( $result['entry_id'] )['meta']['notifications']['moderator'] );
+
+		// The settings screen would refuse this value; force it in as if stored by other code.
+		add_filter( 'pre_option_fr_settings', fn() => array( 'moderator_email' => "x@example.org\nBcc: y@example.org" ) );
+		$this->assertSame( 'admin@example.org', Notifications::recipient( '{option:fr_settings.moderator_email}', array() ) );
+		$this->assertSame( '', Notifications::recipient( '{option:fr_settings.moderator_email}', array(), false ), 'reply_to has no fallback.' );
+	}
+
+	/**
 	 * Every documented merge tag.
 	 */
 	public function test_merge_tags() {

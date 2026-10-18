@@ -100,8 +100,7 @@ final class RecordValidator {
 			return new WP_Error( 'pegwork_unknown_type', sprintf( __( 'Unknown content type "%s".', 'pegwork' ), $type ), array( 'status' => 400 ) );
 		}
 
-		$fields = $content_type['fields'];
-		$errors = self::field_errors( $fields, $values, $complete );
+		$errors = self::check_values( $content_type['fields'], $values, $complete );
 
 		$taxonomies = $registry->taxonomies();
 		foreach ( $content_type['taxonomies'] as $usage ) {
@@ -145,19 +144,20 @@ final class RecordValidator {
 	}
 
 	/**
-	 * Checks field values against their definitions: required, required_when and validate rules.
+	 * Checks field values against their `required`, `required_when` and `validate` rules. Shared by
+	 * records, options pages and forms (pegwork_validate_fields()), so all apply the same rules and messages.
 	 *
-	 * Shared by record validation and pegwork_validate_fields() (forms). Values are cast to each
-	 * field's type first, so stored strings compare like request values.
+	 * Type checks (a well-formed email, a real date) are not part of these rules: REST meta schemas do
+	 * them for records, Pegwork\Options\Values for options pages, pegwork_sanitize_field() for forms.
 	 *
-	 * @param array<int, array<string, mixed>> $fields          Normalized fields (`key`, `type`, `label`, `required`, ...).
-	 * @param array<string, mixed>             $values          Values by field key; other keys are ignored.
-	 * @param bool                             $complete        Whether completeness rules apply. False skips every check.
+	 * @param array<int, array<string, mixed>> $fields          Normalized fields.
+	 * @param array<string, mixed>             $values          Values by field key; missing, null or '' counts as empty.
+	 * @param bool                             $complete        Whether completeness rules apply. Without them nothing is checked.
 	 * @param bool                             $checked_boolean Whether a required boolean must be true (a consent box),
-	 *                                                          rather than only set.
+	 *                                                          rather than only set (forms).
 	 * @return array<string, string> Error message by field key; empty when every field passes.
 	 */
-	public static function field_errors( array $fields, array $values, bool $complete = true, bool $checked_boolean = false ): array {
+	public static function check_values( array $fields, array $values, bool $complete = true, bool $checked_boolean = false ): array {
 		$values = array_merge( $values, self::cast_all( $fields, $values ) );
 		$errors = array();
 
