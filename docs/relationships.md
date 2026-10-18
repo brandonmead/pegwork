@@ -57,6 +57,10 @@ Validation errors (PHP validator; the JSON Schema covers the per-file rules):
 - Collection param `rel_{key}` (integer) on the "from" collection lists the records linked to one "to" record: `GET /wp/v2/stories?rel_story_projects=24`. Status visibility stays core's (anonymous readers see published records only).
 - Links are IDs only. No field of the linked record is exposed; there are no private relationships.
 
+## Editor
+
+The "from" type's Details panel has a picker per relationship: a searchable "Add {singular}" combobox and the list of linked records with Remove buttons. Links save in the same REST request as the post; a rejected save shows the rule's message under the picker. Config entry, states, focus and announcements: `docs/editor-panel.md`. The "to" type has no picker.
+
 ## PHP
 
 ```php

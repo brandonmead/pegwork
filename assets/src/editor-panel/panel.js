@@ -22,6 +22,7 @@ import {
 	saveErrors,
 	wordLimits,
 } from './logic';
+import RelationshipControl from './relationship-control';
 import TaxonomyControl from './taxonomy-control';
 import WordCounter from './word-counter';
 
@@ -33,7 +34,7 @@ import WordCounter from './word-counter';
  * @param {Object} props.typeConfig Config for the post type.
  */
 function TypePanel( { postType, typeConfig } ) {
-	const { fields, taxonomies } = typeConfig;
+	const { fields, taxonomies, relationships } = typeConfig;
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 	const { removeEditorPanel } = useDispatch( editorStore );
 
@@ -106,6 +107,17 @@ function TypePanel( { postType, typeConfig } ) {
 					/>
 				);
 			} ) }
+			{ relationships.map( ( relationship ) => (
+				<RelationshipControl
+					key={ relationship.key }
+					relationship={ relationship }
+					value={ values[ relationship.meta_key ] }
+					onChange={ ( ids ) =>
+						setMeta( { ...values, [ relationship.meta_key ]: ids } )
+					}
+					error={ errors[ relationship.key ] }
+				/>
+			) ) }
 			{ taxonomies.map( ( taxonomy ) => (
 				<TaxonomyControl
 					key={ taxonomy.key }

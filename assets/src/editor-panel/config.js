@@ -96,10 +96,43 @@ export function parseTaxonomy( taxonomy ) {
 }
 
 /**
+ * Parses one relationship entry (from-side only).
+ *
+ * @param {unknown} relationship Raw relationship.
+ * @return {?Object} The relationship, or null when it has no key, meta key or target type.
+ */
+export function parseRelationship( relationship ) {
+	if (
+		! isObject( relationship ) ||
+		! isKey( relationship.key ) ||
+		! isKey( relationship.meta_key ) ||
+		! isKey( relationship.to )
+	) {
+		return null;
+	}
+	return {
+		key: relationship.key,
+		meta_key: relationship.meta_key,
+		to: relationship.to,
+		label: isKey( relationship.label )
+			? relationship.label
+			: relationship.to,
+		to_label_singular: isKey( relationship.to_label_singular )
+			? relationship.to_label_singular
+			: relationship.to,
+		cardinality:
+			relationship.cardinality === 'one_to_many'
+				? 'one_to_many'
+				: 'many_to_many',
+		required: relationship.required === true,
+	};
+}
+
+/**
  * Parses the whole config.
  *
  * @param {unknown} raw The localized value, usually window.pegworkEditor.
- * @return {{types: Object<string, {fields: Object[], taxonomies: Object[]}>}} Parsed config.
+ * @return {{types: Object<string, {fields: Object[], taxonomies: Object[], relationships: Object[]}>}} Parsed config.
  */
 export function parseConfig( raw ) {
 	const types = {};
@@ -114,6 +147,9 @@ export function parseConfig( raw ) {
 			taxonomies: toList( type.taxonomies )
 				.map( parseTaxonomy )
 				.filter( Boolean ),
+			relationships: toList( type.relationships )
+				.map( parseRelationship )
+				.filter( Boolean ),
 		};
 	}
 
@@ -125,7 +161,7 @@ export function parseConfig( raw ) {
  *
  * @param {{types: Object}} config   Parsed config.
  * @param {?string}         postType Post type key.
- * @return {?{fields: Object[], taxonomies: Object[]}} The type config, or null when the panel does not apply.
+ * @return {?{fields: Object[], taxonomies: Object[], relationships: Object[]}} The type config, or null when the panel does not apply.
  */
 export function getTypeConfig( config, postType ) {
 	if (

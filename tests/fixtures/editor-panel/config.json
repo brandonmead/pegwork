@@ -151,7 +151,8 @@
 					"required": false,
 					"label": "Impact categories"
 				}
-			]
+			],
+			"relationships": []
 		},
 		"sifg_story": {
 			"fields": [
@@ -184,7 +185,18 @@
 					"default": null
 				}
 			],
-			"taxonomies": []
+			"taxonomies": [],
+			"relationships": [
+				{
+					"key": "story_projects",
+					"meta_key": "_rel_story_projects",
+					"to": "sifg_project",
+					"label": "Projects",
+					"to_label_singular": "Project",
+					"cardinality": "many_to_many",
+					"required": true
+				}
+			]
 		}
 	}
 }
