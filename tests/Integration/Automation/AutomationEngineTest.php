@@ -57,8 +57,9 @@ class AutomationEngineTest extends AutomationTestCase {
 		$this->assertSame( 'completed', $run['status'] );
 		$this->assertNotNull( $run['finished_at'] );
 		$steps = $this->steps( $run['id'] );
-		$this->assertCount( 1, $steps );
+		$this->assertCount( 2, $steps );
 		$this->assertSame( array( 'verify', 'update_record', 'ok' ), array( $steps[0]['step_id'], $steps[0]['step_type'], $steps[0]['status'] ) );
+		$this->assertSame( array( 'notify', 'send_email', 'ok' ), array( $steps[1]['step_id'], $steps[1]['step_type'], $steps[1]['status'] ) );
 		$this->assertSame(
 			array(
 				'record_id' => $id,
@@ -117,7 +118,7 @@ class AutomationEngineTest extends AutomationTestCase {
 		$this->assertNull( Engine::instance()->executor()->execute( $run['id'] ), 'A wake-up after the run is not claimed.' );
 		do_action( Engine::RUN_HOOK, $run['id'] );
 
-		$this->assertCount( 1, $this->steps( $run['id'] ) );
+		$this->assertCount( 2, $this->steps( $run['id'] ), 'Each step ran once.' );
 		$this->assertCount( 1, $this->runs( 'job_approved' ) );
 	}
 

@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "job_digest",
+  "label": "Hourly digest with no record and a custom retry policy",
+  "trigger": { "type": "schedule", "every": "hour", "at": "00:30" },
+  "idempotency": "digest:{{now}}",
+  "steps": [
+    { "id": "digest", "type": "send_email", "to": "ops@example.org, desk@example.org",
+      "subject": "Digest for {{site.name}}", "text": "Run {{run.id}} at {{now}}.",
+      "retry": { "max": 3, "backoff": [ "PT5M", "PT1H" ] } }
+  ]
+}

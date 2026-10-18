@@ -6,6 +6,6 @@
     "when": { "var": "trigger.new_status", "op": "eq", "value": "private" } },
   "steps": [
     { "id": "stage", "type": "update_record", "values": { "job_stage": "closed" } },
-    { "id": "mail", "type": "send_email", "to": "ops@example.org", "subject": "{{record.title}} is private", "text": "Done." }
+    { "id": "hook", "type": "call_webhook", "url": "https://example.org/hook" }
   ]
 }

@@ -9,6 +9,8 @@
     { "key": "marker", "type": "text", "label": "Marker" },
     { "key": "note", "type": "text", "label": "Note", "visibility": "private" },
     { "key": "child_id", "type": "number", "label": "Child ID" },
-    { "key": "urgent", "type": "boolean", "label": "Urgent", "default": false }
+    { "key": "urgent", "type": "boolean", "label": "Urgent", "default": false },
+    { "key": "contact_email", "type": "email", "label": "Contact email", "visibility": "private" },
+    { "key": "website", "type": "url", "label": "Website" }
   ]
 }
