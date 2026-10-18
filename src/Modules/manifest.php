@@ -16,7 +16,7 @@ declare( strict_types=1 );
 return array(
 	'listings'   => array(
 		'label'       => 'Listings',
-		'description' => 'Field output on core blocks (the pegwork/field binding source) and the Show if block.',
+		'description' => 'Field output on core blocks (the pegwork/field binding source), the Show if block, and directories (Pegwork Query Loops and patterns).',
 		'requires'    => array(),
 		'path'        => PEGWORK_DIR . 'modules/listings',
 	),

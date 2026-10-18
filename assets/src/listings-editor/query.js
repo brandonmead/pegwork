@@ -10,6 +10,8 @@
 export const ATTRIBUTE = 'pegwork';
 export const OPTION_KEY = 'post_in_option';
 export const PER_PAGE = 12;
+// Narrowest card column; columns wrap below it (PegworkListings\Patterns::MIN_COLUMN).
+export const MIN_COLUMN = '16rem';
 
 const isObject = ( value ) =>
 	value !== null && typeof value === 'object' && ! Array.isArray( value );
@@ -146,12 +148,18 @@ export function directoryVariations( config, strings ) {
 					inherit: false,
 				},
 				enhancedPagination: true,
+				align: 'wide',
 				[ ATTRIBUTE ]: { filters: true },
 			},
 			innerBlocks: [
 				[
 					'core/post-template',
-					{ layout: { type: 'grid', columnCount: 3 } },
+					{
+						layout: {
+							type: 'grid',
+							minimumColumnWidth: MIN_COLUMN,
+						},
+					},
 					[ [ 'core/pattern', { slug: type.cardPattern } ] ],
 				],
 				[

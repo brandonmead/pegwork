@@ -72,6 +72,10 @@ class DirectoryPerformanceTest extends WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
+		// The suite restores hooks after each test, which can drop the one added before the class.
+		if ( ! has_action( 'pegwork_register', self::$register ) ) {
+			add_action( 'pegwork_register', self::$register );
+		}
 		Plugin::init();
 		$this->set_permalink_structure( '/%postname%/' );
 		Plugin::init();

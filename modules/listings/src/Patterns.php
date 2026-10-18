@@ -44,6 +44,11 @@ final class Patterns {
 	public const LATEST = 3;
 
 	/**
+	 * Narrowest card column in grids (columns wrap below it, so the grid works at phone width).
+	 */
+	public const MIN_COLUMN = '16rem';
+
+	/**
 	 * Registers on init priority 20, or now when init has passed. Safe to call more than once.
 	 */
 	public static function register(): void {
@@ -168,7 +173,7 @@ final class Patterns {
 					'isLink' => true,
 				)
 			),
-			self::block( 'core/post-excerpt', array( 'excerptLength' => 30 ) ),
+			self::block( 'core/post-excerpt', array( 'excerptLength' => 20 ) ),
 		);
 		foreach ( self::taxonomies( $type ) as $key => $label ) {
 			$blocks[] = self::terms( $key, $label );
@@ -254,7 +259,7 @@ final class Patterns {
 				'perPage'            => self::PER_PAGE,
 				'enhancedPagination' => true,
 				'pegwork'            => array( 'filters' => true ),
-				'columns'            => 3,
+				'grid'               => true,
 				'pagination'         => true,
 			)
 		);
@@ -293,7 +298,7 @@ final class Patterns {
 			'latest',
 			array(
 				'perPage' => self::LATEST,
-				'columns' => self::LATEST,
+				'grid'    => true,
 			)
 		);
 	}
@@ -344,7 +349,7 @@ final class Patterns {
 	 *
 	 * @param string               $type    Content type key.
 	 * @param string               $kind    Pattern kind (seeds a stable query ID).
-	 * @param array<string, mixed> $options `perPage`, `columns`, `pagination`, `enhancedPagination`, `pegwork`.
+	 * @param array<string, mixed> $options `perPage`, `grid` (wide, responsive columns), `pagination`, `enhancedPagination`, `pegwork`.
 	 * @return string Block markup.
 	 */
 	private static function query( string $type, string $kind, array $options ): string {
@@ -371,10 +376,14 @@ final class Patterns {
 			$attrs[ QueryHooks::ATTRIBUTE ] = $options['pegwork'];
 		}
 
-		$layout = isset( $options['columns'] ) && $options['columns'] > 1
+		$grid = ! empty( $options['grid'] );
+		if ( $grid ) {
+			$attrs['align'] = 'wide';
+		}
+		$layout = $grid
 			? array(
-				'type'        => 'grid',
-				'columnCount' => $options['columns'],
+				'type'               => 'grid',
+				'minimumColumnWidth' => self::MIN_COLUMN,
 			)
 			: array( 'type' => 'default' );
 		$inner  = array( self::block( 'core/post-template', array( 'layout' => $layout ), self::lines( array( self::registered_card( $type ) ) ) ) );
@@ -403,7 +412,7 @@ final class Patterns {
 			);
 		}
 
-		return self::block( 'core/query', $attrs, '<div class="wp-block-query">' . self::lines( $inner ) . '</div>' );
+		return self::block( 'core/query', $attrs, '<div class="wp-block-query' . ( $grid ? ' alignwide' : '' ) . '">' . self::lines( $inner ) . '</div>' );
 	}
 
 	/**

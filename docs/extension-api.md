@@ -59,6 +59,47 @@ Registry section accessors (API 0.2.0) return definitions only, in canonical for
 
 `pegwork_get_field( int|WP_Post $post, string $key, string $context = 'view' ): mixed`: boolean fields return bool, number fields int, float or null when unset, everything else a string; registered defaults apply when unset. Private fields return null unless `$context` is `edit` and the current user can `edit_post`. Null for an unknown post or field. It applies no display rules (`show_when`, password, post status): display code such as the `pegwork/field` binding source adds those (`docs/display.md`).
 
+## Listing hooks
+
+Provided by the `listings` module (`docs/display.md`, "Directories"). Hook names are the contract; the module's classes are not.
+
+### `pegwork_listing_constraints` (filter)
+
+```php
+apply_filters( 'pegwork_listing_constraints', array $constraints, string $post_type, array $context );
+// $context: [ 'source' => 'main'|'block', 'filters' => bool ]
+```
+
+Runs for every Pegwork Query Loop (`source` `block`, once per block that builds the loop's query: post template, pagination, no results) and for the main query of a post type archive whose type has a `listing` (`source` `main`, `filters` always true). Return the constraints to apply:
+
+```php
+array(
+	'taxonomies' => array( 'sifg_impact' => array( 'sdg-04', 'sdg-13' ) ), // term slugs: any within a taxonomy, all across
+	'fields'     => array( 'needs_volunteers' => true ),                  // public boolean: bool; public select: value or list
+	'search'     => 'data',                                                // core search (s)
+	'post__in'   => array( 12 ),                                           // empty list matches nothing
+)
+```
+
+`$constraints` arrives holding the loop's `where` presets (as `fields` and `post__in`), or empty for `main`. Merge into it rather than replacing it. Return values are re-checked against the registry: private, unknown or non-filterable fields, taxonomies the type does not use, malformed slugs and values outside a select's options are dropped; at most 20 values per key, 100 characters of search. Queries always list published records only. The filters module adds URL constraints here when `filters` is true; it must be pure and cheap, since it runs several times per render.
+
+```php
+add_filter( 'pegwork_listing_constraints', function ( $constraints, $type, $context ) {
+	if ( 'sifg_project' === $type && $context['filters'] ) {
+		$constraints['taxonomies']['sifg_project_status'] = array( 'active' );
+	}
+	return $constraints;
+}, 10, 3 );
+```
+
+### `pegwork_listing_pattern` (filter)
+
+```php
+apply_filters( 'pegwork_listing_pattern', ?array $pattern, string $type, string $kind ); // kind: card|details|directory|featured|latest
+```
+
+Pattern properties for `register_block_pattern()` before Pegwork registers `pegwork/<type>-<kind>`; return null to skip it. A pattern of that name registered earlier (a theme `patterns/` file) wins and this filter is not called.
+
 ## Modules
 
 A module is a directory containing `module.php`, listed in the module manifest. `module.php` returns an object implementing `Pegwork\Api\Module`:
