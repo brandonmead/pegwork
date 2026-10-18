@@ -170,17 +170,21 @@ final class Loader {
 	 * @return true|WP_Error
 	 */
 	public static function enable( string $slug ) {
-		$manifest = self::manifest();
-		if ( ! isset( $manifest[ $slug ] ) ) {
-			return new WP_Error( 'pegwork_module_unknown', "Unknown module: {$slug}." );
+		if ( ! isset( self::manifest()[ $slug ] ) ) {
+			/* translators: %s: module slug. */
+			return new WP_Error( 'pegwork_module_unknown', sprintf( __( 'Unknown module: %s.', 'pegwork' ), $slug ) );
+		}
+
+		$missing = self::missing_requirements( $slug );
+		if ( $missing ) {
+			return new WP_Error(
+				'pegwork_module_requires',
+				/* translators: 1: module slug, 2: comma-separated module slugs. */
+				sprintf( __( 'Module %1$s requires these modules to be enabled first: %2$s.', 'pegwork' ), $slug, implode( ', ', $missing ) )
+			);
 		}
 
 		$enabled = self::enabled();
-		$missing = array_diff( $manifest[ $slug ]['requires'], $enabled );
-		if ( $missing ) {
-			return new WP_Error( 'pegwork_module_requires', "Module {$slug} requires these modules to be enabled first: " . implode( ', ', $missing ) . '.' );
-		}
-
 		if ( ! in_array( $slug, $enabled, true ) ) {
 			$enabled[] = $slug;
 			update_option( self::OPTION, $enabled );
@@ -189,7 +193,7 @@ final class Loader {
 	}
 
 	/**
-	 * Disables a module. Also removes slugs that are no longer in the manifest.
+	 * Disables a module. Rejected while an enabled module requires it.
 	 *
 	 * @param string $slug Module slug.
 	 * @return true|WP_Error
@@ -197,11 +201,52 @@ final class Loader {
 	public static function disable( string $slug ) {
 		$enabled = self::enabled();
 		if ( ! in_array( $slug, $enabled, true ) ) {
-			return new WP_Error( 'pegwork_module_not_enabled', "Module {$slug} is not enabled." );
+			/* translators: %s: module slug. */
+			return new WP_Error( 'pegwork_module_not_enabled', sprintf( __( 'Module %s is not enabled.', 'pegwork' ), $slug ) );
+		}
+
+		$dependents = self::dependents( $slug );
+		if ( $dependents ) {
+			return new WP_Error(
+				'pegwork_module_required_by',
+				/* translators: 1: module slug, 2: comma-separated module slugs. */
+				sprintf( __( 'Module %1$s is required by these enabled modules, so disable them first: %2$s.', 'pegwork' ), $slug, implode( ', ', $dependents ) )
+			);
 		}
 
 		update_option( self::OPTION, array_values( array_diff( $enabled, array( $slug ) ) ) );
 		return true;
+	}
+
+	/**
+	 * Requirements of a module that are not enabled.
+	 *
+	 * @param string $slug Module slug.
+	 * @return string[] Required slugs that are not enabled, in manifest order. Empty for an unknown slug.
+	 */
+	public static function missing_requirements( string $slug ): array {
+		$manifest = self::manifest();
+		if ( ! isset( $manifest[ $slug ] ) ) {
+			return array();
+		}
+		return array_values( array_diff( $manifest[ $slug ]['requires'], self::enabled() ) );
+	}
+
+	/**
+	 * Enabled modules that require a module.
+	 *
+	 * @param string $slug Module slug.
+	 * @return string[] Slugs of the enabled modules whose manifest entry requires $slug.
+	 */
+	public static function dependents( string $slug ): array {
+		$manifest   = self::manifest();
+		$dependents = array();
+		foreach ( self::enabled() as $enabled ) {
+			if ( $enabled !== $slug && in_array( $slug, $manifest[ $enabled ]['requires'] ?? array(), true ) ) {
+				$dependents[] = $enabled;
+			}
+		}
+		return $dependents;
 	}
 
 	/**
