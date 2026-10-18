@@ -68,6 +68,24 @@ final class Registry {
 	}
 
 	/**
+	 * Post meta key of a meta-stored field: `wp.meta_key`, else `_{type}_{field}`.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param string $type  Content type key.
+	 * @param string $field Field key.
+	 * @return string|null The meta key, or null for an unknown field or one stored in a post column (`wp.storage`).
+	 */
+	public function meta_key( string $type, string $field ): ?string {
+		$definition = $this->fields( $type )[ $field ] ?? null;
+		if ( null === $definition || isset( $definition['wp']['storage'] ) ) {
+			return null;
+		}
+
+		return $definition['wp']['meta_key'] ?? '_' . $type . '_' . $field;
+	}
+
+	/**
 	 * All taxonomies.
 	 *
 	 * @return array<string, array<string, mixed>> Taxonomies by key, in load order.

@@ -12,4 +12,4 @@ namespace Pegwork\Api;
 /**
  * Semver of the public `Pegwork\Api` surface. Everything outside `Pegwork\Api` is internal.
  */
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';

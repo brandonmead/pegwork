@@ -196,9 +196,30 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Phase 1 ships no optional modules.
+	 * The shipped manifest lists listings and filters (filters requires listings); each path has a module.php
+	 * that returns a module with the matching id and requirements.
 	 */
-	public function test_shipped_manifest_is_empty() {
-		$this->assertSame( array(), require dirname( __DIR__, 2 ) . '/src/Modules/manifest.php' );
+	public function test_shipped_manifest_lists_listings_and_filters() {
+		$manifest = require dirname( __DIR__, 2 ) . '/src/Modules/manifest.php';
+
+		$this->assertSame( array( 'listings', 'filters' ), array_keys( $manifest ) );
+		$this->assertSame( array(), $manifest['listings']['requires'] );
+		$this->assertSame( array( 'listings' ), $manifest['filters']['requires'] );
+
+		foreach ( $manifest as $slug => $entry ) {
+			$module = require $entry['path'] . '/module.php';
+			$this->assertInstanceOf( \Pegwork\Api\Module::class, $module );
+			$this->assertSame( $slug, $module->id() );
+			$this->assertSame( $entry['requires'], $module->requires() );
+		}
+	}
+
+	/**
+	 * Enabling filters before listings is rejected.
+	 */
+	public function test_filters_requires_listings() {
+		$this->assertWPError( Loader::enable( 'filters' ) );
+		$this->assertTrue( Loader::enable( 'listings' ) );
+		$this->assertTrue( Loader::enable( 'filters' ) );
 	}
 }
