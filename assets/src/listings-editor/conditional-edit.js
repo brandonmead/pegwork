@@ -128,7 +128,16 @@ function ConditionRow( { condition, index, type, onChange, onRemove } ) {
 	const ops = condition.taxonomy ? TAXONOMY_OPS : FIELD_OPS;
 
 	return (
-		<div className="pegwork-conditional__row">
+		<div
+			className="pegwork-conditional__row"
+			style={ {
+				borderBottom: '1px solid #ddd',
+				display: 'grid',
+				gap: '12px',
+				marginBottom: '16px',
+				paddingBottom: '16px',
+			} }
+		>
 			<SelectControl
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
@@ -216,12 +225,6 @@ export function createEdit( config ) {
 			<>
 				<InspectorControls>
 					<PanelBody title={ __( 'Conditions', 'pegwork' ) }>
-						<p>
-							{ __(
-								'Shows the inner blocks only when every condition holds for the current record.',
-								'pegwork'
-							) }
-						</p>
 						{ ! resolved && typeKeys.length > 0 && (
 							<SelectControl
 								__next40pxDefaultSize

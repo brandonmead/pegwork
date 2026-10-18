@@ -59,9 +59,6 @@ final class Editor {
 	/**
 	 * The editor config: public fields and taxonomies (with terms) per content type.
 	 *
-	 * `fieldsListFormat` is `array` on WordPress 6.9 and later (getFieldsList returns
-	 * `[ { label, args, type } ]`) and `object` before (`{ key: { label, value } }`).
-	 *
 	 * @return array<string, mixed> Config.
 	 */
 	public static function config(): array {
@@ -100,9 +97,8 @@ final class Editor {
 		}
 
 		return array(
-			'fieldsListFormat' => version_compare( get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ? 'array' : 'object',
-			'dateFormat'       => (string) get_option( 'date_format' ),
-			'types'            => $types,
+			'dateFormat' => (string) get_option( 'date_format' ),
+			'types'      => $types,
 		);
 	}
 

@@ -67,30 +67,17 @@ const escapeLabel = ( label ) =>
 	String( label ).replace( /&/g, '&amp;' ).replace( /</g, '&lt;' );
 
 /**
- * Fields offered by the editor's bindings UI, in the shape this WordPress expects.
+ * Fields offered by the editor's bindings UI (WordPress 6.9+; 6.7 and 6.8 ignore
+ * getFieldsList for every source except core/post-meta).
  *
- * @param {Object}  config  Parsed config.
- * @param {?Object} record  Edited entity record, or null.
- * @param {Object}  context Block context.
- * @return {Array|Object} `[ { label, args, type } ]` (6.9+) or `{ key: { label, value } }` (6.7, 6.8).
+ * @param {Object} config  Parsed config.
+ * @param {Object} context Block context.
+ * @return {Array<{label: string, args: Object, type: string}>} Public fields of the context type.
  */
-export function fieldsList( config, record, context ) {
+export function fieldsList( config, context ) {
 	const type = config.types[ context?.postType ] ?? null;
-	const fields = type?.fields ?? [];
 
-	if ( config.fieldsListFormat === 'object' ) {
-		const list = {};
-		for ( const field of fields ) {
-			const value = record ? fieldValue( record, field ) : null;
-			list[ field.key ] = {
-				label: field.label,
-				value: value === null || value === false ? '' : String( value ),
-			};
-		}
-		return list;
-	}
-
-	return fields.map( ( field ) => ( {
+	return ( type?.fields ?? [] ).map( ( field ) => ( {
 		label: field.label,
 		args: { key: field.key },
 		type: 'string',
@@ -131,12 +118,8 @@ export function createSource( config, deps ) {
 		canUserEditValue() {
 			return false;
 		},
-		getFieldsList( { select, context } ) {
-			return fieldsList(
-				config,
-				contextRecord( select, context ),
-				context
-			);
+		getFieldsList( { context } ) {
+			return fieldsList( config, context );
 		},
 	};
 }

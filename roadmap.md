@@ -20,6 +20,10 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 7. Module loader and public API (merged)
 8. sifg-config (in siforgood repo)
 
+## Phase 2 PRs (`docs/phase-2-design.md`)
+- Listings A: `pegwork/field` source, `pegwork/conditional`, block category, `Registry::meta_key()`, `pegwork_get_field()`, `listings`/`filters` module skeletons (in review, branch `listings-a`).
+- Listings B, Filters server, Filters client, Gate and docs: not started.
+
 ## Done
 - Choose product name: Pegwork (2026-10-17).
 

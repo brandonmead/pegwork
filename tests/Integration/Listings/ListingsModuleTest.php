@@ -366,7 +366,7 @@ class ListingsModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The editor config lists public fields only and the fields list format for this WordPress.
+	 * The editor config lists public fields only, plus taxonomy terms for the Show if UI.
 	 */
 	public function test_editor_config_has_public_fields_only() {
 		$config  = \PegworkListings\Editor::config();
@@ -377,6 +377,5 @@ class ListingsModuleTest extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'contact_email', wp_json_encode( $config ) );
 		$this->assertSame( array( 'sifg_project_type', 'sifg_project_status', 'sifg_impact' ), array_column( $project['taxonomies'], 'key' ) );
 		$this->assertContains( 'paused', array_column( $project['taxonomies'][1]['terms'], 'slug' ) );
-		$this->assertSame( version_compare( get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ? 'array' : 'object', $config['fieldsListFormat'] );
 	}
 }

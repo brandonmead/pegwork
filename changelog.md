@@ -3,6 +3,7 @@
 Purpose: dated, newest-first log of changes actually made.
 
 ## 2026-10-18
+- Phase 2 Listings A (in review, branch `listings-a`): `Pegwork\Api\VERSION` 0.2.0; `Registry::meta_key()`; `pegwork_get_field()` (typed, private fields null unless edit context and `edit_post`); manifest entries `listings` and `filters` (requires listings, skeleton); listings module: `pegwork/field` binding source (formats, escaping, http/https/mailto URLs, password/visibility/`show_when` rules, hide-when-empty via `render_block`, `keepEmpty`), `pegwork/conditional` "Show if" block (fails closed), "Pegwork" block category, `listings-editor` script (editor preview, field picker on 6.9+, Show if inspector). Docs `docs/display.md`. Checked in headless Chrome on throwaway WordPress 7.1.3 and 6.7 sites (`~/wp-envs/`); screenshots `docs/screenshots/listings-a-*`.
 - Phase 2 display design approved (`docs/phase-2-design.md`): Query Loop variation, `pegwork/field` bindings, `pegwork/filters` and `pegwork/conditional` blocks, registry `listing` section, no custom endpoints.
 - Design `docs/content-builder-design.md` approved (PR #8): relationships (meta storage, picker, REST param, query helpers), options pages (registry kind, Settings API screen, `pegwork/option` bindings), admin menu skeleton with Overview and Modules screens; schema editor UI deferred to Phase 5.
 

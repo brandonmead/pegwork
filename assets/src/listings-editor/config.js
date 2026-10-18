@@ -67,7 +67,7 @@ function parseTaxonomy( taxonomy ) {
  * Parses the whole config.
  *
  * @param {unknown} raw Usually window.pegworkListings.
- * @return {{fieldsListFormat: string, dateFormat: string, types: Object}} Parsed config.
+ * @return {{dateFormat: string, types: Object}} Parsed config.
  */
 export function parseConfig( raw ) {
 	const source = isObject( raw ) ? raw : {};
@@ -89,8 +89,6 @@ export function parseConfig( raw ) {
 	}
 
 	return {
-		fieldsListFormat:
-			source.fieldsListFormat === 'object' ? 'object' : 'array',
 		dateFormat: isKey( source.dateFormat ) ? source.dateFormat : 'F j, Y',
 		types,
 	};

@@ -76,6 +76,14 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Hooks added in `init` are wiped by the WP test suite's hook restore between tests; guard re-adds with `has_filter`, not a static "already hooked" flag.
 - siforgood.local sample content: Project ID 24 "Sample Project (delete before launch)" (published, 2026-10-17).
 
+## Display: Listings A (Phase 2 PR 2)
+- `modules/listings` (`PegworkListings\`, own autoloader in `module.php`, `PEGWORK_LISTINGS_DIR`); `modules/filters` is a skeleton. Modules use `PEGWORK_DIR`/`PEGWORK_FILE` only to find `assets/build/`.
+- Core keeps a block's own markup when a source returns null, so hide-when-empty is a `render_block` filter on paragraph, heading, button, image. Core adds the source's `uses_context` to `WP_Block::$context` during binding processing, so the filter sees `postId`.
+- Core swaps a schema-invalid block attribute for its default before render; the conditional reads `parsed_block['attrs']` so malformed conditions fail closed.
+- WP 7.x adds `class="wp-block-paragraph"` to paragraphs; tests match `>text</p>`.
+- Editor bindings (verified 2026-10-18 in headless Chrome): 6.7 and 7.1.3 both register custom sources and call `getValues` (preview in post editor and Query Loops). `getFieldsList` is dropped by the blocks store for every source except `core/post-meta` through 6.8; from 6.9 it is kept and its shape is `[ { label, args, type } ]` (7.1 lists "Pegwork field" in the Attributes picker). Templates have no `postId`, so the preview shows field labels.
+- Throwaway browser-check sites: `~/wp-envs/listings` (7.1.3, DB `wpenv_listings`, port 8131) and `~/wp-envs/core-6.7` (DB `wpenv_listings67`, port 8132); plugin symlinked to `~/worktrees/pegwork/listings-a`, mu-plugin registers `examples/sifg`. Admin password not stored.
+
 ## Tooling
 - PHPUnit 9.6 (WP 6.7 test suite rejects PHPUnit 10+), yoast/phpunit-polyfills 3, WPCS 3, PHPCompatibilityWP 2.1 (PHPCompatibility 9.3.5; 10.x still alpha). `composer.lock` resolved for platform PHP 8.2.
 - CI matrix PHP 8.2/8.4 x WP 6.7/latest, MySQL 8.0 service; runner needs `subversion` for the install script.

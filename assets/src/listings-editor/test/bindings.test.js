@@ -10,7 +10,6 @@ import { createSource, fieldsList } from '../bindings';
 import { parseConfig } from '../config';
 
 const raw = {
-	fieldsListFormat: 'array',
 	dateFormat: 'Y-m-d',
 	types: {
 		sifg_project: {
@@ -63,14 +62,13 @@ const select = () => ( {
 const context = { postType: 'sifg_project', postId: 7 };
 
 describe( 'parseConfig', () => {
-	it( 'drops malformed fields and types and defaults the format', () => {
+	it( 'drops malformed fields and types and defaults the date format', () => {
 		const config = parseConfig( raw );
 		expect( Object.keys( config.types ) ).toEqual( [ 'sifg_project' ] );
 		expect(
 			config.types.sifg_project.fields.map( ( field ) => field.key )
 		).toEqual( [ 'who_for', 'needs_volunteers', 'volunteer_link' ] );
 		expect( parseConfig( null ) ).toEqual( {
-			fieldsListFormat: 'array',
 			dateFormat: 'F j, Y',
 			types: {},
 		} );
@@ -127,33 +125,23 @@ describe( 'createSource', () => {
 } );
 
 describe( 'fieldsList', () => {
-	it( 'returns the array shape (WordPress 6.9+)', () => {
-		const list = fieldsList( parseConfig( raw ), record, context );
+	it( 'lists public fields as { label, args, type } (WordPress 6.9+ shape)', () => {
+		const list = fieldsList( parseConfig( raw ), context );
 		expect( list[ 0 ] ).toEqual( {
 			label: "Who it's for",
 			args: { key: 'who_for' },
 			type: 'string',
 		} );
-		expect( list ).toHaveLength( 3 );
-	} );
-
-	it( 'returns the object shape (WordPress 6.7, 6.8)', () => {
-		const list = fieldsList(
-			parseConfig( { ...raw, fieldsListFormat: 'object' } ),
-			record,
-			context
-		);
-		expect( list.who_for ).toEqual( {
-			label: "Who it's for",
-			value: 'Kids <3',
-		} );
-		expect( list.needs_volunteers.value ).toBe( '' );
-		expect( list.contact_email ).toBeUndefined();
+		expect( list.map( ( item ) => item.args.key ) ).toEqual( [
+			'who_for',
+			'needs_volunteers',
+			'volunteer_link',
+		] );
 	} );
 
 	it( 'is empty for unknown post types', () => {
 		expect(
-			fieldsList( parseConfig( raw ), null, { postType: 'page' } )
+			fieldsList( parseConfig( raw ), { postType: 'page' } )
 		).toEqual( [] );
 	} );
 } );
