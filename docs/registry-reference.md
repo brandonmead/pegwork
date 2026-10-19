@@ -233,7 +233,7 @@ A form either creates or updates a record of a content type (`target`) or, witho
 | `target` | no | | `{ content_type, action, status }`. `content_type` must be defined (`unknown_content_type`). `action` `create` (default) or `update`. `status` `draft`, `pending` or `publish`; default `pending` for `create`, none for `update` (the record keeps its status) |
 | `access` | no | `anyone` | `"anyone"` or `{ "capability": "<capability>" }`. A capability object is required when `target.status` is `publish` or `action` is `update` (`form_access_required`) |
 | `confirm` | no | | double opt-in: `{ field, subject, body, expires_hours }`. `field` is an email field of the form (`form_confirm_field`); `body` must contain `{confirm_url}` (`form_confirm_url_missing`); `expires_hours` positive integer, default `72` |
-| `captcha` | no | | `turnstile` |
+| `captcha` | no | | `turnstile`: Cloudflare Turnstile widget on the last step, verified server side. Keys come only from the wp-config constants `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY`; without both the form is not shown (`docs/forms.md#turnstile`) |
 | `fields` | one of | | list of items |
 | `steps` | one of | | list of `{ key, label, description, fields }`; step keys unique. Exactly one of `fields` or `steps` (`form_fields_or_steps`) |
 | `notifications` | no | `[]` | list of notifications, keys unique |

@@ -314,7 +314,8 @@ final class EntriesAdmin {
 		$mime = is_string( $value['mime'] ?? null ) ? $value['mime'] : '';
 
 		if ( null !== Uploads::absolute( $value ) ) {
-			return '<a href="' . esc_url( Files::url( $entry_id, $key ) ) . '" download>' . esc_html( $name ) . '</a> <span class="description">('
+			// Underlined: next to plain text, a link must not rely on color alone (WCAG 1.4.1).
+			return '<a href="' . esc_url( Files::url( $entry_id, $key ) ) . '" download style="text-decoration:underline">' . esc_html( $name ) . '</a> <span class="description">('
 				/* translators: 1: file size, such as "120 KB", 2: file type, such as "application/pdf". */
 				. esc_html( sprintf( __( '%1$s, %2$s', 'pegwork' ), $size, $mime ) ) . ')</span>';
 		}

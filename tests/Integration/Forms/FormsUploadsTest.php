@@ -370,7 +370,7 @@ class FormsUploadsTest extends EntriesTestCase {
 		$this->login_as( 'administrator' );
 
 		$html = $this->admin_screen( array( 'entry' => (string) $id ) );
-		$this->assertMatchesRegularExpression( '#<tr><th scope="row">Document</th><td><a href="http://example.org/wp-admin/admin-post\.php\?action=pegwork_forms_file&\#038;entry=' . $id . '&\#038;field=doc&\#038;_wpnonce=[0-9a-f]+" download>report\.pdf</a> <span class="description">\(\d+ B, application/pdf\)</span></td></tr>#', $html );
+		$this->assertMatchesRegularExpression( '#<tr><th scope="row">Document</th><td><a href="http://example.org/wp-admin/admin-post\.php\?action=pegwork_forms_file&\#038;entry=' . $id . '&\#038;field=doc&\#038;_wpnonce=[0-9a-f]+" download style="text-decoration:underline">report\.pdf</a> <span class="description">\(\d+ B, application/pdf\)</span></td></tr>#', $html );
 		$this->assertStringNotContainsString( 'pegwork-forms/', $html, 'No storage path on screen.' );
 
 		$out = fopen( 'php://memory', 'w+' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Test stream.
