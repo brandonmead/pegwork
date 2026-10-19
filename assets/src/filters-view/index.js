@@ -19,14 +19,19 @@ import { createStore } from './store';
 // a named import of a missing export would stop the module from loading on 6.7.
 const optional = ( name ) => interactivity[ name ];
 
+const NAMESPACE = 'pegwork/filters';
+const serverState = optional( 'getServerState' );
+
 let api = null;
 
 api = interactivity.store(
-	'pegwork/filters',
+	NAMESPACE,
 	createStore( {
 		getContext: interactivity.getContext,
 		getElement: interactivity.getElement,
-		getState: () => api?.state,
+		// The router merges a new page's state into the store without overwriting existing keys, so the
+		// latest server values are read with getServerState (WordPress 6.7+).
+		getState: () => ( serverState ? serverState( NAMESPACE ) : api?.state ),
 		withSyncEvent: optional( 'withSyncEvent' ),
 		loadRouter: () => import( '@wordpress/interactivity-router' ),
 		win: window,

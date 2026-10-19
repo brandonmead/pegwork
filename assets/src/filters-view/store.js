@@ -3,7 +3,7 @@
  * without WordPress (index.js wires the real Interactivity API and router).
  *
  * Context (from the server, per block): `{ type, base, search, filters, active, summaries, countText }`.
- * State (from the server, merged again by the router on every navigation):
+ * State (from the server, replaced by the router on every navigation; read with getServerState):
  * `{ strings, directories: { [type]: { count, countText } } }`.
  *
  * The form controls are the source of truth for the values (no bindings that a navigation could
@@ -31,7 +31,7 @@ export const LOADING_CLASS = 'is-loading';
  * @param {Object}                 deps                 Dependencies.
  * @param {() => Object}           deps.getContext      Interactivity getContext.
  * @param {() => {ref: Element}}   deps.getElement      Interactivity getElement.
- * @param {() => Object}           deps.getState        Returns the store's state (server values merged).
+ * @param {() => Object}           deps.getState        Returns the latest server state of the store.
  * @param {(fn: Object) => Object} [deps.withSyncEvent] Interactivity withSyncEvent (absent before WordPress 6.8).
  * @param {() => Promise<Object>}  deps.loadRouter      Resolves to the router module (`{ actions: { navigate } }`).
  * @param {Window}                 deps.win             Window (location, document, timers, FormData).

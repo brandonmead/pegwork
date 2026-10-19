@@ -488,6 +488,22 @@ class FiltersModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The render function works outside blocks (a theme template or shortcode): a plain GET form with the
+	 * server values already in place.
+	 */
+	public function test_render_outside_blocks() {
+		$this->go_to( add_query_arg( 'volunteers', '1', get_post_type_archive_link( 'sifg_project' ) ) );
+		$html = FiltersBlock::render_block( array( 'postType' => 'sifg_project' ) );
+
+		$this->assertStringStartsWith( '<div class="wp-block-pegwork-filters"', $html );
+		$this->assertStringContainsString( 'method="get"', $html );
+		$this->assertMatchesRegularExpression( '#name="volunteers" value="1" checked=\'checked\'#', $html );
+		$this->assertStringContainsString( 'role="status" data-wp-text="context.countText">3 results</p>', $html );
+		$this->assertDoesNotMatchRegularExpression( '#pegwork-filters__clear[^>]* hidden>#', $html );
+		$this->assertSame( '', FiltersBlock::render_block( array( 'postType' => 'page' ) ) );
+	}
+
+	/**
 	 * No role sees the contact email in any filtered render; the block registers with interactivity.
 	 */
 	public function test_no_leaks_for_any_role() {
