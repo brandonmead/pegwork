@@ -20,7 +20,10 @@
       "required_when": { "field": "needs_volunteers", "equals": true } },
     { "key": "github_link", "type": "url", "label": "GitHub link" },
     { "key": "contact_email", "type": "email", "label": "Contact email", "required": true, "visibility": "private" },
-    { "key": "last_verified", "type": "date", "label": "Last verified" }
+    { "key": "last_verified", "type": "date", "label": "Last verified" },
+    { "key": "paused_on", "type": "date", "label": "Paused on", "visibility": "private" },
+    { "key": "paused_from", "type": "text", "label": "Status before pause", "visibility": "private" },
+    { "key": "paused_volunteers", "type": "boolean", "label": "Needed volunteers before pause", "visibility": "private" }
   ],
   "listing": {
     "search": true,

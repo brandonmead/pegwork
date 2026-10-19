@@ -10,28 +10,216 @@ declare( strict_types=1 );
 namespace PegworkForms;
 
 /**
- * Flattens items, evaluates `show_when`, and reports what this release cannot run yet.
+ * Flattens and resolves items, evaluates `show_when`, and reports what this release cannot run yet.
+ *
+ * Bound items (`{ "bind": { "field": k } }`, `{ "bind": { "taxonomy": k } }`) resolve against the
+ * target content type in the registry, so type, label, required, conditions, rules and options are
+ * defined once. Only presentational keys (`label`, `help`, `placeholder`, `autocomplete`, `display`)
+ * come from the form. A resolved item keeps its `bind`.
  */
 final class Definition {
 
 	/**
-	 * Every item of a form in display order (steps flattened).
+	 * Registry field keys a bound field item inherits.
+	 */
+	private const INHERITED = array( 'key', 'type', 'label', 'required', 'required_when', 'show_when', 'validate', 'options', 'default' );
+
+	/**
+	 * Presentational keys a bound item may set.
+	 */
+	private const PRESENTATION = array( 'label', 'help', 'placeholder', 'autocomplete', 'display' );
+
+	/**
+	 * Every item of a form in display order (steps flattened), bound items resolved.
 	 *
 	 * @param array<string, mixed> $form Canonical form.
 	 * @return array<int, array<string, mixed>>
 	 */
 	public static function items( array $form ): array {
-		if ( isset( $form['fields'] ) ) {
-			return array_values( $form['fields'] );
-		}
-
 		$items = array();
-		foreach ( $form['steps'] ?? array() as $step ) {
-			foreach ( $step['fields'] ?? array() as $item ) {
+		foreach ( self::sections( $form ) as $section ) {
+			foreach ( $section['fields'] as $item ) {
 				$items[] = $item;
 			}
 		}
 		return $items;
+	}
+
+	/**
+	 * Steps with their items resolved, or one unnamed section holding `fields`.
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 * @return array<int, array{label: string, description: string, fields: array<int, array<string, mixed>>, step: bool}>
+	 */
+	public static function sections( array $form ): array {
+		if ( isset( $form['fields'] ) ) {
+			return array(
+				array(
+					'label'       => '',
+					'description' => '',
+					'fields'      => self::resolve_list( $form, $form['fields'] ),
+					'step'        => false,
+				),
+			);
+		}
+
+		$sections = array();
+		foreach ( $form['steps'] ?? array() as $step ) {
+			$sections[] = array(
+				'label'       => (string) $step['label'],
+				'description' => (string) ( $step['description'] ?? '' ),
+				'fields'      => self::resolve_list( $form, $step['fields'] ?? array() ),
+				'step'        => true,
+			);
+		}
+		return $sections;
+	}
+
+	/**
+	 * Resolves a list of items, dropping bound items that no longer resolve.
+	 *
+	 * @param array<string, mixed>             $form  Canonical form.
+	 * @param array<int, array<string, mixed>> $items Items as defined.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function resolve_list( array $form, array $items ): array {
+		$resolved = array();
+		foreach ( $items as $item ) {
+			$item = isset( $item['bind'] ) ? self::resolve( $form, $item ) : $item;
+			if ( null !== $item ) {
+				$resolved[] = $item;
+			}
+		}
+		return $resolved;
+	}
+
+	/**
+	 * A bound item as a full item, or null when its field or taxonomy is not on the target type.
+	 *
+	 * Fields: the registry field's type and rules (a `rich_text` field is entered as plain text, type
+	 * `textarea`, and written as paragraph blocks). Taxonomies: type `select` with the existing terms as
+	 * options (public input never creates terms), `multiple` for multi-select taxonomies, `display`
+	 * defaulting to `select` (single) or `checkboxes` (multi).
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 * @param array<string, mixed> $item Bound item.
+	 * @return array<string, mixed>|null
+	 */
+	public static function resolve( array $form, array $item ): ?array {
+		$type = self::target_type( $form );
+		if ( null === $type || null === pegwork_registry()->content_type( $type ) ) {
+			return null;
+		}
+		$registry     = pegwork_registry();
+		$presentation = array_intersect_key( $item, array_flip( self::PRESENTATION ) );
+
+		if ( isset( $item['bind']['field'] ) ) {
+			$field = $registry->fields( $type )[ $item['bind']['field'] ] ?? null;
+			if ( null === $field ) {
+				return null;
+			}
+			$resolved = array_intersect_key( $field, array_flip( self::INHERITED ) ) + array( 'required' => false );
+			if ( 'rich_text' === $resolved['type'] ) {
+				$resolved['type'] = 'textarea';
+			}
+			return array_merge( $resolved, $presentation, array( 'bind' => array( 'field' => $field['key'] ) ) );
+		}
+
+		$taxonomy = (string) ( $item['bind']['taxonomy'] ?? '' );
+		$usage    = null;
+		foreach ( $registry->content_type( $type )['taxonomies'] as $candidate ) {
+			if ( $candidate['key'] === $taxonomy ) {
+				$usage = $candidate;
+			}
+		}
+		if ( null === $usage ) {
+			return null;
+		}
+		$multiple   = 'multi' === $usage['select'];
+		$definition = $registry->taxonomies()[ $taxonomy ] ?? array();
+		$labels     = $definition['labels'] ?? array();
+
+		return array_merge(
+			array(
+				'key'      => $taxonomy,
+				'type'     => 'select',
+				'label'    => (string) ( $multiple ? ( $labels['plural'] ?? $taxonomy ) : ( $labels['singular'] ?? $taxonomy ) ),
+				'required' => (bool) $usage['required'],
+				'options'  => self::term_options( $taxonomy, $definition['terms'] ?? array() ),
+				'multiple' => $multiple,
+				'display'  => $multiple ? 'checkboxes' : 'select',
+			),
+			$presentation,
+			array( 'bind' => array( 'taxonomy' => $taxonomy ) )
+		);
+	}
+
+	/**
+	 * The target content type key, or null for an entry-only form.
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 */
+	public static function target_type( array $form ): ?string {
+		$type = $form['target']['content_type'] ?? null;
+
+		return is_string( $type ) && '' !== $type ? $type : null;
+	}
+
+	/**
+	 * Whether a form updates an existing record (`target.action: update`).
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 */
+	public static function updates( array $form ): bool {
+		return null !== self::target_type( $form ) && 'update' === ( $form['target']['action'] ?? 'create' );
+	}
+
+	/**
+	 * Existing terms of a taxonomy as select options (value: slug, label: name): the registry's term
+	 * order first, then any other terms by name.
+	 *
+	 * @param string                           $taxonomy Taxonomy key.
+	 * @param array<int, array<string, mixed>> $defined  Registry terms (`slug`, `name`).
+	 * @return array<int, array{value: string, label: string}>
+	 */
+	private static function term_options( string $taxonomy, array $defined ): array {
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+		if ( ! is_array( $terms ) ) {
+			return array();
+		}
+
+		$by_slug = array();
+		foreach ( $terms as $term ) {
+			if ( $term instanceof \WP_Term ) {
+				$by_slug[ $term->slug ] = $term->name;
+			}
+		}
+
+		$options = array();
+		foreach ( $defined as $term ) {
+			$slug = (string) ( $term['slug'] ?? '' );
+			if ( isset( $by_slug[ $slug ] ) ) {
+				$options[] = array(
+					'value' => $slug,
+					'label' => $by_slug[ $slug ],
+				);
+				unset( $by_slug[ $slug ] );
+			}
+		}
+		foreach ( $by_slug as $slug => $name ) {
+			$options[] = array(
+				'value' => (string) $slug,
+				'label' => $name,
+			);
+		}
+
+		return $options;
 	}
 
 	/**
@@ -53,22 +241,24 @@ final class Definition {
 	/**
 	 * Why this release cannot run a form, or null when it can.
 	 *
-	 * Record mapping (`target`, bound items), email confirmation, Turnstile and file fields arrive in
-	 * later releases; until then such forms fail closed: they render nothing for visitors and their
-	 * submissions are ignored.
+	 * Turnstile and file fields arrive in a later release; until then such forms fail closed: they
+	 * render nothing for visitors and their submissions are ignored. A target type missing from the
+	 * registry (the registry validator prevents this) also fails closed.
 	 *
 	 * @param array<string, mixed> $form Canonical form.
 	 */
 	public static function unsupported( array $form ): ?string {
-		if ( isset( $form['target'] ) || isset( $form['confirm'] ) ) {
-			return __( 'it creates or updates records or needs email confirmation, which this version of Pegwork Forms does not handle yet', 'pegwork' );
-		}
 		if ( isset( $form['captcha'] ) ) {
 			return __( 'it uses Turnstile, which this version of Pegwork Forms does not support yet', 'pegwork' );
 		}
+		$type = self::target_type( $form );
+		if ( null !== $type && null === pegwork_registry()->content_type( $type ) ) {
+			/* translators: %s: content type key. */
+			return sprintf( __( 'its target content type "%s" is not defined', 'pegwork' ), $type );
+		}
 		foreach ( self::items( $form ) as $item ) {
-			if ( isset( $item['bind'] ) || 'file' === ( $item['type'] ?? '' ) ) {
-				return __( 'it has a bound or file field, which this version of Pegwork Forms does not support yet', 'pegwork' );
+			if ( 'file' === ( $item['type'] ?? '' ) ) {
+				return __( 'it has a file field, which this version of Pegwork Forms does not support yet', 'pegwork' );
 			}
 		}
 		return null;
@@ -88,6 +278,12 @@ final class Definition {
 		$value  = $values[ $condition['field'] ] ?? null;
 		$equals = $condition['equals'] ?? null;
 
+		if ( is_array( $value ) ) {
+			if ( is_bool( $equals ) ) {
+				return ( array() !== $value ) === $equals;
+			}
+			return in_array( (string) $equals, array_map( 'strval', $value ), true );
+		}
 		if ( is_bool( $equals ) ) {
 			return $equals === (bool) $value;
 		}

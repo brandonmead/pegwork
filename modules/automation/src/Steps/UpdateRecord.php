@@ -32,6 +32,10 @@ final class UpdateRecord implements Step {
 		if ( $id <= 0 ) {
 			return StepResult::fail( 'pegwork_record_not_found', 'No record to update.' );
 		}
+		if ( 'link' === ( $run['trigger_type'] ?? '' ) && (int) ( $bound['id'] ?? 0 ) !== $id ) {
+			// A link click acts on the one record its token names, whatever the step's `record` template says.
+			return StepResult::fail( 'link_scope', sprintf( 'A link run may only update its own record (%1$d), not %2$d.', (int) ( $bound['id'] ?? 0 ), $id ), array( 'record_id' => $id ), false );
+		}
 
 		$record = null !== $bound && $id === (int) $bound['id'] ? $bound : Records::get( $id );
 		if ( null === $record ) {

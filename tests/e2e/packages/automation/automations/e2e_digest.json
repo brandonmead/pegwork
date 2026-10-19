@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "e2e_digest",
+  "label": "E2E daily digest",
+  "description": "Browser tests of Pegwork > Automations: Run now, a failed run, Retry.",
+  "trigger": { "type": "schedule", "every": "day", "at": "03:00" },
+  "steps": [
+    { "id": "digest", "type": "send_email", "to": "e2e-digest@example.org",
+      "subject": "Digest for {{site.name}}", "text": "Run {{run.id}} at {{now}}.",
+      "retry": { "max": 0 } }
+  ]
+}

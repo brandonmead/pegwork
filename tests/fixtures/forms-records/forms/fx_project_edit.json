@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "fx_project_edit",
+  "label": "Edit a project",
+  "target": { "content_type": "sifg_project", "action": "update" },
+  "access": { "capability": "edit_posts" },
+  "fields": [
+    { "bind": { "field": "who_for" } },
+    { "bind": { "field": "website" } },
+    { "bind": { "taxonomy": "sifg_impact" } }
+  ]
+}

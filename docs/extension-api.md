@@ -67,6 +67,7 @@ Registry section accessors (API 0.2.0) return definitions only, in canonical for
 | `forms(): array`, `form( string $key ): ?array` | Forms by key, in load order; one form or null. |
 | `form_source( string $key ): ?string` | `file:<package id>` for a file package, `db` for the `pegwork_schema` option, null when undefined. File forms are read-only in a builder. |
 | `automations(): array`, `automation( string $key ): ?array` | Automations by key, in load order; one automation or null. |
+| `automation_source( string $key ): ?string` | Like `form_source()`: `file:<package id>`, `db`, or null when undefined (shown on Pegwork > Automations). |
 | `options_pages(): array`, `options_page( string $key ): ?array` | Options pages by key, in load order; one page or null. The key is also the option name. |
 
 `Registry::meta_key( $type, $field ): ?string` is the post meta key of a meta-stored field (`wp.meta_key`, else `_{type}_{field}`); null for unknown fields and `wp.storage` fields.
@@ -144,9 +145,9 @@ The manifest maps `slug => [ label, description, requires[], path ]`, where `pat
 
 ## Automation hooks
 
-The `automation` module (`docs/automation.md`) runs registry automations. Sites and add-ons can tune it with filters; its PHP classes are internal.
+The `automation` module (`docs/automation.md`) runs registry automations and adds Pegwork > Automations (list, Enable/Disable, Run now, run log, Retry; `manage_options`). Sites and add-ons can tune it with filters; its PHP classes are internal.
 
-The `forms` module (`docs/forms.md`) renders registry forms and handles their submissions. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content), so it ships no `uninstall.php`.
+The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, and the daily WP-Cron event `pegwork_forms_cleanup`. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
 
 | Hook | Kind | Default | Use |
 |---|---|---|---|
@@ -184,8 +185,8 @@ add_action(
 |---|---|---|---|
 | 0 | Overview | `pegwork` | core |
 | 10 to 19 | each options page | `pegwork-options-{key}` | core |
-| 20, 21 | Forms, Entries | module-defined | `forms` |
-| 30 | Automations | module-defined | `automation` |
+| 20, 21 | Forms, Entries | module-defined (Entries: `pegwork-entries`, capability `pegwork_forms_capability`) | `forms` |
+| 30 | Automations | `pegwork-automations` | `automation` |
 | 90 | Modules | `pegwork-modules` | core |
 
 WordPress treats `position` as an index into the submenu built so far, not a sort key. Pegwork therefore adds Overview first (`admin_menu` priority 9, position 0) and Modules last (priority 999); screens added at the default priority sit between them in the order they register. Pass the position from the table anyway.

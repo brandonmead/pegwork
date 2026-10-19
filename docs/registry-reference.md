@@ -338,7 +338,7 @@ Durations are ISO 8601 (`P7D`, `PT6H`, `P1Y2M`; `invalid_duration`), from one ho
 | `success_url`, `expired_url` | no | | URL or site path |
 | `success_message` | no | | text shown after the click |
 
-`button`, `success_url`, `success_message` and `expired_url` are templates in a public context: the page is shown to whoever holds the link.
+`button`, `success_url`, `success_message` and `expired_url` are templates in a public context: the page is shown to whoever holds the link. A URL is a site path (`/thanks/`, under the home URL) or an absolute URL that `wp_validate_redirect()` allows; anything else shows the built-in page. Each emailed link acts once; the runtime is in `docs/automation.md#signed-links`.
 
 ### Conditions
 

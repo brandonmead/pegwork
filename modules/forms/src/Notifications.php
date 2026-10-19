@@ -10,8 +10,9 @@ declare( strict_types=1 );
 namespace PegworkForms;
 
 /**
- * Sends a form's notifications for one moment (`submitted` here; `confirmed` arrives with confirmation)
- * through wp_mail, as plain text, synchronously.
+ * Sends a form's notifications for one moment (`submitted`, or `confirmed` after email confirmation),
+ * the confirmation email itself, and the admin notice for a submission whose record failed, through
+ * wp_mail, as plain text, synchronously.
  *
  * Merge tags: `{field:key}`, `{all_fields}`, `{form:label}`, `{entry:id}`, `{entry:admin_url}`,
  * `{post:edit_url}`, `{confirm_url}`, `{admin_email}`, `{site:name}`, `{option:page.field}`. Unknown
@@ -62,6 +63,72 @@ final class Notifications {
 		}
 
 		return $results;
+	}
+
+	/**
+	 * Sends the confirmation email (`confirm.subject` and `confirm.body`, merge tags as for notifications)
+	 * to the submitted address. It is the only mail an unconfirmed address receives.
+	 *
+	 * @param array<string, mixed> $form    Canonical form with `confirm`.
+	 * @param array<string, mixed> $context `entry_id`, `values`, `confirm_url`.
+	 * @return string `sent`, `failed`, or `skipped` (no valid address).
+	 */
+	public static function confirm( array $form, array $context ): string {
+		$to = self::recipient( '{field:' . (string) $form['confirm']['field'] . '}', $context['values'] ?? array() );
+		if ( '' === $to ) {
+			return 'skipped';
+		}
+
+		$subject = self::single_line( self::render( (string) $form['confirm']['subject'], $form, $context ) );
+		$body    = self::render( (string) $form['confirm']['body'], $form, $context );
+		if ( ! str_contains( $body, (string) ( $context['confirm_url'] ?? '' ) ) ) {
+			$body .= "\n\n" . $context['confirm_url'];
+		}
+
+		return wp_mail( $to, $subject, $body ) ? 'sent' : 'failed';
+	}
+
+	/**
+	 * Tells the site admin that a submission was kept but its record could not be written as defined
+	 * (re-validation failed at confirmation, or the write failed), so nothing is lost silently.
+	 *
+	 * @param array<string, mixed>  $form      Canonical form.
+	 * @param int                   $entry_id  Entry ID.
+	 * @param int|null              $record_id Draft created instead, if any.
+	 * @param array<string, string> $errors    Messages by key.
+	 * @return string `sent` or `failed`.
+	 */
+	public static function failure( array $form, int $entry_id, ?int $record_id, array $errors ): string {
+		$context = array(
+			'entry_id' => $entry_id,
+			'post_id'  => $record_id,
+		);
+		$lines   = array(
+			/* translators: %s: form label. */
+			sprintf( __( 'A submission to "%s" was stored, but its record could not be saved as the form defines.', 'pegwork' ), (string) $form['label'] ),
+			'',
+			__( 'Problems:', 'pegwork' ),
+		);
+		foreach ( $errors as $message ) {
+			$lines[] = '- ' . self::single_line( (string) $message );
+		}
+		$lines[] = '';
+		/* translators: %s: URL of the entry in the admin. */
+		$lines[] = sprintf( __( 'Entry: %s', 'pegwork' ), self::render( '{entry:admin_url}', $form, $context ) );
+		if ( null !== $record_id ) {
+			/* translators: %s: URL to edit the draft record. */
+			$lines[] = sprintf( __( 'A draft was created instead: %s', 'pegwork' ), self::render( '{post:edit_url}', $form, $context ) );
+		}
+
+		$subject = sprintf(
+			/* translators: 1: site name, 2: form label. */
+			__( '[%1$s] Form submission needs attention: %2$s', 'pegwork' ),
+			wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES ),
+			(string) $form['label']
+		);
+		$to = (string) get_option( 'admin_email' );
+
+		return is_email( $to ) && wp_mail( $to, self::single_line( $subject ), implode( "\n", $lines ) ) ? 'sent' : 'failed';
 	}
 
 	/**
@@ -159,6 +226,10 @@ final class Notifications {
 		$type = $item['type'] ?? 'text';
 		if ( 'boolean' === $type ) {
 			return $value ? __( 'Yes', 'pegwork' ) : __( 'No', 'pegwork' );
+		}
+		if ( is_array( $value ) ) {
+			$labels = array_map( fn( $choice ) => self::display( array( 'multiple' => false ) + $item, $choice ), array_filter( $value, 'is_scalar' ) );
+			return implode( ', ', array_filter( $labels, fn( string $label ) => '' !== $label ) );
 		}
 		if ( null === $value || '' === $value || ! is_scalar( $value ) ) {
 			return '';
