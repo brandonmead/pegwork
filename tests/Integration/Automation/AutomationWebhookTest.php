@@ -342,10 +342,10 @@ class AutomationWebhookTest extends AutomationTestCase {
 	 * through Records (sanitized); a repeated delivery ID creates no second run.
 	 */
 	public function test_inbound_202_creates_a_run_and_a_duplicate_delivery_does_not() {
-		$body = wp_json_encode(
+		$body     = wp_json_encode(
 			array(
-				'title'   => 'From n8n',
-				'website' => 'javascript:alert(1)',
+				'title'   => '<b>From</b> n8n',
+				'website' => 'https://n8n.example.org/p',
 				'note'    => 'private-from-n8n',
 			)
 		);
@@ -375,15 +375,15 @@ class AutomationWebhookTest extends AutomationTestCase {
 
 		$this->drain();
 		$run = $this->run_row( $run['id'] );
-		$this->assertSame( 'completed', $run['status'] );
+		$this->assertSame( 'completed', $run['status'], (string) $run['error'] );
 		$record = Records::get( (int) $run['context']['steps']['create']['record_id'] );
 		$this->assertSame( 'draft', $record['status'] );
-		$this->assertSame( 'From n8n', $record['values']['title'] );
-		$this->assertSame( '', (string) $record['values']['website'], 'Values are sanitized by the Records API.' );
+		$this->assertSame( 'From n8n', $record['values']['title'], 'Values are sanitized by the Records API.' );
+		$this->assertSame( 'https://n8n.example.org/p', $record['values']['website'] );
 		$this->assertSame( 'private-from-n8n', $record['values']['note'] );
 
 		foreach ( array( $response, $again ) as $answer ) {
-			$this->assertStringNotContainsString( 'From n8n', wp_json_encode( $answer->get_data() ), 'The payload is never echoed.' );
+			$this->assertStringNotContainsString( 'n8n.example.org', wp_json_encode( $answer->get_data() ), 'The payload is never echoed.' );
 		}
 
 		// Without a delivery ID each request is a new run.
@@ -393,13 +393,37 @@ class AutomationWebhookTest extends AutomationTestCase {
 	}
 
 	/**
+	 * A payload value the field rejects fails the run through Records validation; nothing is created.
+	 */
+	public function test_inbound_values_are_validated_by_records() {
+		$before = wp_count_posts( 'job' )->draft;
+		$this->inbound(
+			'job_inbound',
+			wp_json_encode(
+				array(
+					'title'   => 'Bad URL',
+					'website' => 'javascript:alert(1)',
+				)
+			)
+		);
+		$this->drain();
+
+		$run = $this->only_run( 'job_inbound' );
+		$this->assertSame( 'failed', $run['status'] );
+		$this->assertStringStartsWith( 'pegwork_invalid_record:', $run['error'] );
+		$this->assertStringNotContainsString( 'javascript:', $run['error'] );
+		wp_cache_flush();
+		$this->assertSame( $before, wp_count_posts( 'job' )->draft );
+	}
+
+	/**
 	 * Acceptance: bad, missing and replayed signatures, and unknown, disabled or non-webhook automations,
 	 * all get the same 401 and create nothing.
 	 */
 	public function test_inbound_401_cases_are_indistinguishable() {
-		$body  = wp_json_encode( array( 'title' => 'Nope' ) );
-		$now   = $this->clock->now()->getTimestamp();
-		$cases = array(
+		$body    = wp_json_encode( array( 'title' => 'Nope' ) );
+		$now     = $this->clock->now()->getTimestamp();
+		$cases   = array(
 			'bad signature'      => array( 'job_inbound', array( 'secret' => 'wrong' ) ),
 			'unsigned'           => array( 'job_inbound', array( 'sign' => false ) ),
 			'replayed (301 s)'   => array( 'job_inbound', array( 'timestamp' => $now - 301 ) ),
@@ -434,7 +458,7 @@ class AutomationWebhookTest extends AutomationTestCase {
 	 * payload too big to store gets 413 too. Non-JSON bodies get 415.
 	 */
 	public function test_inbound_413_and_415() {
-		$big = wp_json_encode( array( 'title' => str_repeat( 'a', Inbound::MAX_BYTES ) ) );
+		$big      = wp_json_encode( array( 'title' => str_repeat( 'a', Inbound::MAX_BYTES ) ) );
 		$response = $this->inbound( 'job_inbound', $big );
 		$this->assertSame( 413, $response->get_status() );
 		$this->assertSame( 'pegwork_webhook_too_large', $response->get_data()['code'] );
@@ -502,9 +526,9 @@ class AutomationWebhookTest extends AutomationTestCase {
 	 * not render to http(s) fails without retry.
 	 */
 	public function test_record_less_body_and_bad_url() {
-		$engine = Engine::instance();
-		$step   = new \PegworkAutomation\Steps\CallWebhook();
-		$run    = array(
+		$engine  = Engine::instance();
+		$step    = new \PegworkAutomation\Steps\CallWebhook();
+		$run     = array(
 			'id'           => 7,
 			'automation'   => 'job_hook',
 			'trigger_type' => 'webhook',

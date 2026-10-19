@@ -82,10 +82,10 @@ final class CallWebhook implements Step {
 				'redirection' => 0,
 				'user-agent'  => 'Pegwork/' . ( defined( 'PEGWORK_VERSION' ) ? PEGWORK_VERSION : '0' ) . '; ' . home_url( '/' ),
 				'headers'     => array(
-					'Content-Type'        => 'application/json; charset=utf-8',
-					Signature::DELIVERY   => $delivery,
-					Signature::TIMESTAMP  => (string) $timestamp,
-					Signature::SIGNATURE  => Signature::sign( $secret, $timestamp, $body ),
+					'Content-Type'       => 'application/json; charset=utf-8',
+					Signature::DELIVERY  => $delivery,
+					Signature::TIMESTAMP => (string) $timestamp,
+					Signature::SIGNATURE => Signature::sign( $secret, $timestamp, $body ),
 				),
 				'body'        => $body,
 			)
