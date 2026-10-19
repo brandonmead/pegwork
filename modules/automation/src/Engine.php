@@ -13,6 +13,7 @@ use PegworkAutomation\Clock\Clock;
 use PegworkAutomation\Clock\SystemClock;
 use PegworkAutomation\Scheduler\Scheduler;
 use PegworkAutomation\Scheduler\WpCronScheduler;
+use PegworkAutomation\Steps\CallWebhook;
 use PegworkAutomation\Steps\Condition;
 use PegworkAutomation\Steps\CreateRecord;
 use PegworkAutomation\Steps\SendEmail;
@@ -97,6 +98,7 @@ final class Engine {
 			'create_record' => new CreateRecord(),
 			'condition'     => new Condition(),
 			'send_email'    => new SendEmail(),
+			'call_webhook'  => new CallWebhook(),
 			'wait'          => new Wait(),
 		);
 	}

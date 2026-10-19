@@ -17,6 +17,7 @@ use PegworkAutomation\Links\Links;
 use PegworkAutomation\Manual;
 use PegworkAutomation\Overrides;
 use PegworkAutomation\Runs;
+use PegworkAutomation\Webhooks\Secrets;
 use WP_CLI;
 
 /**
@@ -242,6 +243,56 @@ final class AutomationCommand {
 		}
 		$done = $manual->finish();
 		$this->report( array( (int) $args[0] ), $done );
+	}
+
+	/**
+	 * Prints an automation's webhook signing secret (generated on first use), or rotates it.
+	 *
+	 * One secret per automation signs its call_webhook deliveries and verifies its inbound webhook requests
+	 * (docs/automation.md, "Verifying Pegwork webhooks"). It is stored in option pegwork_automation_secrets
+	 * (autoload off), never in the JSON, schema exports or the run log, and this command is the only place
+	 * that prints it. Rotating makes signatures made with the old secret fail: update the receiver (outbound)
+	 * or the sender (inbound) with the new one.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <key>
+	 * : Automation key (one with a webhook trigger or a call_webhook step).
+	 *
+	 * [--rotate]
+	 * : Replace the secret with a new random one and print the new one.
+	 *
+	 * [--yes]
+	 * : Rotate without asking.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork automation secret sifg_project_published
+	 *     wp pegwork automation secret sifg_project_published --rotate --yes
+	 *
+	 * @param string[]             $args       Positional arguments.
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function secret( array $args, array $assoc_args ): void {
+		$key        = (string) $args[0];
+		$definition = pegwork_registry()->automation( $key );
+		if ( null === $definition ) {
+			WP_CLI::error( sprintf( 'Unknown automation: %s.', $key ) );
+		}
+		if ( ! Secrets::used_by( $definition ) ) {
+			WP_CLI::error( sprintf( 'Automation %s has no webhook trigger or call_webhook step, so it has no secret.', $key ) );
+		}
+
+		if ( isset( $assoc_args['rotate'] ) ) {
+			WP_CLI::confirm( sprintf( 'Rotate the webhook secret of %s? Signatures made with the old one stop verifying.', $key ), $assoc_args );
+			$secret = Secrets::rotate( $key );
+		} else {
+			$secret = Secrets::get( $key );
+		}
+		if ( null === $secret ) {
+			WP_CLI::error( 'Could not store the webhook secret.' );
+		}
+		WP_CLI::line( $secret );
 	}
 
 	/**
@@ -474,6 +525,8 @@ final class AutomationCommand {
 				return $trigger['event'] . ( '' !== $filter ? ' (' . $filter . ')' : '' );
 			case 'schedule':
 				return 'every ' . $trigger['every'] . ( isset( $trigger['at'] ) ? ' at ' . $trigger['at'] : '' ) . ( isset( $trigger['for_each'] ) ? ' for each ' . $trigger['for_each']['content_type'] : '' );
+			case 'webhook':
+				return 'webhook';
 		}
 		return $trigger['type'] . ' (not supported yet)';
 	}

@@ -121,6 +121,9 @@ final class Format {
 					$when = sprintf( __( '%1$s, for each %2$s', 'pegwork' ), $when, $trigger['for_each']['content_type'] );
 				}
 				return $when;
+
+			case 'webhook':
+				return __( 'Inbound webhook', 'pegwork' );
 		}
 		/* translators: %s: trigger type. */
 		return sprintf( __( '%s (not supported yet)', 'pegwork' ), $trigger['type'] );

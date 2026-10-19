@@ -157,6 +157,9 @@ The `forms` module (`docs/forms.md`) renders registry forms, handles their submi
 | `pegwork_automation_spawn_cron` | filter | true | Spawn WP-Cron at shutdown after queueing a run; return false with a system cron |
 | `pegwork_automation_run` | action (WP-Cron) | | Fired with a run ID to execute it |
 | `pegwork_automation_maintenance` | action (WP-Cron) | | Daily maintenance job |
+| `pegwork_automation_webhook_rate` | filter | 30 | Inbound webhook requests accepted per automation per minute (second argument: the key, '' for the shared bucket of other keys) |
+
+REST: `POST /wp-json/pegwork/v1/automations/<key>/webhook` (inbound webhook trigger; signed with the automation's secret, see `docs/automation.md#webhooks`). Outbound `call_webhook` deliveries use `wp_safe_remote_post()`, so the core `http_request_host_is_external` and `http_allowed_safe_ports` filters apply to them.
 
 Records written by automation runs carry `origin.automation`, `origin.run_id` and `origin.depth` (run depth plus 1) in their record events.
 
