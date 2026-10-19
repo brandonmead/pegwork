@@ -10,6 +10,7 @@ tests/e2e/mu-plugins/pegwork-e2e-sifg.php   registers examples/sifg as a file pa
 tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, admin-only helper routes (docs/forms.md)
 tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, reset (docs/automation.md)
 tests/e2e/mu-plugins/pegwork-e2e-links.php  signed link helpers: Project create and read, link mint, link rate limit raised (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-webhooks.php  webhook test package, in-process receiver for receiver.e2e.test, fixed test secret on reset, receiver down switch (docs/automation.md)
 tests/e2e/packages/                   file packages that only the browser tests register
 tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures
 tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest would run)
