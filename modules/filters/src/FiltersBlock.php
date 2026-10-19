@@ -135,7 +135,11 @@ final class FiltersBlock {
 	 */
 	public static function render_block( $attributes ): string {
 		$attributes = is_array( $attributes ) ? $attributes : array();
-		$state      = self::state( $attributes, get_block_wrapper_attributes() );
+		// Called from PHP outside a render of this block (a template or shortcode), there are no block
+		// supports to read, and WordPress 6.7 warns when asked.
+		$rendering = \WP_Block_Supports::$block_to_render;
+		$in_block  = is_array( $rendering ) && self::NAME === ( $rendering['blockName'] ?? null );
+		$state     = self::state( $attributes, $in_block ? get_block_wrapper_attributes() : '' );
 		if ( null === $state ) {
 			return '';
 		}
