@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "job_inbound_off",
+  "label": "Inbound webhook, disabled",
+  "enabled": false,
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "create", "type": "create_record", "content_type": "job", "values": { "title": "{{trigger.payload.title}}" } }
+  ]
+}

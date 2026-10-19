@@ -40,6 +40,7 @@ final class Module implements ModuleContract {
 		Schema::maybe_install();
 		Engine::register();
 		Admin\Screen::register();
+		Webhooks\Inbound::register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( '\WP_CLI' ) ) {
 			\WP_CLI::add_command( 'pegwork automation', Cli\AutomationCommand::class );

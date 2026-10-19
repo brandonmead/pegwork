@@ -1,7 +1,7 @@
 {
   "format": 1,
   "key": "job_private",
-  "label": "Made private: a step type this release does not run",
+  "label": "Made private: close it, then a step whose handler a test removes",
   "trigger": { "type": "event", "event": "record.status_changed", "content_type": "job",
     "when": { "var": "trigger.new_status", "op": "eq", "value": "private" } },
   "steps": [
