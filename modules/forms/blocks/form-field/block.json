@@ -1,0 +1,40 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/form-field",
+	"title": "Form field",
+	"category": "pegwork",
+	"icon": "edit",
+	"description": "One field of a Pegwork form. Its attributes are the form item.",
+	"keywords": [ "field", "input", "form" ],
+	"textdomain": "pegwork",
+	"attributes": {
+		"bind": { "type": "object" },
+		"key": { "type": "string" },
+		"type": {
+			"type": "string",
+			"enum": [ "text", "textarea", "rich_text", "url", "email", "boolean", "date", "number", "select", "file" ]
+		},
+		"label": { "type": "string" },
+		"required": { "type": "boolean" },
+		"default": { "type": [ "string", "number", "boolean" ] },
+		"options": { "type": "array" },
+		"required_when": { "type": "object" },
+		"show_when": { "type": "object" },
+		"validate": { "type": "object" },
+		"help": { "type": "string" },
+		"placeholder": { "type": "string" },
+		"autocomplete": { "type": "string" },
+		"display": { "type": "string", "enum": [ "radio", "checkboxes", "select" ] },
+		"accept": { "type": "array" },
+		"max_size_mb": { "type": "number" }
+	},
+	"supports": {
+		"html": false,
+		"className": false,
+		"customClassName": false,
+		"reusable": false,
+		"renaming": false,
+		"lock": false
+	}
+}

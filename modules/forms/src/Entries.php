@@ -165,6 +165,25 @@ final class Entries {
 	}
 
 	/**
+	 * Entry counts by form key and status, in one query (the Forms list).
+	 *
+	 * @return array<string, array<string, int>> Form key => status => count (statuses without entries absent).
+	 */
+	public static function counts_by_form(): array {
+		global $wpdb;
+
+		$table = Schema::table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix; no input.
+		$rows = $wpdb->get_results( "SELECT form_key, status, COUNT(*) AS n FROM {$table} GROUP BY form_key, status", ARRAY_A );
+
+		$counts = array();
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$counts[ (string) $row['form_key'] ][ (string) $row['status'] ] = (int) $row['n'];
+		}
+		return $counts;
+	}
+
+	/**
 	 * Distinct form keys that have entries (includes forms since deleted from the registry).
 	 *
 	 * @return string[]

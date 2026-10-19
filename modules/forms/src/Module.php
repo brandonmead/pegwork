@@ -46,6 +46,11 @@ final class Module implements ModuleContract {
 		Block::register();
 		Editor::register();
 		Submission::register();
+		// Builder: form posts, field and step blocks, Forms list (Phase 3 PR 6). Forms registers its
+		// submenu before Entries, so it sits above it.
+		FormPost::register();
+		BuilderEditor::register();
+		FormsAdmin::register();
 		// Entries admin, CSV export, privacy tools and retention (Phase 3 PR 7).
 		EntriesAdmin::register();
 		EntryActions::register();

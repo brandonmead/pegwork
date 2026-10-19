@@ -9,8 +9,8 @@
 		"node": ">=22.22.2"
 	},
 	"scripts": {
-		"build": "wp-scripts build editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js --output-path=assets/build",
-		"start": "wp-scripts start editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js --output-path=assets/build",
+		"build": "wp-scripts build editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js forms-builder=./assets/src/forms-builder/index.js --output-path=assets/build",
+		"start": "wp-scripts start editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js forms-builder=./assets/src/forms-builder/index.js --output-path=assets/build",
 		"lint:js": "wp-scripts lint-js",
 		"test:unit": "wp-scripts test-unit-js",
 		"test:e2e": "playwright test",
