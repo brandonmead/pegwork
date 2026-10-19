@@ -93,11 +93,48 @@
 	padding-top: 0;
 }
 
-.wp-block-pegwork-filters summary {
+/* Disclosure: the native marker is dropped (themes often reset list-style) for a currentColor chevron
+   that turns when open, so it follows any theme's text color and forced-colors mode. */
+.wp-block-pegwork-filters summary.pegwork-filters__label {
 	cursor: pointer;
 	min-height: 2.75rem;
-	display: list-item;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
 	padding: 0.5rem 0;
+	list-style: none;
+}
+
+.wp-block-pegwork-filters summary::-webkit-details-marker {
+	display: none;
+}
+
+.wp-block-pegwork-filters summary::after {
+	content: "";
+	flex: none;
+	width: 0.5rem;
+	height: 0.5rem;
+	margin-inline-end: 0.25rem;
+	border-style: solid;
+	border-width: 0 2px 2px 0;
+	border-color: currentColor;
+	transform: translateY(-0.125rem) rotate(45deg);
+}
+
+.wp-block-pegwork-filters details[open] > summary::after {
+	transform: translateY(0.125rem) rotate(-135deg);
+}
+
+.wp-block-pegwork-filters summary:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.wp-block-pegwork-filters summary::after {
+		transition: transform 0.15s ease;
+	}
 }
 
 .wp-block-pegwork-filters .pegwork-filters__actions {

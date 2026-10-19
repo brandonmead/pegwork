@@ -24,7 +24,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 - Listings A: `pegwork/field` source, `pegwork/conditional`, block category, `Registry::meta_key()`, `pegwork_get_field()`, `listings`/`filters` module skeletons (in review, branch `listings-a`).
 - Listings B: `pegwork` Query Loop attribute, variations, `where` presets, constraint pipeline, archive main query, generated patterns, seed fixture, query budget test (in review, branch `listings-b`).
 - Filters server and client (PRs 4 and 5 together): `pegwork/filters` block, URL state, constraints, directory pattern with Clear all, Interactivity store and router (in review, branch `filters`).
-- Gate and docs (PR 6): `bin/perf-directory.sh` on LocalWP nginx, CI timing guard: not started. The size check landed with the filters PR.
+- Gate and docs (PR 6): `bin/perf-directory.sh`, CI timing guard, axe specs, docs, budget numbers (in review, branch `display-gate`). The size check landed with the filters PR. Next: PR 7 in the siforgood repo (owner sign-off).
 
 ## Shared registry sections PR (in review, branch `registry-sections`)
 - Registry side of `listing` (Phase 2), forms (Phase 3), automations (Phase 4) and options pages (content builder PR 4): schema, validation, normalization, export/import, API accessors. Runtime for each stays in its own PR.
