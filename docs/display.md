@@ -8,7 +8,7 @@ wp pegwork module enable listings
 
 Options page values (`pegwork/option`, [below](#option-output-the-pegworkoption-binding-source)) are core and need no module.
 
-Design: `docs/phase-2-design.md` sections 4 to 6 and 8. The `listing` registry section is in `docs/registry-reference.md`. The filters block arrives in a later Phase 2 PR; directories already feed its pipeline (see "Constraint pipeline").
+Design: `docs/phase-2-design.md` sections 4 to 9. The `listing` registry section is in `docs/registry-reference.md`. The filters block (`pegwork/filters`, [below](#filters-the-pegworkfilters-block)) is the `filters` module (`wp pegwork module enable filters`, requires `listings`).
 
 ## Field output: the `pegwork/field` binding source
 
@@ -156,9 +156,9 @@ Registered per content type with a `listing`, in pattern category Pegwork:
 
 | Pattern | Content |
 |---|---|
-| `pegwork/<type>-card` | Linked title (h3), 20-word excerpt, terms of each taxonomy with its label, public boolean fields as a badge, select and date fields as "Label: value". |
+| `pegwork/<type>-card` | Linked title (h3), 20-word excerpt, then meta lines at font size `small`: terms of each taxonomy with its label, public boolean fields as a badge, select fields as "Label: value", date fields as month and year (`format: "M Y"`) with a prefix from the label: "Last X" becomes "X " ("Last verified" reads "Verified Oct 2026"), any other label "Label: ". |
 | `pegwork/<type>-details` | Every public field with its label, url fields as buttons, `show_when` fields inside a "Show if" block, then the taxonomies. Offered for `single-<type>` templates. |
-| `pegwork/<type>-directory` | The variation above as markup, with the card inline. |
+| `pegwork/<type>-directory` | The variation above as markup, with the card inline; the no-results message adds a "Clear all filters" link. With the filters module on, a wide `pegwork/filters` block comes first. |
 | `pegwork/<type>-featured` | One record: `where.post_in_option` on the first public options page `post` field for the type (else `pegwork: {}`, the newest published record). No pagination. |
 | `pegwork/<type>-latest` | A plain core Query Loop (no `pegwork` attribute), 3 newest, card grid. |
 
@@ -186,3 +186,59 @@ Anything else is dropped. URL params never reach a query except through this fil
 ### Query budget (500 records)
 
 Fixture: `tests/perf/seed.php` (`wp eval-file tests/perf/seed.php [count] [seed]`, also used by PHPUnit). `tests/Integration/Listings/DirectoryPerformanceTest.php` renders the directory and the archive with cold caches and fails above 35 queries or when 12 and 48 per page differ. Set `PEGWORK_PERF_REPORT=1` to print the counts. Measured numbers: `architecture.md`.
+
+## Filters: the `pegwork/filters` block
+
+Module `filters` (requires `listings`). One block per directory; it narrows every Query Loop of its type with `pegwork.filters` on, and the type's archive main query.
+
+```html
+<!-- wp:pegwork/filters {"postType":"sifg_project","align":"wide"} /-->
+```
+
+| Attribute | Default | Meaning |
+|---|---|---|
+| `postType` | `""` | Content type key. Empty: the archive's type, else the only type with a `listing`. No `listing`: renders nothing. |
+| `filters` | all | Filter keys from the `listing`, in this order. Unknown keys are ignored. |
+| `showSearch` | `true` | The search box, when the `listing` has `search: true`. |
+
+Styles: Horizontal (default, wraps) and Vertical. Supports wide and full alignment, margin and padding. In the editor, the inspector picks the type, the search box and the filters, and the canvas shows a server render.
+
+### Controls
+
+From the type's `listing` (`docs/registry-reference.md`), labels from the registry and taxonomies at runtime:
+
+| Filter | Control | URL |
+|---|---|---|
+| taxonomy, `multiple: true` | a disclosure ("Impact category, 2 selected") holding a fieldset of checkboxes, terms in registry order then by name, at most 200 | `impact=sdg-04,sdg-13` (also `impact[]=`) |
+| taxonomy, `multiple: false` | a fieldset of radios, "Any" first | `project_type=nonprofit` |
+| `select` field | a labelled `<select>`, "Any" first | `size=small` |
+| `boolean` field | one checkbox | `volunteers=1` |
+| search | "Search projects", at most 100 characters | `q=data` |
+
+Then "Apply filters" (submit), "Clear all" (hidden until something is active; links to the base URL) and the result count ("36 results", "No results") in a `role="status"` region. Fieldsets have legends; targets are at least 24px.
+
+### URL state
+
+The URL is the only state. Values are kept only when declared: unknown keys, private fields, unknown term slugs, select values outside the options, booleans other than `1`, nested arrays and non-strings are dropped; at most 20 values per filter, one for single-value filters. Values in one filter combine as OR, filters as AND. `where` presets win over the URL for the same field.
+
+The form is a GET form to the base URL: the type's archive on the archive, else the page's permalink (a base URL's own query args, such as `page_id` with plain permalinks, become hidden fields), without `q`, paging or filter params. A filter change therefore starts again at page 1; core's pagination links keep the query string, so paging keeps the filters. The no-results message's `a.pegwork-filters-clear` link gets the same base URL.
+
+### Result count
+
+The block renders before the grid, so it counts with the bound loop's own query: the first filterable `core/query` of the type in the page content or the block template (through `core/pattern` references), built with core's `build_query_vars_from_query_block()`. The loop then reuses the result from the `WP_Query` cache, so the count costs no query. On the archive it is the main query's `found_posts`. With no bound loop it runs a one-row ID query.
+
+### With JavaScript
+
+Script module `@pegwork/filters` (Interactivity API store `pegwork/filters`, about 1.9 KB gzipped; the CI JS job fails above 10 KB via `npm run check:size`). Without it the block is the GET form above.
+
+- A checkbox, radio or select change, or typing in search (300 ms pause), builds the URL and calls the router's `navigate()`, which fetches the server-rendered page and swaps only the Query Loop region (`data-wp-router-region`, set by core when the loop has enhanced pagination). No document load; focus stays on the control.
+- While loading, the regions get `aria-busy="true"` and the class `is-loading` (dimmed after 150 ms; no transition with reduced motion).
+- After the swap, the count region is emptied and refilled from the new page's state (`getServerState`), so screen readers announce it even when unchanged. The router's own announcement is off.
+- Back and forward: the controls are set from the URL; the router restores the results from its cache, and the count is announced.
+- Clear all resets the controls, focuses the search box (or the first control) and navigates to the base URL.
+- Enhanced pagination stays client-side and keeps the filters.
+- No router region (an inherit loop without enhanced pagination, or no loop on the page) or a router error: a normal page load to the same URL.
+
+### Outside blocks
+
+`PegworkFilters\FiltersBlock::render_block( array $attributes ): string` renders the same markup from PHP (a theme template, a shortcode callback), with the server values in place and the state registered. It works as the GET form; for the client behaviour, also enqueue the `@pegwork/filters` script module and run the output through `wp_interactivity_process_directives()`.
