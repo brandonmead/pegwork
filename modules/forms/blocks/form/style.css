@@ -15,6 +15,46 @@
 	padding: 0;
 }
 
+.pegwork-form__step-heading {
+	font-size: inherit;
+	font-weight: inherit;
+	margin: 0 0 0.5em;
+}
+
+/* Set by the view script (steps, conditions). Themes may give fields a display value; hidden wins. */
+.pegwork-form [hidden] {
+	display: none !important;
+}
+
+.pegwork-form__progress {
+	font-weight: 600;
+	margin: 0 0 0.75em;
+}
+
+.pegwork-form__count {
+	margin: 0.25em 0 0;
+}
+
+.pegwork-form__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75em;
+}
+
+.pegwork-form__back {
+	background: transparent;
+	border: 2px solid currentcolor;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	padding: 0.5em 1.25em;
+}
+
+.pegwork-form__submit[aria-disabled="true"] {
+	cursor: progress;
+	opacity: 0.75;
+}
+
 .pegwork-form__label {
 	display: block;
 	font-weight: 600;
@@ -69,6 +109,7 @@ fieldset.pegwork-form__field {
 .pegwork-form textarea:focus-visible,
 .pegwork-form button:focus-visible,
 .pegwork-form a:focus-visible,
+.pegwork-form__step-heading:focus-visible,
 .pegwork-form__errors:focus,
 .pegwork-form__status:focus,
 .pegwork-form__notice:focus {

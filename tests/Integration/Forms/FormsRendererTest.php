@@ -38,7 +38,7 @@ class FormsRendererTest extends FormsTestCase {
 		$html = $this->block( 'fr_contact' );
 
 		$this->assertStringContainsString( '<div class="wp-block-pegwork-form pegwork-form" id="pegwork-fr_contact">', $html );
-		$this->assertStringContainsString( 'method="post" action="http://example.org/contact/" novalidate>', $html );
+		$this->assertStringContainsString( 'method="post" action="http://example.org/contact/" novalidate data-pegwork-config="', $html );
 		$this->assertStringContainsString( '<input type="hidden" name="pegwork_form[key]" value="fr_contact">', $html );
 		$this->assertMatchesRegularExpression( '/name="pegwork_form\[token\]" value="[0-9]+\.[a-f0-9]{64}"/', $html );
 		$this->assertStringNotContainsString( 'pegwork_form[nonce]', $html, 'Anonymous visitors get no nonce.' );
@@ -157,7 +157,7 @@ class FormsRendererTest extends FormsTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		Renderer::reset();
 		$html = $this->block( 'fr_members' );
-		$this->assertStringContainsString( '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title">About you</legend><p class="pegwork-form__step-description">Tell us who you are.</p>', $html );
+		$this->assertStringContainsString( '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title"><h2 class="pegwork-form__step-heading">About you</h2></legend><p class="pegwork-form__step-description">Tell us who you are.</p>', $html );
 		$this->assertStringContainsString( 'type="text" inputmode="decimal" id="pegwork-fr_members-age"', $html );
 		$this->assertStringContainsString( 'type="date" id="pegwork-fr_members-start"', $html );
 		$this->assertSame( 1, substr_count( $html, '<button' ) );

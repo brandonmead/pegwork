@@ -135,7 +135,7 @@ The manifest maps `slug => [ label, description, requires[], path ]`, where `pat
 
 The `automation` module (`docs/automation.md`) runs registry automations and adds Pegwork > Automations (list, Enable/Disable, Run now, run log, Retry; `manage_options`). Sites and add-ons can tune it with filters; its PHP classes are internal.
 
-The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, and the daily WP-Cron event `pegwork_forms_cleanup`. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
+The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, and the daily WP-Cron event `pegwork_forms_cleanup`. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. Its front-end script is the classic script handle `pegwork-forms-view` (enqueued only where a form renders; a theme may dequeue it, and forms keep working without it). It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
 
 | Hook | Kind | Default | Use |
 |---|---|---|---|

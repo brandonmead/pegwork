@@ -335,25 +335,10 @@ final class Submission {
 			}
 		}
 
-		$visible = array();
-		$check   = function ( string $key, int $depth ) use ( &$check, &$visible, $by_key, $clean ): bool {
-			if ( isset( $visible[ $key ] ) ) {
-				return $visible[ $key ];
-			}
-			$item      = $by_key[ $key ];
-			$condition = $item['show_when']['field'] ?? null;
-			$shown     = true;
-			if ( is_string( $condition ) ) {
-				$shown = $depth < 10 && isset( $by_key[ $condition ] ) && $check( $condition, $depth + 1 )
-					&& Definition::shown( $item, $clean );
-			}
-			$visible[ $key ] = $shown;
-			return $shown;
-		};
-
-		$values = array();
+		$visible = Definition::visible( $by_key, $clean );
+		$values  = array();
 		foreach ( array_keys( $by_key ) as $key ) {
-			if ( $check( $key, 0 ) ) {
+			if ( $visible[ $key ] ) {
 				$values[ $key ] = $clean[ $key ];
 			} else {
 				unset( $errors[ $key ] );
