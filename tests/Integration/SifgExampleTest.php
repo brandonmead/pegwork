@@ -49,10 +49,10 @@ class SifgExampleTest extends WP_UnitTestCase {
 		$this->assertSame( 'sifg', Plugin::result()->sources['content_type']['sifg_project'] );
 
 		$this->assertSame(
-			array( 'name', 'description', 'who_for', 'website', 'needs_volunteers', 'volunteer_link', 'github_link', 'contact_email', 'last_verified' ),
+			array( 'name', 'description', 'who_for', 'website', 'needs_volunteers', 'volunteer_link', 'github_link', 'contact_email', 'last_verified', 'paused_on', 'paused_from', 'paused_volunteers' ),
 			array_keys( $registry->fields( 'sifg_project' ) )
 		);
-		$this->assertSame( array( 'contact_email' ), array_keys( $registry->fields( 'sifg_project', 'private' ) ) );
+		$this->assertSame( array( 'contact_email', 'paused_on', 'paused_from', 'paused_volunteers' ), array_keys( $registry->fields( 'sifg_project', 'private' ) ) );
 		$this->assertCount( 8, $registry->fields( 'sifg_project', 'public' ) );
 		$this->assertSame( 'post_content', $registry->fields( 'sifg_project' )['description']['wp']['storage'] );
 
@@ -96,7 +96,7 @@ class SifgExampleTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The directory listing, the two forms, the approval automation and the settings page load as data only.
+	 * The directory listing, the two forms, both automations and the settings page load as data only.
 	 */
 	public function test_sifg_sections() {
 		$this->register( dirname( __DIR__, 2 ) . '/examples/sifg' );
@@ -125,6 +125,12 @@ class SifgExampleTest extends WP_UnitTestCase {
 		$approved = $registry->automation( 'sifg_project_approved' );
 		$this->assertTrue( $approved['enabled'] );
 		$this->assertSame( array( 'verify', 'notify' ), array_column( $approved['steps'], 'id' ) );
+
+		$staleness = $registry->automation( 'sifg_staleness_check' );
+		$this->assertSame( array( 'ask', 'grace', 'still_stale', 'pause', 'tell' ), array_column( $staleness['steps'], 'id' ) );
+		$this->assertSame( array( 'still_active' ), array_keys( $staleness['links'] ) );
+		$this->assertTrue( $staleness['links']['still_active']['confirm'] );
+		$this->assertSame( array( 'verify', 'was_paused', 'restore' ), array_column( $staleness['links']['still_active']['steps'], 'id' ) );
 
 		$settings = $registry->options_page( 'sifg_settings' );
 		$this->assertSame( array( 'featured_project', 'moderator_email', 'review_criteria', 'contact_email' ), array_column( $settings['fields'], 'key' ) );

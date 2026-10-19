@@ -175,6 +175,52 @@ final class Triggers {
 	}
 
 	/**
+	 * Starts a run of a webhook automation from a verified inbound request. The payload is stored as
+	 * `trigger.payload`; the sender's X-Pegwork-Delivery, when given, is the idempotency key (so a
+	 * redelivery creates no second run), else the automation's `idempotency` template applies.
+	 *
+	 * @param string               $key        Automation key.
+	 * @param array<string, mixed> $definition Canonical automation.
+	 * @param array<mixed>         $payload    Decoded JSON body.
+	 * @param string|null          $delivery   X-Pegwork-Delivery, or null.
+	 * @return int Run ID, or 0 when a run with the same key exists.
+	 */
+	public function webhook( string $key, array $definition, array $payload, ?string $delivery ): int {
+		$trigger = array(
+			'payload' => $payload,
+			'origin'  => array(
+				'source' => 'webhook',
+				'depth'  => 0,
+			),
+		);
+		$run     = array(
+			'automation'      => $key,
+			'trigger_type'    => 'webhook',
+			'record_id'       => null,
+			'depth'           => 0,
+			'definition_hash' => self::hash( $definition ),
+			'context'         => array( 'trigger' => $trigger ),
+		);
+		$context = new Context( $this->engine->clock(), null, $trigger );
+
+		if ( null !== $delivery ) {
+			// The delivery ID wins over the automation's own idempotency template.
+			unset( $definition['idempotency'] );
+			$run['idempotency_key'] = self::delivery_key( $delivery );
+		}
+		return $this->enqueue( $run, $definition, $context );
+	}
+
+	/**
+	 * The stored idempotency key of an inbound delivery ID.
+	 *
+	 * @param string $delivery X-Pegwork-Delivery.
+	 */
+	public static function delivery_key( string $delivery ): string {
+		return self::key( 'delivery:' . $delivery );
+	}
+
+	/**
 	 * Hash of a definition, stored on each run.
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.

@@ -51,6 +51,11 @@ final class Templates {
 	public const PRIVATE_MASK = '[private]';
 
 	/**
+	 * What a signed link renders as in `log` mode.
+	 */
+	public const LINK_MASK = '[link]';
+
+	/**
 	 * One merge tag: path and optional default.
 	 */
 	private const TAG = '/\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(?:\|\s*default:"([^"]*)"\s*)?\}\}/';
@@ -108,6 +113,9 @@ final class Templates {
 		$path = $m[1];
 		if ( self::LOG === $mode && $context->is_private( $path ) ) {
 			return self::PRIVATE_MASK;
+		}
+		if ( self::LOG === $mode && str_starts_with( $path, 'link.' ) ) {
+			return self::LINK_MASK; // A signed link is a credential: never in the log, never minted for it.
 		}
 
 		$value    = self::lookup( $m, $context );
