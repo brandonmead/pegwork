@@ -49,6 +49,22 @@ final class Patterns {
 	public const MIN_COLUMN = '16rem';
 
 	/**
+	 * Font size preset of a card's meta lines (terms, badges, select and date fields), so they match.
+	 */
+	public const META_SIZE = 'small';
+
+	/**
+	 * Date format of date fields in a card ("Oct 2026").
+	 */
+	public const CARD_DATE_FORMAT = 'M Y';
+
+	/**
+	 * Class of the Clear all link in a directory's no-results message (the filters module points it at
+	 * the directory's base URL; `?` without it).
+	 */
+	public const CLEAR_CLASS = 'pegwork-filters-clear';
+
+	/**
 	 * Registers on init priority 20, or now when init has passed. Safe to call more than once.
 	 */
 	public static function register(): void {
@@ -176,20 +192,43 @@ final class Patterns {
 			self::block( 'core/post-excerpt', array( 'excerptLength' => 20 ) ),
 		);
 		foreach ( self::taxonomies( $type ) as $key => $label ) {
-			$blocks[] = self::terms( $key, $label );
+			$blocks[] = self::terms( $key, $label, self::META_SIZE );
 		}
 		foreach ( pegwork_registry()->fields( $type, 'public' ) as $field ) {
 			if ( isset( $field['wp']['storage'] ) ) {
 				continue;
 			}
 			if ( 'boolean' === $field['type'] ) {
-				$blocks[] = self::bound_paragraph( $field, array(), 'pegwork-badge' );
-			} elseif ( in_array( $field['type'], array( 'select', 'date' ), true ) ) {
-				$blocks[] = self::bound_paragraph( $field, array( 'prefix' => self::prefix( $field['label'] ) ) );
+				$blocks[] = self::bound_paragraph( $field, array(), 'pegwork-badge', self::META_SIZE );
+			} elseif ( 'select' === $field['type'] ) {
+				$blocks[] = self::bound_paragraph( $field, array( 'prefix' => self::prefix( $field['label'] ) ), '', self::META_SIZE );
+			} elseif ( 'date' === $field['type'] ) {
+				$blocks[] = self::bound_paragraph(
+					$field,
+					array(
+						'format' => self::CARD_DATE_FORMAT,
+						'prefix' => self::card_date_prefix( $field['label'] ),
+					),
+					'',
+					self::META_SIZE
+				);
 			}
 		}
 
 		return self::group( 'pegwork-card', $blocks );
+	}
+
+	/**
+	 * Prefix of a date line in a card: "Last verified" becomes "Verified " (so the line reads "Verified
+	 * Oct 2026"); any other label becomes "Label: ".
+	 *
+	 * @param string $label Field label.
+	 */
+	public static function card_date_prefix( string $label ): string {
+		if ( 1 === preg_match( '/^last\s+(\S.*)$/iu', trim( $label ), $match ) ) {
+			return mb_strtoupper( mb_substr( $match[1], 0, 1 ) ) . mb_substr( $match[1], 1 ) . ' ';
+		}
+		return self::prefix( $label );
 	}
 
 	/**
@@ -408,7 +447,7 @@ final class Patterns {
 			$inner[] = self::block(
 				'core/query-no-results',
 				array(),
-				self::lines( array( self::block( 'core/paragraph', array(), '<p>' . esc_html( self::no_results( $type ) ) . '</p>' ) ) )
+				self::lines( array( self::block( 'core/paragraph', array(), '<p>' . esc_html( self::no_results( $type ) ) . ' <a class="' . esc_attr( self::CLEAR_CLASS ) . '" href="?">' . esc_html__( 'Clear all filters', 'pegwork' ) . '</a></p>' ) ) )
 			);
 		}
 
@@ -431,9 +470,10 @@ final class Patterns {
 	 * @param array<string, mixed>  $field      Field.
 	 * @param array<string, string> $args       Extra binding args.
 	 * @param string                $class_name Optional class.
+	 * @param string                $font_size  Optional font size preset slug.
 	 */
-	private static function bound_paragraph( array $field, array $args, string $class_name = '' ): string {
-		$attrs = array(
+	private static function bound_paragraph( array $field, array $args, string $class_name = '', string $font_size = '' ): string {
+		$attrs   = array(
 			'metadata' => array(
 				'bindings' => array(
 					'content' => array(
@@ -443,11 +483,16 @@ final class Patterns {
 				),
 			),
 		);
-		$open  = '<p>';
+		$classes = array();
 		if ( '' !== $class_name ) {
 			$attrs['className'] = $class_name;
-			$open               = '<p class="' . esc_attr( $class_name ) . '">';
+			$classes[]          = $class_name;
 		}
+		if ( '' !== $font_size ) {
+			$attrs['fontSize'] = $font_size;
+			$classes[]         = 'has-' . $font_size . '-font-size';
+		}
+		$open = array() === $classes ? '<p>' : '<p class="' . esc_attr( implode( ' ', $classes ) ) . '">';
 		return self::block( 'core/paragraph', $attrs, $open . esc_html( $field['label'] ) . '</p>' );
 	}
 
@@ -477,17 +522,19 @@ final class Patterns {
 	/**
 	 * Terms of a taxonomy, prefixed with its label.
 	 *
-	 * @param string $taxonomy Taxonomy key.
-	 * @param string $label    Label.
+	 * @param string $taxonomy  Taxonomy key.
+	 * @param string $label     Label.
+	 * @param string $font_size Optional font size preset slug.
 	 */
-	private static function terms( string $taxonomy, string $label ): string {
-		return self::block(
-			'core/post-terms',
-			array(
-				'term'   => $taxonomy,
-				'prefix' => self::prefix( $label ),
-			)
+	private static function terms( string $taxonomy, string $label, string $font_size = '' ): string {
+		$attrs = array(
+			'term'   => $taxonomy,
+			'prefix' => self::prefix( $label ),
 		);
+		if ( '' !== $font_size ) {
+			$attrs['fontSize'] = $font_size;
+		}
+		return self::block( 'core/post-terms', $attrs );
 	}
 
 	/**

@@ -74,6 +74,9 @@ jobs:
 
       - run: npm run build
 
+      # Filters view module: at most 10 KB gzipped (docs/phase-2-design.md section 10).
+      - run: npm run check:size
+
       - run: npm run test:unit
 
   test:
