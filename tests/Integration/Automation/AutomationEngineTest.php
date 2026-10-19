@@ -204,9 +204,16 @@ class AutomationEngineTest extends AutomationTestCase {
 	}
 
 	/**
-	 * A step type this release does not run fails the run after the earlier steps.
+	 * A step type the engine has no handler for (a definition newer than the module) fails the run after
+	 * the earlier steps. Every registry step type has a handler now, so the test removes one.
 	 */
 	public function test_unsupported_step_fails_the_run() {
+		$handlers = new \ReflectionProperty( Engine::class, 'steps' );
+		$handlers->setAccessible( true );
+		$steps = $handlers->getValue( Engine::instance() );
+		unset( $steps['call_webhook'] );
+		$handlers->setValue( Engine::instance(), $steps );
+
 		$id = $this->job( 'publish' );
 		wp_update_post(
 			array(

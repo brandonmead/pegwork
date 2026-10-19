@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/filters",
+	"title": "Filters",
+	"category": "pegwork",
+	"icon": "filter",
+	"description": "Search and filter controls for a Pegwork directory. Works without JavaScript; with it, results update in place.",
+	"keywords": [ "search", "filter", "facets", "directory", "pegwork" ],
+	"textdomain": "pegwork",
+	"attributes": {
+		"postType": {
+			"type": "string",
+			"default": ""
+		},
+		"filters": {
+			"type": "array",
+			"default": [],
+			"items": { "type": "string" }
+		},
+		"showSearch": {
+			"type": "boolean"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ],
+		"interactivity": true,
+		"spacing": { "margin": true, "padding": true }
+	},
+	"styles": [
+		{ "name": "horizontal", "label": "Horizontal", "isDefault": true },
+		{ "name": "vertical", "label": "Vertical" }
+	],
+	"editorScript": "pegwork-filters-editor",
+	"viewScriptModule": "@pegwork/filters",
+	"style": "file:./style.css"
+}

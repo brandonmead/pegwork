@@ -198,7 +198,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		);
 		$this->assertSame( array( 'project_type', 'project_status', 'impact', 'volunteers' ), array_column( $sections['listing']['filters'], 'key' ) );
 		$this->assertSame( array( 'request_help', 'submit_project' ), array_keys( $sections['forms'] ) );
-		$this->assertSame( array( 'sifg_project_approved' ), array_keys( $sections['automations'] ) );
+		$this->assertSame( array( 'sifg_project_approved', 'sifg_staleness_check' ), array_keys( $sections['automations'] ) );
 		$this->assertSame( array( 'sifg_settings' ), array_keys( $sections['options_pages'] ) );
 		$this->assertSame( 'file:sifg', $registry->form_source( 'submit_project' ) );
 
@@ -221,6 +221,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame(
 			array(
 				'automations/sifg_project_approved.json',
+				'automations/sifg_staleness_check.json',
 				'content-types/sifg_project.json',
 				'content-types/sifg_story.json',
 				'forms/request_help.json',
@@ -249,7 +250,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		// 4. Import A, re-run registration, export to B.
 		$first = Importer::import( $a );
 		$this->assertTrue( $first->is_valid() );
-		$this->assertSame( 11, $first->count() ); // Manifest, 2 content types, 3 taxonomies, 1 relationship, 2 forms, 1 automation, 1 options page; terms already exist.
+		$this->assertSame( 12, $first->count() ); // Manifest, 2 content types, 3 taxonomies, 1 relationship, 2 forms, 2 automations, 1 options page; terms already exist.
 		$this->assertSame( array(), $first->terms );
 		$this->reregister();
 		$this->assertTrue( post_type_exists( 'sifg_project' ) );
@@ -320,7 +321,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertTrue( $dry->is_valid() );
 		$this->assertFalse( get_option( Loader::DB_OPTION ) );
 		$this->assertFalse( post_type_exists( 'sifg_project' ) );
-		$this->assertSame( 11, count( $dry->changes ) );
+		$this->assertSame( 12, count( $dry->changes ) );
 
 		Importer::import( $dir );
 		$this->assertTrue( taxonomy_exists( 'sifg_impact' ) );

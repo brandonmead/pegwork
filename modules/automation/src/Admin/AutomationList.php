@@ -11,6 +11,7 @@ namespace PegworkAutomation\Admin;
 
 use PegworkAutomation\Engine;
 use PegworkAutomation\Overrides;
+use PegworkAutomation\Webhooks\Inbound;
 
 /**
  * Every registered automation with its trigger, source, enabled state (JSON default and site override),
@@ -62,7 +63,7 @@ final class AutomationList {
 				echo '<span class="pegwork-meta">' . esc_html( $source ) . '</span>';
 			}
 			echo '</th>';
-			echo '<td>' . esc_html( Format::trigger( $definition['trigger'] ) ) . '</td>';
+			echo '<td>' . esc_html( Format::trigger( $definition['trigger'] ) ) . self::endpoint( $key, $definition ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in endpoint().
 			echo '<td>' . self::enabled( $key, $definition, $is_enabled ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in enabled().
 			echo '<td>' . self::last_run( $summary[ $key ] ?? array() ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in last_run().
 			echo '<td>' . self::next_run( $key, $schedule, $is_enabled, $engine ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in next_run().
@@ -79,6 +80,24 @@ final class AutomationList {
 			'<code>wp pegwork automation enable|disable|run|retry</code>'
 		);
 		echo '</p>';
+	}
+
+	/**
+	 * For a webhook trigger: the inbound URL and where its signing secret comes from (never the secret).
+	 *
+	 * @param string               $key        Automation key.
+	 * @param array<string, mixed> $definition Canonical automation.
+	 */
+	private static function endpoint( string $key, array $definition ): string {
+		if ( 'webhook' !== $definition['trigger']['type'] ) {
+			return '';
+		}
+		return '<span class="pegwork-meta">' . esc_html__( 'POST signed JSON to', 'pegwork' ) . ' <code class="pegwork-endpoint">' . esc_html( Inbound::url( $key ) ) . '</code></span>'
+			. '<span class="pegwork-meta">' . sprintf(
+				/* translators: %s: CLI command. */
+				esc_html__( 'Secret: %s', 'pegwork' ),
+				'<code>wp pegwork automation secret ' . esc_html( $key ) . '</code>'
+			) . '</span>';
 	}
 
 	/**
@@ -136,7 +155,9 @@ final class AutomationList {
 	 */
 	private static function next_run( string $key, bool $schedule, bool $is_enabled, Engine $engine ): string {
 		if ( ! $schedule ) {
-			return esc_html__( 'When its event fires', 'pegwork' );
+			return 'webhook' === pegwork_registry()->automation( $key )['trigger']['type']
+				? esc_html__( 'When a signed request arrives', 'pegwork' )
+				: esc_html__( 'When its event fires', 'pegwork' );
 		}
 		$next = $engine->scheduler()->next( Engine::SCHEDULE_HOOK, array( $key ) );
 		if ( ! $is_enabled ) {

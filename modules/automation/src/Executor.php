@@ -72,7 +72,11 @@ final class Executor {
 			return 'cancelled';
 		}
 
-		$steps = array_values( (array) $definition['steps'] );
+		$steps = self::step_list( $definition, $run );
+		if ( null === $steps ) {
+			$runs->finish( $id, 'failed', sprintf( 'definition_changed: link "%s" is no longer in the automation.', (string) ( $run['context']['link'] ?? '' ) ) );
+			return 'failed';
+		}
 		$start = 0;
 		if ( '' !== $run['current_step'] ) {
 			$start = array_search( $run['current_step'], array_column( $steps, 'id' ), true );
@@ -84,7 +88,7 @@ final class Executor {
 
 		$stored  = $run['context'];
 		$record  = null === $run['record_id'] ? null : Records::get( (int) $run['record_id'] );
-		$context = new Context( $this->engine->clock(), $record, (array) ( $stored['trigger'] ?? array() ), (array) ( $stored['steps'] ?? array() ), $id );
+		$context = new Context( $this->engine->clock(), $record, (array) ( $stored['trigger'] ?? array() ), (array) ( $stored['steps'] ?? array() ), $id, (string) $run['automation'] );
 
 		/**
 		 * Filters the time budget of one executor wake-up, in seconds. When it is used up, the run is
@@ -156,6 +160,23 @@ final class Executor {
 		// A trailing wait has nothing left to wait for: the run completes now.
 		$runs->finish( $id, 'completed', null, self::store( $stored, $context ) );
 		return 'completed';
+	}
+
+	/**
+	 * The steps a run executes: a `link` run executes only the steps of the link named in its context
+	 * (`context.link`), every other run the automation's own steps.
+	 *
+	 * @param array<string, mixed> $definition Canonical automation.
+	 * @param array<string, mixed> $run        Run row.
+	 * @return array<int, array<string, mixed>>|null Null when the run's link is no longer defined.
+	 */
+	public static function step_list( array $definition, array $run ): ?array {
+		if ( 'link' !== $run['trigger_type'] ) {
+			return array_values( (array) $definition['steps'] );
+		}
+		$name = (string) ( $run['context']['link'] ?? '' );
+		$link = $definition['links'][ $name ] ?? null;
+		return is_array( $link ) ? array_values( (array) $link['steps'] ) : null;
 	}
 
 	/**

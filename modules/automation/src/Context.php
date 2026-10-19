@@ -55,20 +55,37 @@ final class Context {
 	private int $run_id;
 
 	/**
+	 * Automation key, '' when unknown (then `link.*` resolves to null).
+	 *
+	 * @var string
+	 */
+	private string $automation;
+
+	/**
+	 * Signed link URLs minted so far, by link name: one token per link per context, so the text and HTML
+	 * parts of one email carry the same link.
+	 *
+	 * @var array<string, string|null>
+	 */
+	private array $links = array();
+
+	/**
 	 * Builds a context.
 	 *
-	 * @param Clock                               $clock   Engine clock.
-	 * @param array<string, mixed>|null           $record  Bound record, or null.
-	 * @param array<string, mixed>                $trigger Trigger payload.
-	 * @param array<string, array<string, mixed>> $steps   Step outputs.
-	 * @param int                                 $run_id  Run ID.
+	 * @param Clock                               $clock      Engine clock.
+	 * @param array<string, mixed>|null           $record     Bound record, or null.
+	 * @param array<string, mixed>                $trigger    Trigger payload.
+	 * @param array<string, array<string, mixed>> $steps      Step outputs.
+	 * @param int                                 $run_id     Run ID.
+	 * @param string                              $automation Automation key (needed for `link.*`).
 	 */
-	public function __construct( Clock $clock, ?array $record, array $trigger = array(), array $steps = array(), int $run_id = 0 ) {
-		$this->clock   = $clock;
-		$this->record  = $record;
-		$this->trigger = $trigger;
-		$this->steps   = $steps;
-		$this->run_id  = $run_id;
+	public function __construct( Clock $clock, ?array $record, array $trigger = array(), array $steps = array(), int $run_id = 0, string $automation = '' ) {
+		$this->clock      = $clock;
+		$this->record     = $record;
+		$this->trigger    = $trigger;
+		$this->steps      = $steps;
+		$this->run_id     = $run_id;
+		$this->automation = $automation;
 	}
 
 	/**
@@ -166,10 +183,25 @@ final class Context {
 			case 'record':
 				return $this->record_value( $parts );
 			case 'link':
-				// Signed links arrive with the link handler (Phase 4 PR 5).
-				return null;
+				return 1 === count( $parts ) ? $this->link( $parts[0] ) : null;
 		}
 		return null;
+	}
+
+	/**
+	 * A signed URL for one of the automation's links on the bound record, valid for the link's `expires`
+	 * from now (each send gets the full lifetime). Null without a record, automation or such a link.
+	 *
+	 * @param string $name Link name.
+	 */
+	private function link( string $name ): ?string {
+		if ( null === $this->record || '' === $this->automation ) {
+			return null;
+		}
+		if ( ! array_key_exists( $name, $this->links ) ) {
+			$this->links[ $name ] = Links\Links::url( $this->automation, $name, (int) $this->record['id'], $this->clock->now() );
+		}
+		return $this->links[ $name ];
 	}
 
 	/**

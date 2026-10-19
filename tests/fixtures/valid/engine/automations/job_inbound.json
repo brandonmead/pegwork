@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "job_inbound",
+  "label": "Inbound webhook: create a draft job",
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "create", "type": "create_record", "content_type": "job", "status": "draft",
+      "values": { "title": "{{trigger.payload.title}}", "website": "{{trigger.payload.website}}", "note": "{{trigger.payload.note}}" } }
+  ]
+}

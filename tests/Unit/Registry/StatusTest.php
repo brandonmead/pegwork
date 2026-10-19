@@ -40,7 +40,7 @@ class StatusTest extends TestCase {
 		$this->assertSame( array( 'sifg_project_type', 'sifg_project_status', 'sifg_impact' ), $types[0]['taxonomies'] );
 
 		$fields = array_column( $types[0]['fields'], null, 'key' );
-		$this->assertCount( 9, $fields );
+		$this->assertCount( 12, $fields );
 		$this->assertSame( 'post_title', $fields['name']['stored_as'] );
 		$this->assertSame( '_sifg_project_contact_email', $fields['contact_email']['stored_as'] );
 		$this->assertSame( 'private', $fields['contact_email']['visibility'] );
