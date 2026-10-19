@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "key": "sifg_staleness_check",
+  "label": "Yearly still-active check: ask, wait 30 days, pause if no reply",
+  "description": "Emails a one-click still-active link 12 months after Last verified; pauses the listing 30 days later if Last verified did not move; the same link reactivates it.",
+  "trigger": { "type": "schedule", "every": "day", "at": "09:00",
+    "for_each": { "content_type": "sifg_project", "status": [ "publish" ], "where": { "all": [
+      { "var": "record.last_verified", "op": "not_empty" },
+      { "var": "record.last_verified", "op": "lte", "value": { "date": "today", "offset": "-P12M" } },
+      { "var": "record.sifg_project_status", "op": "ne", "value": "paused" } ] } } },
+  "idempotency": "{{record.id}}:{{record.last_verified}}",
+  "steps": [
+    { "id": "ask", "type": "send_email", "to": "{{record.contact_email}}",
+      "subject": "Is {{record.name}} still active?",
+      "text": "{{record.name}} was last verified on {{record.last_verified}}. One click keeps your listing live on {{site.name}}:\n\n{{link.still_active}}\n\nIf we do not hear from you within 30 days, we will pause the listing. The link works for a year." },
+    { "id": "grace", "type": "wait", "for": "P30D" },
+    { "id": "still_stale", "type": "condition",
+      "when": { "all": [
+        { "var": "record.last_verified", "op": "lte", "value": { "date": "today", "offset": "-P12M" } },
+        { "var": "record.sifg_project_status", "op": "ne", "value": "paused" } ] } },
+    { "id": "pause", "type": "update_record", "values": {
+      "paused_from": "{{record.sifg_project_status}}",
+      "paused_volunteers": "{{record.needs_volunteers | default:\"0\"}}",
+      "paused_on": "{{today}}",
+      "sifg_project_status": "paused",
+      "needs_volunteers": false } },
+    { "id": "tell", "type": "send_email", "to": "{{record.contact_email}}",
+      "subject": "{{record.name}} is paused on {{site.name}}",
+      "text": "We did not hear back, so we paused {{record.name}} on {{site.name}}. Reactivate it any time with one click:\n\n{{link.still_active}}" }
+  ],
+  "links": {
+    "still_active": {
+      "expires": "P365D",
+      "confirm": true,
+      "button": "Yes, it is still active",
+      "success_message": "Thank you. Your listing stays live on {{site.name}}.",
+      "steps": [
+        { "id": "verify", "type": "update_record", "values": { "last_verified": "{{today}}" } },
+        { "id": "was_paused", "type": "condition",
+          "when": { "var": "record.sifg_project_status", "op": "eq", "value": "paused" } },
+        { "id": "restore", "type": "update_record", "values": {
+          "sifg_project_status": "{{record.paused_from | default:\"active\"}}",
+          "needs_volunteers": "{{record.paused_volunteers | default:\"0\"}}",
+          "paused_from": "",
+          "paused_volunteers": false,
+          "paused_on": "" } }
+      ]
+    }
+  }
+}

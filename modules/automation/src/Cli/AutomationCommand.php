@@ -9,7 +9,11 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Cli;
 
+use Pegwork\Api\Records;
+use PegworkAutomation\Duration;
 use PegworkAutomation\Engine;
+use PegworkAutomation\Links\Key;
+use PegworkAutomation\Links\Links;
 use PegworkAutomation\Manual;
 use PegworkAutomation\Overrides;
 use PegworkAutomation\Runs;
@@ -317,6 +321,117 @@ final class AutomationCommand {
 	 */
 	public function disable( array $args ): void {
 		$this->toggle( $args[0], 'off' );
+	}
+
+	/**
+	 * Shows where the signed link key comes from (never the key itself), or rotates it.
+	 *
+	 * The key is the PEGWORK_LINK_SECRET constant when wp-config.php defines it, else the option
+	 * pegwork_link_secret, generated the first time a link is minted. Rotating replaces the option, so every
+	 * link sent so far stops working (they show the "does not work" page).
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--rotate]
+	 * : Replace the stored key with a new random one.
+	 *
+	 * [--yes]
+	 * : Rotate without asking.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork automation link-key
+	 *     wp pegwork automation link-key --rotate --yes
+	 *
+	 * @subcommand link-key
+	 *
+	 * @param string[]             $args       Positional arguments (unused).
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function link_key( array $args, array $assoc_args ): void {
+		$source = Key::source();
+		if ( isset( $assoc_args['rotate'] ) ) {
+			if ( 'constant' === $source ) {
+				WP_CLI::error( sprintf( 'The link key comes from %s in wp-config.php; change it there to rotate it.', Key::CONSTANT ) );
+			}
+			WP_CLI::confirm( 'Rotate the link key? Every link sent so far stops working.', $assoc_args );
+			if ( ! Key::rotate() ) {
+				WP_CLI::error( 'Could not store the new link key.' );
+			}
+			WP_CLI::success( sprintf( 'Rotated the link key (option %s). Links sent before now no longer work.', Key::OPTION ) );
+			return;
+		}
+
+		switch ( $source ) {
+			case 'constant':
+				WP_CLI::log( sprintf( 'Link key: constant %s (wp-config.php).', Key::CONSTANT ) );
+				if ( (int) Key::constant_length() < Key::MIN_CONSTANT_LENGTH ) {
+					WP_CLI::warning( sprintf( '%1$s is shorter than %2$d characters; use a long random value.', Key::CONSTANT, Key::MIN_CONSTANT_LENGTH ) );
+				}
+				return;
+			case 'option':
+				WP_CLI::log( sprintf( 'Link key: option %s (generated, autoload off).', Key::OPTION ) );
+				return;
+		}
+		WP_CLI::log( sprintf( 'No link key yet: one is generated in option %s the first time a link is minted.', Key::OPTION ) );
+	}
+
+	/**
+	 * Prints a signed URL for one of an automation's links on a record, as an email would carry it. For
+	 * testing: anyone with the URL can use it.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <automation>
+	 * : Automation key.
+	 *
+	 * <link>
+	 * : Link name, from the automation's "links".
+	 *
+	 * <record>
+	 * : Record ID.
+	 *
+	 * [--now=<datetime|offset>]
+	 * : Mint as if it were this time (the link expires its "expires" after it), for example "-400days" for an
+	 * expired link. Refused when the environment type is production.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork automation link sifg_staleness_check still_active 42
+	 *
+	 * @param string[]             $args       Positional arguments.
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function link( array $args, array $assoc_args ): void {
+		[ $key, $name, $record ] = array( (string) $args[0], (string) $args[1], (int) $args[2] );
+		$definition              = pegwork_registry()->automation( $key );
+		if ( null === $definition ) {
+			WP_CLI::error( sprintf( 'Unknown automation: %s.', $key ) );
+		}
+		if ( ! isset( $definition['links'][ $name ] ) ) {
+			$names = array_keys( $definition['links'] ?? array() );
+			WP_CLI::error( sprintf( 'Automation %1$s has no link "%2$s"%3$s.', $key, $name, array() === $names ? '' : ' (links: ' . implode( ', ', $names ) . ')' ) );
+		}
+		$data = Records::get( $record );
+		$type = Links::bound_type( $definition );
+		if ( null === $data || ( null !== $type && $type !== $data['type'] ) ) {
+			WP_CLI::error( sprintf( 'No %1$s record with ID %2$d.', $type ?? 'registry', $record ) );
+		}
+
+		$clock = Engine::instance()->clock();
+		if ( isset( $assoc_args['now'] ) ) {
+			$clock = Manual::clock( (string) $assoc_args['now'] );
+			if ( is_wp_error( $clock ) ) {
+				WP_CLI::error( $clock->get_error_message() );
+			}
+		}
+		$url = Links::url( $key, $name, $record, $clock->now() );
+		if ( null === $url ) {
+			WP_CLI::error( sprintf( 'Could not mint link "%1$s" of %2$s.', $name, $key ) );
+		}
+		$expires = Duration::add( $clock->now(), (string) $definition['links'][ $name ]['expires'] );
+		WP_CLI::log( $url );
+		WP_CLI::log( sprintf( 'Expires %s (site time).', null === $expires ? '?' : wp_date( 'Y-m-d H:i T', $expires->getTimestamp() ) ) );
 	}
 
 	/**

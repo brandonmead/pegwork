@@ -255,6 +255,13 @@ final class Engine {
 	}
 
 	/**
+	 * Signed links: verification and link runs.
+	 */
+	public function links(): Links\Links {
+		return new Links\Links( $this );
+	}
+
+	/**
 	 * Handler of a step type.
 	 *
 	 * @param string $type Step type.

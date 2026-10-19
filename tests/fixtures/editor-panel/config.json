@@ -127,6 +127,48 @@
 					"validate": [],
 					"options": [],
 					"default": null
+				},
+				{
+					"key": "paused_on",
+					"type": "date",
+					"label": "Paused on",
+					"required": false,
+					"visibility": "private",
+					"meta_key": "_sifg_project_paused_on",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "paused_from",
+					"type": "text",
+					"label": "Status before pause",
+					"required": false,
+					"visibility": "private",
+					"meta_key": "_sifg_project_paused_from",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
+				},
+				{
+					"key": "paused_volunteers",
+					"type": "boolean",
+					"label": "Needed volunteers before pause",
+					"required": false,
+					"visibility": "private",
+					"meta_key": "_sifg_project_paused_volunteers",
+					"storage": "meta",
+					"show_when": null,
+					"required_when": null,
+					"validate": [],
+					"options": [],
+					"default": null
 				}
 			],
 			"taxonomies": [

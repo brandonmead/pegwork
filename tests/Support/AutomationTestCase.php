@@ -65,7 +65,7 @@ abstract class AutomationTestCase extends WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
-		add_action( 'pegwork_register', fn( RegistryBuilder $b ) => $b->add_package( dirname( __DIR__ ) . '/fixtures/valid/engine' ) );
+		add_action( 'pegwork_register', fn( RegistryBuilder $b ) => $b->add_package( $this->package() ) );
 		Plugin::init();
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Rebuild routes for the registered types.
 
@@ -73,6 +73,15 @@ abstract class AutomationTestCase extends WP_UnitTestCase {
 		wp_set_current_user( $this->editor );
 
 		$this->boot();
+	}
+
+	/**
+	 * Package directory the test registers (default: the engine fixture).
+	 *
+	 * @return string
+	 */
+	protected function package() {
+		return dirname( __DIR__ ) . '/fixtures/valid/engine';
 	}
 
 	/**
