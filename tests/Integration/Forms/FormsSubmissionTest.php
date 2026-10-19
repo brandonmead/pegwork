@@ -413,10 +413,10 @@ class FormsSubmissionTest extends FormsTestCase {
 		$this->assertNotFalse( has_filter( 'document_title_parts', array( Submission::class, 'error_title' ) ) );
 		remove_filter( 'document_title_parts', array( Submission::class, 'error_title' ) );
 
-		$_POST['pegwork_form']['key'] = 'fr_turnstile';
+		$_POST['pegwork_form']['key'] = 'nope';
 		Submission::reset();
 		Submission::handle();
-		$this->assertNull( Submission::state( 'fr_turnstile' ), 'Unsupported forms are not handled.' );
+		$this->assertNull( Submission::state( 'nope' ), 'Unknown forms are not handled (FormsTurnstileKeysTest: Turnstile forms without keys).' );
 
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		unset( $_POST['pegwork_form'], $_POST['pegwork'] );
