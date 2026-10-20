@@ -16,8 +16,10 @@ import { __, sprintf } from '@wordpress/i18n';
 import {
 	ATTRIBUTE,
 	OPTION_KEY,
+	RELATED_KEY,
 	isPegworkQuery,
 	presetFields,
+	relatedChoices,
 	setWhere,
 	whereValue,
 } from './query';
@@ -30,6 +32,14 @@ function PegworkQueryPanel( { type, attributes, setAttributes } ) {
 		{ value: '1', label: __( 'Yes', 'pegwork' ) },
 		{ value: '0', label: __( 'No', 'pegwork' ) },
 	];
+	const related = relatedChoices( type, ( singular, key ) =>
+		sprintf(
+			/* translators: 1: content type singular name, 2: relationship key. */
+			__( 'The %1$s being viewed (%2$s)', 'pegwork' ),
+			singular,
+			key
+		)
+	);
 
 	return (
 		<PanelBody title={ __( 'Pegwork directory', 'pegwork' ) }>
@@ -86,6 +96,35 @@ function PegworkQueryPanel( { type, attributes, setAttributes } ) {
 							}
 						/>
 					) ) }
+					{ related.length > 0 && (
+						<SelectControl
+							__next40pxDefaultSize
+							__nextHasNoMarginBottom
+							label={ __( 'Only records linked to', 'pegwork' ) }
+							help={ __(
+								'Lists the records linked to the record being shown: the viewed post, or the card record inside another Query Loop. With no such record, or nothing linked, the loop is empty: wrap it in a Show if block with a relationship condition to hide its heading too.',
+								'pegwork'
+							) }
+							value={ pegwork.where?.[ RELATED_KEY ] ?? '' }
+							options={ [
+								{
+									value: '',
+									label: __( 'Any record', 'pegwork' ),
+								},
+								...related,
+							] }
+							onChange={ ( value ) =>
+								update(
+									setWhere(
+										pegwork,
+										RELATED_KEY,
+										value,
+										'related'
+									)
+								)
+							}
+						/>
+					) }
 					{ type.optionPosts.length > 0 && (
 						<SelectControl
 							__next40pxDefaultSize

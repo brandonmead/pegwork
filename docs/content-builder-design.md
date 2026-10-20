@@ -18,7 +18,7 @@ As built (2026-10-18): PRs 1 to 3 merged; PRs 4 and 5 built together (branch `op
 |---|---|---|
 | Story relates to one or more Projects | relationship `story_projects` registered as `_rel_story_projects` meta, `required` | Stories cannot link to Projects |
 | Editors pick related records | relationship picker in Details panel | Editors would type post IDs |
-| Project page lists its stories | `pegwork_related_query_args()` (Phase 2 listings call it) | No reverse lookup |
+| Project page lists its stories | `pegwork_related_query_args()` (Phase 2 listings call it: Query Loop `where.related`, `docs/display.md` "Related records") | No reverse lookup |
 | REST exposes related IDs | `_rel_*` in `show_in_rest`, `rel_{key}` collection param | n8n and listings AJAX cannot read links |
 | Resource may relate to Projects | same shape, `required: false` | (no new element) |
 | Featured project, moderator email, review criteria, contact email | `options_page` kind, `post` field type (options pages only) | Settings hard-coded in theme |

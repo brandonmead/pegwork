@@ -28,12 +28,12 @@ import { __, sprintf } from '@wordpress/i18n';
  */
 import { findField, findTaxonomy } from './config';
 import {
-	FIELD_OPS,
-	TAXONOMY_OPS,
 	conditionFor,
 	conditionProblem,
 	describeCondition,
 	opLabel,
+	opsFor,
+	relationshipLabel,
 	resolvePostType,
 	targetOf,
 } from './conditions';
@@ -117,6 +117,10 @@ function ConditionRow( { condition, index, type, onChange, onRemove } ) {
 			value: `taxonomy:${ taxonomy.key }`,
 			label: taxonomy.label,
 		} ) ),
+		...type.relationships.map( ( relationship ) => ( {
+			value: `relationship:${ relationship.key }`,
+			label: relationshipLabel( relationship ),
+		} ) ),
 	];
 	const target = targetOf( condition );
 	if ( problem === 'unknown' ) {
@@ -125,7 +129,7 @@ function ConditionRow( { condition, index, type, onChange, onRemove } ) {
 			label: __( '(unavailable field)', 'pegwork' ),
 		} );
 	}
-	const ops = condition.taxonomy ? TAXONOMY_OPS : FIELD_OPS;
+	const ops = opsFor( condition );
 
 	return (
 		<div
@@ -277,6 +281,11 @@ export function createEdit( config ) {
 											conditionFor(
 												`taxonomy:${ type.taxonomies[ 0 ].key }`,
 												type
+											) ) ??
+										( type.relationships[ 0 ] &&
+											conditionFor(
+												`relationship:${ type.relationships[ 0 ].key }`,
+												type
 											) );
 									if ( next ) {
 										setAttributes( {
@@ -294,7 +303,7 @@ export function createEdit( config ) {
 					{ problems.length > 0 && (
 						<Notice status="warning" isDismissible={ false }>
 							{ __(
-								'A condition uses an unknown or private field, or a taxonomy this content type does not use. This block renders nothing on the site.',
+								'A condition uses an unknown or private field, or a taxonomy or relationship this content type does not use. This block renders nothing on the site.',
 								'pegwork'
 							) }
 						</Notice>

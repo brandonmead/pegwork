@@ -57,7 +57,8 @@ final class Editor {
 	}
 
 	/**
-	 * The editor config: public fields and taxonomies (with terms) per content type.
+	 * The editor config: public fields, taxonomies (with terms) and relationships (with the type at the
+	 * other end) per content type.
 	 *
 	 * @return array<string, mixed> Config.
 	 */
@@ -89,15 +90,28 @@ final class Editor {
 				);
 			}
 
+			$relationships = array();
+			foreach ( $registry->relationships_for( $type_key ) as $key => $relationship ) {
+				$other           = $type_key === $relationship['to'] ? $relationship['from'] : $relationship['to'];
+				$labels          = $registry->content_type( $other )['labels'] ?? array();
+				$relationships[] = array(
+					'key'    => $key,
+					'type'   => $other,
+					'label'  => $labels['singular'] ?? $other,
+					'plural' => $labels['plural'] ?? $other,
+				);
+			}
+
 			$types[ $type_key ] = array(
-				'label'       => $type['labels']['singular'] ?? $type_key,
-				'plural'      => $type['labels']['plural'] ?? $type_key,
-				'fields'      => $fields,
-				'taxonomies'  => $taxonomies,
-				'listing'     => null !== $registry->listing( $type_key ),
-				'cardPattern' => Patterns::name( $type_key, 'card' ),
-				'noResults'   => Patterns::no_results( $type_key ),
-				'optionPosts' => Patterns::option_fields( $type_key ),
+				'label'         => $type['labels']['singular'] ?? $type_key,
+				'plural'        => $type['labels']['plural'] ?? $type_key,
+				'fields'        => $fields,
+				'taxonomies'    => $taxonomies,
+				'relationships' => $relationships,
+				'listing'       => null !== $registry->listing( $type_key ),
+				'cardPattern'   => Patterns::name( $type_key, 'card' ),
+				'noResults'     => Patterns::no_results( $type_key ),
+				'optionPosts'   => Patterns::option_fields( $type_key ),
 			);
 		}
 

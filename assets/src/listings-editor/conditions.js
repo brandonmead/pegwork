@@ -10,10 +10,38 @@ import { __, sprintf } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { findField, findTaxonomy } from './config';
+import { findField, findRelationship, findTaxonomy } from './config';
 
 export const FIELD_OPS = [ 'equals', 'not_equals', 'empty', 'not_empty' ];
 export const TAXONOMY_OPS = [ 'in', 'not_in' ];
+export const RELATIONSHIP_OPS = [ 'not_empty', 'empty' ];
+
+/**
+ * Operators a condition may use.
+ *
+ * @param {Object} condition Condition.
+ * @return {string[]} Operators.
+ */
+export function opsFor( condition ) {
+	if ( typeof condition?.relationship === 'string' ) {
+		return RELATIONSHIP_OPS;
+	}
+	return typeof condition?.taxonomy === 'string' ? TAXONOMY_OPS : FIELD_OPS;
+}
+
+/**
+ * Label of a relationship condition's target: "Related <plural of the other type>".
+ *
+ * @param {Object} relationship Parsed relationship (the other end).
+ * @return {string} Label.
+ */
+export function relationshipLabel( relationship ) {
+	return sprintf(
+		/* translators: %s: plural name of the related content type */
+		__( 'Related %s', 'pegwork' ),
+		relationship.plural
+	);
+}
 
 /**
  * The content type the block edits for: the context post type when Pegwork knows it,
@@ -43,6 +71,12 @@ export function resolvePostType( config, contextType, templateSlug ) {
  * @return {?string} `unknown`, `operator`, or null.
  */
 export function conditionProblem( condition, type ) {
+	if ( typeof condition?.relationship === 'string' ) {
+		if ( ! findRelationship( type, condition.relationship ) ) {
+			return 'unknown';
+		}
+		return RELATIONSHIP_OPS.includes( condition.op ) ? null : 'operator';
+	}
 	if ( typeof condition?.taxonomy === 'string' ) {
 		if ( ! findTaxonomy( type, condition.taxonomy ) ) {
 			return 'unknown';
@@ -62,9 +96,12 @@ export function conditionProblem( condition, type ) {
  * Select value naming a condition's target.
  *
  * @param {Object} condition Condition.
- * @return {string} `field:<key>`, `taxonomy:<key>`, or ''.
+ * @return {string} `field:<key>`, `taxonomy:<key>`, `relationship:<key>`, or ''.
  */
 export function targetOf( condition ) {
+	if ( typeof condition?.relationship === 'string' ) {
+		return `relationship:${ condition.relationship }`;
+	}
 	if ( typeof condition?.taxonomy === 'string' ) {
 		return `taxonomy:${ condition.taxonomy }`;
 	}
@@ -77,12 +114,15 @@ export function targetOf( condition ) {
 /**
  * A new condition for a target, with a sensible operator and value.
  *
- * @param {string}  target `field:<key>` or `taxonomy:<key>`.
+ * @param {string}  target `field:<key>`, `taxonomy:<key>` or `relationship:<key>`.
  * @param {?Object} type   Parsed type config.
  * @return {?Object} Condition, or null for an unknown target.
  */
 export function conditionFor( target, type ) {
 	const [ kind, key ] = target.split( ':' );
+	if ( kind === 'relationship' && findRelationship( type, key ) ) {
+		return { relationship: key, op: 'not_empty' };
+	}
 	if ( kind === 'taxonomy' && findTaxonomy( type, key ) ) {
 		return { taxonomy: key, op: 'in', terms: [] };
 	}
@@ -130,8 +170,16 @@ export function describeCondition( condition, type ) {
 		return sprintf(
 			/* translators: %s: field or taxonomy key */
 			__( '%s (unavailable: renders nothing)', 'pegwork' ),
-			condition?.field ?? condition?.taxonomy ?? '?'
+			condition?.field ??
+				condition?.taxonomy ??
+				condition?.relationship ??
+				'?'
 		);
+	}
+	if ( condition.relationship ) {
+		return `${ relationshipLabel(
+			findRelationship( type, condition.relationship )
+		) } ${ opLabel( condition.op ) }`;
 	}
 	if ( condition.taxonomy ) {
 		const taxonomy = findTaxonomy( type, condition.taxonomy );

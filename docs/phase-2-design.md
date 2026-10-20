@@ -102,7 +102,7 @@ Steelman a custom listing block: the Query Loop already gives layout (post-templ
   - Taxonomy constraints become `tax_query` (field `slug`, operator `IN`, relation `AND` across filters). Boolean becomes `meta_query` `=` `'1'` on `Registry::meta_key()`; select becomes `=` on the option value. `q` becomes `s`, set in `pre_get_posts` after `parse_query` so `is_search()` stays false and the archive template is kept.
   - The translator re-checks every key against the registry and drops private or undeclared keys (defense in depth behind the Validator).
 - Listings add `data-pegwork-directory="<post_type>"` to the query wrapper (`render_block_core/query`) so the filters store can find its regions.
-- Related items (relationships) are out of scope; if needed later they depend on the parallel content builder completion design.
+- Related items (relationships) are out of scope; if needed later they depend on the parallel content builder completion design. Built later (2026-10-20) as `where.related` plus a Show if relationship condition: `docs/display.md` "Related records".
 
 ## 7. Filters: `pegwork/filters`
 

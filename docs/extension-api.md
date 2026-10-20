@@ -110,10 +110,11 @@ array(
 	'fields'     => array( 'needs_volunteers' => true ),                  // public boolean: bool; public select: value or list
 	'search'     => 'data',                                                // core search (s)
 	'post__in'   => array( 12 ),                                           // empty list matches nothing
+	'related'    => array( 'key' => 'story_projects', 'post' => 24 ),      // records linked to post 24; unresolvable matches nothing
 )
 ```
 
-`$constraints` arrives holding the loop's `where` presets (as `fields` and `post__in`), or empty for `main`. Merge into it rather than replacing it. Return values are re-checked against the registry: private, unknown or non-filterable fields, taxonomies the type does not use, malformed slugs and values outside a select's options are dropped; at most 20 values per key, 100 characters of search. Queries always list published records only. The filters module adds URL constraints here at priority 10 when `filters` is true (presets already in `$constraints` win per field or taxonomy; searches join), so a callback at a later priority sees them. Callbacks must be pure and cheap, since this runs several times per render.
+`$constraints` arrives holding the loop's `where` presets (as `fields`, `post__in` and `related`), or empty for `main`. Merge into it rather than replacing it. Return values are re-checked against the registry: private, unknown or non-filterable fields, taxonomies the type does not use, malformed slugs and values outside a select's options are dropped; at most 20 values per key, 100 characters of search. Queries always list published records only. The filters module adds URL constraints here at priority 10 when `filters` is true (presets already in `$constraints` win per field or taxonomy; searches join), so a callback at a later priority sees them. Callbacks must be pure and cheap, since this runs several times per render.
 
 ```php
 add_filter( 'pegwork_listing_constraints', function ( $constraints, $type, $context ) {
@@ -128,9 +129,10 @@ add_filter( 'pegwork_listing_constraints', function ( $constraints, $type, $cont
 
 ```php
 apply_filters( 'pegwork_listing_pattern', ?array $pattern, string $type, string $kind ); // kind: card|details|directory|featured|latest
+apply_filters( 'pegwork_listing_pattern', ?array $pattern, string $type, 'related', string $relationship ); // pegwork/<type>-related-<relationship>
 ```
 
-Pattern properties for `register_block_pattern()` before Pegwork registers `pegwork/<type>-<kind>`; return null to skip it. A pattern of that name registered earlier (a theme `patterns/` file) wins and this filter is not called. The filters module uses it (priority 10) to put a `pegwork/filters` block above the directory pattern's Query Loop; a later callback can remove or move it.
+Pattern properties for `register_block_pattern()` before Pegwork registers `pegwork/<type>-<kind>` (or the related pattern for the viewed type `$type`); return null to skip it. A pattern of that name registered earlier (a theme `patterns/` file) wins and this filter is not called. The filters module uses it (priority 10) to put a `pegwork/filters` block above the directory pattern's Query Loop; a later callback can remove or move it.
 
 ### Filters module
 
@@ -184,9 +186,11 @@ Enabled slugs live in the `pegwork_modules` option. Manage them on the Pegwork >
 
 ```
 wp pegwork module list
-wp pegwork module enable <slug>
-wp pegwork module disable <slug>
+wp pegwork module enable <slug>...     # e.g. wp pegwork module enable listings filters
+wp pegwork module disable <slug>...    # e.g. wp pegwork module disable filters listings
 ```
+
+`enable` and `disable` take one or more slugs and apply them in the order given (so list a module after the ones it requires, and before them when disabling). Each slug prints its own success or warning line; a failed slug does not stop the rest, and the command exits 1 when any slug failed.
 
 Behavior: a disabled module's files are never included. An enabled slug missing from the manifest is ignored. A module whose `requires` are not all booted is skipped. Each of these shows an admin notice. `enable` rejects unknown slugs and slugs whose requirements are not yet enabled (`pegwork_module_requires`). `disable` rejects a slug that an enabled module requires (`pegwork_module_required_by`). The screen and the CLI call the same `Modules\Loader` methods, so the rules are identical; the screen shows a blocked action as a disabled button with its reason ("Requires Sample", "Required by Needs sample").
 

@@ -71,6 +71,14 @@ pegwork_registry()->relationships_for( 'sifg_project' ); // relationships with t
 
 `pegwork_related_query_args()` returns `[ post_type => from, meta_query => [ [ key => _rel_{key}, value => id, type => NUMERIC ] ] ]` from a "to" post and `[ post_type => to, post__in => ids ]` from a "from" post (`post__in => [ 0 ]` when nothing is linked). For an unknown key or a post of neither type it returns `[ post__in => [ 0 ] ]`, which matches nothing.
 
+## Listings
+
+With the listings module, no PHP is needed to show related records (`docs/display.md` "Related records"):
+
+- Query Loop preset `"pegwork":{"where":{"related":"story_projects"}}`: a Stories loop on a Project lists its published Stories, a Projects loop on a Story its published Projects. It calls `pegwork_related_query_args()` for the record in block context and keeps the loop's order and paging. No record, no links, a wrong type or an unknown key list nothing.
+- "Show if" condition `{ "relationship": "story_projects", "op": "not_empty" }` hides a heading together with the loop when nothing published is related.
+- Generated patterns `pegwork/sifg_project-related-story_projects` ("Project related Stories") and `pegwork/sifg_story-related-story_projects` ("Story related Projects"), one per end of each relationship.
+
 ## WP-CLI
 
 ```

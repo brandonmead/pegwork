@@ -63,6 +63,26 @@ function parseTaxonomy( taxonomy ) {
 	};
 }
 
+function parseRelationship( relationship ) {
+	if (
+		! isObject( relationship ) ||
+		! isKey( relationship.key ) ||
+		! isKey( relationship.type )
+	) {
+		return null;
+	}
+	return {
+		key: relationship.key,
+		type: relationship.type,
+		label: isKey( relationship.label )
+			? relationship.label
+			: relationship.type,
+		plural: isKey( relationship.plural )
+			? relationship.plural
+			: relationship.type,
+	};
+}
+
 /**
  * Parses the whole config.
  *
@@ -100,6 +120,9 @@ export function parseConfig( raw ) {
 			taxonomies: toList( type.taxonomies )
 				.map( parseTaxonomy )
 				.filter( Boolean ),
+			relationships: toList( type.relationships )
+				.map( parseRelationship )
+				.filter( Boolean ),
 		};
 	}
 
@@ -129,5 +152,19 @@ export function findField( type, key ) {
  */
 export function findTaxonomy( type, key ) {
 	const found = type?.taxonomies.find( ( taxonomy ) => taxonomy.key === key );
+	return found ?? null;
+}
+
+/**
+ * A relationship with the type at one end, with the type at the other end.
+ *
+ * @param {?Object} type Parsed type config.
+ * @param {string}  key  Relationship key.
+ * @return {?Object} `{ key, type, label, plural }` (the other end), or null.
+ */
+export function findRelationship( type, key ) {
+	const found = ( type?.relationships ?? [] ).find(
+		( relationship ) => relationship.key === key
+	);
 	return found ?? null;
 }
