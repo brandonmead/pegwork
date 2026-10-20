@@ -250,6 +250,45 @@ class ModuleLoaderTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Built-in labels and descriptions are translated in the pegwork domain when read (after init), not
+	 * when manifest.php is included; the manifest filter and the Modules screen get the translated strings.
+	 */
+	public function test_shipped_labels_are_translated_at_read_time() {
+		$manifest = require dirname( __DIR__, 2 ) . '/src/Modules/manifest.php';
+		foreach ( $manifest as $entry ) {
+			$this->assertInstanceOf( \Closure::class, $entry['label'], 'Nothing is translated at include time.' );
+			$this->assertInstanceOf( \Closure::class, $entry['description'] );
+		}
+
+		add_filter(
+			'gettext',
+			static fn( $text, $original, $domain ) => 'pegwork' === $domain && in_array( $original, array( 'Forms', 'Listings' ), true ) ? 'XX ' . $original : $text,
+			10,
+			3
+		);
+		$seen = null;
+		add_filter(
+			'pegwork_module_manifest',
+			static function ( $value ) use ( &$seen ) {
+				$seen = $value['forms']['label'];
+				return $value;
+			}
+		);
+
+		$this->assertSame( 'XX Forms', Loader::manifest()['forms']['label'] );
+		$this->assertSame( 'XX Forms', $seen, 'The filter receives strings.' );
+		$this->assertStringStartsWith( 'Registry forms on pages', Loader::manifest()['forms']['description'] );
+		$this->assertSame( 'Sample', Loader::manifest()['sample']['label'], 'Plain strings from the filter are kept.' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		ob_start();
+		\Pegwork\Admin\Modules::render();
+		$html = ob_get_clean();
+		$this->assertStringContainsString( '<strong>XX Listings</strong>', $html );
+		$this->assertStringContainsString( 'XX Listings', substr( $html, (int) strpos( $html, '<code>filters</code>' ) ), 'Requirements use the translated label.' );
+	}
+
+	/**
 	 * Enabling filters before listings is rejected.
 	 */
 	public function test_filters_requires_listings() {

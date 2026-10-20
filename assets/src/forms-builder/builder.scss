@@ -40,6 +40,13 @@ $pegwork-muted: #50575e;
 	font-weight: 600;
 }
 
+// A bound field without its own label shows the registry label as the placeholder: it is the label
+// the form uses, so it looks like one (as in the read-only view), not like a hint.
+.pegwork-builder-field.is-bound .pegwork-builder-field__label::placeholder {
+	color: inherit;
+	opacity: 1;
+}
+
 .pegwork-builder-field__required {
 	color: $pegwork-muted;
 }
@@ -169,4 +176,16 @@ $pegwork-muted: #50575e;
 
 .pegwork-builder-settings__tags {
 	word-break: break-word;
+}
+
+// Every save of a form is private, so "Save draft" would do the same as Save: one button only.
+.post-type-pegwork_form .editor-post-save-draft {
+	display: none;
+}
+
+// File forms (read-only): every block is locked (templateLock "all"), but core keeps the inserter
+// button enabled; and the post is regenerated from the file, so "Last edited" says nothing.
+.pegwork-form-readonly .editor-document-tools__inserter-toggle,
+.pegwork-form-readonly .editor-post-last-edited-panel {
+	display: none;
 }

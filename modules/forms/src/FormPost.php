@@ -433,6 +433,16 @@ final class FormPost {
 		}
 
 		$generated = Builder::generate( $form );
+		// Regeneration is not an edit: keep the modified date ("Last edited" in the editor).
+		$post = get_post( $post_id );
+		$keep = static function ( $data, $postarr ) use ( $post_id, $post ) {
+			if ( $post instanceof WP_Post && (int) ( $postarr['ID'] ?? 0 ) === $post_id ) {
+				$data['post_modified']     = $post->post_modified;
+				$data['post_modified_gmt'] = $post->post_modified_gmt;
+			}
+			return $data;
+		};
+		add_filter( 'wp_insert_post_data', $keep, 99, 2 );
 		wp_update_post(
 			wp_slash(
 				array(
@@ -442,6 +452,7 @@ final class FormPost {
 				)
 			)
 		);
+		remove_filter( 'wp_insert_post_data', $keep, 99 );
 		self::link( $post_id, $key );
 		return true;
 	}

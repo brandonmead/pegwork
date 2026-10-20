@@ -26,7 +26,8 @@ use Pegwork\Api\Events;
  * - Values are validated again against the current definition. Valid: the record is written as the
  *   definition says, the entry becomes `received` with `post_id` and `confirmed_at`, `confirmed`
  *   notifications go out and `form.confirmed` is emitted. Invalid: a create form makes a draft, the
- *   entry becomes `failed` with `meta.errors`, and the site admin is told; nothing is emitted.
+ *   entry becomes `failed` with `meta.errors`, and the site admin is told; nothing is emitted. The
+ *   submitter then sees `messages.confirm_failed` (a person will check it), not the thank-you.
  * - At most MAX_MAILS confirmation emails per address per MAIL_WINDOW, across forms.
  * - Confirmation pages are sent with no-cache headers, `noindex` and `Referrer-Policy: no-referrer`,
  *   so the token is neither cached nor leaked to other sites.
@@ -42,6 +43,12 @@ final class Confirm {
 	 * Query arg of the thank-you state after a confirmation (value: form key).
 	 */
 	public const DONE = 'pegwork_confirmed';
+
+	/**
+	 * Query arg added to DONE when the confirmation was received but the entry failed re-validation
+	 * (value: 1). It only changes the message shown, so a hand-made URL reveals nothing.
+	 */
+	public const REVIEW = 'pegwork_review';
 
 	/**
 	 * Confirmation emails allowed per address in MAIL_WINDOW, across forms.
@@ -325,7 +332,11 @@ final class Confirm {
 		) : self::confirm( $parsed['id'], $parsed['token'], time() );
 
 		if ( 'confirmed' === $result['outcome'] ) {
-			$target = add_query_arg( self::DONE, $result['form'], Submission::current_url() );
+			$args = array( self::DONE => $result['form'] );
+			if ( 'failed' === ( $result['status'] ?? '' ) ) {
+				$args[ self::REVIEW ] = '1';
+			}
+			$target = add_query_arg( $args, Submission::current_url() );
 			wp_safe_redirect( $target, 303 );
 			exit;
 		}
@@ -345,7 +356,7 @@ final class Confirm {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only display state; the token is checked.
 		if ( isset( $_GET[ self::DONE ] ) && sanitize_key( wp_unslash( $_GET[ self::DONE ] ) ) === $key ) {
 			return array(
-				'html'    => self::status( __( 'Thank you. Your submission is confirmed.', 'pegwork' ) ),
+				'html'    => self::status( isset( $_GET[ self::REVIEW ] ) ? self::review_message( $form ) : __( 'Thank you. Your submission is confirmed.', 'pegwork' ) ),
 				'replace' => true,
 			);
 		}
@@ -365,7 +376,7 @@ final class Confirm {
 				'replace' => true,
 			),
 			'done'    => array(
-				'html'    => self::status( __( 'This submission is already confirmed. There is nothing more to do.', 'pegwork' ) ),
+				'html'    => self::status( 'failed' === $entry['status'] ? self::review_message( $form ) : __( 'This submission is already confirmed. There is nothing more to do.', 'pegwork' ) ),
 				'replace' => true,
 			),
 			'expired' => array(
@@ -455,6 +466,19 @@ final class Confirm {
 			. '<input type="hidden" name="' . esc_attr( self::QUERY ) . '[token]" value="' . esc_attr( $parsed['token'] ) . '">'
 			. '<div class="pegwork-form__actions"><button type="submit" class="pegwork-form__submit wp-element-button">' . esc_html__( 'Confirm my submission', 'pegwork' ) . '</button></div>'
 			. '</form></section>';
+	}
+
+	/**
+	 * What the submitter sees when their confirmation arrived but the entry failed re-validation (it is
+	 * kept, as a draft for a create form, for a person to check): `messages.confirm_failed`, or the default.
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 */
+	public static function review_message( array $form ): string {
+		$message = $form['messages']['confirm_failed'] ?? null;
+		return is_string( $message ) && '' !== $message
+			? $message
+			: __( 'We got your confirmation, but something in your submission needs a person to check it. We will be in touch.', 'pegwork' );
 	}
 
 	/**

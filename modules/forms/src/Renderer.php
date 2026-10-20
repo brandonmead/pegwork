@@ -157,7 +157,8 @@ final class Renderer {
 		}
 
 		$submit = $form['messages']['submit_label'] ?? __( 'Send', 'pegwork' );
-		$html  .= '<div class="pegwork-form__actions"><button type="submit" class="pegwork-form__submit wp-element-button">' . esc_html( $submit ) . '</button></div>';
+		// Turnstile forms: the button starts disabled and a one-line script enables it, so without JavaScript it cannot be sent.
+		$html .= '<div class="pegwork-form__actions"><button type="submit" class="pegwork-form__submit wp-element-button"' . ( $turnstile ? ' disabled' : '' ) . '>' . esc_html( $submit ) . '</button>' . ( $turnstile ? Turnstile::enable_submit() : '' ) . '</div>';
 
 		return $html . '</form></div>';
 	}
@@ -398,6 +399,7 @@ final class Renderer {
 			'denied'       => __( 'You do not have permission to use this form.', 'pegwork' ),
 			'failed'       => __( 'Your submission could not be saved. Try again later.', 'pegwork' ),
 			'captcha_failed' => __( 'The spam check did not pass. Wait for the check to finish, then send the form again.', 'pegwork' ),
+			'captcha_missing' => __( 'This form needs JavaScript for its spam check. Turn on JavaScript in your browser to send it.', 'pegwork' ),
 			'record_failed' => __( 'Your submission was received, but it could not be processed. The site team has been told and will follow up.', 'pegwork' ),
 			default        => '',
 		};

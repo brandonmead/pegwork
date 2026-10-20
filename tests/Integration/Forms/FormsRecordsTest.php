@@ -572,7 +572,8 @@ class FormsRecordsTest extends FormsTestCase {
 		$this->events = array();
 
 		$confirmed = Confirm::confirm( (int) $id, $token, self::NOW + 60 );
-		$this->assertSame( 'confirmed', $confirmed['outcome'], 'The submitter still sees the thank-you.' );
+		$this->assertSame( 'confirmed', $confirmed['outcome'], 'The confirmation itself went through.' );
+		$this->assertSame( 'failed', $confirmed['status'], 'handle() adds pegwork_review=1 to the redirect for this status.' );
 		$draft = get_post( $confirmed['record_id'] );
 		$this->assertSame( 'draft', $draft->post_status );
 		$this->assertSame( 'River Watch', $draft->post_title );
@@ -590,6 +591,28 @@ class FormsRecordsTest extends FormsTestCase {
 		$this->assertStringContainsString( 'Description must be at least 50 words', $mail[0]['body'] );
 		$this->assertStringContainsString( 'post.php?post=' . $draft->ID . '&action=edit', $mail[0]['body'] );
 		$this->assertSame( array(), $this->events_named( 'form.confirmed' ) );
+
+		// The submitter is told honestly that a person will check it, not "confirmed".
+		$review = 'We got your confirmation, but something in your submission needs a person to check it. We will be in touch.';
+		Renderer::reset();
+		$_GET['pegwork_confirmed'] = 'fx_project';
+		$_GET['pegwork_review']    = '1';
+		$html                      = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
+		unset( $_GET['pegwork_confirmed'], $_GET['pegwork_review'] );
+		$this->assertStringContainsString( '<div class="pegwork-form__status" role="status" tabindex="-1" autofocus><p>' . $review . '</p></div>', $html );
+		$this->assertStringNotContainsString( 'Your submission is confirmed', $html );
+
+		// Opening the link again says the same, not "already confirmed".
+		Confirm::reset();
+		Renderer::reset();
+		$_GET['pegwork_confirm'] = $id . '.' . $token;
+		$html                    = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
+		unset( $_GET['pegwork_confirm'] );
+		$this->assertStringContainsString( '<p>' . $review . '</p>', $html );
+
+		// A form overrides it with messages.confirm_failed.
+		$this->assertSame( 'An editor will check it.', Confirm::review_message( array( 'messages' => array( 'confirm_failed' => 'An editor will check it.' ) ) ) );
+		$this->assertSame( $review, Confirm::review_message( array( 'messages' => array( 'success' => 'x' ) ) ) );
 	}
 
 	/**

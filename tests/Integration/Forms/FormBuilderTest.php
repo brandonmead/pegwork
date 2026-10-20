@@ -341,8 +341,17 @@ class FormBuilderTest extends FormsTestCase {
 		);
 		$this->assertTrue( pegwork_save_form( $form ) );
 
+		global $wpdb;
+		$old = array(
+			'post_modified'     => '2026-01-02 03:04:05',
+			'post_modified_gmt' => '2026-01-02 03:04:05',
+		);
+		$wpdb->update( $wpdb->posts, $old, array( 'ID' => $post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Sets an old modified date.
+		clean_post_cache( $post_id );
+
 		$this->assertTrue( FormPost::sync( $post_id ) );
 		$post = get_post( $post_id );
+		$this->assertSame( '2026-01-02 03:04:05', $post->post_modified_gmt, 'Regeneration is not an edit: "Last edited" stays.' );
 		$this->assertSame( 'Feedback (imported)', $post->post_title );
 		$this->assertStringContainsString( '"key":"phone"', $post->post_content );
 		$this->assertSame( Builder::generate( pegwork_registry()->form( 'feedback' ) )['content'], $post->post_content );
@@ -385,6 +394,13 @@ class FormBuilderTest extends FormsTestCase {
 		$this->assertFalse( current_user_can( 'delete_post', $post_id ) );
 		$settings = FormPost::editor_settings( array(), new WP_Block_Editor_Context( array( 'post' => get_post( $post_id ) ) ) );
 		$this->assertSame( 'all', $settings['templateLock'] );
+		set_current_screen( FormPost::TYPE );
+		$GLOBALS['post'] = get_post( $post_id );
+		$this->assertStringContainsString( 'pegwork-form-readonly', BuilderEditor::body_class( 'x' ), 'Read-only styles: no inserter, no "Last edited".' );
+		$GLOBALS['post'] = get_post( $this->create_form() );
+		$this->assertSame( 'x', BuilderEditor::body_class( 'x' ), 'Site forms stay editable.' );
+		unset( $GLOBALS['post'] );
+		set_current_screen( 'pegwork_page_' . FormsAdmin::SLUG );
 		$config = BuilderEditor::config( get_post( $post_id ) );
 		$this->assertTrue( $config['readOnly'] );
 		$this->assertSame( 'forms_runtime', $config['package'] );

@@ -20,7 +20,6 @@ import {
 	Disabled,
 } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
-// eslint-disable-next-line import/no-unresolved -- WordPress script wp-server-side-render; the build externalizes it.
 import ServerSideRender from '@wordpress/server-side-render';
 
 /**

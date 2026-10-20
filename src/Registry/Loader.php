@@ -230,8 +230,8 @@ final class Loader {
 				if ( isset( $seen[ $kind ][ $data['key'] ] ) ) {
 					$package['errors'][] = new ValidationError(
 						'duplicate_key',
-						/* translators: 1: key, 2: file that already defines it. */
-						sprintf( __( 'Key "%1$s" is already defined in %2$s.', 'pegwork' ), $data['key'], $seen[ $kind ][ $data['key'] ] ),
+						/* translators: 1: key, 2: file that already defines it, relative to the package directory. */
+						sprintf( __( 'Key "%1$s" is already defined in %2$s.', 'pegwork' ), $data['key'], substr( $seen[ $kind ][ $data['key'] ], strlen( $real ) + 1 ) ),
 						$file,
 						'/key'
 					);

@@ -120,6 +120,15 @@ final class Turnstile {
 	}
 
 	/**
+	 * Inline script placed right after the submit button, which is rendered `disabled`: it enables the
+	 * button, so only a browser running JavaScript (and so the widget) can send the form. Without
+	 * JavaScript the button stays disabled under the noscript notice.
+	 */
+	public static function enable_submit(): string {
+		return wp_get_inline_script_tag( 'document.currentScript.previousElementSibling.disabled=false;' );
+	}
+
+	/**
 	 * Enqueues Cloudflare's script. Loaded without a version query: Cloudflare serves api.js from one
 	 * fixed URL and does not support altered or cached copies.
 	 */

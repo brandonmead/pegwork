@@ -60,6 +60,8 @@ A package is a directory with `manifest.json` and one JSON file per object:
 | `label` | yes | non-empty string |
 | `requires` | no | map of name to version constraint strings; informational |
 
+`requires` is validated for shape only (string values, no callables) and is never compared with the running versions: Pegwork does not refuse a package whose constraint it does not meet. It tells readers and tools which plugin version the package was written for. An older Pegwork rejects the newer sections on its own (unknown keys), which is the real guard. The plugin version (`PEGWORK_VERSION`, plugin header) and the API version (`Pegwork\Api\VERSION`) are both 0.2.0.
+
 ## Content types
 
 ```json
@@ -237,7 +239,7 @@ A form either creates or updates a record of a content type (`target`) or, witho
 | `fields` | one of | | list of items |
 | `steps` | one of | | list of `{ key, label, description, fields }`; step keys unique. Exactly one of `fields` or `steps` (`form_fields_or_steps`) |
 | `notifications` | no | `[]` | list of notifications, keys unique |
-| `messages` | no | | `{ success, submit_label }`, non-empty strings |
+| `messages` | no | | `{ success, submit_label, confirm_failed }`, non-empty strings. `confirm_failed` is shown after a confirmation whose values no longer pass validation (the entry is `failed`, a draft is kept for review) |
 | `retention_days` | no | | positive integer; entries older than this are deleted |
 
 ### Form items

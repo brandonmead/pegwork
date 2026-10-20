@@ -126,8 +126,9 @@ trait FormRules {
 					$v,
 					$p,
 					array(
-						'success'      => $string,
-						'submit_label' => $string,
+						'success'        => $string,
+						'submit_label'   => $string,
+						'confirm_failed' => $string,
 					)
 				),
 				'retention_days' => fn( $v, $p ) => $this->positive_count( $v, $p ),

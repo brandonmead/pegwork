@@ -510,7 +510,8 @@
 					"additionalProperties": false,
 					"properties": {
 						"success": { "$ref": "#/$defs/text" },
-						"submit_label": { "$ref": "#/$defs/text" }
+						"submit_label": { "$ref": "#/$defs/text" },
+						"confirm_failed": { "$ref": "#/$defs/text" }
 					}
 				},
 				"retention_days": { "type": "integer", "minimum": 1 }

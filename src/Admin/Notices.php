@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace Pegwork\Admin;
 
 use Pegwork\Plugin;
+use Pegwork\Registry\Status;
 
 /**
  * Shows registry load errors to administrators.
@@ -44,8 +45,11 @@ final class Notices {
 			)
 		);
 		echo '</p><ul>';
+		$status = Status::current();
 		foreach ( array_slice( $errors, 0, self::MAX_LISTED ) as $error ) {
-			echo '<li><code>' . esc_html( (string) $error ) . '</code></li>';
+			// Short path (wp-content/... or package-relative), never the server's absolute path.
+			$where = $status->display_path( $error->file ) . ( '' === $error->pointer ? '' : '#' . $error->pointer );
+			echo '<li><code>' . esc_html( $where ) . '</code>: ' . esc_html( $error->message ) . '</li>';
 		}
 		echo '</ul><p>' . esc_html__( 'Run "wp pegwork schema validate" for the full list.', 'pegwork' ) . '</p></div>';
 	}

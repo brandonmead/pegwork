@@ -257,8 +257,51 @@ final class Status {
 	 * @param string $file Error file path.
 	 */
 	private function owner( string $file ): string {
+		return $this->locate( $file )[0];
+	}
+
+	/**
+	 * A source file or package directory as admin screens show it, without the server's absolute path:
+	 * `wp-content/...` when it is under the content directory, else `<package directory name>/...`
+	 * relative to the package that holds it, else the file name. The DB source label is returned as is.
+	 * The CLI keeps absolute paths.
+	 *
+	 * @param string $path Error file path or package directory.
+	 */
+	public function display_path( string $path ): string {
+		if ( '' === $path || Loader::DB_SOURCE === $path ) {
+			return $path;
+		}
+
+		$normal  = str_replace( '\\', '/', $path );
+		$content = defined( 'WP_CONTENT_DIR' ) ? array( WP_CONTENT_DIR, (string) realpath( WP_CONTENT_DIR ) ) : array();
+		foreach ( array_unique( array_filter( $content ) ) as $dir ) {
+			$dir = rtrim( str_replace( '\\', '/', $dir ), '/' );
+			if ( str_starts_with( $normal, $dir . '/' ) ) {
+				return 'wp-content/' . substr( $normal, strlen( $dir ) + 1 );
+			}
+		}
+
+		[ $owner, $prefix ] = $this->locate( $path );
+		if ( '' !== $prefix ) {
+			$name = basename( str_replace( '\\', '/', $prefix ) );
+			$rest = ltrim( str_replace( '\\', '/', substr( $path, strlen( $prefix ) ) ), '/' );
+			return '' === $rest ? $name : $name . '/' . $rest;
+		}
+
+		return basename( $normal );
+	}
+
+	/**
+	 * Package directory (as registered) that holds a path, and the matching prefix (the directory as
+	 * given or its real path); the DB source label and '' when no package holds it.
+	 *
+	 * @param string $file File or directory path.
+	 * @return array{0: string, 1: string}
+	 */
+	private function locate( string $file ): array {
 		$owner = Loader::DB_SOURCE;
-		$depth = -1;
+		$match = '';
 		foreach ( $this->packages as $dir ) {
 			$dir  = (string) $dir;
 			$real = realpath( $dir );
@@ -267,12 +310,12 @@ final class Status {
 					continue;
 				}
 				$inside = $file === $prefix || str_starts_with( $file, $prefix . '/' ) || str_starts_with( $file, $prefix . '\\' );
-				if ( $inside && strlen( $prefix ) > $depth ) {
+				if ( $inside && strlen( $prefix ) > strlen( $match ) ) {
 					$owner = $dir;
-					$depth = strlen( $prefix );
+					$match = $prefix;
 				}
 			}
 		}
-		return $owner;
+		return array( $owner, $match );
 	}
 }

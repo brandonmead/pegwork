@@ -115,7 +115,9 @@ final class Overview {
 		$errors = array();
 		foreach ( $status->rejected() as $group ) {
 			foreach ( $group['errors'] as $error ) {
-				$errors[] = array( 'source' => $group['source'] ) + $error;
+				// Short paths on screen; `wp pegwork schema status` prints the absolute ones.
+				$error['file'] = $status->display_path( $error['file'] );
+				$errors[]      = array( 'source' => $status->display_path( $group['source'] ) ) + $error;
 			}
 		}
 		self::section(

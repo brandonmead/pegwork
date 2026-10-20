@@ -48,6 +48,12 @@ const DEFAULT_SUCCESS = __(
 	'pegwork'
 );
 
+// Same default as PegworkForms\Confirm::review_message().
+const DEFAULT_CONFIRM_FAILED = __(
+	'We got your confirmation, but something in your submission needs a person to check it. We will be in touch.',
+	'pegwork'
+);
+
 /**
  * Wraps panel content in Disabled for read-only (file) forms.
  *
@@ -716,6 +722,24 @@ function MessagesPanel() {
 						setMessage( 'submit_label', value )
 					}
 				/>
+				{ settings.confirm && (
+					<TextareaControl
+						__nextHasNoMarginBottom
+						label={ __(
+							'Message when a confirmed submission needs review',
+							'pegwork'
+						) }
+						help={ __(
+							'Shown after the submitter confirms if their values no longer pass the form rules. The entry is kept for you to check.',
+							'pegwork'
+						) }
+						placeholder={ DEFAULT_CONFIRM_FAILED }
+						value={ messages.confirm_failed || '' }
+						onChange={ ( value ) =>
+							setMessage( 'confirm_failed', value )
+						}
+					/>
+				) }
 				<Errors messages={ errorsAt( errors, '/messages' ) } />
 				<ToggleControl
 					__nextHasNoMarginBottom

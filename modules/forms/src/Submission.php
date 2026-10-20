@@ -148,7 +148,8 @@ final class Submission {
 	 * @return array<string, mixed> `outcome`: `sent`, `spam`, `duplicate` (all redirect to the success state),
 	 *                              `held` (stored as spam `captcha_unverified`; redirects to the held state),
 	 *                              or `invalid`, `denied`, `expired`, `rate_limited`, `failed` (re-render, nothing
-	 *                              stored), `captcha_failed` (re-render; stored as spam), `record_failed` (re-render;
+	 *                              stored), `captcha_failed` (re-render; stored as spam), `captcha_missing` (no
+	 *                              token field at all, so no JavaScript: re-render; stored as spam), `record_failed` (re-render;
 	 *                              the entry is stored as `failed` and the admin told); plus `entry_id`, `record_id`,
 	 *                              `errors` (message by item key), `values` (posted text) and `files` (names of the
 	 *                              files chosen, which a re-render cannot keep).
@@ -263,9 +264,11 @@ final class Submission {
 		// can be stored (a double click hits the duplicate check above, not a reused-token failure).
 		$verdict = Turnstile::enabled( $form ) ? Turnstile::verify( $control[ Turnstile::FIELD ] ?? null ) : 'pass';
 		if ( 'fail' === $verdict ) {
-			$entry_id = Entries::insert( $base + array( 'status' => 'spam' ) + array( 'meta' => $meta + array( 'spam' => array( 'captcha_failed' ) ) ) );
+			// No token field at all: the widget never ran, so the browser has no JavaScript.
+			$reason   = array_key_exists( Turnstile::FIELD, $control ) ? 'captcha_failed' : 'captcha_missing';
+			$entry_id = Entries::insert( $base + array( 'status' => 'spam' ) + array( 'meta' => $meta + array( 'spam' => array( $reason ) ) ) );
 			RateLimit::hit( 'ip', $key, $ip, $now );
-			return $fail( 'captcha_failed' ) + array( 'entry_id' => $entry_id );
+			return $fail( $reason ) + array( 'entry_id' => $entry_id );
 		}
 
 		$values = self::store_files( $form, $values, $uploads );
@@ -643,6 +646,6 @@ final class Submission {
 		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		$uri    = '' === $uri || '/' !== $uri[0] ? '/' : $uri;
 
-		return remove_query_arg( array( self::SENT, self::HELD, Confirm::QUERY, Confirm::DONE ), $origin . $uri );
+		return remove_query_arg( array( self::SENT, self::HELD, Confirm::QUERY, Confirm::DONE, Confirm::REVIEW ), $origin . $uri );
 	}
 }

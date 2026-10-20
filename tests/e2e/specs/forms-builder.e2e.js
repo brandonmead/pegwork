@@ -95,13 +95,17 @@ async function save( page ) {
 		.getByRole( 'region', { name: 'Editor top bar' } )
 		.getByRole( 'button', { name: /^(Publish|Save|Update)$/ } )
 		.first();
-	const label = ( await button.textContent() ).trim();
+	// The builder relabels core's Publish as Save, so a new form is told apart by its status.
+	const isNew = await page.evaluate(
+		() =>
+			! window.wp.data.select( 'core/editor' ).isCurrentPostPublished()
+	);
 	await press( button );
 	const confirm = page
 		.locator( '.editor-post-publish-panel' )
-		.getByRole( 'button', { name: 'Publish', exact: true } );
-	// The first publish of a new post asks for confirmation in the pre-publish panel.
-	if ( label === 'Publish' && ( await confirm.isVisible() ) === false ) {
+		.getByRole( 'button', { name: /^(Publish|Save)$/ } );
+	// The first save of a new form asks for confirmation in the pre-publish panel.
+	if ( isNew && ( await confirm.isVisible() ) === false ) {
 		await confirm.waitFor( { timeout: 3000 } ).catch( () => {} );
 	}
 	if ( await confirm.isVisible() ) {

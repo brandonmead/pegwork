@@ -59,7 +59,7 @@ final class Modules {
 		echo '<p>' . esc_html__( 'Optional parts of Pegwork. A disabled module does not load at all. A module can be enabled once the modules it requires are enabled, and disabled once no enabled module requires it.', 'pegwork' ) . '</p>';
 
 		// Not wp-list-table: its small-screen CSS stacks cells without their headers.
-		echo '<table class="widefat striped pegwork-table">';
+		echo '<table class="widefat striped pegwork-table pegwork-modules">';
 		echo '<caption class="screen-reader-text">' . esc_html__( 'Modules', 'pegwork' ) . '</caption>';
 		echo '<thead><tr>';
 		echo '<th scope="col">' . esc_html__( 'Module', 'pegwork' ) . '</th>';
