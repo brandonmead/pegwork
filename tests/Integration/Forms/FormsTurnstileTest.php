@@ -121,7 +121,7 @@ class FormsTurnstileTest extends FormsTestCase {
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fr_turnstile"} /-->' );
 
 		$this->assertStringContainsString( '<div class="cf-turnstile" data-sitekey="' . self::TURNSTILE_SITE_KEY . '" data-response-field-name="pegwork_form[captcha]"', $html );
-		$this->assertMatchesRegularExpression( '#<legend class="pegwork-form__step-title">Last</legend>.*<div class="pegwork-form__captcha".*</fieldset><div class="pegwork-form__actions">#s', $html, 'Widget at the end of the last step.' );
+		$this->assertMatchesRegularExpression( '#<legend class="pegwork-form__step-title"><h2 class="pegwork-form__step-heading">Last</h2></legend>.*<div class="pegwork-form__captcha".*</fieldset><div class="pegwork-form__actions">#s', $html, 'Widget at the end of the last step.' );
 		$this->assertSame( 1, substr_count( $html, 'cf-turnstile' ) );
 		$this->assertStringContainsString( '<noscript><p class="pegwork-form__notice pegwork-form__notice--problem">This form needs JavaScript for its spam check.', $html );
 		$this->assertLessThan( strpos( $html, '<form' ), strpos( $html, '<noscript>' ), 'The notice comes before the form, so nobody fills it in first.' );
