@@ -174,3 +174,31 @@ test( 'the multi-value filter disclosure shows a marker, turns it when open, and
 		'Impact category'
 	);
 } );
+
+test( 'horizontal layout: the Needs volunteers checkbox sits at the top of the row, not centered', async ( {
+	page,
+} ) => {
+	await page.setViewportSize( { width: 1280, height: 900 } );
+	await page.goto( directory.link );
+	// Narrow the search box so every control shares one row, next to the tall radio lists.
+	await page.addStyleTag( {
+		content:
+			'.wp-block-pegwork-filters .pegwork-filters__search { flex: 0 1 8rem; } .wp-block-pegwork-filters .pegwork-filters__details { display: none; }',
+	} );
+	const toggle = page.locator( '.pegwork-filters__toggle' );
+	const search = page.getByLabel( 'Search projects' );
+	const toggleBox = await toggle.getByRole( 'checkbox' ).boundingBox();
+	const searchBox = await search.boundingBox();
+	// On the search box's line (the other groups' controls start there), not centered against the lists.
+	expect(
+		Math.abs(
+			toggleBox.y +
+				toggleBox.height / 2 -
+				searchBox.y -
+				searchBox.height / 2
+		)
+	).toBeLessThan( 20 );
+	await page.locator( '.wp-block-pegwork-filters' ).screenshot( {
+		path: `${ SCREENSHOTS }/filters-layout-horizontal.png`,
+	} );
+} );
