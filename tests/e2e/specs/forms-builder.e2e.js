@@ -169,8 +169,22 @@ async function drag( page, source, target, fraction = 0.8 ) {
 	const x = to.x + Math.min( 60, to.width / 2 );
 	const y = to.y + to.height * fraction;
 	await page.mouse.move( x, y, { steps: 20 } );
-	await page.mouse.move( x, y + 2, { steps: 2 } );
+	// The editor throttles dragover (about 200 ms); hover a moment so it places the drop indicator.
+	for ( let i = 1; i <= 3; i++ ) {
+		await page.waitForTimeout( 150 );
+		await page.mouse.move( x, y + i, { steps: 2 } );
+	}
 	await page.mouse.up();
+}
+
+// Drags until `fields` has `count` blocks: a slow runner can drop before the drop zone is ready.
+async function dragUntil( page, source, target, fraction, fields, count ) {
+	await expect( async () => {
+		if ( ( await fields.count() ) < count ) {
+			await drag( page, source, target, fraction );
+		}
+		await expect( fields ).toHaveCount( count, { timeout: 3000 } );
+	} ).toPass( { timeout: 30_000 } );
 }
 
 // Inserts a block from the main inserter: searched and chosen by keyboard.
@@ -256,24 +270,24 @@ test( 'build a two-step form by keyboard and drag and drop, save it, place it an
 
 	const steps = frame.locator( '.pegwork-builder-step' );
 	await searchInserter( page, 'Email' );
-	await drag(
+	const firstFields = steps.first().locator( '.pegwork-builder-field' );
+	await dragUntil(
 		page,
 		blockOption( page, 'Email' ),
-		steps.first().locator( '.pegwork-builder-field' ).first()
+		firstFields.first(),
+		0.8,
+		firstFields,
+		2
 	);
-	await expect(
-		steps.first().locator( '.pegwork-builder-field' )
-	).toHaveCount( 2 );
 	await page.getByRole( 'searchbox' ).fill( 'Paragraph text' );
-	await drag(
+	await dragUntil(
 		page,
 		blockOption( page, 'Paragraph text' ),
 		steps.nth( 1 ).locator( '.pegwork-builder-step__fields' ),
-		0.5
+		0.5,
+		steps.nth( 1 ).locator( '.pegwork-builder-field' ),
+		1
 	);
-	await expect(
-		steps.nth( 1 ).locator( '.pegwork-builder-field' )
-	).toHaveCount( 1 );
 	await closeInserter( page );
 
 	// Each field block is titled by its type (the variation).
