@@ -217,7 +217,7 @@ final class Notifications {
 	}
 
 	/**
-	 * A value as text: Yes/No for booleans, the option label for selects.
+	 * A value as text: Yes/No for booleans, the option label for selects, a file by its name (never its path).
 	 *
 	 * @param array<string, mixed> $item  Item.
 	 * @param mixed                $value Sanitized value.
@@ -226,6 +226,9 @@ final class Notifications {
 		$type = $item['type'] ?? 'text';
 		if ( 'boolean' === $type ) {
 			return $value ? __( 'Yes', 'pegwork' ) : __( 'No', 'pegwork' );
+		}
+		if ( 'file' === $type ) {
+			return is_array( $value ) && is_string( $value['name'] ?? null ) ? $value['name'] : '';
 		}
 		if ( is_array( $value ) ) {
 			$labels = array_map( fn( $choice ) => self::display( array( 'multiple' => false ) + $item, $choice ), array_filter( $value, 'is_scalar' ) );

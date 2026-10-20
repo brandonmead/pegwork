@@ -74,6 +74,23 @@ Registry section accessors (API 0.2.0) return definitions only, in canonical for
 
 `pegwork_get_field( int|WP_Post $post, string $key, string $context = 'view' ): mixed`: boolean fields return bool, number fields int, float or null when unset, everything else a string; registered defaults apply when unset. Private fields return null unless `$context` is `edit` and the current user can `edit_post`. Null for an unknown post or field. It applies no display rules (`show_when`, password, post status): display code such as the `pegwork/field` binding source adds those (`docs/display.md`).
 
+## Display
+
+What the `listings` and `filters` modules offer to themes and add-ons (usage in `docs/display.md`). Block and binding names are the contract:
+
+| Name | Kind | Contract |
+|---|---|---|
+| `pegwork/field` | Block Bindings source | `args`: `key` (required), `format`, `prefix`, `label`, `keepEmpty`. Public fields only; private fields and records that are not publicly viewable resolve to nothing. |
+| `pegwork/option` | Block Bindings source | `args`: `page`, `field` (required), `format`. Public option fields only; an unresolved binding keeps the block's saved text. |
+| `pegwork/conditional` | block | `conditions` (`field` with `equals`, `not_equals`, `empty`, `not_empty`; `taxonomy` with `in`, `not_in`); fails closed. |
+| `pegwork/filters` | block | Attributes `postType`, `filters`, `showSearch`; filter keys come from the type's `listing`. |
+| `pegwork` attribute on `core/query` | block attribute | `filters` (bool) and `where` presets; context `pegwork/listing`. Any value makes the loop list published records only. |
+| `pegwork/<type>-<kind>` | block patterns | `card`, `details`, `directory`, `featured`, `latest`; a pattern registered earlier under the same name (a theme `patterns/` file) wins. |
+
+The schema side is the optional `listing` section of a content type (`docs/registry-reference.md`; `Registry::listing( $type )`). Everything is gated by the modules: `wp pegwork module enable listings` (and `filters`).
+
+Performance tooling for add-on authors who ship large directories: `bin/perf-directory.sh` and `tests/perf/seed.php` (`docs/display.md`, "Query budget and timing"). They are developer tools, not API.
+
 ## Listing hooks
 
 Provided by the `listings` module (`docs/display.md`, "Directories"). Hook names are the contract; the module's classes are not.
@@ -149,7 +166,7 @@ The manifest maps `slug => [ label, description, requires[], path ]`, where `pat
 
 The `automation` module (`docs/automation.md`) runs registry automations and adds Pegwork > Automations (list, Enable/Disable, Run now, run log, Retry; `manage_options`). Sites and add-ons can tune it with filters; its PHP classes are internal.
 
-The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, and the daily WP-Cron event `pegwork_forms_cleanup`. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
+The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, the daily WP-Cron event `pegwork_forms_cleanup`, Cloudflare Turnstile for forms with `captcha: turnstile` (keys only from the wp-config constants `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY`; missing keys hide the form and show managers an admin notice), and private file uploads under `uploads/pegwork-forms/`, downloadable only through `admin-post.php?action=pegwork_forms_file` (capability plus a per-file nonce). Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
 
 | Hook | Kind | Default | Use |
 |---|---|---|---|

@@ -3,5 +3,13 @@
   "key": "fr_turnstile",
   "label": "Needs Turnstile",
   "captcha": "turnstile",
-  "fields": [ { "key": "note", "type": "text", "label": "Note" } ]
+  "steps": [
+    { "key": "one", "label": "First", "fields": [ { "key": "note", "type": "text", "label": "Note", "required": true } ] },
+    { "key": "two", "label": "Last", "fields": [
+      { "key": "email", "type": "email", "label": "Email" },
+      { "key": "attachment", "type": "file", "label": "Attachment", "accept": [ "txt" ] } ] }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "subject": "Turnstile form", "body": "{all_fields}" }
+  ]
 }

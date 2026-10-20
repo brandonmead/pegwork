@@ -125,6 +125,19 @@ The block renders nothing when any condition names an unknown or private field (
 
 The inspector builds conditions from the content type's public fields, taxonomies and relationships ("Related <plural>"): the context post type, the type of a `single-<type>` or `archive-<type>` template, or a type chosen in the panel. Private fields are never offered. The canvas shows a "Show if: ..." summary above the inner blocks, which always display in the editor, and a warning when a condition would make the block render nothing. The block supports Interactivity API client navigation, so it can sit inside directory cards.
 
+## The `listing` section
+
+A content type opts in to directories and filters with an optional `listing` in its schema (full rules in `docs/registry-reference.md`, "Listing"):
+
+```json
+"listing": { "search": true, "filters": [ { "key": "impact", "taxonomy": "sifg_impact" }, { "key": "volunteers", "field": "needs_volunteers" } ] }
+```
+
+- `search: true` enables the `q` parameter (core search, at most 100 characters).
+- Each filter has a URL `key` and exactly one target: a `taxonomy` of the type, or a public `boolean` or `select` `field`. `multiple` (taxonomies only) allows several values, combined as OR; filters combine as AND. `label` is optional.
+- It is an allowlist: nothing outside it is read from the URL, and private fields cannot be named (the registry rejects them).
+- A type with a `listing` gets the generated patterns, the "<Plural> directory" variation, published-only archives and a filtered main query. A type without one is untouched by this module.
+
 ## Directories: Pegwork Query Loops
 
 A directory is a core Query Loop (`core/query`) with one extra attribute, `pegwork`. Layout, pagination, no-results and enhanced pagination stay core's, so themes style it like any Query Loop.
@@ -208,9 +221,19 @@ One translator, `PegworkListings\Constraints::to_query_args()`, serves both path
 
 Anything else is dropped. URL params never reach a query except through this filter (the filters module), so `?contact_email=` or `?meta_key=` on an archive does nothing.
 
-### Query budget (500 records)
+### Query budget and timing (500 records)
 
-Fixture: `tests/perf/seed.php` (`wp eval-file tests/perf/seed.php [count] [seed]`, also used by PHPUnit). `tests/Integration/Listings/DirectoryPerformanceTest.php` renders the directory and the archive with cold caches and fails above 35 queries or when 12 and 48 per page differ. Set `PEGWORK_PERF_REPORT=1` to print the counts. Measured numbers: `architecture.md`.
+Fixture: `tests/perf/seed.php` (`wp eval-file tests/perf/seed.php [count] [seed]`, also used by PHPUnit). `tests/Integration/Listings/DirectoryPerformanceTest.php` renders the directory and the archive with cold caches and fails above 35 queries or when 12 and 48 per page differ. `test_render_time_guard` also fails when the median of five cold-cache renders of the directory (unfiltered or filtered) exceeds 750 ms. Set `PEGWORK_PERF_REPORT=1` to print the counts and median times. Measured numbers: `architecture.md`.
+
+`bin/perf-directory.sh` measures a real site over HTTP:
+
+```sh
+bin/e2e-local-site.sh start perf 8215          # a throwaway site
+bin/perf-directory.sh perf                     # seeds to 500 Projects if needed, then measures
+bin/perf-directory.sh --url http://127.0.0.1:8215 --path ~/wp-envs/perf --max-p95 300 --max-queries 35
+```
+
+It prints p50, p95 and max time to first byte (5 warm-up and 20 timed requests per scenario, no page cache) and the full-request query count for the home page (baseline), and for the archive and a page holding the directory pattern ("Perf directory", created if missing), each on pages 1 and 2, unfiltered and filtered. Query counts come from a temporary mu-plugin that the script installs in the target's `wp-content/mu-plugins` and removes on exit. With a site name it seeds; with `--url` and `--path` it seeds only when you add `--seed`, so it never changes a real site by accident (do not point it at siforgood.local unless you mean to). `--max-p95` and `--max-queries` make it exit 1 when exceeded. `wp server` runs PHP without opcache, which adds about 170 ms of compile time to every request, baseline included; for design-budget numbers serve the site with `php -d zend_extension=opcache.so -S`.
 
 Related sections: `tests/Integration/Listings/RelatedListingTest.php::test_query_budget` renders the generated related pattern (condition plus loop) on a Project with 24 Stories and on a Story with 24 Projects, with cold caches, and fails above 35 queries or when 6 and 24 per page differ.
 
@@ -236,7 +259,7 @@ From the type's `listing` (`docs/registry-reference.md`), labels from the regist
 
 | Filter | Control | URL |
 |---|---|---|
-| taxonomy, `multiple: true` | a disclosure ("Impact category, 2 selected") holding a fieldset of checkboxes, terms in registry order then by name, at most 200 | `impact=sdg-04,sdg-13` (also `impact[]=`) |
+| taxonomy, `multiple: true` | a native `details` disclosure, open or closed, whose summary reads "Impact category" or "Impact category, 2 selected", with a chevron that turns when open and a visible focus outline, holding a fieldset of checkboxes, terms in registry order then by name, at most 200 | `impact=sdg-04,sdg-13` (also `impact[]=`) |
 | taxonomy, `multiple: false` | a fieldset of radios, "Any" first | `project_type=nonprofit` |
 | `select` field | a labelled `<select>`, "Any" first | `size=small` |
 | `boolean` field | one checkbox | `volunteers=1` |
@@ -265,6 +288,18 @@ Script module `@pegwork/filters` (Interactivity API store `pegwork/filters`, abo
 - Clear all resets the controls, focuses the search box (or the first control) and navigates to the base URL.
 - Enhanced pagination stays client-side and keeps the filters.
 - No router region (an inherit loop without enhanced pagination, or no loop on the page) or a router error: a normal page load to the same URL.
+
+### Hooks
+
+Signatures and examples are in `docs/extension-api.md`.
+
+| Hook | Use |
+|---|---|
+| `pegwork_listing_constraints` (filter) | Add or change the constraints of every Pegwork Query Loop and archive main query. The filters module adds URL constraints here. |
+| `pegwork_listing_pattern` (filter) | Change or drop a generated pattern (`card`, `details`, `directory`, `featured`, `latest`). |
+| `pegwork_module_manifest` (filter) | Add modules. |
+
+A theme overrides a pattern without a hook: a pattern registered earlier under the same name wins (see "Generated patterns").
 
 ### Outside blocks
 

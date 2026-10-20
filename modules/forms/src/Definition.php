@@ -239,29 +239,38 @@ final class Definition {
 	}
 
 	/**
-	 * Why this release cannot run a form, or null when it can.
+	 * Why a form cannot run on this site, or null when it can.
 	 *
-	 * Turnstile and file fields arrive in a later release; until then such forms fail closed: they
-	 * render nothing for visitors and their submissions are ignored. A target type missing from the
-	 * registry (the registry validator prevents this) also fails closed.
+	 * Such forms fail closed: they render nothing for visitors and their submissions are ignored. A
+	 * Turnstile form without both wp-config keys, and a target type missing from the registry (the
+	 * registry validator prevents this), fail closed.
 	 *
 	 * @param array<string, mixed> $form Canonical form.
 	 */
 	public static function unsupported( array $form ): ?string {
-		if ( isset( $form['captcha'] ) ) {
-			return __( 'it uses Turnstile, which this version of Pegwork Forms does not support yet', 'pegwork' );
+		if ( isset( $form['captcha'] ) && ( ! Turnstile::enabled( $form ) || null === Turnstile::keys() ) ) {
+			return __( 'it uses Cloudflare Turnstile, and PEGWORK_TURNSTILE_SITE_KEY and PEGWORK_TURNSTILE_SECRET_KEY are not both set in wp-config.php', 'pegwork' );
 		}
 		$type = self::target_type( $form );
 		if ( null !== $type && null === pegwork_registry()->content_type( $type ) ) {
 			/* translators: %s: content type key. */
 			return sprintf( __( 'its target content type "%s" is not defined', 'pegwork' ), $type );
 		}
+		return null;
+	}
+
+	/**
+	 * Whether a form has a file item (the form then posts `multipart/form-data`).
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 */
+	public static function has_files( array $form ): bool {
 		foreach ( self::items( $form ) as $item ) {
 			if ( 'file' === ( $item['type'] ?? '' ) ) {
-				return __( 'it has a file field, which this version of Pegwork Forms does not support yet', 'pegwork' );
+				return true;
 			}
 		}
-		return null;
+		return false;
 	}
 
 	/**

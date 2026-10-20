@@ -26,6 +26,16 @@ class DirectoryPerformanceTest extends WP_UnitTestCase {
 	private const BUDGET = 35;
 
 	/**
+	 * Timing guard: median render time limit in milliseconds.
+	 */
+	private const TIME_BUDGET_MS = 750;
+
+	/**
+	 * Timing guard: renders per median.
+	 */
+	private const TIME_RUNS = 5;
+
+	/**
 	 * Records seeded.
 	 */
 	private const RECORDS = 500;
@@ -219,6 +229,37 @@ class DirectoryPerformanceTest extends WP_UnitTestCase {
 		$this->assertSame( $q12, $q48 );
 		self::$counts['block filtered (12)'] = $q12;
 		self::$counts['block filtered (48)'] = $q48;
+	}
+
+	/**
+	 * CI timing guard (docs/phase-2-design.md section 10): the median of TIME_RUNS cold-cache renders of the
+	 * directory (unfiltered, filtered) stays under TIME_BUDGET_MS. The query budgets above catch structural
+	 * regressions exactly; this catches a slow query plan or accidental heavy work, and is deliberately
+	 * generous so a loaded GitHub runner does not flake it.
+	 */
+	public function test_render_time_guard() {
+		$medians = array();
+		foreach ( array( 'unfiltered', 'filtered' ) as $scenario ) {
+			if ( 'filtered' === $scenario ) {
+				$this->filter_scenario();
+			}
+			$this->measure( fn() => do_blocks( $this->directory( 12 ) ) );
+			$times = array();
+			for ( $i = 0; $i < self::TIME_RUNS; $i++ ) {
+				wp_cache_flush();
+				$start   = microtime( true );
+				$html    = do_blocks( $this->directory( 12 ) );
+				$times[] = ( microtime( true ) - $start ) * 1000;
+			}
+			$this->assertGreaterThan( 0, self::cards( $html ) );
+			sort( $times );
+			$medians[ $scenario ] = $times[ intdiv( self::TIME_RUNS, 2 ) ];
+		}
+
+		foreach ( $medians as $scenario => $ms ) {
+			self::$counts[ "render ms median ($scenario)" ] = (int) round( $ms );
+			$this->assertLessThan( self::TIME_BUDGET_MS, $ms, "Directory render ($scenario) median {$ms} ms" );
+		}
 	}
 
 	/**

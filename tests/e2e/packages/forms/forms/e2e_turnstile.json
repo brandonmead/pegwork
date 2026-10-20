@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "key": "e2e_turnstile",
+  "label": "E2E Turnstile",
+  "captcha": "turnstile",
+  "steps": [
+    { "key": "message", "label": "Your message", "fields": [
+      { "key": "name", "type": "text", "label": "Name", "required": true, "autocomplete": "name" },
+      { "key": "message", "type": "textarea", "label": "Message", "required": true } ] },
+    { "key": "contact", "label": "Contact", "fields": [
+      { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+      { "key": "attachment", "type": "file", "label": "Attachment", "accept": [ "txt" ] } ] }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "subject": "E2E Turnstile: {field:name}", "body": "{all_fields}" }
+  ],
+  "messages": { "success": "Thanks. Your message passed the spam check.", "submit_label": "Send message" }
+}
