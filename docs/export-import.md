@@ -18,14 +18,19 @@ Output is one package directory, loadable as a file package or importable:
 <dir>/content-types/<key>.json
 <dir>/taxonomies/<key>.json
 <dir>/relationships/<key>.json
+<dir>/forms/<key>.json
+<dir>/automations/<key>.json
+<dir>/options-pages/<key>.json
 ```
+
+The six object directories are `Registry\Loader::DIRS`; a directory with no objects is not written.
 
 Format:
 - Each object in canonical form: defaults filled, empty optional objects dropped, object keys sorted, list order kept.
 - `JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE`, 4-space indent, trailing newline.
 - No timestamps, no paths. The same registry exports the same bytes whatever its source.
 - Manifest: when exactly one source contributes objects, its manifest (a file package's own, or for the DB source the manifest stored by the last import). Otherwise a generic one: `{ "format": 1, "id": "site", "label": "Site schema", "version": "0.0.0" }`.
-- Re-exporting into the same directory removes object files that no longer exist (only `*.json` in the three object directories; other files are left alone). Empty object directories are removed.
+- Re-exporting into the same directory removes object files that no longer exist (only `*.json` in the six object directories; other files are left alone). Empty object directories are removed.
 
 ## Import
 

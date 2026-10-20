@@ -171,7 +171,8 @@ class DirectoryQueryTest extends WP_UnitTestCase {
 			$this->assertContains( 'pegwork/listing', $registry->get_registered( $name )->uses_context, $name );
 		}
 
-		$this->assertSame( array( 'query', 'pegwork/listing' ), QueryHooks::uses_context( array( 'query' ) ) );
+		$this->assertSame( array( 'query', 'pegwork/listing', 'postId' ), QueryHooks::uses_context( array( 'query' ) ) );
+		$this->assertSame( array( 'query', 'postId', 'pegwork/listing' ), QueryHooks::uses_context( array( 'query', 'postId' ) ) );
 		$this->assertSame( array( 'postId' ), QueryHooks::uses_context( array( 'postId' ) ) );
 		$args = QueryHooks::block_type_args( array( 'attributes' => array() ), 'core/query' );
 		$this->assertSame( array( 'type' => 'object' ), $args['attributes']['pegwork'] );

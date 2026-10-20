@@ -4,11 +4,13 @@
  * query-controls.js and index.js.
  *
  * Attribute shape (mirrors PegworkListings\QueryHooks on the server):
- * `{ filters?: boolean, where?: { [fieldKey]: boolean|string|string[], post_in_option?: "<page>.<field>" } }`.
+ * `{ filters?: boolean, where?: { [fieldKey]: boolean|string|string[], post_in_option?: "<page>.<field>",
+ * related?: "<relationship key>" } }`.
  */
 
 export const ATTRIBUTE = 'pegwork';
 export const OPTION_KEY = 'post_in_option';
+export const RELATED_KEY = 'related';
 export const PER_PAGE = 12;
 // Narrowest card column; columns wrap below it (PegworkListings\Patterns::MIN_COLUMN).
 export const MIN_COLUMN = '16rem';
@@ -59,6 +61,21 @@ export function presetFields( type ) {
 			( field.type === 'boolean' || field.type === 'select' ) &&
 			field.storage === 'meta'
 	);
+}
+
+/**
+ * Choices for the `related` preset: one per relationship with the loop's type at one end, naming
+ * the type at the other end (the type of the post being viewed).
+ *
+ * @param {?Object}                                   type  Parsed type config of the loop.
+ * @param {(singular: string, key: string) => string} label Choice label.
+ * @return {{value: string, label: string}[]} Choices.
+ */
+export function relatedChoices( type, label ) {
+	return ( type?.relationships ?? [] ).map( ( relationship ) => ( {
+		value: relationship.key,
+		label: label( relationship.label, relationship.key ),
+	} ) );
 }
 
 /**
