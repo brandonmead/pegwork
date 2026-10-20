@@ -233,7 +233,7 @@ A form either creates or updates a record of a content type (`target`) or, witho
 | `target` | no | | `{ content_type, action, status }`. `content_type` must be defined (`unknown_content_type`). `action` `create` (default) or `update`. `status` `draft`, `pending` or `publish`; default `pending` for `create`, none for `update` (the record keeps its status) |
 | `access` | no | `anyone` | `"anyone"` or `{ "capability": "<capability>" }`. A capability object is required when `target.status` is `publish` or `action` is `update` (`form_access_required`) |
 | `confirm` | no | | double opt-in: `{ field, subject, body, expires_hours }`. `field` is an email field of the form (`form_confirm_field`); `body` must contain `{confirm_url}` (`form_confirm_url_missing`); `expires_hours` positive integer, default `72` |
-| `captcha` | no | | `turnstile` |
+| `captcha` | no | | `turnstile`: Cloudflare Turnstile widget on the last step, verified server side. Keys come only from the wp-config constants `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY`; without both the form is not shown (`docs/forms.md#turnstile`) |
 | `fields` | one of | | list of items |
 | `steps` | one of | | list of `{ key, label, description, fields }`; step keys unique. Exactly one of `fields` or `steps` (`form_fields_or_steps`) |
 | `notifications` | no | `[]` | list of notifications, keys unique |
@@ -304,7 +304,7 @@ A trigger, ordered steps, and optional signed links. Conditions are a JSON expre
 |---|---|
 | `event` | `event` (required): dot-separated name such as `record.updated` (`invalid_event`); `content_type` narrows `record.*` events and `form` narrows `form.*` events (`trigger_filter_mismatch` otherwise; `unknown_content_type`, `unknown_form`); `when`: condition |
 | `schedule` | `every` (required): `hour`, `day` or `week`; `at`: `HH:MM` site time; `for_each`: `{ content_type (required), status (default `["publish"]`; any of `publish`, `future`, `draft`, `pending`, `private`), where (condition), max_runs (default 200) }` |
-| `webhook` | none; the inbound request body is `trigger.payload` |
+| `webhook` | none; the inbound request body is `trigger.payload` (endpoint, signature and limits: `docs/automation.md#webhooks`) |
 
 A run is bound to a record when the trigger is a `record.*` event or a schedule with `for_each`. Without one, `record.*` paths, `{{link.*}}` and `update_record` without `record` are `automation_no_record`.
 
@@ -317,7 +317,7 @@ Every step has `id` (key pattern) and `type`, plus optional `retry` (`{ max: int
 | `update_record` | `values` (required); `record`: template giving a record ID (default the bound record) |
 | `create_record` | `content_type` (required, defined), `values` (required), `status` (default `draft`; `draft`, `pending`, `publish`, `private`). Output `steps.<id>.record_id` |
 | `send_email` | `to`, `subject`, `text` (required), `html`, `reply_to` (templates) |
-| `call_webhook` | `url` (required, template, public context), `fields` (record field or taxonomy keys sent in the body; private ones are `automation_private_field`), `timeout` (seconds, more than 0 and at most 15) |
+| `call_webhook` | `url` (required, template, public context), `fields` (record field or taxonomy keys sent in the body; private ones are `automation_private_field`), `timeout` (seconds, more than 0 and at most 15, default 10). Without `fields` every public field and taxonomy is sent. Body, headers and signature: `docs/automation.md#webhooks` |
 | `wait` | `for` (required): duration |
 | `condition` | `when` (required): condition; the run stops when it is false |
 
@@ -338,7 +338,7 @@ Durations are ISO 8601 (`P7D`, `PT6H`, `P1Y2M`; `invalid_duration`), from one ho
 | `success_url`, `expired_url` | no | | URL or site path |
 | `success_message` | no | | text shown after the click |
 
-`button`, `success_url`, `success_message` and `expired_url` are templates in a public context: the page is shown to whoever holds the link.
+`button`, `success_url`, `success_message` and `expired_url` are templates in a public context: the page is shown to whoever holds the link. A URL is a site path (`/thanks/`, under the home URL) or an absolute URL that `wp_validate_redirect()` allows; anything else shows the built-in page. Each emailed link acts once; the runtime is in `docs/automation.md#signed-links`.
 
 ### Conditions
 

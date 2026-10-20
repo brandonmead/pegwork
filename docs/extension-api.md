@@ -96,7 +96,7 @@ array(
 )
 ```
 
-`$constraints` arrives holding the loop's `where` presets (as `fields` and `post__in`), or empty for `main`. Merge into it rather than replacing it. Return values are re-checked against the registry: private, unknown or non-filterable fields, taxonomies the type does not use, malformed slugs and values outside a select's options are dropped; at most 20 values per key, 100 characters of search. Queries always list published records only. The filters module adds URL constraints here when `filters` is true; it must be pure and cheap, since it runs several times per render.
+`$constraints` arrives holding the loop's `where` presets (as `fields` and `post__in`), or empty for `main`. Merge into it rather than replacing it. Return values are re-checked against the registry: private, unknown or non-filterable fields, taxonomies the type does not use, malformed slugs and values outside a select's options are dropped; at most 20 values per key, 100 characters of search. Queries always list published records only. The filters module adds URL constraints here at priority 10 when `filters` is true (presets already in `$constraints` win per field or taxonomy; searches join), so a callback at a later priority sees them. Callbacks must be pure and cheap, since this runs several times per render.
 
 ```php
 add_filter( 'pegwork_listing_constraints', function ( $constraints, $type, $context ) {
@@ -113,7 +113,19 @@ add_filter( 'pegwork_listing_constraints', function ( $constraints, $type, $cont
 apply_filters( 'pegwork_listing_pattern', ?array $pattern, string $type, string $kind ); // kind: card|details|directory|featured|latest
 ```
 
-Pattern properties for `register_block_pattern()` before Pegwork registers `pegwork/<type>-<kind>`; return null to skip it. A pattern of that name registered earlier (a theme `patterns/` file) wins and this filter is not called.
+Pattern properties for `register_block_pattern()` before Pegwork registers `pegwork/<type>-<kind>`; return null to skip it. A pattern of that name registered earlier (a theme `patterns/` file) wins and this filter is not called. The filters module uses it (priority 10) to put a `pegwork/filters` block above the directory pattern's Query Loop; a later callback can remove or move it.
+
+### Filters module
+
+The `filters` module (`docs/display.md` "Filters") has no hooks of its own; it reads URL parameters only through the two filters above. Public entry points:
+
+| Call | Returns |
+|---|---|
+| `PegworkFilters\FiltersBlock::render_block( array $attributes )` | The block's markup for the current request (attributes `postType`, `filters`, `showSearch`), or `''` when no type with a `listing` applies. Usable outside blocks. |
+| `PegworkFilters\FiltersBlock::base_url( string $type )` | The URL the form submits to and Clear all links to. |
+| `PegworkFilters\Hooks::state( string $type )` | The parsed, allowlisted URL state `{ q, values: { <filter key>: [values] } }`, or null without a `listing`. |
+
+Interactivity store `pegwork/filters`: state `directories.<type>.countText` holds the current result count text.
 
 ## Modules
 
@@ -129,13 +141,13 @@ interface Module {
 
 Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks requirements and includes each `module.php` (so top-level code in `module.php` runs then and must not need the registry). `boot()` runs later, on `pegwork_loaded` (`init` priority 5, after the registry is built), in dependency order, so `pegwork_registry()` is available inside it.
 
-The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings`, `filters` (requires `listings`; a skeleton until later Phase 2 PRs), `automation` and `forms`; add entries with the `pegwork_module_manifest` filter. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`. A module that keeps its own tables or cron events ships `uninstall.php` in its directory; Pegwork's `uninstall.php` includes every `modules/*/uninstall.php` before deleting `pegwork_*` options.
+The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings`, `filters` (requires `listings`), `automation` and `forms`; add entries with the `pegwork_module_manifest` filter. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`. A module that keeps its own tables or cron events ships `uninstall.php` in its directory; Pegwork's `uninstall.php` includes every `modules/*/uninstall.php` before deleting `pegwork_*` options.
 
 ## Automation hooks
 
 The `automation` module (`docs/automation.md`) runs registry automations and adds Pegwork > Automations (list, Enable/Disable, Run now, run log, Retry; `manage_options`). Sites and add-ons can tune it with filters; its PHP classes are internal.
 
-The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds the block-editor form builder (post type `pegwork_form`, private and not public, every capability mapped to `pegwork_manage_forms` and from there to `pegwork_forms_capability`; blocks `pegwork/form-field` and `pegwork/form-step`, allowed only in that post type), Pegwork > Forms, Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, and the daily WP-Cron event `pegwork_forms_cleanup`. Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
+The `forms` module (`docs/forms.md`) renders registry forms, handles their submissions, and adds the block-editor form builder (post type `pegwork_form`, private and not public, every capability mapped to `pegwork_manage_forms` and from there to `pegwork_forms_capability`; blocks `pegwork/form-field` and `pegwork/form-step`, allowed only in that post type), Pegwork > Forms, Pegwork > Entries (list, entry screen, CSV export), the personal data exporter and eraser `pegwork-forms`, the daily WP-Cron event `pegwork_forms_cleanup`, Cloudflare Turnstile for forms with `captcha: turnstile` (keys only from the wp-config constants `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY`; missing keys hide the form and show managers an admin notice), and private file uploads under `uploads/pegwork-forms/`, downloadable only through `admin-post.php?action=pegwork_forms_file` (capability plus a per-file nonce). Hooks: `pegwork_forms_capability`, `pegwork_forms_spam_check`, `pegwork_forms_rate_limits`, `pegwork_forms_client_ip`, `pegwork_forms_draft_type`, `pegwork_forms_retention_days`, and the `form.submitted` event; its PHP classes are internal. It keeps its entries table on uninstall (entries are content); its `uninstall.php` only clears the cleanup event.
 
 | Hook | Kind | Default | Use |
 |---|---|---|---|
@@ -145,6 +157,9 @@ The `forms` module (`docs/forms.md`) renders registry forms, handles their submi
 | `pegwork_automation_spawn_cron` | filter | true | Spawn WP-Cron at shutdown after queueing a run; return false with a system cron |
 | `pegwork_automation_run` | action (WP-Cron) | | Fired with a run ID to execute it |
 | `pegwork_automation_maintenance` | action (WP-Cron) | | Daily maintenance job |
+| `pegwork_automation_webhook_rate` | filter | 30 | Inbound webhook requests accepted per automation per minute (second argument: the key, '' for the shared bucket of other keys) |
+
+REST: `POST /wp-json/pegwork/v1/automations/<key>/webhook` (inbound webhook trigger; signed with the automation's secret, see `docs/automation.md#webhooks`). Outbound `call_webhook` deliveries use `wp_safe_remote_post()`, so the core `http_request_host_is_external` and `http_allowed_safe_ports` filters apply to them.
 
 Records written by automation runs carry `origin.automation`, `origin.run_id` and `origin.depth` (run depth plus 1) in their record events.
 

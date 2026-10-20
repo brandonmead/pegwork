@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "job_hook",
+  "label": "Published with marker hook: tell the receiver",
+  "trigger": { "type": "event", "event": "record.status_changed", "content_type": "job",
+    "when": { "all": [ { "var": "trigger.new_status", "op": "eq", "value": "publish" },
+                       { "var": "record.marker", "op": "eq", "value": "hook" } ] } },
+  "steps": [
+    { "id": "notify", "type": "call_webhook", "url": "https://receiver.example.org/jobs/{{record.id}}",
+      "fields": [ "title", "website", "job_stage" ], "timeout": 5 },
+    { "id": "everything", "type": "call_webhook", "url": "https://receiver.example.org/all" }
+  ]
+}

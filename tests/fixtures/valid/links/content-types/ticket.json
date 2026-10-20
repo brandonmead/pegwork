@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "ticket",
+  "labels": { "singular": "Ticket", "plural": "Tickets" },
+  "fields": [
+    { "key": "title", "type": "text", "label": "Title", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "verified", "type": "date", "label": "Verified" },
+    { "key": "marker", "type": "text", "label": "Marker" },
+    { "key": "owner_email", "type": "email", "label": "Owner email", "visibility": "private" }
+  ]
+}

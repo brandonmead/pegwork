@@ -46,10 +46,46 @@ abstract class FormsTestCase extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Cloudflare's published Turnstile test site key that always passes (not a secret).
+	 */
+	public const TURNSTILE_SITE_KEY = '1x00000000000000000000AA';
+
+	/**
+	 * Cloudflare's published Turnstile test secret key that always passes (not a secret).
+	 */
+	public const TURNSTILE_SECRET_KEY = '1x0000000000000000000000000000000AA';
+
+	/**
+	 * Uploads base directory for this test (a temporary folder, removed in tear_down()).
+	 *
+	 * @var string
+	 */
+	protected $uploads_dir = '';
+
+	/**
 	 * Registers the fixture package and resets state.
 	 */
 	public function set_up() {
 		parent::set_up();
+		// Constants cannot be undefined, so every forms test runs with Cloudflare's test keys (as a
+		// Local site does) regardless of test order; without_turnstile_keys() covers missing keys.
+		defined( 'PEGWORK_TURNSTILE_SITE_KEY' ) || define( 'PEGWORK_TURNSTILE_SITE_KEY', self::TURNSTILE_SITE_KEY );
+		defined( 'PEGWORK_TURNSTILE_SECRET_KEY' ) || define( 'PEGWORK_TURNSTILE_SECRET_KEY', self::TURNSTILE_SECRET_KEY );
+		self::turnstile_constants( 'PEGWORK_TURNSTILE_SITE_KEY', 'PEGWORK_TURNSTILE_SECRET_KEY' );
+		// Uploads go to a temporary folder, never into the WordPress copy under test.
+		$this->uploads_dir = untrailingslashit( get_temp_dir() ) . '/pegwork-uploads-' . wp_generate_password( 8, false );
+		add_filter(
+			'upload_dir',
+			function ( $uploads ) {
+				$uploads['basedir'] = $this->uploads_dir;
+				$uploads['baseurl'] = 'http://example.org/wp-content/uploads';
+				$uploads['path']    = $this->uploads_dir . $uploads['subdir'];
+				$uploads['url']     = $uploads['baseurl'] . $uploads['subdir'];
+				$uploads['error']   = false;
+				return $uploads;
+			},
+			1
+		);
 		add_action( 'pegwork_register', fn( RegistryBuilder $b ) => $b->add_package( dirname( __DIR__ ) . '/fixtures/valid/forms-runtime' ) );
 		Plugin::init();
 
@@ -77,9 +113,91 @@ abstract class FormsTestCase extends WP_UnitTestCase {
 	 * Rebuilds the registry without the test package.
 	 */
 	public function tear_down() {
-		unset( $_GET['pegwork_sent'], $_POST['pegwork'], $_POST['pegwork_form'] );
+		unset( $_GET['pegwork_sent'], $_GET['pegwork_held'], $_POST['pegwork'], $_POST['pegwork_form'], $_FILES['pegwork'] );
+		self::remove_tree( $this->uploads_dir );
+		self::turnstile_constants( 'PEGWORK_TURNSTILE_SITE_KEY', 'PEGWORK_TURNSTILE_SECRET_KEY' );
 		parent::tear_down();
 		Plugin::init();
+	}
+
+	/**
+	 * Makes Turnstile read its keys from undefined constants (both, or only the site or secret key).
+	 *
+	 * @param string $which `both`, `site` or `secret`: which key goes missing.
+	 */
+	protected static function without_turnstile_keys( $which = 'both' ) {
+		self::turnstile_constants(
+			'secret' === $which ? 'PEGWORK_TURNSTILE_SITE_KEY' : 'PEGWORK_TESTS_UNDEFINED_SITE_KEY',
+			'site' === $which ? 'PEGWORK_TURNSTILE_SECRET_KEY' : 'PEGWORK_TESTS_UNDEFINED_SECRET_KEY'
+		);
+	}
+
+	/**
+	 * Points Turnstile's private constant names.
+	 *
+	 * @param string $site   Site key constant.
+	 * @param string $secret Secret key constant.
+	 */
+	private static function turnstile_constants( $site, $secret ) {
+		$property = new \ReflectionProperty( \PegworkForms\Turnstile::class, 'constants' );
+		$property->setAccessible( true );
+		$property->setValue(
+			null,
+			array(
+				'site'   => $site,
+				'secret' => $secret,
+			)
+		);
+	}
+
+	/**
+	 * Deletes a temporary folder and everything in it.
+	 *
+	 * @param string $dir Folder.
+	 */
+	protected static function remove_tree( $dir ) {
+		if ( '' === $dir || ! is_dir( $dir ) ) {
+			return;
+		}
+		$items = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $dir, \FilesystemIterator::SKIP_DOTS ), \RecursiveIteratorIterator::CHILD_FIRST );
+		foreach ( $items as $item ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Test cleanup of a temporary folder.
+			$item->isDir() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
+		}
+		rmdir( $dir ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Test cleanup.
+	}
+
+	/**
+	 * Writes a temporary file to stand in for an upload.
+	 *
+	 * @param string $name    Client file name.
+	 * @param string $content Bytes.
+	 * @return array{name: string, tmp_name: string, error: int, size: int}
+	 */
+	protected function upload( $name, $content ) {
+		$tmp = wp_tempnam( 'pegwork-upload' );
+		file_put_contents( $tmp, $content ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file.
+		return array(
+			'name'     => $name,
+			'tmp_name' => $tmp,
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => strlen( $content ),
+		);
+	}
+
+	/**
+	 * A minimal PDF.
+	 */
+	protected static function pdf_bytes() {
+		return "%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n";
+	}
+
+	/**
+	 * A 1x1 PNG.
+	 */
+	protected static function png_bytes() {
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Test image.
+		return base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' );
 	}
 
 	/**

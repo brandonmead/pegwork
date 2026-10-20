@@ -22,7 +22,7 @@ return array(
 	),
 	'filters'    => array(
 		'label'       => 'Filters',
-		'description' => 'Search and filters for listings (skeleton; built in later Phase 2 PRs).',
+		'description' => 'Search and filters for directories: the Filters block, URL-only state, live results without a page load.',
 		'requires'    => array( 'listings' ),
 		'path'        => PEGWORK_DIR . 'modules/filters',
 	),

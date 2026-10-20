@@ -33,8 +33,13 @@ final class Values {
 
 		foreach ( $values as $key => $value ) {
 			$rendered = Templates::value( $value, $context );
-			if ( in_array( $key, $taxonomies, true ) && ! is_array( $rendered ) ) {
-				$rendered = array_values( array_filter( array_map( 'trim', explode( ',', (string) $rendered ) ), 'strlen' ) );
+			if ( in_array( $key, $taxonomies, true ) ) {
+				if ( ! is_array( $rendered ) ) {
+					$rendered = array_values( array_filter( array_map( 'trim', explode( ',', (string) $rendered ) ), 'strlen' ) );
+				}
+			} elseif ( is_array( $rendered ) ) {
+				// No field type holds a list: a taxonomy copied into a field (`paused_from`) keeps its slugs as text.
+				$rendered = implode( ',', array_map( fn( $item ) => is_scalar( $item ) ? (string) $item : '', $rendered ) );
 			}
 			$out[ (string) $key ] = $rendered;
 		}

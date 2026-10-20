@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "key": "e2e_upload",
+  "label": "E2E upload",
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "autocomplete": "name" },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+    { "key": "document", "type": "file", "label": "Document", "required": true, "accept": [ "pdf", "txt" ], "max_size_mb": 1,
+      "help": "Your proposal." }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "subject": "E2E upload: {field:document}", "body": "{all_fields}" }
+  ],
+  "messages": { "success": "Thanks. We received your document.", "submit_label": "Send document" }
+}

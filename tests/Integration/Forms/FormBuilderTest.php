@@ -451,7 +451,9 @@ class FormBuilderTest extends FormsTestCase {
 
 		$this->assertFalse( $config['readOnly'] );
 		$this->assertSame( 'feedback', $config['lockedKey'] );
-		$this->assertFalse( $config['turnstile'] );
+		$this->assertTrue( $config['turnstile'], 'FormsTestCase defines both keys.' );
+		self::without_turnstile_keys( 'secret' );
+		$this->assertFalse( BuilderEditor::config( get_post( $post_id ) )['turnstile'] );
 		$types = array_column( $config['types'], null, 'key' );
 		$this->assertSame( 'Project', $types['fe_project']['label'] );
 		$this->assertSame( array( 'title', 'website', 'contact_email' ), array_column( $types['fe_project']['fields'], 'key' ) );

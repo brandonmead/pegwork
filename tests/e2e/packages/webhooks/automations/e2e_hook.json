@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "e2e_hook",
+  "label": "E2E inbound to outbound",
+  "description": "Browser tests of webhooks: a signed inbound request starts a run that calls the test receiver.",
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "notify", "type": "call_webhook", "url": "https://receiver.e2e.test/hook" }
+  ]
+}

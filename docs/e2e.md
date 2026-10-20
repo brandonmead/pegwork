@@ -7,8 +7,10 @@ playwright.config.js
 .wp-env.json                          CI site: plugin plus the mu-plugins below
 bin/e2e-local-site.sh                 throwaway local site (no Docker)
 tests/e2e/mu-plugins/pegwork-e2e-sifg.php   registers examples/sifg as a file package
-tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, admin-only helper routes (docs/forms.md)
+tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, Turnstile test keys per mode, admin-only helper routes (docs/forms.md)
 tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, reset (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-links.php  signed link helpers: Project create and read, link mint, link rate limit raised (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-webhooks.php  webhook test package, in-process receiver for receiver.e2e.test, fixed test secret on reset, receiver down switch (docs/automation.md)
 tests/e2e/packages/                   file packages that only the browser tests register
 tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures
 tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest would run)
@@ -72,3 +74,7 @@ The plugin clone is the checkout the script lives in (override with `PEGWORK_DIR
 - `utils/listings.js`: `enableModule( page, 'Listings' )` (Modules screen; modules start disabled on a fresh site), `recordTracker( request )` (published Projects passing publish validation, pages, cleanup), `seedProjects`, `patternContent`, `cardTitles`, `publishedProjects`.
 - Specs share one site and run serially (one worker). Clean up what you create.
 - Block editor specs (`forms-builder.e2e.js`): the canvas is an iframe (`page.frameLocator( 'iframe[name="editor-canvas"]' )`); inserter results are `option`s whose accessible name starts with an icon glyph, so match them with `^[^A-Za-z]*<Title>$`, not `exact`; WordPress 7 focuses the inserter's Blocks tab before its search box, and a reopened inserter keeps focus on its last result; wait for the quick inserter's search box to be focused before typing; drag from the inserter with `page.mouse` (down, move in steps, up) aimed below the block toolbar, because `dragTo()` hits the toolbar popover. The spec builds form `e2e_built`; its post and page are deleted after the run and `pegwork-e2e/v1/reset` clears its entries.
+- Turnstile: `forms-turnstile.e2e.js` loads Cloudflare's real widget with the published test keys, so the site and browser need `challenges.cloudflare.com`. `POST pegwork-e2e/v1/turnstile { mode }` picks the keys the forms mu-plugin defines on the next request: `pass`, `fail` (failing secret), `block` (blocking site key), `offline` (siteverify returns a `WP_Error` through `pre_http_request`), `none` (no constants); `reset` returns to `pass`.
+- With `javaScriptEnabled: false`, Chromium still parses `<noscript>` as raw text, so check its `textContent`, not its visible text.
+- A full-page screenshot leaves Cloudflare's widget iframe blank; take an element screenshot of the form instead.
+- Upload specs pass files with `setInputFiles( { name, mimeType, buffer } )`; a file input is focused with Tab and opened with Space.

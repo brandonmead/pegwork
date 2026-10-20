@@ -180,15 +180,10 @@ final class BuilderEditor {
 	}
 
 	/**
-	 * Whether both Turnstile keys are set in wp-config.php.
+	 * Whether both Turnstile keys are set in wp-config.php (the same check the runtime makes).
 	 */
 	public static function turnstile_keys_set(): bool {
-		foreach ( array( 'PEGWORK_TURNSTILE_SITE_KEY', 'PEGWORK_TURNSTILE_SECRET_KEY' ) as $name ) {
-			if ( ! defined( $name ) || ! is_string( constant( $name ) ) || '' === constant( $name ) ) {
-				return false;
-			}
-		}
-		return true;
+		return null !== Turnstile::keys();
 	}
 
 	/**
