@@ -12,9 +12,9 @@ import {
 } from '@wordpress/block-editor';
 import { registerBlockType } from '@wordpress/blocks';
 import {
+	ComboboxControl,
 	PanelBody,
 	Placeholder,
-	SelectControl,
 	ToolbarButton,
 	ToolbarGroup,
 	Disabled,
@@ -41,13 +41,16 @@ const labels = {
 
 function FormPicker( { value, onChange } ) {
 	return (
-		<SelectControl
+		<ComboboxControl
 			__next40pxDefaultSize
 			__nextHasNoMarginBottom
 			label={ __( 'Form', 'pegwork' ) }
-			value={ value }
-			options={ formOptions( config.forms, value, labels ) }
-			onChange={ onChange }
+			help={ __( 'Type to search forms by label or key.', 'pegwork' ) }
+			value={ value || null }
+			options={ formOptions( config.forms, value, labels ).filter(
+				( option ) => option.value !== ''
+			) }
+			onChange={ ( next ) => onChange( next || '' ) }
 		/>
 	);
 }

@@ -252,6 +252,14 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - E2E seed route `pegwork-e2e/v1/entries/seed` (mu-plugin `pegwork-e2e-entries.php`, mapped in `.wp-env.json`). The privacy E2E reads the export zip with the system `unzip`.
 - Local runs: test DB `pegwork_tests_formsentries` (core `~/wp-envs/core-latest`); site `~/wp-envs/formsentries` (`bin/e2e-local-site.sh start formsentries 8167`, DB `wpenv_formsentries`).
 
+## Form builder and Forms list (Phase 3 PR 6)
+- `docs/forms.md#builder`. Classes `Builder` (pure generate and compile, JSON-pointer errors), `FormPost` (post type `pegwork_form`, meta `_pegwork_form_settings`, `_pegwork_form_key`, `_pegwork_form_hash`; capability mapping, forced private, REST save, trash, restore, sync, file-form locks), `BuilderEditor` (blocks, editor script and config, duplicate prefill), `FormsAdmin` and `FormsTable` (Pegwork > Forms, `pegwork-forms`, position 20). Script `assets/src/forms-builder/` (built `forms-builder.js` and `.css`), loaded only on `pegwork_form` screens.
+- The registry is the source of truth: saving compiles the post and calls `pegwork_save_form()`; the post keeps the hash of the definition it was generated from and regenerates on `load-post.php` when it differs.
+- Gotcha: styles enqueued on `enqueue_block_editor_assets` never reach the iframed canvas (WP 7.1 iframes it when every block is API version 3); the builder stylesheet is enqueued on `enqueue_block_assets`, which the editor also runs for the iframe.
+- Gotcha: `wp_insert_post_data` must leave `auto-draft`, `trash` and `inherit` alone when forcing `private`, or new posts and trashing break.
+- Gotcha: a `meta_key` lookup trips the VIP `slow_db_query_meta_key` sniff; `FormPost::find()` ignores it with that sniff named (one indexed query per admin screen).
+- Local runs: test DB `pegwork_tests_formsbuilder` (core `~/wp-envs/core-latest`, WP 7.1.3); site `~/wp-envs/formsbuilder` (`bin/e2e-local-site.sh start formsbuilder 8213`, DB `wpenv_formsbuilder`). Last verified 2026-10-18.
+
 ## Admin area (content builder PR 1)
 - Top-level menu slug `Pegwork\Api\ADMIN_MENU` (`pegwork`), `manage_options`: Overview (`pegwork`, `admin_menu` priority 9, position 0), Modules (`pegwork-modules`, priority 999 so it stays last). Submenu `position` is an index into the list built so far, not a sort key; contract in `docs/extension-api.md`.
 - `add_submenu_page()` skips screens the user lacks the capability for, so a lower-capability screen becomes the first item and the top-level link for that user (`AdminMenuTest`).

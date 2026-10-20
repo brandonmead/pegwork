@@ -2,7 +2,7 @@
 
 Module `forms` (`modules/forms`, namespace `PegworkForms\`): places registry forms on pages, handles submissions without JavaScript, stores entries, creates or updates records of a content type, holds submissions for email confirmation, sends notifications and emits `form.submitted` and `form.confirmed`. Design: `docs/phase-3-design.md`. Definitions: `docs/registry-reference.md#forms`.
 
-Status (Phase 3 PRs 3, 4 and 7): entry-only forms, record mapping (`target`, bound items), email confirmation (`confirm`), Cloudflare Turnstile and file uploads, and the entries admin, CSV export, privacy tools and retention cleanup. The front-end script (PR 5) and the builder (PR 6) come later.
+Status (Phase 3 PRs 3, 4, 6 and 7): entry-only forms, record mapping (`target`, bound items), email confirmation (`confirm`), Cloudflare Turnstile and file uploads, the block-editor form builder and Forms list, and the entries admin, CSV export, privacy tools and retention cleanup. The front-end script (PR 5) comes later.
 
 ## Enable
 
@@ -14,7 +14,7 @@ Pegwork > Modules > Forms, or `wp pegwork module enable forms`. Disabled, the mo
 <!-- wp:pegwork/form {"form":"request_help"} /-->
 ```
 
-In the editor, the Form block (category Pegwork) has a form picker and a server-rendered preview. Placement is by key, so patterns work on every site and for file forms.
+In the editor, the Form block (category Pegwork) has a form combobox (type to filter by label) and a server-rendered preview. Placement is by key, so patterns work on every site and for file forms. The Forms list's "Copy block" copies this markup.
 
 Not shown to visitors (a notice for users with the forms capability, nothing for anyone else):
 
@@ -22,6 +22,22 @@ Not shown to visitors (a notice for users with the forms capability, nothing for
 - a form this site cannot run: a Turnstile form without both wp-config keys (see Turnstile), or a `target` type missing from the registry. Such forms fail closed; their POSTs are ignored too.
 
 `access: { capability }` forms ask logged-out visitors to log in and tell users without the capability they lack permission.
+
+## Builder
+
+The registry stays the source of truth; a `pegwork_form` post is only its editing surface (design section 2).
+
+- Post type `pegwork_form`: not public, `show_ui`, `show_in_rest` (`rest_base` `pegwork-forms`), no menu of its own (`edit.php?post_type=pegwork_form` redirects to the Forms list). Every capability maps to the meta capability `pegwork_manage_forms`, which `map_meta_cap` turns into `pegwork_forms_capability` (default `manage_options`), so editors cannot open the builder, the list or the REST route. Saved posts are always `private` (`wp_insert_post_data`); new forms show Draft in the editor until the first save.
+- Mapping, 1:1: each `pegwork/form-field` block's attributes are one item (`Builder::FIELD_ATTRIBUTES` order, the keys the registry accepts, `type: file`, `accept`, `max_size_mb` included); each `pegwork/form-step` block's attributes are one step and its inner blocks the step's items; the post title is `label`; everything else (`key`, `target`, `access`, `confirm`, `captcha`, `notifications`, `messages`, `retention_days`) is a JSON object in post meta `_pegwork_form_settings`. Meta `_pegwork_form_key` and `_pegwork_form_hash` link the post to its definition. `Builder::generate()` and `Builder::compile()` are inverses for every valid definition (`FormBuilderRoundTripTest`, byte-identical after `Normalizer::normalize()`).
+- Blocks: both are allowed only in `pegwork_form` posts, and those posts allow only them (`allowed_block_types_all`). One variation per field type (Text is the default) and one per field and taxonomy of the target type (bound items); the field block shows an inline label over a disabled preview of the control, with required, help, placeholder, autocomplete, validation, options and show_when in the sidebar. Bound fields show the registry rules read-only ("From Project: Text, required, up to 200 characters"). Missing item and step keys follow the label. On the front end both blocks render nothing.
+- Document settings (sidebar, Form tab): Form settings (key, locked after the first save; target type, action and status; access), Email confirmation, Notifications (repeater with merge-tag help), and Messages, spam and privacy (messages, Turnstile toggle, retention). The Turnstile toggle is disabled with a note until `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY` are both set in `wp-config.php`. "Add all fields from <type>" appends a bound field for each target field and taxonomy not yet in the form.
+- Save: `rest_pre_insert_pegwork_form` compiles the post and calls `pegwork_save_form()`. Any problem refuses the save (`WP_Error` `pegwork_invalid_form`, status 400; 409 when the key belongs to a file form) with `data.fields`, messages keyed by JSON pointer (`/steps/0/fields/1/label`). The editor shows the first message in core's save notice and each one at its block or setting. Autosaves are not compiled. Trash calls `pegwork_delete_form()`; restoring saves the form again; a post deleted without the trash deletes its definition too.
+- Sync: opening a form (`load-post.php`) regenerates the post when the registry definition's hash differs (a `wp pegwork form import`, a package update, a `pegwork_save_form()` call).
+- File-defined forms open read-only: the template is locked, saving is disabled, and a notice offers "Duplicate as site form", which opens a new form prefilled from the definition under a free key `<key>_copy` (nothing is saved until you save). They cannot be trashed.
+
+## Forms list
+
+Pegwork > Forms (`admin.php?page=pegwork-forms`, menu position 20; Entries is 21). Visiting it creates a post for every registry form that has none. Columns: form (Edit, or View for file forms, plus "Duplicate as site form"), key, source ("Site" or "File: <package> (read-only)"), received and unconfirmed counts (one grouped query), Entries link, and the block markup with a "Copy block" button (announced in a polite live region; hidden without JavaScript, the markup stays selectable). "Add form" opens a new form.
 
 ## Markup
 
@@ -209,7 +225,7 @@ A file value appears as `{ name, size, mime }`, never its contents or storage pa
 
 | Hook | Purpose |
 |---|---|
-| `pegwork_forms_capability` | Capability that manages forms, reads and acts on entries, and sees manager notices (default `manage_options`). |
+| `pegwork_forms_capability` | Capability that manages forms, reads and acts on entries, and sees manager notices (default `manage_options`). The `pegwork_form` post type's meta capability `pegwork_manage_forms` maps to it. |
 | `pegwork_forms_draft_type` | `( ?string $type, array $form )`: content type "Create post anyway" makes a Draft of; default `target.content_type` of `create` forms, null otherwise. Must be a registry type. |
 | `pegwork_forms_retention_days` | `( array $days )`: days to keep `spam` (30) and `unconfirmed` (7) entries; 0 keeps them. |
 | `pegwork_forms_spam_check` | `( string[] $reasons, array $form, array $values )`: add reasons to store a submission as spam. |
@@ -221,6 +237,7 @@ Seams for the later PRs: `Definition::unsupported()` is the single fail-closed g
 
 ## Testing
 
+- Builder: `tests/Integration/Forms/FormBuilderRoundTripTest.php` (generate then compile every valid fixture form, `tests/e2e/packages/*/forms` and `examples/*/forms`; markup shape; key filling; compile errors) and `FormBuilderTest.php` (post type and capabilities, REST save, refused saves with pointers, key lock and collisions, trash and restore, sync, Forms list, duplicate, editor denial). JavaScript units: `assets/src/forms-builder/test/logic.test.js` (`npm run test:unit`). E2E (case 7): `tests/e2e/specs/forms-builder.e2e.js` builds `e2e_built` by keyboard and drag and drop, sees a refused save, saves, places and submits it; Forms list by keyboard with axe at 1280 and 782 px; file form read-only and Duplicate; editor gets 403.
 - PHPUnit: `tests/Integration/Forms/` (fixture packages `tests/fixtures/valid/forms-runtime`, and `tests/fixtures/forms-records`, which needs `examples/sifg` and so sits outside `valid/`: `fx_project` is `submit_project` without Turnstile). Mail through the WP test mailer (`tests_retrieve_phpmailer_instance()`). Entries admin, export, privacy and cleanup: `Entries*Test.php` on `tests/Support/EntriesTestCase.php`, which adds `tests/fixtures/valid/forms-entries` (types `fe_project`, `fe_story`; forms `fe_project` with a target, `fe_story` entry-only with `retention_days` 30). Turnstile and uploads: `FormsTurnstileTest`, `FormsTurnstileKeysTest`, `FormsUploadsTest` (forms `fr_turnstile`, two steps with a file item, and `fr_upload`, a required file accepting pdf, png and txt up to 0.01 MB). `FormsTestCase` defines the Turnstile constants with Cloudflare's always-pass test keys for every forms test (a defined constant cannot be undefined, so test order must not matter) and `without_turnstile_keys()` points `Turnstile`'s private constant names at undefined ones for the missing-keys cases; siteverify is mocked with `pre_http_request` (pass, Cloudflare's always-fail answer, network error, HTTP 500, unreadable body, wrong secret). Uploads go to a temporary uploads folder per test (`upload_dir` filter), removed in `tear_down()`.
 - E2E Turnstile and uploads: `forms-turnstile.e2e.js` (Cloudflare's real widget and siteverify with the test keys: pass by keyboard, fail, blocking site key, siteverify unreachable, the `noscript` notice, missing keys and the admin notice) and `forms-uploads.e2e.js` (keyboard-only upload, refused file, "Choose the file again", entry screen link, download headers, bad nonce, subscriber 403, logged out 400, 404 after delete). Both need the site and browser to reach `challenges.cloudflare.com` (Turnstile only). Route `pegwork-e2e/v1/turnstile` (`mode`: `pass`, `fail`, `block`, `offline`, `none`) picks the keys the forms mu-plugin defines on the next request; `reset` puts it back to `pass`.
 - E2E entries admin: `tests/e2e/specs/forms-entries.e2e.js` (keyboard list, filter, views, entry, spam, CSV, delete confirmation, Tools > Export and Erase Personal Data; axe at 1280 and 782 px). Mu-plugin `tests/e2e/mu-plugins/pegwork-e2e-entries.php` adds the admin-only route `pegwork-e2e/v1/entries/seed`.

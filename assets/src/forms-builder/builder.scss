@@ -1,0 +1,172 @@
+// Form builder: field and step blocks in the canvas, settings panels.
+
+$pegwork-error: #cc1818;
+$pegwork-muted: #50575e;
+
+.pegwork-builder-field {
+	margin: 0 0 1em;
+	padding: 8px 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 2px;
+	background: #fff;
+
+	&.is-bound {
+		border-left: 4px solid #3858e9;
+	}
+
+	&.has-error {
+		border-color: $pegwork-error;
+	}
+}
+
+.pegwork-builder-field__head,
+.pegwork-builder-step__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 8px;
+}
+
+// Inline labels and descriptions grow with their text; no resize grip.
+.pegwork-builder-field textarea.block-editor-plain-text,
+.pegwork-builder-step textarea.block-editor-plain-text {
+	resize: none;
+}
+
+.pegwork-builder-field__label.block-editor-plain-text,
+.pegwork-builder-field__label {
+	flex: 1 1 12em;
+	min-width: 0;
+	font-weight: 600;
+}
+
+.pegwork-builder-field__required {
+	color: $pegwork-muted;
+}
+
+.pegwork-builder-field__badge,
+.pegwork-builder-step__number {
+	padding: 0 6px;
+	border-radius: 2px;
+	background: #f0f0f1;
+	color: $pegwork-muted;
+	font-size: 12px;
+	line-height: 1.8;
+}
+
+// The preview is a picture of the control: clicks select the block.
+.pegwork-builder-field__preview {
+	margin-top: 6px;
+	pointer-events: none;
+
+	input:not([type="checkbox"]):not([type="radio"]),
+	select,
+	textarea {
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 100%;
+	}
+}
+
+.pegwork-builder-field__choices {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.pegwork-builder-field__help,
+.pegwork-builder-step__description,
+.pegwork-builder__help {
+	margin: 6px 0 0;
+	color: $pegwork-muted;
+	font-size: 13px;
+}
+
+.pegwork-builder-step {
+	margin: 0 0 1.5em;
+	padding: 12px;
+	border: 1px dashed #8c8f94;
+	border-radius: 2px;
+
+	&.has-error {
+		border-color: $pegwork-error;
+	}
+}
+
+.pegwork-builder-step__label.block-editor-plain-text,
+.pegwork-builder-step__label {
+	flex: 1 1 12em;
+	min-width: 0;
+	font-size: 1.25em;
+	font-weight: 600;
+}
+
+// The step's "Add block" button sits below its fields, not over the last one.
+.pegwork-builder-step__fields > .block-list-appender {
+	position: static;
+	margin-top: 8px;
+}
+
+.pegwork-builder-field__required {
+	font-size: 13px;
+}
+
+.pegwork-builder-step__fields {
+	margin-top: 12px;
+}
+
+.pegwork-builder__errors {
+	margin-top: 6px;
+}
+
+.pegwork-builder__error {
+	margin: 4px 0 0;
+	color: $pegwork-error;
+	font-weight: 600;
+}
+
+.pegwork-builder__rules {
+	margin-top: 0;
+}
+
+.pegwork-builder__fieldset {
+	margin: 0 0 16px;
+	padding: 8px 12px 12px;
+	border: 1px solid #dcdcde;
+
+	legend {
+		padding: 0 4px;
+		font-weight: 600;
+	}
+
+	.components-base-control {
+		margin-bottom: 12px;
+	}
+}
+
+.pegwork-builder__choices {
+	margin: 0 0 12px;
+	padding: 0;
+	list-style: none;
+}
+
+.pegwork-builder__choice {
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.pegwork-builder-settings {
+	.components-base-control,
+	.components-toggle-control {
+		margin-bottom: 16px;
+	}
+}
+
+.pegwork-builder-settings__add-all {
+	margin-bottom: 16px;
+}
+
+.pegwork-builder-settings__tags {
+	word-break: break-word;
+}
