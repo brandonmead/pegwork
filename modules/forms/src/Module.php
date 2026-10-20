@@ -49,6 +49,11 @@ final class Module implements ModuleContract {
 		// Turnstile keys notice and private file downloads (Phase 3 PR 4).
 		Turnstile::register();
 		Files::register();
+		// Builder: form posts, field and step blocks, Forms list (Phase 3 PR 6). Forms registers its
+		// submenu before Entries, so it sits above it.
+		FormPost::register();
+		BuilderEditor::register();
+		FormsAdmin::register();
 		// Entries admin, CSV export, privacy tools and retention (Phase 3 PR 7).
 		EntriesAdmin::register();
 		EntryActions::register();

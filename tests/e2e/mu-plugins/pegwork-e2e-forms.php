@@ -96,7 +96,8 @@ add_action(
 			)
 		);
 
-		// Clears the mail log, rate-limit transients and the e2e forms' entries (which also resets the confirmation email cap).
+		// Clears the mail log, rate-limit transients and the e2e forms' entries (which also resets the confirmation email cap),
+		// including e2e_built, the form forms-builder.e2e.js builds.
 		register_rest_route(
 			'pegwork-e2e/v1',
 			'/reset',
@@ -110,7 +111,7 @@ add_action(
 					wp_cache_flush();
 					$table = $wpdb->prefix . 'pegwork_entries';
 					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {
-						$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE form_key IN (%s, %s)", 'e2e_contact', 'e2e_project' ) );
+						$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE form_key IN (%s, %s, %s)", 'e2e_contact', 'e2e_project', 'e2e_built' ) );
 						// Upload and Turnstile entries go through the module, so their files go too.
 						$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$table} WHERE form_key IN (%s, %s)", 'e2e_upload', 'e2e_turnstile' ) );
 						if ( $ids && class_exists( 'PegworkForms\Entries' ) ) {

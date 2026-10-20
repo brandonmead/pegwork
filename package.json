@@ -9,8 +9,8 @@
 		"node": ">=22.22.2"
 	},
 	"scripts": {
-		"build": "wp-scripts build editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js filters-editor=./assets/src/filters-editor/index.js forms-view=./assets/src/forms-view/index.js --experimental-modules --output-path=assets/build",
-		"start": "wp-scripts start editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js filters-editor=./assets/src/filters-editor/index.js forms-view=./assets/src/forms-view/index.js --experimental-modules --output-path=assets/build",
+		"build": "wp-scripts build editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js filters-editor=./assets/src/filters-editor/index.js forms-builder=./assets/src/forms-builder/index.js forms-view=./assets/src/forms-view/index.js --experimental-modules --output-path=assets/build",
+		"start": "wp-scripts start editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js filters-editor=./assets/src/filters-editor/index.js forms-builder=./assets/src/forms-builder/index.js forms-view=./assets/src/forms-view/index.js --experimental-modules --output-path=assets/build",
 		"check:size": "node bin/check-script-size.js assets/build/filters-view.js 10240",
 		"lint:js": "wp-scripts lint-js",
 		"test:unit": "wp-scripts test-unit-js",
