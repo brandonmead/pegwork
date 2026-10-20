@@ -13,6 +13,7 @@ use WP_Block;
 use WP_Block_Type;
 use WP_Block_Type_Registry;
 use WP_HTML_Tag_Processor;
+use WP_Post;
 use WP_Query;
 
 /**
@@ -85,15 +86,21 @@ final class QueryHooks {
 	}
 
 	/**
-	 * Gives every block that uses the `query` context the `pegwork/listing` context too. Hooked to
+	 * Gives every block that uses the `query` context the `pegwork/listing` and `postId` contexts too
+	 * (`postId` is the current post a `related` preset resolves against). Hooked to
 	 * get_block_type_uses_context.
 	 *
 	 * @param string[] $uses Context names.
 	 * @return string[] Context names.
 	 */
 	public static function uses_context( $uses ) {
-		if ( is_array( $uses ) && in_array( 'query', $uses, true ) && ! in_array( self::CONTEXT, $uses, true ) ) {
-			$uses[] = self::CONTEXT;
+		if ( ! is_array( $uses ) || ! in_array( 'query', $uses, true ) ) {
+			return $uses;
+		}
+		foreach ( array( self::CONTEXT, 'postId' ) as $name ) {
+			if ( ! in_array( $name, $uses, true ) ) {
+				$uses[] = $name;
+			}
 		}
 		return $uses;
 	}
@@ -141,9 +148,27 @@ final class QueryHooks {
 		}
 
 		$where       = isset( $listing['where'] ) && is_array( $listing['where'] ) ? $listing['where'] : array();
-		$constraints = Constraints::filter( Constraints::from_where( $type, $where ), $type, 'block', ! empty( $listing['filters'] ) );
+		$current     = array_key_exists( Constraints::RELATED_KEY, $where ) ? self::current_post_id( $block ) : 0;
+		$constraints = Constraints::filter( Constraints::from_where( $type, $where, $current ), $type, 'block', ! empty( $listing['filters'] ) );
 
 		return Constraints::merge( $query, Constraints::to_query_args( $type, $constraints ) );
+	}
+
+	/**
+	 * The post a `related` preset resolves against: the `postId` block context, as for field bindings and
+	 * "Show if" (the viewed post in a single template, the card's record inside another Query Loop), else
+	 * the queried post.
+	 *
+	 * @param WP_Block $block The block building the query.
+	 * @return int Post ID, or 0.
+	 */
+	private static function current_post_id( WP_Block $block ): int {
+		$id = $block->context['postId'] ?? null;
+		if ( is_numeric( $id ) && (int) $id > 0 ) {
+			return (int) $id;
+		}
+		$queried = get_queried_object();
+		return $queried instanceof WP_Post ? $queried->ID : 0;
 	}
 
 	/**

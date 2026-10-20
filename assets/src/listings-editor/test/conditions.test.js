@@ -8,9 +8,11 @@ import { describe, expect, it } from 'vitest';
  */
 import { parseConfig } from '../config';
 import {
+	RELATIONSHIP_OPS,
 	conditionFor,
 	conditionProblem,
 	describeCondition,
+	opsFor,
 	resolvePostType,
 	targetOf,
 } from '../conditions';
@@ -145,5 +147,53 @@ describe( 'describeCondition', () => {
 		expect(
 			describeCondition( { field: 'contact_email', op: 'empty' }, type )
 		).toBe( 'contact_email (unavailable: renders nothing)' );
+	} );
+} );
+
+describe( 'relationship conditions', () => {
+	const withRelated = parseConfig( {
+		types: {
+			sifg_project: {
+				label: 'Project',
+				relationships: [
+					{
+						key: 'story_projects',
+						type: 'sifg_story',
+						label: 'Story',
+						plural: 'Stories',
+					},
+				],
+			},
+		},
+	} ).types.sifg_project;
+
+	it( 'builds, validates and describes them', () => {
+		const condition = conditionFor(
+			'relationship:story_projects',
+			withRelated
+		);
+		expect( condition ).toEqual( {
+			relationship: 'story_projects',
+			op: 'not_empty',
+		} );
+		expect( targetOf( condition ) ).toBe( 'relationship:story_projects' );
+		expect( opsFor( condition ) ).toEqual( RELATIONSHIP_OPS );
+		expect( conditionProblem( condition, withRelated ) ).toBeNull();
+		expect( describeCondition( condition, withRelated ) ).toBe(
+			'Related Stories is not empty'
+		);
+		expect(
+			conditionProblem( { ...condition, op: 'in' }, withRelated )
+		).toBe( 'operator' );
+	} );
+
+	it( 'fails closed on a relationship the type is not part of', () => {
+		const condition = { relationship: 'nope', op: 'empty' };
+		expect( conditionFor( 'relationship:nope', withRelated ) ).toBeNull();
+		expect( conditionProblem( condition, withRelated ) ).toBe( 'unknown' );
+		expect( conditionProblem( condition, type ) ).toBe( 'unknown' );
+		expect( describeCondition( condition, withRelated ) ).toBe(
+			'nope (unavailable: renders nothing)'
+		);
 	} );
 } );

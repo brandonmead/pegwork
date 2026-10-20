@@ -14,7 +14,8 @@ use WP_Block_Patterns_Registry;
 
 /**
  * Registers five patterns per content type with a `listing`, in category "Pegwork":
- * `pegwork/<type>-card`, `-details`, `-directory`, `-featured`, `-latest`.
+ * `pegwork/<type>-card`, `-details`, `-directory`, `-featured`, `-latest`; and per relationship, one
+ * for each end: `pegwork/<type>-related-<relationship key>` (the records linked to the one being viewed).
  *
  * Overriding: Pegwork registers on `init` priority 20 and skips any name already registered, so a theme
  * (a `patterns/` file with `Slug: pegwork/<type>-card`) or a plugin registering earlier wins. The
@@ -42,6 +43,11 @@ final class Patterns {
 	 * Records in the latest pattern.
 	 */
 	public const LATEST = 3;
+
+	/**
+	 * Records in a related records pattern.
+	 */
+	public const RELATED = 6;
 
 	/**
 	 * Narrowest card column in grids (columns wrap below it, so the grid works at phone width).
@@ -119,6 +125,95 @@ final class Patterns {
 				}
 			}
 		}
+
+		foreach ( pegwork_registry()->relationships() as $key => $relationship ) {
+			foreach ( array( $relationship['to'], $relationship['from'] ) as $context ) {
+				$name = self::related_name( $context, $key );
+				if ( $registry->is_registered( $name ) ) {
+					continue;
+				}
+				/** This filter is documented above; kind `related`, fourth argument the relationship key. */
+				$pattern = apply_filters( 'pegwork_listing_pattern', self::related_pattern( $context, $key ), $context, 'related', $key );
+				if ( is_array( $pattern ) && isset( $pattern['content'] ) ) {
+					register_block_pattern( $name, $pattern );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Name of a related records pattern.
+	 *
+	 * @param string $context Content type of the record being viewed.
+	 * @param string $key     Relationship key.
+	 */
+	public static function related_name( string $context, string $key ): string {
+		return 'pegwork/' . $context . '-related-' . $key;
+	}
+
+	/**
+	 * A "Related <plural>" section for the single template of one end of a relationship: a heading and a
+	 * card grid of the published records at the other end (`where.related`), inside a "Show if" block whose
+	 * relationship condition hides the whole section when nothing is related.
+	 *
+	 * @param string $context Content type of the record being viewed (`from` or `to` of the relationship).
+	 * @param string $key     Relationship key.
+	 * @return array<string, mixed>|null Pattern properties, or null for an unknown relationship or type.
+	 */
+	public static function related_pattern( string $context, string $key ): ?array {
+		$relationship = pegwork_registry()->relationships()[ $key ] ?? null;
+		if ( null === $relationship || ! in_array( $context, array( $relationship['from'], $relationship['to'] ), true ) ) {
+			return null;
+		}
+		$listed = $context === $relationship['to'] ? $relationship['from'] : $relationship['to'];
+		$plural = self::plural( $listed );
+
+		$heading = self::block(
+			'core/heading',
+			array(),
+			/* translators: %s: content type plural name, lowercase. */
+			'<h2 class="wp-block-heading">' . esc_html( sprintf( __( 'Related %s', 'pegwork' ), mb_strtolower( $plural ) ) ) . '</h2>'
+		);
+		$query   = self::query(
+			$listed,
+			'related-' . $key,
+			array(
+				'perPage' => self::RELATED,
+				'pegwork' => array( 'where' => array( Constraints::RELATED_KEY => $key ) ),
+				'grid'    => true,
+			)
+		);
+		$section = self::block(
+			'core/group',
+			array(
+				'tagName'   => 'section',
+				'className' => 'pegwork-related',
+				'align'     => 'wide',
+				// Flow layout, so the heading lines up with the wide card grid.
+				'layout'    => array( 'type' => 'default' ),
+			),
+			'<section class="wp-block-group alignwide pegwork-related">' . self::lines( array( $heading, $query ) ) . '</section>'
+		);
+
+		return array(
+			/* translators: 1: singular name of the type being viewed, 2: plural name of the related type. */
+			'title'         => sprintf( __( '%1$s related %2$s', 'pegwork' ), self::singular( $context ), $plural ),
+			'templateTypes' => array( 'single-' . $context ),
+			'categories'    => array( self::CATEGORY ),
+			'keywords'      => array( 'pegwork', 'related', $plural, $key ),
+			'content'       => self::block(
+				Conditional::NAME,
+				array(
+					'conditions' => array(
+						array(
+							'relationship' => $key,
+							'op'           => 'not_empty',
+						),
+					),
+				),
+				self::lines( array( $section ) )
+			),
+		);
 	}
 
 	/**
@@ -318,8 +413,9 @@ final class Patterns {
 			'featured',
 			array(
 				'perPage' => 1,
+				// Never an empty object: pattern registration re-serializes `{}` as `[]`, which the editor drops.
 				'pegwork' => null === $option
-					? (object) array()
+					? array( 'filters' => false )
 					: array( 'where' => array( Constraints::OPTION_KEY => $option ) ),
 			)
 		);
