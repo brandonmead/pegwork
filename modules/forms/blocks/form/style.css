@@ -64,6 +64,26 @@ fieldset.pegwork-form__field {
 	margin: 0.25em 0;
 }
 
+.pegwork-form__file {
+	border: 2px dashed currentcolor;
+	box-sizing: border-box;
+	font: inherit;
+	max-width: 100%;
+	padding: 0.5em;
+	width: 100%;
+}
+
+.pegwork-form__field--error .pegwork-form__file {
+	border-color: #b3261e;
+}
+
+/* Cloudflare's widget is 300 px wide at most; keep it from widening narrow layouts. */
+.pegwork-form__captcha {
+	margin: 0 0 1.25em;
+	max-width: 100%;
+	overflow: hidden;
+}
+
 .pegwork-form input:focus-visible,
 .pegwork-form select:focus-visible,
 .pegwork-form textarea:focus-visible,

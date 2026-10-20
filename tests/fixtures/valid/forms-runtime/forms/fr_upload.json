@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "fr_upload",
+  "label": "Send a document",
+  "fields": [
+    { "key": "email", "type": "email", "label": "Email", "required": true, "autocomplete": "email" },
+    { "key": "doc", "type": "file", "label": "Document", "required": true, "accept": [ "pdf", "png", "txt" ], "max_size_mb": 0.01 },
+    { "key": "note", "type": "text", "label": "Note", "required": true }
+  ],
+  "notifications": [
+    { "key": "admin", "when": "submitted", "to": "{admin_email}", "subject": "Document from {field:email}: {field:doc}", "body": "{all_fields}" }
+  ]
+}

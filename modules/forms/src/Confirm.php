@@ -280,7 +280,7 @@ final class Confirm {
 				'form'      => (string) $form['key'],
 				'entry_id'  => $id,
 				'record_id' => $record_id,
-				'values'    => $values,
+				'values'    => Uploads::without_paths( $values ),
 			)
 		);
 

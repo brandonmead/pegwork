@@ -62,7 +62,11 @@ final class Renderer {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state after the redirect.
 		$sent = isset( $_GET[ Submission::SENT ] ) && sanitize_key( wp_unslash( $_GET[ Submission::SENT ] ) ) === $key;
 		if ( $sent && 1 === self::$instances[ $key ] ) {
-			$message = $form['messages']['success'] ?? self::default_success( $form );
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state after the redirect.
+			$held    = isset( $_GET[ Submission::HELD ] );
+			$message = $held
+				? __( 'Your submission was saved, but our spam check could not be completed. The site team will review it, so there is no need to send it again.', 'pegwork' )
+				: ( $form['messages']['success'] ?? self::default_success( $form ) );
 			return $html . '<div class="pegwork-form__status" role="status" tabindex="-1" autofocus><p>' . esc_html( $message ) . '</p></div></div>';
 		}
 
@@ -96,6 +100,7 @@ final class Renderer {
 
 		$state  = 1 === self::$instances[ $key ] ? Submission::state( $key ) : null;
 		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
+		$files  = is_array( $state['files'] ?? null ) ? $state['files'] : array();
 		$values = is_array( $state['values'] ?? null ) ? $state['values'] : ( $record_id > 0 ? RecordWriter::prefill( $form, $record_id ) : array() );
 		$notice = self::outcome_notice( (string) ( $state['outcome'] ?? '' ) );
 
@@ -109,7 +114,12 @@ final class Renderer {
 		}
 
 		// No #fragment in the action, so the re-render's `autofocus` on the error summary takes effect.
-		$html .= '<form class="pegwork-form__form" method="post" action="' . esc_url( Submission::current_url() ) . '" novalidate>';
+		$turnstile = Turnstile::enabled( $form );
+		if ( $turnstile ) {
+			$html .= Turnstile::noscript();
+		}
+		$html .= '<form class="pegwork-form__form" method="post" action="' . esc_url( Submission::current_url() ) . '"'
+			. ( Definition::has_files( $form ) ? ' enctype="multipart/form-data"' : '' ) . ' novalidate>';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[key]" value="' . esc_attr( $key ) . '">';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[token]" value="' . esc_attr( Token::create( $key, $now ) ) . '">';
 		if ( is_user_logged_in() ) {
@@ -124,8 +134,10 @@ final class Renderer {
 			. '<input type="text" id="' . esc_attr( $base ) . '-hp" name="' . esc_attr( Submission::CONTROL ) . '[url]" value="" tabindex="-1" autocomplete="off">'
 			. '</div>';
 
-		$by_key = Definition::items_by_key( $form );
-		foreach ( Definition::sections( $form ) as $section ) {
+		$by_key   = Definition::items_by_key( $form );
+		$sections = Definition::sections( $form );
+		$last     = count( $sections ) - 1;
+		foreach ( $sections as $index => $section ) {
 			if ( $section['step'] ) {
 				$html .= '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title">' . esc_html( $section['label'] ) . '</legend>';
 				if ( '' !== $section['description'] ) {
@@ -133,7 +145,11 @@ final class Renderer {
 				}
 			}
 			foreach ( $section['fields'] as $item ) {
-				$html .= self::field( $base, $item, $by_key, $values, $errors );
+				$html .= self::field( $base, $item, $by_key, $values, $errors, $files );
+			}
+			// The Turnstile widget sits at the end of the last step, so it shows with the submit button.
+			if ( $turnstile && $index === $last ) {
+				$html .= Turnstile::widget( $base );
 			}
 			if ( $section['step'] ) {
 				$html .= '</fieldset>';
@@ -184,8 +200,9 @@ final class Renderer {
 	 * @param array<string, array<string, mixed>> $by_key Items by key.
 	 * @param array<string, string|string[]>      $values Posted values for a re-render (lists for multi-choice items).
 	 * @param array<string, string>               $errors Errors by item key.
+	 * @param array<string, string>               $files  Names of files chosen in the request being re-rendered, by item key.
 	 */
-	private static function field( string $base, array $item, array $by_key, array $values, array $errors ): string {
+	private static function field( string $base, array $item, array $by_key, array $values, array $errors, array $files = array() ): string {
 		if ( ! empty( $item['multiple'] ) ) {
 			return self::choices( $base, $item, $by_key, $values, $errors );
 		}
@@ -194,15 +211,23 @@ final class Renderer {
 		$type     = (string) $item['type'];
 		$error    = $errors[ $key ] ?? '';
 		$required = ! empty( $item['required'] );
-		$value    = array_key_exists( $key, $values ) ? $values[ $key ] : ( isset( $item['default'] ) && is_scalar( $item['default'] ) ? self::default_text( $item['default'] ) : '' );
+		$value    = array_key_exists( $key, $values ) && is_scalar( $values[ $key ] ) ? (string) $values[ $key ] : ( isset( $item['default'] ) && is_scalar( $item['default'] ) ? self::default_text( $item['default'] ) : '' );
 
-		$help = array_values( array_filter( array( (string) ( $item['help'] ?? '' ), Definition::condition_text( $item, $by_key ) ) ) );
+		$help = array_values( array_filter( array( (string) ( $item['help'] ?? '' ), 'file' === $type ? Uploads::hint( $item ) : '', Definition::condition_text( $item, $by_key ) ) ) );
 
 		$described = array();
 		$extra     = '';
 		if ( $help ) {
 			$described[] = $id . '-help';
 			$extra      .= '<p class="pegwork-form__help" id="' . esc_attr( $id ) . '-help">' . esc_html( implode( ' ', $help ) ) . '</p>';
+		}
+		if ( 'file' === $type && '' !== ( $files[ $key ] ?? '' ) ) {
+			// Browsers cannot refill a file input, and the server discards files of a submission with problems.
+			$described[] = $id . '-again';
+			$extra      .= '<p class="pegwork-form__help pegwork-form__again" id="' . esc_attr( $id ) . '-again"><strong>' . esc_html(
+				/* translators: %s: file name. */
+				sprintf( __( 'Choose the file again. "%s" was not kept.', 'pegwork' ), $files[ $key ] )
+			) . '</strong></p>';
 		}
 		if ( '' !== $error ) {
 			$described[] = $id . '-error';
@@ -245,6 +270,12 @@ final class Renderer {
 				$html .= '<option value="' . esc_attr( (string) $option['value'] ) . '"' . ( (string) $option['value'] === $value ? ' selected' : '' ) . '>' . esc_html( $option['label'] ) . '</option>';
 			}
 			return $html . '</select></div>';
+		}
+
+		if ( 'file' === $type ) {
+			$accept = implode( ',', array_map( fn( string $ext ) => '.' . $ext, Uploads::extensions( $item ) ) );
+			return $html . '<input class="pegwork-form__file" type="file" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '"'
+				. ( '' !== $accept ? ' accept="' . esc_attr( $accept ) . '"' : '' ) . $aria . '></div>';
 		}
 
 		if ( in_array( $type, array( 'textarea', 'rich_text' ), true ) ) {
@@ -366,6 +397,7 @@ final class Renderer {
 			'expired'      => __( 'This page was open too long. Check your answers and send again.', 'pegwork' ),
 			'denied'       => __( 'You do not have permission to use this form.', 'pegwork' ),
 			'failed'       => __( 'Your submission could not be saved. Try again later.', 'pegwork' ),
+			'captcha_failed' => __( 'The spam check did not pass. Wait for the check to finish, then send the form again.', 'pegwork' ),
 			'record_failed' => __( 'Your submission was received, but it could not be processed. The site team has been told and will follow up.', 'pegwork' ),
 			default        => '',
 		};

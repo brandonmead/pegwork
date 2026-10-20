@@ -229,8 +229,8 @@ final class Entries {
 	}
 
 	/**
-	 * Deletes entries. The single delete path for the admin, retention and the privacy eraser, so file
-	 * removal (uploads, Phase 3 PR 4) belongs here.
+	 * Deletes entries and their uploaded files. The single delete path for the admin, retention and the
+	 * privacy eraser. Rows go first, then the files of the rows that were deleted.
 	 *
 	 * @param int[] $ids Entry IDs.
 	 * @return int Rows deleted.
@@ -245,8 +245,17 @@ final class Entries {
 		$table = Schema::table();
 		$sql   = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom table; $sql holds only %d placeholders.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom table; $sql holds only %d placeholders.
+		$rows    = $wpdb->get_col( $wpdb->prepare( "SELECT field_values FROM {$table} WHERE id IN ({$sql}) AND field_values LIKE %s", ...array_merge( $ids, array( '%' . $wpdb->esc_like( '"path":"' . Uploads::DIR ) . '%' ) ) ) );
 		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE id IN ({$sql})", ...$ids ) );
+		// phpcs:enable
+
+		if ( $deleted > 0 ) {
+			foreach ( is_array( $rows ) ? $rows : array() as $json ) {
+				$values = json_decode( (string) $json, true );
+				Uploads::delete( is_array( $values ) ? $values : array() );
+			}
+		}
 
 		return (int) $deleted;
 	}
