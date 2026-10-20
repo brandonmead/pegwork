@@ -27,6 +27,12 @@ $pegwork-muted: #50575e;
 	gap: 4px 8px;
 }
 
+// Inline labels and descriptions grow with their text; no resize grip.
+.pegwork-builder-field textarea.block-editor-plain-text,
+.pegwork-builder-step textarea.block-editor-plain-text {
+	resize: none;
+}
+
 .pegwork-builder-field__label.block-editor-plain-text,
 .pegwork-builder-field__label {
 	flex: 1 1 12em;
@@ -93,6 +99,16 @@ $pegwork-muted: #50575e;
 	min-width: 0;
 	font-size: 1.25em;
 	font-weight: 600;
+}
+
+// The step's "Add block" button sits below its fields, not over the last one.
+.pegwork-builder-step__fields > .block-list-appender {
+	position: static;
+	margin-top: 8px;
+}
+
+.pegwork-builder-field__required {
+	font-size: 13px;
 }
 
 .pegwork-builder-step__fields {

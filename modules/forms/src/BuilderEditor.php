@@ -48,6 +48,7 @@ final class BuilderEditor {
 
 		if ( ! has_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue' ) ) ) {
 			add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue' ) );
+			add_action( 'enqueue_block_assets', array( self::class, 'enqueue_style' ) );
 			add_action( 'load-post-new.php', array( self::class, 'prepare_duplicate' ) );
 		}
 	}
@@ -76,11 +77,25 @@ final class BuilderEditor {
 		);
 		wp_add_inline_script( self::HANDLE, 'window.pegworkFormBuilder = ' . wp_json_encode( self::config( $post ) ) . ';', 'before' );
 		wp_set_script_translations( self::HANDLE, 'pegwork' );
+	}
 
-		if ( is_readable( PEGWORK_DIR . 'assets/build/forms-builder.css' ) ) {
-			wp_enqueue_style( self::HANDLE, plugins_url( 'assets/build/forms-builder.css', PEGWORK_FILE ), array(), $asset['version'] );
-			wp_style_add_data( self::HANDLE, 'rtl', 'replace' );
+	/**
+	 * Enqueues the builder stylesheet on form editor screens. Hooked to enqueue_block_assets, which
+	 * the block editor also runs for its iframed canvas (enqueue_block_editor_assets styles stay
+	 * outside the iframe), so the field and step blocks are styled in the canvas and the sidebar.
+	 */
+	public static function enqueue_style(): void {
+		if ( ! is_admin() ) {
+			return;
 		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( null === $screen || FormPost::TYPE !== $screen->post_type || ! is_readable( PEGWORK_DIR . 'assets/build/forms-builder.css' ) ) {
+			return;
+		}
+		$asset_file = PEGWORK_DIR . 'assets/build/forms-builder.asset.php';
+		$version    = is_readable( $asset_file ) ? ( require $asset_file )['version'] : null;
+		wp_enqueue_style( self::HANDLE, plugins_url( 'assets/build/forms-builder.css', PEGWORK_FILE ), array(), $version );
+		wp_style_add_data( self::HANDLE, 'rtl', 'replace' );
 	}
 
 	/**

@@ -145,7 +145,7 @@ class FormBuilderTest extends FormsTestCase {
 		$post_id = $this->create_form(
 			'Feedback form',
 			array(
-				'notifications' => array(
+				'notifications'  => array(
 					array(
 						'key'     => 'admin',
 						'when'    => 'submitted',
@@ -332,8 +332,8 @@ class FormBuilderTest extends FormsTestCase {
 		$post_id = $this->create_form();
 		$this->assertFalse( FormPost::sync( $post_id ), 'Unchanged definition: nothing to do.' );
 
-		$form          = pegwork_registry()->form( 'feedback' );
-		$form['label'] = 'Feedback (imported)';
+		$form             = pegwork_registry()->form( 'feedback' );
+		$form['label']    = 'Feedback (imported)';
 		$form['fields'][] = array(
 			'key'   => 'phone',
 			'type'  => 'text',
@@ -413,7 +413,7 @@ class FormBuilderTest extends FormsTestCase {
 		global $submenu;
 		set_current_screen( 'dashboard' );
 		$submenu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Rebuilt by admin_menu below.
-		do_action( 'admin_menu' );
+		do_action( 'admin_menu' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook, fired to build the menu.
 		$slugs = array_column( $submenu['pegwork'] ?? array(), 2 );
 		$this->assertContains( FormsAdmin::SLUG, $slugs );
 		$this->assertLessThan( array_search( 'pegwork-entries', $slugs, true ), array_search( FormsAdmin::SLUG, $slugs, true ) );

@@ -74,7 +74,8 @@ add_action(
 			)
 		);
 
-		// Clears the mail log, rate-limit transients and the e2e forms' entries (which also resets the confirmation email cap).
+		// Clears the mail log, rate-limit transients and the e2e forms' entries (which also resets the confirmation email cap),
+		// including e2e_built, the form forms-builder.e2e.js builds.
 		register_rest_route(
 			'pegwork-e2e/v1',
 			'/reset',
@@ -88,7 +89,7 @@ add_action(
 					wp_cache_flush();
 					$table = $wpdb->prefix . 'pegwork_entries';
 					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {
-						$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE form_key IN (%s, %s)", 'e2e_contact', 'e2e_project' ) );
+						$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE form_key IN (%s, %s, %s)", 'e2e_contact', 'e2e_project', 'e2e_built' ) );
 					}
 					return rest_ensure_response( true );
 				},
