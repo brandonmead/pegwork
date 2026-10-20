@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace PegworkListings;
 
+use WP_Post;
 use WP_Query;
 
 /**
@@ -21,11 +22,13 @@ use WP_Query;
  *         'fields'     => array( 'needs_volunteers' => true ),                  // public boolean (bool) or select (value or values, OR)
  *         'search'     => 'data',                                                // core search, becomes `s`
  *         'post__in'   => array( 12 ),                                           // record IDs; an empty list matches nothing
+ *         'related'    => array( 'key' => 'story_projects', 'post' => 24 ),      // records linked to post 24 by the relationship
  *     )
  *
  * Every key is re-checked against the registry: a taxonomy the type does not use (or that is not
  * publicly queryable), a private, unknown or non-filterable field, or an invalid value is dropped.
- * Listing queries only ever return published records.
+ * A `related` constraint that does not resolve (unknown relationship, a type at neither end, no
+ * displayable current post) matches nothing. Listing queries only ever return published records.
  */
 final class Constraints {
 
@@ -55,6 +58,11 @@ final class Constraints {
 	public const OPTION_KEY = 'post_in_option';
 
 	/**
+	 * `where` key that lists the records linked to the current post by a relationship.
+	 */
+	public const RELATED_KEY = 'related';
+
+	/**
 	 * Non-persistent cache group for per-request lookups.
 	 */
 	private const CACHE_GROUP = 'pegwork_listings';
@@ -63,17 +71,24 @@ final class Constraints {
 	 * Constraints from a Query Loop's `pegwork.where` presets.
 	 *
 	 * Field keys keep their value (to_query_args() checks them); `post_in_option` ("<page>.<field>")
-	 * becomes `post__in` with the record chosen on that options page, else the newest published record.
+	 * becomes `post__in` with the record chosen on that options page, else the newest published record;
+	 * `related` ("<relationship key>") becomes a `related` constraint on the current post.
 	 *
-	 * @param string               $type  Content type key.
-	 * @param array<string, mixed> $where Presets.
+	 * @param string               $type    Content type key.
+	 * @param array<string, mixed> $where   Presets.
+	 * @param int                  $current The current post's ID (0 when there is none), for `related`.
 	 * @return array<string, mixed> Constraints.
 	 */
-	public static function from_where( string $type, array $where ): array {
+	public static function from_where( string $type, array $where, int $current = 0 ): array {
 		$constraints = array();
 		foreach ( $where as $key => $value ) {
 			if ( self::OPTION_KEY === $key ) {
 				$constraints['post__in'] = self::option_post_ids( $type, $value );
+			} elseif ( self::RELATED_KEY === $key ) {
+				$constraints['related'] = array(
+					'key'  => is_string( $value ) ? $value : '',
+					'post' => $current,
+				);
 			} elseif ( is_string( $key ) ) {
 				$constraints['fields'][ $key ] = $value;
 			}
@@ -94,7 +109,7 @@ final class Constraints {
 		/**
 		 * Filters the constraints of a listing query before they become WP_Query args.
 		 *
-		 * @param array  $constraints Constraints: `taxonomies`, `fields`, `search`, `post__in` (see Constraints).
+		 * @param array  $constraints Constraints: `taxonomies`, `fields`, `search`, `post__in`, `related` (see Constraints).
 		 * @param string $type        Content type key.
 		 * @param array  $context     `source` (`main` or `block`) and `filters` (bool).
 		 */
@@ -124,7 +139,8 @@ final class Constraints {
 			return array();
 		}
 
-		$args = array( 'post_status' => 'publish' );
+		$args    = array( 'post_status' => 'publish' );
+		$related = array_key_exists( 'related', $constraints ) ? self::related_args( $type, $constraints['related'] ) : array();
 
 		$tax_query = array();
 		foreach ( self::as_array( $constraints['taxonomies'] ?? null ) as $taxonomy => $slugs ) {
@@ -149,6 +165,9 @@ final class Constraints {
 				$meta_query[] = $clause;
 			}
 		}
+		foreach ( $related['meta_query'] ?? array() as $clause ) {
+			$meta_query[] = $clause;
+		}
 		if ( array() !== $meta_query ) {
 			$args['meta_query'] = array_merge( array( 'relation' => 'AND' ), $meta_query ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Boolean and select filters are meta queries by design.
 		}
@@ -162,8 +181,93 @@ final class Constraints {
 			$ids              = self::ids( $constraints['post__in'] );
 			$args['post__in'] = array() === $ids ? array( 0 ) : $ids;
 		}
+		if ( isset( $related['post__in'] ) ) {
+			$ids              = self::ids( $related['post__in'] );
+			$ids              = isset( $args['post__in'] ) ? array_values( array_intersect( $args['post__in'], $ids ) ) : $ids;
+			$args['post__in'] = array() === $ids ? array( 0 ) : $ids;
+		}
 
 		return $args;
+	}
+
+	/**
+	 * The relationship part of a listing query: pegwork_related_query_args() for the current post, when
+	 * the relationship links the listing's type to the post's type.
+	 *
+	 * @param string $type    Content type key of the listing.
+	 * @param mixed  $related `array( 'key' => <relationship key>, 'post' => <current post ID> )`.
+	 * @return array<string, mixed> `meta_query` (listing the "from" type from a "to" post) or `post__in` (listing
+	 *                              the "to" type from a "from" post). `post__in` `array( 0 )`, which matches
+	 *                              nothing, when the constraint does not resolve.
+	 */
+	public static function related_args( string $type, mixed $related ): array {
+		$none = array( 'post__in' => array( 0 ) );
+		$post = self::related_post( is_array( $related ) ? ( $related['key'] ?? null ) : null, is_array( $related ) ? ( $related['post'] ?? null ) : null );
+		if ( null === $post ) {
+			return $none;
+		}
+
+		$args = pegwork_related_query_args( $post, (string) $related['key'] );
+		if ( ( $args['post_type'] ?? null ) !== $type ) {
+			return $none;
+		}
+		return isset( $args['meta_query'] ) && is_array( $args['meta_query'] )
+			? array( 'meta_query' => $args['meta_query'] ) // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Relationship lookup (docs/relationships.md).
+			: array( 'post__in' => $args['post__in'] ?? array( 0 ) );
+	}
+
+	/**
+	 * Whether a record has any published record at the other end of a relationship.
+	 *
+	 * @param WP_Post $post Record (must be of a type at one end).
+	 * @param string  $key  Relationship key.
+	 * @return bool False also for an unknown relationship or a record of neither type.
+	 */
+	public static function has_related( WP_Post $post, string $key ): bool {
+		$relationship = pegwork_registry()->relationships()[ $key ] ?? null;
+		if ( null === $relationship || ! in_array( $post->post_type, array( $relationship['from'], $relationship['to'] ), true ) ) {
+			return false;
+		}
+
+		$args = pegwork_related_query_args( $post, $key );
+		if ( array( 0 ) === ( $args['post__in'] ?? null ) ) {
+			return false;
+		}
+
+		$query = new WP_Query(
+			array_merge(
+				$args,
+				array(
+					'post_status'            => 'publish',
+					'posts_per_page'         => 1,
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'ignore_sticky_posts'    => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				)
+			)
+		);
+		return array() !== $query->posts;
+	}
+
+	/**
+	 * The current post of a `related` constraint: a record of a type at one end of a known relationship,
+	 * publicly viewable and not password-protected (the rule for showing any of its values).
+	 *
+	 * @param mixed $key     Relationship key.
+	 * @param mixed $post_id Current post ID.
+	 */
+	private static function related_post( mixed $key, mixed $post_id ): ?WP_Post {
+		if ( ! is_string( $key ) || ! is_numeric( $post_id ) || (int) $post_id <= 0 ) {
+			return null;
+		}
+		$relationship = pegwork_registry()->relationships()[ $key ] ?? null;
+		$post         = get_post( (int) $post_id );
+		if ( null === $relationship || ! $post instanceof WP_Post || ! Fields::displayable( $post ) ) {
+			return null;
+		}
+		return in_array( $post->post_type, array( $relationship['from'], $relationship['to'] ), true ) ? $post : null;
 	}
 
 	/**

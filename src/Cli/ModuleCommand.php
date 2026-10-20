@@ -48,38 +48,88 @@ final class ModuleCommand {
 	}
 
 	/**
-	 * Enables a module. Its required modules must already be enabled.
+	 * Enables modules, in the order given. Each module's required modules must be enabled already or
+	 * earlier in the list.
 	 *
 	 * ## OPTIONS
 	 *
-	 * <slug>
-	 * : Module slug, as shown by `wp pegwork module list`.
+	 * <slug>...
+	 * : One or more module slugs, as shown by `wp pegwork module list`.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork module enable listings filters
 	 *
 	 * @param string[] $args Positional arguments.
 	 */
 	public function enable( array $args ): void {
-		$result = Loader::enable( $args[0] );
-		if ( is_wp_error( $result ) ) {
-			WP_CLI::error( $result->get_error_message() );
-		}
-		WP_CLI::success( "Enabled module {$args[0]}." );
+		self::report( self::toggle( 'enable', $args ) );
 	}
 
 	/**
-	 * Disables a module.
+	 * Disables modules, in the order given (dependents first).
 	 *
 	 * ## OPTIONS
 	 *
-	 * <slug>
-	 * : Module slug.
+	 * <slug>...
+	 * : One or more module slugs.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork module disable filters listings
 	 *
 	 * @param string[] $args Positional arguments.
 	 */
 	public function disable( array $args ): void {
-		$result = Loader::disable( $args[0] );
-		if ( is_wp_error( $result ) ) {
-			WP_CLI::error( $result->get_error_message() );
+		self::report( self::toggle( 'disable', $args ) );
+	}
+
+	/**
+	 * Enables or disables each slug in turn with the Loader's rules. A failure does not stop the rest.
+	 *
+	 * @param string   $action `enable` or `disable`.
+	 * @param string[] $slugs  Module slugs.
+	 * @return list<array{slug: string, ok: bool, message: string}> One result per slug, in order.
+	 */
+	public static function toggle( string $action, array $slugs ): array {
+		$results = array();
+		foreach ( $slugs as $slug ) {
+			$slug   = (string) $slug;
+			$result = 'disable' === $action ? Loader::disable( $slug ) : Loader::enable( $slug );
+			if ( is_wp_error( $result ) ) {
+				$results[] = array(
+					'slug'    => $slug,
+					'ok'      => false,
+					'message' => $result->get_error_message(),
+				);
+				continue;
+			}
+			$results[] = array(
+				'slug'    => $slug,
+				'ok'      => true,
+				'message' => 'disable' === $action ? "Disabled module {$slug}." : "Enabled module {$slug}.",
+			);
 		}
-		WP_CLI::success( "Disabled module {$args[0]}." );
+		return $results;
+	}
+
+	/**
+	 * Prints one line per slug and exits 1 when any slug failed.
+	 *
+	 * @param list<array{slug: string, ok: bool, message: string}> $results Results of toggle().
+	 */
+	private static function report( array $results ): void {
+		$failed = 0;
+		foreach ( $results as $result ) {
+			if ( $result['ok'] ) {
+				WP_CLI::success( $result['message'] );
+			} else {
+				++$failed;
+				WP_CLI::warning( "{$result['slug']}: {$result['message']}" );
+			}
+		}
+		if ( $failed > 0 ) {
+			WP_CLI::error( sprintf( '%d of %d modules failed.', $failed, count( $results ) ) );
+		}
 	}
 }

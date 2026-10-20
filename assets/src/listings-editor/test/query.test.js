@@ -9,10 +9,12 @@ import { describe, expect, it } from 'vitest';
 import { parseConfig } from '../config';
 import {
 	OPTION_KEY,
+	RELATED_KEY,
 	addPegworkAttribute,
 	directoryVariations,
 	isPegworkQuery,
 	presetFields,
+	relatedChoices,
 	setWhere,
 	whereValue,
 } from '../query';
@@ -195,5 +197,62 @@ describe( 'presets', () => {
 		expect( setWhere( null, 'kind', 'a', 'select' ) ).toEqual( {
 			where: { kind: 'a' },
 		} );
+	} );
+} );
+
+describe( 'related preset', () => {
+	const related = parseConfig( {
+		types: {
+			sifg_story: {
+				label: 'Story',
+				relationships: [
+					{
+						key: 'story_projects',
+						type: 'sifg_project',
+						label: 'Project',
+						plural: 'Projects',
+					},
+					{ key: 'no_type' },
+					'bad',
+				],
+			},
+		},
+	} ).types.sifg_story;
+
+	it( 'parses relationships and offers one choice each', () => {
+		expect( related.relationships ).toEqual( [
+			{
+				key: 'story_projects',
+				type: 'sifg_project',
+				label: 'Project',
+				plural: 'Projects',
+			},
+		] );
+		expect(
+			relatedChoices(
+				related,
+				( singular, key ) => `${ singular }/${ key }`
+			)
+		).toEqual( [
+			{ value: 'story_projects', label: 'Project/story_projects' },
+		] );
+		expect( relatedChoices( config.types.sifg_story, String ) ).toEqual(
+			[]
+		);
+	} );
+
+	it( 'sets and clears the preset', () => {
+		let pegwork = setWhere(
+			{ filters: false },
+			RELATED_KEY,
+			'story_projects',
+			'related'
+		);
+		expect( pegwork ).toEqual( {
+			filters: false,
+			where: { related: 'story_projects' },
+		} );
+		pegwork = setWhere( pegwork, RELATED_KEY, '', 'related' );
+		expect( pegwork ).toEqual( { filters: false } );
 	} );
 } );

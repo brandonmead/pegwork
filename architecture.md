@@ -121,6 +121,16 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Browser sites: `bin/e2e-local-site.sh start filters 8153` (WP 7.1.3, DB `wpenv_filters`, 500 seeded Projects, page "Projects directory" ID 504 `/projects-directory/`, router region `query-726`); `filters67` on 8154 (WP 6.7 via `wp core download --version=6.7 --force` over a created site, DB `wpenv_filters67`). On 6.7 the admin password from a 7.x install must be re-set (`wp user update --user_pass`): 6.7 cannot read the 6.8+ bcrypt hash. PHPUnit DB `pegwork_tests_filters`.
 - E2E: `filters-no-js.e2e.js`, `filters.e2e.js`, helpers `tests/e2e/utils/filters.js` (16 fixture records scoped by search token `zqfiltertoken`; expected results from REST, so specs work with or without the 500 seed). Passed on 7.1.3 (seeded) and 6.7 (fixture only).
 
+## Related records in listings (2026-10-20, branch `listings-related`)
+- `docs/display.md` "Related records". `where.related` becomes constraint `related: { key, post }`; `Constraints::related_args()` calls `pegwork_related_query_args()` and requires its `post_type` to equal the loop type, else `post__in [0]`. Current post: `postId` block context (QueryHooks adds `postId` to every block using `query` context), else the queried `WP_Post`; it must pass `Fields::displayable()`.
+- Show if `{ relationship, op: not_empty|empty }` via `Constraints::has_related()` (one `posts_per_page` 1 ids query; none when `post__in` is `[0]`). Core `query-no-results` cannot hide a heading outside the post template, hence the condition.
+- Patterns `pegwork/<type>-related-<key>` for both ends of every relationship (no `listing` needed), registered after the per-type patterns.
+- Gotcha: `WP_Block_Patterns_Registry::get_registered()` re-serializes pattern markup (`prepare_content()`: `parse_blocks` then `traverse_and_serialize_blocks`), so an attribute `{}` comes back as `[]` and the editor drops it from an object attribute. Generated `pegwork` attributes are never empty (featured without an option field uses `{"filters":false}`).
+- `where` presets are block attributes, not registry data, so the relationship key is checked at render time only (no Validator rule or JSON Schema def exists for `where`).
+- Query counts (`RelatedListingTest::test_query_budget`, WP 7.1.3, cold cache, related pattern with condition): 7 from a Project (24 Stories), 9 from a Story (24 Projects); same at 6 and 24 per page (budget 35).
+- `wp pegwork module enable|disable <slug>...`: `Cli\ModuleCommand::toggle()` (testable without WP-CLI) applies slugs in order; exit 1 when any failed.
+- Local runs: test DB `pegwork_tests_listrel` (core `~/wp-envs/core-latest`); site `~/wp-envs/listrel` (`bin/e2e-local-site.sh start listrel 8216`, DB `wpenv_listrel`).
+
 ## Relationships (content builder PR 2)
 - `docs/relationships.md`. `Content\Relationships` registers `_rel_{key}` (multi-row integer meta on the "from" type), `rel_{key}` REST collection param, `deleted_post` cleanup; RecordValidator checks target type and `one_to_many` on every save, `required` on complete saves.
 - Core REST only exposes meta for types supporting `custom-fields`; `PostTypes::args()` adds it for "from" types too, not just types with meta fields.

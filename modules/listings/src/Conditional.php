@@ -15,8 +15,8 @@ use WP_Post;
 
 /**
  * Renders inner blocks only when every condition on the context record holds. Fails closed:
- * an unknown or private field, a taxonomy not on the type, an unknown operator, a missing record
- * or a record that is not displayable renders nothing.
+ * an unknown or private field, a taxonomy not on the type, a relationship the type is not part of,
+ * an unknown operator, a missing record or a record that is not displayable renders nothing.
  */
 final class Conditional {
 
@@ -87,11 +87,14 @@ final class Conditional {
 	 * Evaluates one condition.
 	 *
 	 * @param WP_Post              $post      Record.
-	 * @param array<string, mixed> $condition `{ field, op, value }` or `{ taxonomy, op, terms }`.
+	 * @param array<string, mixed> $condition `{ field, op, value }`, `{ taxonomy, op, terms }` or `{ relationship, op }`.
 	 */
 	private static function holds( WP_Post $post, array $condition ): bool {
 		$op = $condition['op'] ?? null;
 
+		if ( isset( $condition['relationship'] ) && is_string( $condition['relationship'] ) ) {
+			return self::related_holds( $post, $condition['relationship'], $op );
+		}
 		if ( isset( $condition['taxonomy'] ) && is_string( $condition['taxonomy'] ) ) {
 			return self::terms_hold( $post, $condition['taxonomy'], $op, $condition['terms'] ?? array() );
 		}
@@ -99,6 +102,27 @@ final class Conditional {
 			return self::field_holds( $post, $condition['field'], $op, $condition['value'] ?? null );
 		}
 		return false;
+	}
+
+	/**
+	 * Relationship condition: `not_empty` when the record has a published record at the other end of the
+	 * relationship, `empty` when it has none. So a "Related stories" heading and its loop can hide together.
+	 *
+	 * @param WP_Post $post Record.
+	 * @param string  $key  Relationship key; the record's type must be at one end.
+	 * @param mixed   $op   Operator.
+	 */
+	private static function related_holds( WP_Post $post, string $key, mixed $op ): bool {
+		$relationship = pegwork_registry()->relationships()[ $key ] ?? null;
+		if ( null === $relationship || ! in_array( $post->post_type, array( $relationship['from'], $relationship['to'] ), true ) ) {
+			return false;
+		}
+
+		return match ( $op ) {
+			'not_empty' => Constraints::has_related( $post, $key ),
+			'empty'     => ! Constraints::has_related( $post, $key ),
+			default     => false,
+		};
 	}
 
 	/**

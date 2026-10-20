@@ -25,6 +25,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 - Listings B: `pegwork` Query Loop attribute, variations, `where` presets, constraint pipeline, archive main query, generated patterns, seed fixture, query budget test (in review, branch `listings-b`).
 - Filters server and client (PRs 4 and 5 together): `pegwork/filters` block, URL state, constraints, directory pattern with Clear all, Interactivity store and router (in review, branch `filters`).
 - Gate and docs (PR 6): `bin/perf-directory.sh` on LocalWP nginx, CI timing guard: not started. The size check landed with the filters PR.
+- Related records (closes `docs/content-builder-design.md` section 1 "Project page lists its stories"): `where.related` preset, Show if relationship condition, `pegwork/<type>-related-<key>` patterns; plus multi-slug `module enable|disable`, featured `{}` fix, export doc (in review, branch `listings-related`). Follow-up in the siforgood repo: Project template "Stories about this project" and Story and Resource "Related projects" from these patterns (Resources need a relationship first; `examples/sifg` has none).
 
 ## Shared registry sections PR (in review, branch `registry-sections`)
 - Registry side of `listing` (Phase 2), forms (Phase 3), automations (Phase 4) and options pages (content builder PR 4): schema, validation, normalization, export/import, API accessors. Runtime for each stays in its own PR.

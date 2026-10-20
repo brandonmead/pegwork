@@ -113,16 +113,17 @@ A container that renders its inner blocks only when every condition on the recor
 | `{ "field", "op", "value" }` | `equals`, `not_equals` | the visible value equals `value` (booleans as booleans, `"1"` counts as on; numbers numerically; others as strings) |
 | `{ "field", "op" }` | `empty`, `not_empty` | the visible value is empty (null, off, or `''`), or not |
 | `{ "taxonomy", "op", "terms" }` | `in`, `not_in` | the record has any of the term slugs, or none of them |
+| `{ "relationship", "op" }` | `not_empty`, `empty` | the record has a published record at the other end of the relationship, or none (one `posts_per_page` 1 query). Hides a "Related ..." heading together with its loop. |
 
 "Visible value" follows the binding rules: an unmet `show_when` counts as empty.
 
 ### Fails closed
 
-The block renders nothing when any condition names an unknown or private field (a condition on a private field would reveal whether it is set), a taxonomy the content type does not use, or an unknown operator; when conditions are malformed; when there is no record in context; or when the record is password-protected or not publicly viewable. No conditions means always shown.
+The block renders nothing when any condition names an unknown or private field (a condition on a private field would reveal whether it is set), a taxonomy or relationship the content type does not use, or an unknown operator; when conditions are malformed; when there is no record in context; or when the record is password-protected or not publicly viewable. No conditions means always shown.
 
 ### Editor
 
-The inspector builds conditions from the content type's public fields and taxonomies: the context post type, the type of a `single-<type>` or `archive-<type>` template, or a type chosen in the panel. Private fields are never offered. The canvas shows a "Show if: ..." summary above the inner blocks, which always display in the editor, and a warning when a condition would make the block render nothing. The block supports Interactivity API client navigation, so it can sit inside directory cards.
+The inspector builds conditions from the content type's public fields, taxonomies and relationships ("Related <plural>"): the context post type, the type of a `single-<type>` or `archive-<type>` template, or a type chosen in the panel. Private fields are never offered. The canvas shows a "Show if: ..." summary above the inner blocks, which always display in the editor, and a warning when a condition would make the block render nothing. The block supports Interactivity API client navigation, so it can sit inside directory cards.
 
 ## Directories: Pegwork Query Loops
 
@@ -137,7 +138,7 @@ A directory is a core Query Loop (`core/query`) with one extra attribute, `pegwo
 | `pegwork` key | Meaning |
 |---|---|
 | `filters` | `true`: the page's filters (filters module) narrow this loop. |
-| `where` | Presets, AND-ed: `{ "<field key>": value }` for public `boolean` (true or false) and `select` (one value or a list) fields stored in meta; `"post_in_option": "<options page>.<field>"` for the record chosen in an options page `post` field. |
+| `where` | Presets, AND-ed: `{ "<field key>": value }` for public `boolean` (true or false) and `select` (one value or a list) fields stored in meta; `"post_in_option": "<options page>.<field>"` for the record chosen in an options page `post` field; `"related": "<relationship key>"` for the records linked to the current record (see "Related records"). |
 
 Any `pegwork` attribute, even `{}`, makes the loop list **published records only**, for every user (core would add private records for administrators). Unknown, private, post-column and other field types in `where` are ignored. `where` applies to custom loops only; an inherit Query Loop follows the main query (see "Archives").
 
@@ -145,10 +146,25 @@ Any `pegwork` attribute, even `{}`, makes the loop list **published records only
 
 The query wrapper gets `data-pegwork-directory="<type>"` (the filters block finds its regions by it). Inherit Query Loops on the archive of a type with a `listing` get it too.
 
+### Related records
+
+`where.related` lists the published records linked to the current record by a relationship (`docs/relationships.md`), in either direction: a Stories loop with `"related": "story_projects"` on a Project shows the Project's Stories; a Projects loop with the same key on a Story shows the Story's Projects.
+
+```html
+<!-- wp:query {"queryId":412,"query":{"perPage":6,"postType":"sifg_story","inherit":false},"pegwork":{"where":{"related":"story_projects"}}} -->
+```
+
+- Current record: the `postId` block context, as for bindings and "Show if": the viewed post in a single template, or the card's record when the loop sits inside another Query Loop's post template. Without that context, the queried post. Pegwork adds `postId` to the context of every block that uses `query`. At the top of an archive template the context is the main loop's first post, as for any post block, so put related sections in single templates or cards.
+- Query: `pegwork_related_query_args()`, merged like any constraint (the `related` constraint below). The loop keeps its own `post_status` rule (published only), order, per page and paging (`?query-<id>-page=2`), and ANDs with other presets and with filters.
+- Nothing, never everything: the loop matches nothing (core's no-results block shows) when there is no current record, the record is password-protected or not publicly viewable, nothing is linked, the key is not a relationship, or the loop's type is not the other end of it (for example a Projects loop on a Project).
+- Hiding the whole section: core's `query-no-results` only replaces the loop's items, so a heading above the loop (inside or outside it) would still show. Wrap heading and loop in a "Show if" block with `{ "relationship": "<key>", "op": "not_empty" }`, as the generated related pattern does.
+- Validation: `where` lives in block attributes, not the registry, so the key is checked when the loop renders (unknown keys match nothing) and the editor offers only relationships of the loop's type.
+- Editor: the "Pegwork directory" panel has "Only records linked to" with one choice per relationship of the loop's type ("The Project being viewed (story_projects)"). The editor preview does not apply presets.
+
 ### Inserter, variation and panel
 
 - "Projects directory" (one "<Plural> directory" variation per content type with a `listing`, category Pegwork): `pegwork.filters` on, enhanced pagination, wide, 12 per page, a card grid (columns at least 16rem wide, so it wraps on phones), pagination and the message "No projects match your search or filters.". Its card is a `core/pattern` block of `pegwork/<type>-card`, which the editor swaps for the registered card on insert, so a theme's card override applies.
-- Query Loops of a Pegwork type get a "Pegwork directory" inspector panel: a switch for the attribute, "Connect to filters", an "Only: <field>" select per preset field, and "Show the record chosen in" for options page `post` fields of the type.
+- Query Loops of a Pegwork type get a "Pegwork directory" inspector panel: a switch for the attribute, "Connect to filters", an "Only: <field>" select per preset field, "Only records linked to" for relationships of the type, and "Show the record chosen in" for options page `post` fields of the type.
 
 ### Generated patterns
 
@@ -159,10 +175,18 @@ Registered per content type with a `listing`, in pattern category Pegwork:
 | `pegwork/<type>-card` | Linked title (h3), 20-word excerpt, then meta lines at font size `small`: terms of each taxonomy with its label, public boolean fields as a badge, select fields as "Label: value", date fields as month and year (`format: "M Y"`) with a prefix from the label: "Last X" becomes "X " ("Last verified" reads "Verified Oct 2026"), any other label "Label: ". |
 | `pegwork/<type>-details` | Every public field with its label, url fields as buttons, `show_when` fields inside a "Show if" block, then the taxonomies. Offered for `single-<type>` templates. |
 | `pegwork/<type>-directory` | The variation above as markup, with the card inline; the no-results message adds a "Clear all filters" link. With the filters module on, a wide `pegwork/filters` block comes first. |
-| `pegwork/<type>-featured` | One record: `where.post_in_option` on the first public options page `post` field for the type (else `pegwork: {}`, the newest published record). No pagination. |
+| `pegwork/<type>-featured` | One record: `where.post_in_option` on the first public options page `post` field for the type (else `pegwork: {"filters":false}`, the newest published record). No pagination. |
 | `pegwork/<type>-latest` | A plain core Query Loop (no `pegwork` attribute), 3 newest, card grid. |
 
-Overriding: Pegwork registers on `init` priority 20 and skips names already registered. A theme file `patterns/sifg-card.php` with `Slug: pegwork/sifg_project-card` (registered at `init` 10) replaces the card, and the directory, featured and latest patterns embed that card. Filter `pegwork_listing_pattern` changes a pattern or drops it (return `null`). Labels come from the registry and are not translated.
+Per relationship, one pattern for each end (any content type, with or without a `listing`):
+
+| Pattern | Content |
+|---|---|
+| `pegwork/<type>-related-<relationship key>` | Title "<Type> related <other plural>" ("Project related Stories"), offered for `single-<type>` templates. A "Show if" block with the relationship condition around a wide `<section class="pegwork-related">`: heading "Related <other plural>" (h2) and a card grid of 6 records of the other type (`where.related`), no pagination. Nothing renders when nothing is related. |
+
+Generated `pegwork` attributes are never `{}`: pattern registration parses and re-serializes the markup, which turns an empty object into `[]`, and the editor drops a list from an object attribute.
+
+Overriding: Pegwork registers on `init` priority 20 and skips names already registered. A theme file `patterns/sifg-card.php` with `Slug: pegwork/sifg_project-card` (registered at `init` 10) replaces the card, and the directory, featured and latest patterns embed that card. Filter `pegwork_listing_pattern` changes a pattern or drops it (return `null`); related patterns pass kind `related` and the relationship key as a fourth argument. Labels come from the registry and are not translated.
 
 Patterns are inserted as plain blocks; edit them freely afterwards. Nested `wp:pattern` blocks are resolved by the editor and in theme templates; in post content saved by hand they render without card context, so keep the card inline there.
 
@@ -180,12 +204,15 @@ One translator, `PegworkListings\Constraints::to_query_args()`, serves both path
 | `fields: { <key>: value }` | `meta_query` on `Registry::meta_key()`: boolean true `= '1'`, false "not set or not '1'"; select `=` or `IN` over valid option values (at most 20). Public, meta-stored `boolean` and `select` fields only. |
 | `search: string` | `s`, plain text, at most 100 characters. |
 | `post__in: [ids]` | `post__in`; an empty list matches nothing. |
+| `related: { key, post }` | `pegwork_related_query_args( post, key )` when the relationship links the loop's type to the post's type: a `meta_query` clause on `_rel_{key}` (listing the "from" type) or `post__in` (listing the "to" type, intersected with any other `post__in`). Otherwise, or when the post is not publicly viewable, `post__in: [0]`. |
 
 Anything else is dropped. URL params never reach a query except through this filter (the filters module), so `?contact_email=` or `?meta_key=` on an archive does nothing.
 
 ### Query budget (500 records)
 
 Fixture: `tests/perf/seed.php` (`wp eval-file tests/perf/seed.php [count] [seed]`, also used by PHPUnit). `tests/Integration/Listings/DirectoryPerformanceTest.php` renders the directory and the archive with cold caches and fails above 35 queries or when 12 and 48 per page differ. Set `PEGWORK_PERF_REPORT=1` to print the counts. Measured numbers: `architecture.md`.
+
+Related sections: `tests/Integration/Listings/RelatedListingTest.php::test_query_budget` renders the generated related pattern (condition plus loop) on a Project with 24 Stories and on a Story with 24 Projects, with cold caches, and fails above 35 queries or when 6 and 24 per page differ.
 
 ## Filters: the `pegwork/filters` block
 
