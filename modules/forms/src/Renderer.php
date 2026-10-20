@@ -118,8 +118,10 @@ final class Renderer {
 		if ( $turnstile ) {
 			$html .= Turnstile::noscript();
 		}
+		// The view script (enqueued only where a form renders) reads its rules from data-pegwork-config.
+		View::enqueue();
 		$html .= '<form class="pegwork-form__form" method="post" action="' . esc_url( Submission::current_url() ) . '"'
-			. ( Definition::has_files( $form ) ? ' enctype="multipart/form-data"' : '' ) . ' novalidate>';
+			. ( Definition::has_files( $form ) ? ' enctype="multipart/form-data"' : '' ) . ' novalidate data-pegwork-config="' . esc_attr( (string) wp_json_encode( View::config( $form, $base ) ) ) . '">';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[key]" value="' . esc_attr( $key ) . '">';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[token]" value="' . esc_attr( Token::create( $key, $now ) ) . '">';
 		if ( is_user_logged_in() ) {
@@ -139,7 +141,8 @@ final class Renderer {
 		$last     = count( $sections ) - 1;
 		foreach ( $sections as $index => $section ) {
 			if ( $section['step'] ) {
-				$html .= '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title">' . esc_html( $section['label'] ) . '</legend>';
+				// A heading in the legend: heading navigation without JavaScript, a focus target for the view script.
+				$html .= '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title"><h2 class="pegwork-form__step-heading">' . esc_html( $section['label'] ) . '</h2></legend>';
 				if ( '' !== $section['description'] ) {
 					$html .= '<p class="pegwork-form__step-description">' . esc_html( $section['description'] ) . '</p>';
 				}
@@ -352,13 +355,24 @@ final class Renderer {
 	 * @param string               $base Base ID.
 	 * @param array<string, mixed> $item Item.
 	 */
-	private static function control_id( string $base, array $item ): string {
+	public static function control_id( string $base, array $item ): string {
 		$id = $base . '-' . ( $item['key'] ?? '' );
+
+		return self::is_group( $item ) ? $id . '-0' : $id;
+	}
+
+	/**
+	 * Whether an item renders as a fieldset of radios or checkboxes (the fieldset carries its
+	 * `aria-invalid` and `aria-describedby`).
+	 *
+	 * @param array<string, mixed> $item Item.
+	 */
+	public static function is_group( array $item ): bool {
 		if ( ! empty( $item['multiple'] ) ) {
-			return 'select' === ( $item['display'] ?? 'checkboxes' ) ? $id : $id . '-0';
+			return 'select' !== ( $item['display'] ?? 'checkboxes' );
 		}
 
-		return 'select' === ( $item['type'] ?? '' ) && 'radio' === ( $item['display'] ?? 'select' ) ? $id . '-0' : $id;
+		return 'select' === ( $item['type'] ?? '' ) && 'radio' === ( $item['display'] ?? 'select' );
 	}
 
 	/**

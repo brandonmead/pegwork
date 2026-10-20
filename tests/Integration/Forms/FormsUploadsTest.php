@@ -92,7 +92,7 @@ class FormsUploadsTest extends EntriesTestCase {
 	 */
 	public function test_markup() {
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fr_upload"} /-->' );
-		$this->assertStringContainsString( 'method="post" action="http://example.org/contact/" enctype="multipart/form-data" novalidate>', $html );
+		$this->assertStringContainsString( 'method="post" action="http://example.org/contact/" enctype="multipart/form-data" novalidate data-pegwork-config="', $html );
 		$this->assertStringContainsString( '<input class="pegwork-form__file" type="file" id="pegwork-fr_upload-doc" name="pegwork[doc]" accept=".pdf,.png,.txt" aria-required="true" aria-describedby="pegwork-fr_upload-doc-help">', $html );
 		$this->assertStringContainsString( '<p class="pegwork-form__help" id="pegwork-fr_upload-doc-help">PDF, PNG or TXT, up to 10 KB.</p>', $html );
 		$this->assertStringContainsString( '<label class="pegwork-form__label" for="pegwork-fr_upload-doc">Document <span class="pegwork-form__required">(required)</span></label>', $html );

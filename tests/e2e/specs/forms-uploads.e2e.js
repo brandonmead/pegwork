@@ -202,7 +202,14 @@ test( 'a refused file shows its error; a problem elsewhere asks to choose the fi
 		buffer: PDF,
 	} );
 	await page.waitForTimeout( HUMAN_PAUSE_MS );
-	await page.getByRole( 'button', { name: 'Send document' } ).click();
+	// The view script would catch the empty Name before sending; this checks the server's
+	// answer, so the form is sent past it (form.submit() fires no submit event).
+	await Promise.all( [
+		page.waitForNavigation(),
+		page.evaluate( () =>
+			document.querySelector( 'form.pegwork-form__form' ).submit()
+		),
+	] );
 	await expect( page.locator( '.pegwork-form__errors' ) ).toContainText(
 		'Name is required.'
 	);

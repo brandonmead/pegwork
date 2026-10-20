@@ -138,7 +138,7 @@ class FormsRecordsTest extends FormsTestCase {
 	public function test_bound_items_render_from_the_registry() {
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
 
-		$this->assertStringContainsString( '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title">Your project</legend>', $html );
+		$this->assertStringContainsString( '<fieldset class="pegwork-form__step"><legend class="pegwork-form__step-title"><h2 class="pegwork-form__step-heading">Your project</h2></legend>', $html );
 		$this->assertStringContainsString( '<label class="pegwork-form__label" for="pegwork-fx_project-name">Name <span class="pegwork-form__required">(required)</span></label>', $html );
 		$this->assertStringContainsString( 'id="pegwork-fx_project-description" name="pegwork[description]" rows="6" aria-required="true" aria-describedby="pegwork-fx_project-description-help">', $html, 'A rich_text field is entered as plain text.' );
 		$this->assertStringContainsString( '<fieldset class="pegwork-form__field pegwork-form__field--select" role="radiogroup" aria-required="true"><legend class="pegwork-form__label">Type <span class="pegwork-form__required">(required)</span></legend>', $html );
@@ -148,6 +148,29 @@ class FormsRecordsTest extends FormsTestCase {
 		$this->assertStringContainsString( 'Only needed if &quot;Needs volunteers&quot; is checked.', $html, 'Conditions come from the content type.' );
 		$this->assertStringContainsString( 'Private. Used only to confirm', $html );
 		$this->assertStringContainsString( 'type="email" spellcheck="false" id="pegwork-fx_project-contact_email" name="pegwork[contact_email]" value="" aria-required="true" aria-describedby="pegwork-fx_project-contact_email-help" autocomplete="email">', $html );
+
+		// The view script's config carries the registry rules of bound items.
+		preg_match( '/data-pegwork-config="([^"]*)"/', $html, $match );
+		$config = json_decode( html_entity_decode( $match[1], ENT_QUOTES ), true );
+		$items  = array_column( $config['items'], null, 'key' );
+		$this->assertEquals(
+			array(
+				'min_words' => 50,
+				'max_words' => 300,
+			),
+			$items['description']['validate']
+		);
+		$this->assertTrue( $items['description']['bound'] );
+		$this->assertSame(
+			array(
+				'field'  => 'needs_volunteers',
+				'equals' => true,
+			),
+			$items['volunteer_link']['show_when']
+		);
+		$this->assertSame( $items['volunteer_link']['show_when'], $items['volunteer_link']['required_when'] );
+		$this->assertSame( '', $items['volunteer_link']['help'] );
+		$this->assertSame( array( 'Your project', 'Links', 'Contact' ), array_column( $config['steps'], 'label' ) );
 
 		$direct = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project_direct"} /-->' );
 		$this->assertStringContainsString( 'for="pegwork-fx_project_direct-name">Project name <span', $direct, 'A label override is presentational.' );
