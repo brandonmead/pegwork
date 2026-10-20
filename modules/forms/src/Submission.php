@@ -17,10 +17,11 @@ use Pegwork\Api\Events;
  *
  * Order: resolve the form from the registry (never from the request), access, record to update
  * (`edit_post`), nonce (logged-in users only), signed time token, IP rate limit, collect and sanitize
- * values (conditions false: ignored), spam layers (honeypot, time trap, `pegwork_forms_spam_check`),
- * validation (unbound items with pegwork_validate_fields(), bound ones with pegwork_validate_record()),
- * email rate limit, duplicate fingerprint, confirmation email cap, store, then either hold for email
- * confirmation or write the target record, notify, emit `form.submitted`.
+ * values (conditions false: ignored) and check uploads, spam layers (honeypot, time trap,
+ * `pegwork_forms_spam_check`), validation (unbound items with pegwork_validate_fields(), bound ones with
+ * pegwork_validate_record()), email rate limit, duplicate fingerprint, confirmation email cap, Turnstile,
+ * move uploads into private storage, store, then either hold for email confirmation or write the target
+ * record, notify, emit `form.submitted`.
  */
 final class Submission {
 
@@ -38,6 +39,11 @@ final class Submission {
 	 * Query arg of the success state after the redirect.
 	 */
 	public const SENT = 'pegwork_sent';
+
+	/**
+	 * Query arg added to SENT when the entry was held for review (Turnstile could not be reached).
+	 */
+	public const HELD = 'pegwork_held';
 
 	/**
 	 * Window, in seconds, in which an identical submission is treated as a repeat (double click, back button).
@@ -108,12 +114,16 @@ final class Submission {
 			return;
 		}
 
-		$result = self::process( $form, $raw, $control, time(), get_queried_object_id() );
+		$result = self::process( $form, $raw, $control, time(), get_queried_object_id(), Uploads::from_request( $form ) );
 
-		if ( in_array( $result['outcome'], array( 'sent', 'spam', 'duplicate' ), true ) ) {
+		if ( in_array( $result['outcome'], array( 'sent', 'spam', 'duplicate', 'held' ), true ) ) {
 			// No #fragment: browsers skip `autofocus` when the URL targets an element, and the focused
 			// success region scrolls itself into view.
-			$target = add_query_arg( self::SENT, $key, self::current_url() );
+			$args   = 'held' === $result['outcome'] ? array(
+				self::SENT => $key,
+				self::HELD => '1',
+			) : array( self::SENT => $key );
+			$target = add_query_arg( $args, self::current_url() );
 			wp_safe_redirect( $target, 303 );
 			exit;
 		}
@@ -133,21 +143,30 @@ final class Submission {
 	 * @param mixed                $control Posted control fields (unslashed).
 	 * @param int                  $now     Unix time.
 	 * @param int                  $page_id Page that held the form, 0 if none.
+	 * @param array<string, array> $files   Uploads by item key (Uploads::from_request(): only files PHP
+	 *                                      received for this request).
 	 * @return array<string, mixed> `outcome`: `sent`, `spam`, `duplicate` (all redirect to the success state),
+	 *                              `held` (stored as spam `captcha_unverified`; redirects to the held state),
 	 *                              or `invalid`, `denied`, `expired`, `rate_limited`, `failed` (re-render, nothing
-	 *                              stored), `record_failed` (re-render; the entry is stored as `failed` and the admin
-	 *                              told); plus `entry_id`, `record_id`, `errors` (message by item key) and `values`
-	 *                              (posted text).
+	 *                              stored), `captcha_failed` (re-render; stored as spam), `record_failed` (re-render;
+	 *                              the entry is stored as `failed` and the admin told); plus `entry_id`, `record_id`,
+	 *                              `errors` (message by item key), `values` (posted text) and `files` (names of the
+	 *                              files chosen, which a re-render cannot keep).
 	 */
-	public static function process( array $form, mixed $raw, mixed $control, int $now, int $page_id = 0 ): array {
+	public static function process( array $form, mixed $raw, mixed $control, int $now, int $page_id = 0, array $files = array() ): array {
 		$key     = (string) $form['key'];
 		$raw     = is_array( $raw ) ? $raw : array();
 		$control = is_array( $control ) ? $control : array();
 		$posted  = self::posted_text( $form, $raw );
-		$fail    = fn( string $outcome, array $errors = array() ) => array(
+		$chosen  = array();
+		foreach ( $files as $file_key => $file ) {
+			$chosen[ (string) $file_key ] = sanitize_file_name( wp_basename( str_replace( '\\', '/', (string) ( $file['name'] ?? '' ) ) ) );
+		}
+		$fail = fn( string $outcome, array $errors = array() ) => array(
 			'outcome' => $outcome,
 			'errors'  => $errors,
 			'values'  => $posted,
+			'files'   => $chosen,
 		);
 
 		if ( ! Access::allowed( $form ) ) {
@@ -174,7 +193,9 @@ final class Submission {
 			return $fail( 'rate_limited' );
 		}
 
-		[ $values, $format_errors ] = self::collect( $form, $raw );
+		[ $values, $format_errors ]         = self::collect( $form, $raw );
+		[ $values, $uploads, $file_errors ] = self::uploads( $form, $values, $files );
+		$format_errors                     += $file_errors;
 
 		$reasons = array();
 		if ( '' !== trim( is_scalar( $control['url'] ?? null ) ? (string) $control['url'] : 'x' ) ) {
@@ -238,11 +259,43 @@ final class Submission {
 			return $fail( 'rate_limited' );
 		}
 
+		// Turnstile last, after the cheap checks, so a valid token is spent only on a submission that
+		// can be stored (a double click hits the duplicate check above, not a reused-token failure).
+		$verdict = Turnstile::enabled( $form ) ? Turnstile::verify( $control[ Turnstile::FIELD ] ?? null ) : 'pass';
+		if ( 'fail' === $verdict ) {
+			$entry_id = Entries::insert( $base + array( 'status' => 'spam' ) + array( 'meta' => $meta + array( 'spam' => array( 'captcha_failed' ) ) ) );
+			RateLimit::hit( 'ip', $key, $ip, $now );
+			return $fail( 'captcha_failed' ) + array( 'entry_id' => $entry_id );
+		}
+
+		$values = self::store_files( $form, $values, $uploads );
+		if ( null === $values ) {
+			return $fail( 'failed' );
+		}
+
+		if ( 'unverified' === $verdict ) {
+			// Nobody could tell whether this is a person: keep everything (files too) as spam for an
+			// admin to rescue with "Not spam"; no mail, no events.
+			$base['values'] = $values;
+			$entry_id       = Entries::insert( $base + array( 'status' => 'spam' ) + array( 'meta' => $meta + array( 'spam' => array( 'captcha_unverified' ) ) ) );
+			if ( 0 === $entry_id ) {
+				Uploads::delete( $values );
+				return $fail( 'failed' );
+			}
+			RateLimit::hit( 'ip', $key, $ip, $now );
+			return array(
+				'outcome'  => 'held',
+				'entry_id' => $entry_id,
+			);
+		}
+
 		if ( $record_id > 0 ) {
 			$meta['record'] = $record_id;
 		}
-		$entry_id = Entries::insert( $base + array( 'status' => $confirm ? 'unconfirmed' : 'received' ) + array( 'meta' => $meta ) );
+		$base['values'] = $values;
+		$entry_id       = Entries::insert( $base + array( 'status' => $confirm ? 'unconfirmed' : 'received' ) + array( 'meta' => $meta ) );
 		if ( 0 === $entry_id ) {
+			Uploads::delete( $values );
 			return $fail( 'failed' );
 		}
 		RateLimit::hit( 'ip', $key, $ip, $now );
@@ -278,7 +331,7 @@ final class Submission {
 				'form'      => $key,
 				'entry_id'  => $entry_id,
 				'record_id' => $written,
-				'values'    => $values,
+				'values'    => Uploads::without_paths( $values ),
 			)
 		);
 
@@ -349,6 +402,67 @@ final class Submission {
 	}
 
 	/**
+	 * Checks the uploads of the visible file items (nothing is moved yet). A file that passes becomes
+	 * its metadata `{name, size, mime}` in the values; a visible file item without a file stays ''.
+	 *
+	 * @param array<string, mixed> $form   Canonical form.
+	 * @param array<string, mixed> $values Collected values (visible items only).
+	 * @param array<string, array> $files  Uploads by item key.
+	 * @return array{0: array<string, mixed>, 1: array<string, array>, 2: array<string, string>} Values,
+	 *         uploads that passed by key, errors by key.
+	 */
+	private static function uploads( array $form, array $values, array $files ): array {
+		$uploads = array();
+		$errors  = array();
+		foreach ( Definition::items_by_key( $form ) as $key => $item ) {
+			if ( 'file' !== ( $item['type'] ?? '' ) || ! array_key_exists( $key, $values ) ) {
+				continue;
+			}
+			$values[ $key ] = '';
+			if ( ! isset( $files[ $key ] ) || ! is_array( $files[ $key ] ) ) {
+				continue;
+			}
+			$file   = $files[ $key ] + array(
+				'name'     => '',
+				'tmp_name' => '',
+				'error'    => UPLOAD_ERR_NO_FILE,
+				'size'     => 0,
+			);
+			$result = Uploads::check( $item, $file );
+			if ( is_string( $result ) ) {
+				$errors[ $key ] = $result;
+				continue;
+			}
+			$values[ $key ]  = $result;
+			$uploads[ $key ] = $file;
+		}
+		return array( $values, $uploads, $errors );
+	}
+
+	/**
+	 * Moves the checked uploads into private storage and adds each `path` to its value.
+	 *
+	 * @param array<string, mixed> $form    Canonical form.
+	 * @param array<string, mixed> $values  Values (file items hold their metadata).
+	 * @param array<string, array> $uploads Uploads that passed, by key.
+	 * @return array<string, mixed>|null Values with paths, or null when a file could not be saved (any
+	 *                                   file already moved is deleted again).
+	 */
+	private static function store_files( array $form, array $values, array $uploads ): ?array {
+		$by_key = Definition::items_by_key( $form );
+		$stored = array();
+		foreach ( $uploads as $key => $file ) {
+			$result = Uploads::store( $by_key[ $key ], $file, $values[ $key ] );
+			if ( is_wp_error( $result ) ) {
+				Uploads::delete( $stored );
+				return null;
+			}
+			$stored[ $key ] = $result;
+		}
+		return array_merge( $values, $stored );
+	}
+
+	/**
 	 * A multi-choice item's posted values: the unique chosen option values, and whether every posted
 	 * value was an option.
 	 *
@@ -390,14 +504,23 @@ final class Submission {
 	 * @return array<string, string> Message by item key; a record rule on a field the form does not bind keeps that field's key.
 	 */
 	public static function validate( array $form, array $values, int $record_id = 0 ): array {
-		$fields = array_values(
-			array_filter(
-				Definition::items( $form ),
-				fn( array $item ) => ! isset( $item['bind'] ) && array_key_exists( $item['key'] ?? '', $values )
-			)
-		);
+		$fields = array();
+		$checks = $values;
+		foreach ( Definition::items( $form ) as $item ) {
+			$key = (string) ( $item['key'] ?? '' );
+			if ( isset( $item['bind'] ) || ! array_key_exists( $key, $values ) ) {
+				continue;
+			}
+			if ( 'file' === ( $item['type'] ?? '' ) ) {
+				// A file counts as given by its name, so `required` and `required_when` apply as to text;
+				// type and size were checked at upload.
+				$item           = array( 'type' => 'text' ) + array_diff_key( $item, array_flip( array( 'type', 'validate', 'accept', 'max_size_mb' ) ) );
+				$checks[ $key ] = is_array( $values[ $key ] ) && is_string( $values[ $key ]['name'] ?? null ) ? $values[ $key ]['name'] : '';
+			}
+			$fields[] = $item;
+		}
 		$errors = array();
-		$result = pegwork_validate_fields( $fields, $values );
+		$result = pegwork_validate_fields( $fields, $checks );
 		if ( true !== $result ) {
 			$data   = $result->get_error_data();
 			$errors = is_array( $data['fields'] ?? null ) ? $data['fields'] : array();
@@ -505,6 +628,6 @@ final class Submission {
 		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		$uri    = '' === $uri || '/' !== $uri[0] ? '/' : $uri;
 
-		return remove_query_arg( array( self::SENT, Confirm::QUERY, Confirm::DONE ), $origin . $uri );
+		return remove_query_arg( array( self::SENT, self::HELD, Confirm::QUERY, Confirm::DONE ), $origin . $uri );
 	}
 }

@@ -278,8 +278,12 @@ final class EntriesAdmin {
 			echo '<tr><td>' . esc_html__( 'This entry has no values.', 'pegwork' ) . '</td></tr>';
 		}
 		foreach ( $columns as $key => $label ) {
-			$text = array_key_exists( $key, $entry['values'] ) ? EntryFields::text( $items[ $key ] ?? null, $entry['values'][ $key ] ) : '';
-			$cell = '' === $text ? '<span class="description">' . esc_html__( '(empty)', 'pegwork' ) . '</span>' : nl2br( esc_html( $text ) );
+			$value = $entry['values'][ $key ] ?? null;
+			$text  = array_key_exists( $key, $entry['values'] ) ? EntryFields::text( $items[ $key ] ?? null, $value ) : '';
+			$cell  = '' === $text ? '<span class="description">' . esc_html__( '(empty)', 'pegwork' ) . '</span>' : nl2br( esc_html( $text ) );
+			if ( '' !== $text && is_array( $value ) && isset( $value['name'], $value['size'] ) ) {
+				$cell = self::file_cell( $id, (string) $key, $value, $text );
+			}
 			echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . $cell . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $cell is escaped above.
 		}
 		echo '</tbody></table>';
@@ -292,6 +296,32 @@ final class EntriesAdmin {
 		echo '</tbody></table>';
 
 		self::render_entry_actions( $entry, $form );
+	}
+
+	/**
+	 * An uploaded file's cell: its name linked to the private download, then size and type; or the
+	 * name with why there is nothing to download (spam entries never keep files).
+	 *
+	 * @param int                  $entry_id Entry ID.
+	 * @param string               $key      Item key.
+	 * @param array<string, mixed> $value    Stored file value.
+	 * @param string               $name     File name as text.
+	 * @return string Escaped HTML.
+	 */
+	private static function file_cell( int $entry_id, string $key, array $value, string $name ): string {
+		$size = size_format( (int) $value['size'] );
+		$size = false === $size ? '' : $size;
+		$mime = is_string( $value['mime'] ?? null ) ? $value['mime'] : '';
+
+		if ( null !== Uploads::absolute( $value ) ) {
+			// Underlined: next to plain text, a link must not rely on color alone (WCAG 1.4.1).
+			return '<a href="' . esc_url( Files::url( $entry_id, $key ) ) . '" download style="text-decoration:underline">' . esc_html( $name ) . '</a> <span class="description">('
+				/* translators: 1: file size, such as "120 KB", 2: file type, such as "application/pdf". */
+				. esc_html( sprintf( __( '%1$s, %2$s', 'pegwork' ), $size, $mime ) ) . ')</span>';
+		}
+		$why = Uploads::is_stored( $value ) ? __( 'the file is missing from the server', 'pegwork' ) : __( 'the file was not kept', 'pegwork' );
+
+		return esc_html( $name ) . ' <span class="description">(' . esc_html( $why ) . ')</span>';
 	}
 
 	/**

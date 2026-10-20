@@ -757,12 +757,12 @@ class FormsRecordsTest extends FormsTestCase {
 	}
 
 	/**
-	 * Forms with a target, confirm or bound items are supported now; Turnstile still fails closed.
+	 * Forms with a target, confirm or bound items are supported; Turnstile forms too, with keys set
+	 * (FormsTurnstileKeysTest covers missing keys).
 	 */
 	public function test_target_and_confirm_forms_are_supported() {
-		foreach ( array( 'fx_project', 'fx_project_direct', 'fx_project_edit', 'fx_newsletter' ) as $key ) {
+		foreach ( array( 'fx_project', 'fx_project_direct', 'fx_project_edit', 'fx_newsletter', 'submit_project' ) as $key ) {
 			$this->assertNull( \PegworkForms\Definition::unsupported( pegwork_registry()->form( $key ) ), $key );
 		}
-		$this->assertNotNull( \PegworkForms\Definition::unsupported( pegwork_registry()->form( 'submit_project' ) ), 'examples/sifg submit_project uses Turnstile (PR 4).' );
 	}
 }

@@ -28,14 +28,61 @@ final class Privacy {
 	public const PAGE_SIZE = 50;
 
 	/**
+	 * Folder in the personal data export archive that holds uploaded files.
+	 */
+	public const ARCHIVE_DIR = 'pegwork-form-files';
+
+	/**
 	 * Hooks the exporter, eraser and policy text.
 	 */
 	public static function register(): void {
 		if ( ! has_filter( 'wp_privacy_personal_data_exporters', array( self::class, 'exporters' ) ) ) {
 			add_filter( 'wp_privacy_personal_data_exporters', array( self::class, 'exporters' ) );
 			add_filter( 'wp_privacy_personal_data_erasers', array( self::class, 'erasers' ) );
+			add_action( 'wp_privacy_personal_data_export_file_created', array( self::class, 'add_files' ), 10, 4 );
 			add_action( 'admin_init', array( self::class, 'policy' ) );
 		}
+	}
+
+	/**
+	 * Adds the address's uploaded files to the export archive, as `pegwork-form-files/<entry>-<item>-<name>`.
+	 * Hooked to wp_privacy_personal_data_export_file_created.
+	 *
+	 * @param string $archive  Archive path.
+	 * @param string $url      Archive URL (unused).
+	 * @param string $html     HTML report path (unused).
+	 * @param int    $request  Request ID.
+	 * @return int Files added.
+	 */
+	public static function add_files( $archive, $url = '', $html = '', $request = 0 ): int {
+		unset( $url, $html );
+		$request = wp_get_user_request( (int) $request );
+		if ( ! $request instanceof \WP_User_Request || ! class_exists( \ZipArchive::class ) || ! is_string( $archive ) || ! is_file( $archive ) ) {
+			return 0;
+		}
+
+		$zip = new \ZipArchive();
+		if ( true !== $zip->open( $archive ) ) {
+			return 0;
+		}
+		$added = 0;
+		$page  = 0;
+		do {
+			$entries = Entries::by_email( $request->email, self::PAGE_SIZE, $page * self::PAGE_SIZE );
+			$count   = count( $entries );
+			foreach ( $entries as $entry ) {
+				foreach ( (array) $entry['values'] as $key => $value ) {
+					$file = Uploads::absolute( $value );
+					if ( null !== $file && $zip->addFile( $file, self::ARCHIVE_DIR . '/' . $entry['id'] . '-' . $key . '-' . sanitize_file_name( (string) $value['name'] ) ) ) {
+						++$added;
+					}
+				}
+			}
+			++$page;
+		} while ( self::PAGE_SIZE === $count );
+		$zip->close();
+
+		return $added;
 	}
 
 	/**
@@ -114,9 +161,14 @@ final class Privacy {
 			}
 			foreach ( EntryFields::columns( $form, array( $entry ) ) as $key => $label ) {
 				if ( array_key_exists( $key, $entry['values'] ) ) {
+					$value   = $entry['values'][ $key ];
+					$text    = EntryFields::text( $items[ $key ] ?? null, $value );
 					$pairs[] = array(
 						'name'  => $label,
-						'value' => EntryFields::text( $items[ $key ] ?? null, $entry['values'][ $key ] ),
+						'value' => null !== Uploads::absolute( $value )
+							/* translators: 1: file name, 2: folder name in the export archive. */
+							? sprintf( __( '%1$s (uploaded file, included in the %2$s folder of this export)', 'pegwork' ), $text, self::ARCHIVE_DIR )
+							: $text,
 					);
 				}
 			}
@@ -183,6 +235,7 @@ final class Privacy {
 		$paragraphs = array(
 			__( 'When you submit a form on this site, we store what you entered, the time, and, if you are logged in, your user account. We do not store your IP address; a keyed hash of it is kept for a few minutes to limit repeated submissions.', 'pegwork' ),
 			__( 'Some forms send you an email to confirm your submission. Unconfirmed submissions are deleted after 7 days. Submissions caught as spam are deleted after 30 days. Other submissions are kept for the period each form sets, or until deleted by a site administrator.', 'pegwork' ),
+			__( 'Files you upload with a form are stored privately on this server, outside the public media library. Only the people who manage this site\'s forms can download them, and they are deleted with your submission.', 'pegwork' ),
 			__( 'If a form creates a listing or post from your submission, that record is kept as site content. Asking us to erase your data deletes your form submissions; tell us if the record should change too.', 'pegwork' ),
 			__( 'Forms that use Cloudflare Turnstile to check for spam load a script from Cloudflare, which receives information about your browser and visit. See Cloudflare\'s privacy policy: https://www.cloudflare.com/privacypolicy/', 'pegwork' ),
 		);

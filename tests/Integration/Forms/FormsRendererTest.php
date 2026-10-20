@@ -131,16 +131,15 @@ class FormsRendererTest extends FormsTestCase {
 	}
 
 	/**
-	 * Unknown and unsupported forms render nothing for visitors and a notice for managers.
+	 * Unknown forms render nothing for visitors and a notice for managers (FormsTurnstileKeysTest
+	 * covers Turnstile forms without keys).
 	 */
 	public function test_fail_closed_states() {
 		$this->assertSame( '', $this->block( 'nope' ) );
-		$this->assertSame( '', $this->block( 'fr_turnstile' ) );
 		$this->assertSame( '', do_blocks( '<!-- wp:pegwork/form /-->' ) );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$this->assertStringContainsString( 'Pegwork form &quot;nope&quot; is not defined.', $this->block( 'nope' ) );
-		$this->assertStringContainsString( 'Turnstile', $this->block( 'fr_turnstile' ) );
 		$this->assertStringContainsString( 'Choose a form for this block.', do_blocks( '<!-- wp:pegwork/form /-->' ) );
 		$this->assertStringContainsString( 'Choose a form for this block.', $this->block( 'Bad-Key' ), 'A malformed key is treated as no key.' );
 	}
@@ -185,7 +184,7 @@ class FormsRendererTest extends FormsTestCase {
 			),
 			$forms['fr_contact']
 		);
-		$this->assertFalse( $forms['fr_turnstile']['supported'] );
+		$this->assertTrue( $forms['fr_turnstile']['supported'], 'Turnstile forms run when both keys are set.' );
 	}
 
 	/**

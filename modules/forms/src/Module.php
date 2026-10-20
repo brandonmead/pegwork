@@ -46,6 +46,9 @@ final class Module implements ModuleContract {
 		Block::register();
 		Editor::register();
 		Submission::register();
+		// Turnstile keys notice and private file downloads (Phase 3 PR 4).
+		Turnstile::register();
+		Files::register();
 		// Entries admin, CSV export, privacy tools and retention (Phase 3 PR 7).
 		EntriesAdmin::register();
 		EntryActions::register();
