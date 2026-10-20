@@ -376,7 +376,7 @@ class FormBuilderTest extends FormsTestCase {
 		$html = ob_get_clean();
 
 		$this->assertStringContainsString( 'Contact us', $html );
-		$this->assertStringContainsString( '<code>fr_contact</code>', $html );
+		$this->assertStringContainsString( '<code>fr_<wbr>contact</code>', $html, 'Keys break after an underscore only.' );
 		$this->assertStringContainsString( 'File: forms_runtime (read-only)', $html );
 		$this->assertStringContainsString( 'Duplicate as site form', $html );
 		$this->assertStringContainsString( esc_attr( '<!-- wp:pegwork/form {"form":"fr_contact"} /-->' ), $html );
@@ -395,9 +395,11 @@ class FormBuilderTest extends FormsTestCase {
 		$settings = FormPost::editor_settings( array(), new WP_Block_Editor_Context( array( 'post' => get_post( $post_id ) ) ) );
 		$this->assertSame( 'all', $settings['templateLock'] );
 		set_current_screen( FormPost::TYPE );
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- post.php sets the edited post as $post; body_class() reads it with get_post().
 		$GLOBALS['post'] = get_post( $post_id );
 		$this->assertStringContainsString( 'pegwork-form-readonly', BuilderEditor::body_class( 'x' ), 'Read-only styles: no inserter, no "Last edited".' );
 		$GLOBALS['post'] = get_post( $this->create_form() );
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
 		$this->assertSame( 'x', BuilderEditor::body_class( 'x' ), 'Site forms stay editable.' );
 		unset( $GLOBALS['post'] );
 		set_current_screen( 'pegwork_page_' . FormsAdmin::SLUG );

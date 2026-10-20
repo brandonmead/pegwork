@@ -183,9 +183,16 @@ $pegwork-muted: #50575e;
 	display: none;
 }
 
+// The pre-save panel's Visibility ("Public") and Publish ("Immediately") rows do not apply: the
+// save is always private and immediate.
+.post-type-pegwork_form .editor-post-publish-panel__prepublish .components-panel__body {
+	display: none;
+}
+
 // File forms (read-only): every block is locked (templateLock "all"), but core keeps the inserter
-// button enabled; and the post is regenerated from the file, so "Last edited" says nothing.
-.pegwork-form-readonly .editor-document-tools__inserter-toggle,
+// button enabled; and the post is regenerated from the file, so "Last edited" says nothing. The
+// inserter selector outranks core's `.editor-document-tools .editor-document-tools__left > ...`.
+.pegwork-form-readonly .editor-document-tools .editor-document-tools__left > .editor-document-tools__inserter-toggle,
 .pegwork-form-readonly .editor-post-last-edited-panel {
 	display: none;
 }

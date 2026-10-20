@@ -399,7 +399,7 @@ final class EntriesAdmin {
 			$lines = array();
 			foreach ( $meta['errors'] as $key => $message ) {
 				// Key '' is a whole-form error: no "key: " prefix.
-				$lines[] = esc_html( ( is_string( $key ) && '' !== $key ? $key . ': ' : '' ) .( is_scalar( $message ) ? (string) $message : (string) wp_json_encode( $message ) ) );
+				$lines[] = esc_html( ( is_string( $key ) && '' !== $key ? $key . ': ' : '' ) . ( is_scalar( $message ) ? (string) $message : (string) wp_json_encode( $message ) ) );
 			}
 			$rows[ __( 'Errors', 'pegwork' ) ] = implode( '<br>', $lines );
 		}

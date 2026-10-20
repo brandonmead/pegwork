@@ -133,12 +133,12 @@ final class FormsTable extends \WP_List_Table {
 	}
 
 	/**
-	 * Form key.
+	 * Form key, breakable after each underscore (`<wbr>` adds no character when copied).
 	 *
 	 * @param array<string, mixed> $item Row.
 	 */
 	protected function column_key( $item ): string {
-		return '<code>' . esc_html( $item['key'] ) . '</code>';
+		return '<code>' . str_replace( '_', '_<wbr>', esc_html( $item['key'] ) ) . '</code>';
 	}
 
 	/**

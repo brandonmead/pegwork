@@ -97,8 +97,7 @@ async function save( page ) {
 		.first();
 	// The builder relabels core's Publish as Save, so a new form is told apart by its status.
 	const isNew = await page.evaluate(
-		() =>
-			! window.wp.data.select( 'core/editor' ).isCurrentPostPublished()
+		() => ! window.wp.data.select( 'core/editor' ).isCurrentPostPublished()
 	);
 	await press( button );
 	const confirm = page
@@ -461,6 +460,15 @@ test( 'a file form opens read-only with Duplicate as site form', async ( {
 			.filter( { hasText: 'read-only' } )
 			.first()
 	).toBeVisible();
+	// Truly read-only: no inserter, no Save draft, no status rows, no "Last edited".
+	await expect( inserterToggle( page ) ).toBeHidden();
+	await expect(
+		page.getByRole( 'button', { name: 'Save draft' } )
+	).toHaveCount( 0 );
+	await expect(
+		page.locator( '.editor-post-last-edited-panel' )
+	).toBeHidden();
+	await expect( page.locator( '.editor-post-status' ) ).toHaveCount( 0 );
 	const duplicate = page
 		.getByRole( 'link', { name: 'Duplicate as site form' } )
 		.or( page.getByRole( 'button', { name: 'Duplicate as site form' } ) )
@@ -480,6 +488,15 @@ test( 'a file form opens read-only with Duplicate as site form', async ( {
 		'e2e_contact_copy'
 	);
 	await expect( page.getByLabel( 'Form key' ) ).toBeEnabled();
+	// A new site form offers Save, not Publish.
+	await expect(
+		page
+			.getByRole( 'region', { name: 'Editor top bar' } )
+			.getByRole( 'button', { name: 'Save', exact: true } )
+	).toBeVisible();
+	await expect(
+		page.getByRole( 'button', { name: 'Publish', exact: true } )
+	).toHaveCount( 0 );
 } );
 
 test( 'an editor cannot open the builder or the Forms list', async ( {

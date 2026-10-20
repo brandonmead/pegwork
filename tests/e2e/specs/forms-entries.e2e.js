@@ -250,7 +250,21 @@ test( 'delete through the confirmation screen', async ( { page } ) => {
 			.locator( 'tr', { hasText: 'ada@example.org' } )
 			.getByRole( 'link', { name: /^Delete/ } )
 	);
-	await press( page.getByRole( 'button', { name: 'Delete permanently' } ) );
+	// Destructive styling: red button with a visible red focus ring when reached by keyboard.
+	const confirmDelete = page.getByRole( 'button', {
+		name: 'Delete permanently',
+	} );
+	await expect( confirmDelete ).toHaveClass( /pegwork-button-delete/ );
+	await confirmDelete.focus();
+	await expect( confirmDelete ).toHaveCSS(
+		'background-color',
+		'rgb(179, 45, 46)'
+	);
+	await expect( confirmDelete ).toHaveCSS(
+		'box-shadow',
+		'rgb(255, 255, 255) 0px 0px 0px 1px, rgb(179, 45, 46) 0px 0px 0px 3px'
+	);
+	await press( confirmDelete );
 	await expect( page.locator( '.notice-success' ) ).toContainText(
 		'1 entry permanently deleted.'
 	);

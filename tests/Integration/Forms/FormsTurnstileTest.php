@@ -129,7 +129,7 @@ class FormsTurnstileTest extends FormsTestCase {
 		$this->assertSame( Turnstile::SCRIPT_URL, wp_scripts()->registered[ Turnstile::HANDLE ]->src );
 		$this->assertNull( wp_scripts()->registered[ Turnstile::HANDLE ]->ver, 'No version query on Cloudflare\'s URL.' );
 		$this->assertStringNotContainsString( self::TURNSTILE_SECRET_KEY, $html );
-		$this->assertMatchesRegularExpression( '#<button type="submit" class="pegwork-form__submit wp-element-button" disabled>[^<]*</button><script[^>]*>\s*document\.currentScript\.previousElementSibling\.disabled=false;\s*</script>#', $html, 'Disabled until a script runs: without JavaScript it cannot be sent.' );
+		$this->assertMatchesRegularExpression( '#<button type="submit" class="pegwork-form__submit wp-element-button" disabled>[^<]*</button><script[^>]*>\s*(?:/\* <!\[CDATA\[ \*/\s*)?document\.currentScript\.previousElementSibling\.disabled=false;\s*(?:/\* \]\]> \*/\s*)?</script>#', $html, 'Disabled until a script runs: without JavaScript it cannot be sent (WordPress 6.7 adds a CDATA wrapper for themes without html5 script support).' );
 
 		$plain = do_blocks( '<!-- wp:pegwork/form {"form":"fr_contact"} /-->' );
 		$this->assertStringNotContainsString( 'cf-turnstile', $plain );
