@@ -31,6 +31,9 @@ use Pegwork\Api\Events;
  * - At most MAX_MAILS confirmation emails per address per MAIL_WINDOW, across forms.
  * - Confirmation pages are sent with no-cache headers, `noindex` and `Referrer-Policy: no-referrer`,
  *   so the token is neither cached nor leaked to other sites.
+ * - On a confirmation request (link, thank-you state) the main content of the page is replaced by the
+ *   form's block alone, so the panel is the first thing in the content area on any theme, with or
+ *   without JavaScript. Its heading carries `autofocus` (focusable through `tabindex="-1"`).
  */
 final class Confirm {
 
@@ -68,13 +71,6 @@ final class Confirm {
 	private static ?array $state = null;
 
 	/**
-	 * Whether the_content already received the fallback form block in this request.
-	 *
-	 * @var bool
-	 */
-	private static bool $injected = false;
-
-	/**
 	 * Registers the request handler. Safe to call more than once.
 	 */
 	public static function register(): void {
@@ -87,8 +83,7 @@ final class Confirm {
 	 * Clears per-request state (tests).
 	 */
 	public static function reset(): void {
-		self::$state    = null;
-		self::$injected = false;
+		self::$state = null;
 	}
 
 	/**
@@ -99,6 +94,20 @@ final class Confirm {
 	 */
 	public static function cap_reached( string $email, int $now ): bool {
 		return '' !== $email && EntryState::confirm_mails( $email, $now - self::MAIL_WINDOW ) >= self::MAX_MAILS;
+	}
+
+	/**
+	 * Seconds until the cap lets another confirmation email to this address through (0 when it does now).
+	 *
+	 * @param string $email Lowercased address.
+	 * @param int    $now   Unix time.
+	 */
+	public static function cap_retry_after( string $email, int $now ): int {
+		if ( '' === $email ) {
+			return 0;
+		}
+
+		return RateLimit::wait( EntryState::confirm_mail_times( $email, $now - self::MAIL_WINDOW ), self::MAX_MAILS, self::MAIL_WINDOW, $now );
 	}
 
 	/**
@@ -355,8 +364,11 @@ final class Confirm {
 		$key = (string) $form['key'];
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only display state; the token is checked.
 		if ( isset( $_GET[ self::DONE ] ) && sanitize_key( wp_unslash( $_GET[ self::DONE ] ) ) === $key ) {
+			$review = isset( $_GET[ self::REVIEW ] );
 			return array(
-				'html'    => self::status( isset( $_GET[ self::REVIEW ] ) ? self::review_message( $form ) : __( 'Thank you. Your submission is confirmed.', 'pegwork' ) ),
+				'html'    => $review
+					? self::status( $base, __( 'Confirmation received', 'pegwork' ), self::review_message( $form ) )
+					: self::status( $base, __( 'Submission confirmed', 'pegwork' ), self::confirmed_message( $form ) ),
 				'replace' => true,
 			);
 		}
@@ -376,39 +388,44 @@ final class Confirm {
 				'replace' => true,
 			),
 			'done'    => array(
-				'html'    => self::status( 'failed' === $entry['status'] ? self::review_message( $form ) : __( 'This submission is already confirmed. There is nothing more to do.', 'pegwork' ) ),
+				'html'    => 'failed' === $entry['status']
+					? self::status( $base, __( 'Confirmation received', 'pegwork' ), self::review_message( $form ) )
+					: self::status( $base, __( 'Already confirmed', 'pegwork' ), __( 'This submission is already confirmed. There is nothing more to do.', 'pegwork' ) ),
 				'replace' => true,
 			),
 			'expired' => array(
-				'html'    => self::problem( __( 'This confirmation link has expired. Submit the form again below.', 'pegwork' ) ),
+				'html'    => self::problem( $base, __( 'This link has expired', 'pegwork' ), __( 'This confirmation link has expired. Submit the form again below.', 'pegwork' ) ),
 				'replace' => false,
 			),
 			default   => array(
-				'html'    => self::problem( __( 'This confirmation link is not valid. Check that you used the whole link from the email, or submit the form again below.', 'pegwork' ) ),
+				'html'    => self::problem( $base, __( 'This link is not valid', 'pegwork' ), __( 'This confirmation link is not valid. Check that you used the whole link from the email, or submit the form again below.', 'pegwork' ) ),
 				'replace' => false,
 			),
 		};
 	}
 
 	/**
-	 * Places the form block at the top of the main content on a confirmation request when the content
-	 * does not already hold it (a form shown by a template, or the home fallback). Hooked to the_content, priority 8.
+	 * On a confirmation request, replaces the main content with the form's block alone (keeping its
+	 * attributes when the content holds it), so the panel is the first thing in the content area and
+	 * long pages do not push it out of view. Pages whose content lacks the block (a form placed by a
+	 * template, or the home fallback) get it this way too. Hooked to the_content, priority 8 (before
+	 * do_blocks), main query and queried post only.
 	 *
 	 * @param string $content Post content.
 	 */
 	public static function inject( $content ): string {
 		$content = is_string( $content ) ? $content : '';
-		if ( self::$injected || ! is_singular() || ! is_main_query() || (int) get_the_ID() !== (int) get_queried_object_id() ) {
+		if ( ! is_singular() || ! is_main_query() || (int) get_the_ID() !== (int) get_queried_object_id() ) {
 			return $content;
 		}
 
 		$key = self::requested_form();
-		if ( null === $key || self::contains_form( parse_blocks( $content ), $key ) ) {
+		if ( null === $key ) {
 			return $content;
 		}
 
-		self::$injected = true;
-		return '<!-- wp:pegwork/form ' . wp_json_encode( array( 'form' => $key ) ) . " /-->\n" . $content;
+		$block = self::find_form( parse_blocks( $content ), $key );
+		return null !== $block ? serialize_block( $block ) : '<!-- wp:pegwork/form ' . wp_json_encode( array( 'form' => $key ) ) . ' /-->';
 	}
 
 	/**
@@ -429,21 +446,23 @@ final class Confirm {
 	}
 
 	/**
-	 * Whether parsed blocks hold a `pegwork/form` block for a key, at any depth.
+	 * The first `pegwork/form` block for a key in parsed blocks, at any depth, or null.
 	 *
 	 * @param array<int, array<string, mixed>> $blocks Parsed blocks.
 	 * @param string                           $key    Form key.
+	 * @return array<string, mixed>|null
 	 */
-	private static function contains_form( array $blocks, string $key ): bool {
+	private static function find_form( array $blocks, string $key ): ?array {
 		foreach ( $blocks as $block ) {
 			if ( Block::NAME === ( $block['blockName'] ?? null ) && ( $block['attrs']['form'] ?? null ) === $key ) {
-				return true;
+				return $block;
 			}
-			if ( ! empty( $block['innerBlocks'] ) && self::contains_form( $block['innerBlocks'], $key ) ) {
-				return true;
+			$inner = empty( $block['innerBlocks'] ) ? null : self::find_form( $block['innerBlocks'], $key );
+			if ( null !== $inner ) {
+				return $inner;
 			}
 		}
-		return false;
+		return null;
 	}
 
 	/**
@@ -458,7 +477,7 @@ final class Confirm {
 		$action = add_query_arg( self::QUERY, $parsed['id'] . '.' . $parsed['token'], Submission::current_url() );
 
 		return '<section class="pegwork-form__confirm" aria-labelledby="' . esc_attr( $title ) . '">'
-			. '<h2 class="pegwork-form__confirm-title" id="' . esc_attr( $title ) . '">' . esc_html__( 'Confirm your submission', 'pegwork' ) . '</h2>'
+			. self::heading( $title, __( 'Confirm your submission', 'pegwork' ) )
 			/* translators: %s: form label. */
 			. '<p>' . esc_html( sprintf( __( 'Your "%s" submission is waiting. Press the button to confirm it.', 'pegwork' ), (string) $form['label'] ) ) . '</p>'
 			. '<form class="pegwork-form__form" method="post" action="' . esc_url( $action ) . '">'
@@ -482,20 +501,63 @@ final class Confirm {
 	}
 
 	/**
-	 * A focused status message (success-like states).
+	 * What the submitter sees once confirmed: `messages.confirmed`, or the default.
 	 *
-	 * @param string $message Message.
+	 * @param array<string, mixed> $form Canonical form.
 	 */
-	private static function status( string $message ): string {
-		return '<div class="pegwork-form__status" role="status" tabindex="-1" autofocus><p>' . esc_html( $message ) . '</p></div>';
+	public static function confirmed_message( array $form ): string {
+		$message = $form['messages']['confirmed'] ?? null;
+		return is_string( $message ) && '' !== $message ? $message : __( 'Thank you. Your submission is confirmed.', 'pegwork' );
 	}
 
 	/**
-	 * A focused problem notice shown above the form.
+	 * The panel heading, focused on load. `autofocus` needs no JavaScript and scrolls the heading into view;
+	 * `tabindex="-1"` makes the heading focusable without adding it to the tab order.
 	 *
+	 * @param string $id    Heading ID.
+	 * @param string $title Heading text.
+	 */
+	private static function heading( string $id, string $title ): string {
+		return '<h2 class="pegwork-form__confirm-title" id="' . esc_attr( $id ) . '" tabindex="-1" autofocus>' . esc_html( $title ) . '</h2>';
+	}
+
+	/**
+	 * A finished state (confirmed, already confirmed, received for review): a heading, the message and a
+	 * link to the page without the confirmation arguments (the rest of its content is hidden here).
+	 *
+	 * @param string $base    Base ID.
+	 * @param string $title   Heading.
 	 * @param string $message Message.
 	 */
-	private static function problem( string $message ): string {
-		return '<div class="pegwork-form__notice pegwork-form__notice--problem" role="alert" tabindex="-1" autofocus><p>' . esc_html( $message ) . '</p></div>';
+	private static function status( string $base, string $title, string $message ): string {
+		$id   = $base . '-confirm-title';
+		$page = (int) get_queried_object_id();
+		$name = $page > 0 && is_singular() ? wp_strip_all_tags( get_the_title( $page ) ) : '';
+		$link = '' !== $name
+			/* translators: %s: page title. */
+			? sprintf( __( 'Continue to %s', 'pegwork' ), $name )
+			: __( 'Continue to the site', 'pegwork' );
+
+		return '<section class="pegwork-form__confirm pegwork-form__status" aria-labelledby="' . esc_attr( $id ) . '">'
+			. self::heading( $id, $title )
+			. '<p>' . esc_html( $message ) . '</p>'
+			. '<p class="pegwork-form__continue"><a href="' . esc_url( Submission::current_url() ) . '">' . esc_html( $link ) . '</a></p>'
+			. '</section>';
+	}
+
+	/**
+	 * A problem notice shown above the form (expired or invalid link), its heading focused.
+	 *
+	 * @param string $base    Base ID.
+	 * @param string $title   Heading.
+	 * @param string $message Message.
+	 */
+	private static function problem( string $base, string $title, string $message ): string {
+		$id = $base . '-confirm-title';
+
+		return '<section class="pegwork-form__confirm pegwork-form__notice pegwork-form__notice--problem" aria-labelledby="' . esc_attr( $id ) . '">'
+			. self::heading( $id, $title )
+			. '<p>' . esc_html( $message ) . '</p>'
+			. '</section>';
 	}
 }

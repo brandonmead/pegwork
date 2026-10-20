@@ -435,7 +435,7 @@ class FormsRecordsTest extends FormsTestCase {
 
 		$_GET['pegwork_confirm'] = $link;
 		$html                    = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
-		$this->assertStringContainsString( '<h2 class="pegwork-form__confirm-title" id="pegwork-fx_project-confirm-title">Confirm your submission</h2>', $html );
+		$this->assertStringContainsString( '<h2 class="pegwork-form__confirm-title" id="pegwork-fx_project-confirm-title" tabindex="-1" autofocus>Confirm your submission</h2>', $html, 'The heading is focused on load, without JavaScript.' );
 		$this->assertStringContainsString( 'method="post" action="http://example.org/submit/?pegwork_confirm=' . $link . '"', $html );
 		$this->assertStringContainsString( '<input type="hidden" name="pegwork_confirm[entry]" value="' . $result['entry_id'] . '">', $html );
 		$this->assertStringContainsString( '>Confirm my submission</button>', $html );
@@ -476,14 +476,17 @@ class FormsRecordsTest extends FormsTestCase {
 		Renderer::reset();
 		Confirm::handle();
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
-		$this->assertStringContainsString( 'role="status" tabindex="-1" autofocus><p>This submission is already confirmed.', $html );
+		$this->assertStringContainsString( 'tabindex="-1" autofocus>Already confirmed</h2><p>This submission is already confirmed.', $html );
 		$this->assertSame( 1, $this->project_count() );
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		unset( $_POST['pegwork_confirm'], $_GET['pegwork_confirm'] );
 
 		Renderer::reset();
 		$_GET['pegwork_confirmed'] = 'fx_project';
-		$this->assertStringContainsString( '<div class="pegwork-form__status" role="status" tabindex="-1" autofocus><p>Thank you. Your submission is confirmed.</p></div>', do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' ) );
+		$this->assertStringContainsString(
+			'<section class="pegwork-form__confirm pegwork-form__status" aria-labelledby="pegwork-fx_project-confirm-title"><h2 class="pegwork-form__confirm-title" id="pegwork-fx_project-confirm-title" tabindex="-1" autofocus>Submission confirmed</h2><p>Thank you. Your submission is confirmed.</p><p class="pegwork-form__continue"><a href="http://example.org/submit/">',
+			do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' )
+		);
 		unset( $_GET['pegwork_confirmed'] );
 
 		// A wrong token: a notice, then the form to submit again.
@@ -491,7 +494,7 @@ class FormsRecordsTest extends FormsTestCase {
 		Renderer::reset();
 		$_GET['pegwork_confirm'] = $id . '.' . str_repeat( 'B', 43 );
 		$html                    = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
-		$this->assertStringContainsString( 'role="alert" tabindex="-1" autofocus><p>This confirmation link is not valid.', $html );
+		$this->assertStringContainsString( 'tabindex="-1" autofocus>This link is not valid</h2><p>This confirmation link is not valid.', $html );
 		$this->assertStringContainsString( 'name="pegwork[name]"', $html );
 		$this->assertStringContainsString( 'action="http://example.org/submit/" novalidate', $html, 'The form does not carry the token along.' );
 
@@ -530,9 +533,49 @@ class FormsRecordsTest extends FormsTestCase {
 		$this->the_post_for( $page );
 		$content = apply_filters( 'the_content', get_post( $page )->post_content ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
 		$this->assertStringContainsString( 'Confirm my submission', $content );
-		$this->assertStringContainsString( 'Welcome', $content );
-		$again = apply_filters( 'the_content', get_post( $page )->post_content ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
-		$this->assertStringNotContainsString( 'Confirm my submission', $again, 'Added once per request.' );
+		$this->assertStringNotContainsString( 'Welcome', $content, 'The panel stands in for the page body, so it is first in the content.' );
+		remove_filter( 'the_content', array( Confirm::class, 'inject' ), 8 );
+	}
+
+	/**
+	 * On a long page that holds the form far down, a confirmation request shows the form block alone in
+	 * the main content, with its own attributes; other posts' content is left alone.
+	 */
+	public function test_confirm_link_replaces_a_long_page_body() {
+		$this->submit( $this->project_values(), 'fx_project' );
+		$long = str_repeat( "<!-- wp:paragraph --><p>Long page text</p><!-- /wp:paragraph -->\n", 40 );
+		$page = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Get involved',
+				'post_content' => $long . '<!-- wp:group --><div class="wp-block-group"><!-- wp:pegwork/form {"form":"fx_project","className":"is-style-plain"} /--></div><!-- /wp:group -->',
+			)
+		);
+		$this->go_to( get_permalink( $page ) );
+		$_GET['pegwork_confirm'] = $this->confirm_link();
+		Confirm::handle();
+
+		$this->the_post_for( $page );
+		$this->assertSame( '<!-- wp:pegwork/form {"form":"fx_project","className":"is-style-plain"} /-->', Confirm::inject( get_post( $page )->post_content ) );
+		$content = apply_filters( 'the_content', get_post( $page )->post_content ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
+		$this->assertStringNotContainsString( 'Long page text', $content );
+		$this->assertStringContainsString( 'autofocus>Confirm your submission</h2>', $content );
+
+		// The thank-you state: the same, with a link back to the whole page.
+		unset( $_GET['pegwork_confirm'] );
+		$_GET['pegwork_confirmed'] = 'fx_project';
+		Renderer::reset();
+		$content = apply_filters( 'the_content', get_post( $page )->post_content ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
+		$this->assertStringNotContainsString( 'Long page text', $content );
+		$this->assertStringContainsString( 'autofocus>Submission confirmed</h2>', $content );
+		$this->assertStringContainsString( '>Continue to Get involved</a>', $content );
+
+		// Another post's content (a query loop, a widget) is not touched.
+		$other = self::factory()->post->create( array( 'post_content' => '<!-- wp:paragraph --><p>Other</p><!-- /wp:paragraph -->' ) );
+		$this->the_post_for( $other );
+		$this->assertStringContainsString( 'Other', Confirm::inject( get_post( $other )->post_content ) );
+		unset( $_GET['pegwork_confirmed'] );
 		remove_filter( 'the_content', array( Confirm::class, 'inject' ), 8 );
 	}
 
@@ -622,7 +665,7 @@ class FormsRecordsTest extends FormsTestCase {
 		$_GET['pegwork_review']    = '1';
 		$html                      = do_blocks( '<!-- wp:pegwork/form {"form":"fx_project"} /-->' );
 		unset( $_GET['pegwork_confirmed'], $_GET['pegwork_review'] );
-		$this->assertStringContainsString( '<div class="pegwork-form__status" role="status" tabindex="-1" autofocus><p>' . $review . '</p></div>', $html );
+		$this->assertStringContainsString( 'autofocus>Confirmation received</h2><p>' . $review . '</p>', $html );
 		$this->assertStringNotContainsString( 'Your submission is confirmed', $html );
 
 		// Opening the link again says the same, not "already confirmed".

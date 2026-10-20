@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "desk",
+  "title": "Desk",
+  "capability": "manage_options",
+  "fields": [
+    { "key": "secret_email", "type": "email", "label": "Secret email", "visibility": "private" },
+    { "key": "public_email", "type": "email", "label": "Public email" }
+  ]
+}

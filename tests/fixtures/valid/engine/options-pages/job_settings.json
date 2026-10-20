@@ -4,6 +4,9 @@
   "title": "Job settings",
   "capability": "manage_options",
   "fields": [
-    { "key": "ops_email", "type": "email", "label": "Operations email", "visibility": "private" }
+    { "key": "ops_email", "type": "email", "label": "Operations email", "visibility": "private" },
+    { "key": "desk_email", "type": "email", "label": "Public desk email" },
+    { "key": "desk_url", "type": "url", "label": "Desk page" },
+    { "key": "next_review", "type": "date", "label": "Next review" }
   ]
 }

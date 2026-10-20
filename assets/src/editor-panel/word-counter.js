@@ -23,8 +23,8 @@ function message( count, limits ) {
 		return sprintf(
 			/* translators: 1: current word count, 2: minimum, 3: maximum. */
 			_n(
-				'%1$d of %2$d to %3$d words',
-				'%1$d of %2$d to %3$d words',
+				'%1$d word (%2$d to %3$d)',
+				'%1$d words (%2$d to %3$d)',
 				count,
 				'pegwork'
 			),
@@ -37,8 +37,8 @@ function message( count, limits ) {
 		return sprintf(
 			/* translators: 1: current word count, 2: minimum. */
 			_n(
-				'%1$d word, at least %2$d needed',
-				'%1$d words, at least %2$d needed',
+				'%1$d word (at least %2$d)',
+				'%1$d words (at least %2$d)',
 				count,
 				'pegwork'
 			),
@@ -49,8 +49,8 @@ function message( count, limits ) {
 	return sprintf(
 		/* translators: 1: current word count, 2: maximum. */
 		_n(
-			'%1$d of up to %2$d words',
-			'%1$d of up to %2$d words',
+			'%1$d word (up to %2$d)',
+			'%1$d words (up to %2$d)',
 			count,
 			'pegwork'
 		),

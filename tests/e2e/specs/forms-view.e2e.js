@@ -3,8 +3,9 @@
  *
  * 2. Submit a project with the keyboard only through three steps: Enter on step 1 runs the hints
  *    (error summary focused, links move focus), live word counter, Next and Back move focus to the
- *    step heading and announce "Step 2 of 3: Links", the Volunteer link appears in place when
- *    "Needs volunteers" is checked (focus stays on the checkbox), the submitting state, the
+ *    step heading and announce "Step 2 of 3" (the heading names the step), the Volunteer link
+ *    appears in place, marked required, when "Needs volunteers" is checked (focus stays on the
+ *    checkbox), the submitting state, the
  *    confirmation email, the confirm page POST, and the Pending project visible to the admin.
  *    Turnstile (a widget on the last step) is Phase 3 PR 4; this form has none.
  *    Server errors: the form opens on the first step with an error, summary links switch steps.
@@ -159,7 +160,7 @@ test.describe( 'JavaScript on', () => {
 		const submit = page.locator( '.pegwork-form__submit' );
 
 		// Step 1 only; the progress is a polite live region.
-		await expect( progress ).toHaveText( 'Step 1 of 3: Your project' );
+		await expect( progress ).toHaveText( 'Step 1 of 3' );
 		await expect( progress ).toHaveAttribute( 'aria-live', 'polite' );
 		await expect( step( 'Your project' ) ).toBeVisible();
 		await expect( step( 'Links' ) ).toBeHidden();
@@ -184,7 +185,7 @@ test.describe( 'JavaScript on', () => {
 			'Type is required.',
 			'Project status is required.',
 		] );
-		await expect( progress ).toHaveText( 'Step 1 of 3: Your project' );
+		await expect( progress ).toHaveText( 'Step 1 of 3' );
 		await expect( nameBox ).toHaveAttribute( 'aria-invalid', 'true' );
 		await expect( page ).toHaveTitle( /^Error: / );
 		await expectAccessible( page );
@@ -208,17 +209,17 @@ test.describe( 'JavaScript on', () => {
 		const counter = page.locator(
 			'#pegwork-e2e_project-description-count'
 		);
-		await expect( counter ).toHaveText( '0 of 50 to 300 words' );
+		await expect( counter ).toHaveText( '0 words (50 to 300)' );
 		await expect( counter ).toHaveAttribute( 'aria-live', 'polite' );
 		await expect( descriptionBox ).toHaveAttribute(
 			'aria-describedby',
 			/pegwork-e2e_project-description-count/
 		);
 		await page.keyboard.type( 'Volunteers test river water' );
-		await expect( counter ).toHaveText( '4 of 50 to 300 words' );
+		await expect( counter ).toHaveText( '4 words (50 to 300)' );
 		await page.keyboard.press( 'ControlOrMeta+A' );
 		await page.keyboard.type( description );
-		await expect( counter ).toHaveText( '72 of 50 to 300 words' );
+		await expect( counter ).toHaveText( '72 words (50 to 300)' );
 
 		// Radio groups: Space picks the focused option, arrows move.
 		await page.keyboard.press( 'Tab' );
@@ -243,7 +244,7 @@ test.describe( 'JavaScript on', () => {
 		// Next: step 2, focus on its heading, announced.
 		await tabTo( page, next );
 		await page.keyboard.press( 'Enter' );
-		await expect( progress ).toHaveText( 'Step 2 of 3: Links' );
+		await expect( progress ).toHaveText( 'Step 2 of 3' );
 		await expect(
 			page.getByRole( 'heading', { name: 'Links' } )
 		).toBeFocused();
@@ -271,6 +272,16 @@ test.describe( 'JavaScript on', () => {
 		await page.keyboard.press( 'Space' );
 		await expect( volunteerLink ).toBeVisible();
 		await expect( needsVolunteers ).toBeFocused();
+		// While the condition holds the field is marked required, for sight and for screen readers.
+		await expect( volunteerLink ).toHaveAttribute(
+			'aria-required',
+			'true'
+		);
+		await expect(
+			page.locator(
+				'label[for="pegwork-e2e_project-volunteer_link"] [data-pegwork-required-when]'
+			)
+		).toHaveText( '(required)' );
 		await page.screenshot( {
 			path: `${ SCREENSHOTS }/forms-view-step-2.png`,
 			fullPage: true,
@@ -291,7 +302,7 @@ test.describe( 'JavaScript on', () => {
 
 		await tabTo( page, next );
 		await page.keyboard.press( 'Enter' );
-		await expect( progress ).toHaveText( 'Step 3 of 3: Contact' );
+		await expect( progress ).toHaveText( 'Step 3 of 3' );
 		await expect(
 			page.getByRole( 'heading', { name: 'Contact' } )
 		).toBeFocused();
@@ -301,7 +312,7 @@ test.describe( 'JavaScript on', () => {
 		// Back keeps the answers and focuses the step heading.
 		await tabTo( page, back );
 		await page.keyboard.press( 'Enter' );
-		await expect( progress ).toHaveText( 'Step 2 of 3: Links' );
+		await expect( progress ).toHaveText( 'Step 2 of 3' );
 		await expect(
 			page.getByRole( 'heading', { name: 'Links' } )
 		).toBeFocused();
@@ -310,7 +321,7 @@ test.describe( 'JavaScript on', () => {
 		);
 		await tabTo( page, next );
 		await page.keyboard.press( 'Enter' );
-		await expect( progress ).toHaveText( 'Step 3 of 3: Contact' );
+		await expect( progress ).toHaveText( 'Step 3 of 3' );
 		await expectAccessible( page );
 
 		await page.keyboard.press( 'Tab' );
@@ -424,7 +435,10 @@ test.describe( 'JavaScript on', () => {
 		await tabTo( page, confirmButton );
 		await page.keyboard.press( 'Enter' );
 		await page.waitForURL( /pegwork_confirmed=e2e_project/ );
-		await expect( page.getByRole( 'status' ) ).toHaveText(
+		await expect(
+			page.getByRole( 'heading', { name: 'Submission confirmed' } )
+		).toBeFocused();
+		await expect( page.locator( '.pegwork-form__confirm' ) ).toContainText(
 			'Thank you. Your submission is confirmed.'
 		);
 
@@ -515,7 +529,7 @@ test.describe( 'JavaScript on', () => {
 			'Contact email is required.',
 			/^Check the box to confirm:/,
 		] );
-		await expect( progress ).toHaveText( 'Step 2 of 3: Links' );
+		await expect( progress ).toHaveText( 'Step 2 of 3' );
 		await expect(
 			page.getByRole( 'textbox', { name: /^Volunteer link/ } )
 		).toBeVisible();
@@ -530,12 +544,12 @@ test.describe( 'JavaScript on', () => {
 		await page.keyboard.press( 'Tab' );
 		await page.keyboard.press( 'Tab' );
 		await page.keyboard.press( 'Enter' );
-		await expect( progress ).toHaveText( 'Step 3 of 3: Contact' );
+		await expect( progress ).toHaveText( 'Step 3 of 3' );
 		await expect(
 			page.getByRole( 'textbox', { name: /^Contact email/ } )
 		).toBeFocused();
 		await summary.getByRole( 'link', { name: 'Volunteer link' } ).click();
-		await expect( progress ).toHaveText( 'Step 2 of 3: Links' );
+		await expect( progress ).toHaveText( 'Step 2 of 3' );
 		await expect(
 			page.getByRole( 'textbox', { name: /^Volunteer link/ } )
 		).toBeFocused();
@@ -594,8 +608,9 @@ test.describe( 'JavaScript on', () => {
 		}
 		await send( 6 );
 		const notice = page.getByRole( 'alert' );
+		// The time frame comes from the 10-minute window and the oldest of the five counted submissions.
 		await expect( notice ).toHaveText(
-			'Too many submissions. Try again later.'
+			/^Too many submissions from your connection\. Try again in about (9|10) minutes\.$/
 		);
 		await expect( notice ).toBeFocused();
 		await expect(
@@ -662,9 +677,17 @@ test.describe( 'JavaScript off', () => {
 		await expect(
 			page.locator( 'form.pegwork-form__form' ).getByRole( 'button' )
 		).toHaveText( [ 'Submit project' ] );
+		const volunteerLink = page.getByRole( 'textbox', {
+			name: /^Volunteer link/,
+		} );
+		await expect( volunteerLink ).toBeVisible();
+		// Without JavaScript the marker names the condition; aria-required would be wrong half the time.
 		await expect(
-			page.getByRole( 'textbox', { name: /^Volunteer link/ } )
-		).toBeVisible();
+			page.locator(
+				'label[for="pegwork-e2e_project-volunteer_link"] [data-pegwork-required-when]'
+			)
+		).toHaveText( '(required if "Needs volunteers" is checked)' );
+		await expect( volunteerLink ).not.toHaveAttribute( 'aria-required' );
 		await expect( page.locator( 'body' ) ).toContainText(
 			'Only needed if "Needs volunteers" is checked.'
 		);

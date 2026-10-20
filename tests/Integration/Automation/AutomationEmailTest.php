@@ -309,6 +309,58 @@ class AutomationEmailTest extends AutomationTestCase {
 	}
 
 	/**
+	 * `| date` formats dates with the site's date format in site time; `{{option:<page>.<field>}}` reads
+	 * a public options page field, escaped per mode (URLs with esc_url in HTML).
+	 */
+	public function test_date_filter_and_option_tags() {
+		update_option( 'date_format', 'j F Y' );
+		update_option( 'timezone_string', 'America/New_York' );
+		update_option(
+			'job_settings',
+			array(
+				'desk_email'  => 'desk@example.org',
+				'desk_url'    => 'https://example.org/desk?a=1&b=2',
+				'next_review' => '2027-03-31',
+			)
+		);
+		$id      = $this->record( array( 'last_verified' => '2026-10-20' ) );
+		$context = new Context( $this->clock, Records::get( $id ) );
+
+		$this->assertSame( 'Verified 20 October 2026', Templates::render( 'Verified {{ record.last_verified | date }}', $context, Templates::TEXT ) );
+		$this->assertSame( 'Raw 2026-10-20', Templates::render( 'Raw {{record.last_verified}}', $context, Templates::TEXT ) );
+		// The frozen clock is 2026-11-02 09:00 UTC; `now` and `today` in site time (New York).
+		$this->assertSame( '2 November 2026 / 2 November 2026', Templates::render( '{{today|date}} / {{now | date}}', $context, Templates::TEXT ) );
+		$this->assertSame( '20 October 2026', Templates::value( '{{record.last_verified | date}}', $context ), 'A single tag in values gets the formatted text.' );
+
+		$blank = new Context( $this->clock, Records::get( $this->record( array() ) ) );
+		$this->assertSame( 'never', Templates::render( '{{record.last_verified | date | default:"never"}}', $blank, Templates::TEXT ), 'The default is not date-formatted.' );
+		$this->assertSame( 'not a date', Templates::date( 'not a date' ) );
+		$this->assertSame( '2026-02-30', Templates::date( '2026-02-30' ), 'An impossible date passes through.' );
+
+		$this->assertSame( 'desk@example.org', Templates::render( '{{option:job_settings.desk_email}}', $context, Templates::TEXT ) );
+		$this->assertSame( '31 March 2027', Templates::render( '{{ option:job_settings.next_review | date }}', $context, Templates::TEXT ) );
+		$this->assertSame( '<a href="https://example.org/desk?a=1&#038;b=2">', Templates::render( '<a href="{{option:job_settings.desk_url}}">', $context, Templates::HTML ) );
+		$this->assertSame( 'none', Templates::render( '{{option:job_settings.missing | default:"none"}}', $context, Templates::TEXT ) );
+		// Defense in depth: the registry rejects private option fields in templates, and the log masks them anyway.
+		$this->assertSame( Templates::PRIVATE_MASK, Templates::render( '{{option:job_settings.ops_email}}', $context, Templates::LOG ) );
+
+		// reply_to through an option tag.
+		reset_phpmailer_instance();
+		$result = ( new SendEmail() )->run(
+			array(
+				'to'       => 'owner@example.org',
+				'reply_to' => '{{option:job_settings.desk_email}}',
+				'subject'  => 'Hi',
+				'text'     => 'Body',
+			),
+			$context,
+			array()
+		);
+		$this->assertSame( 'ok', $result->status, (string) $result->error );
+		$this->assertStringContainsString( 'Reply-To: desk@example.org', tests_retrieve_phpmailer_instance()->get_sent()->header );
+	}
+
+	/**
 	 * Recipients: fields, literals and options page fields; option tags come from the template only.
 	 */
 	public function test_recipients() {

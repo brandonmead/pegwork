@@ -54,6 +54,12 @@ const DEFAULT_CONFIRM_FAILED = __(
 	'pegwork'
 );
 
+// Same default as PegworkForms\Confirm::confirmed_message().
+const DEFAULT_CONFIRMED = __(
+	'Thank you. Your submission is confirmed.',
+	'pegwork'
+);
+
 /**
  * Wraps panel content in Disabled for read-only (file) forms.
  *
@@ -722,6 +728,21 @@ function MessagesPanel() {
 						setMessage( 'submit_label', value )
 					}
 				/>
+				{ settings.confirm && (
+					<TextareaControl
+						__nextHasNoMarginBottom
+						label={ __( 'Message after confirmation', 'pegwork' ) }
+						help={ __(
+							'Shown when the submitter confirms. Say what happens next, such as a review.',
+							'pegwork'
+						) }
+						placeholder={ DEFAULT_CONFIRMED }
+						value={ messages.confirmed || '' }
+						onChange={ ( value ) =>
+							setMessage( 'confirmed', value )
+						}
+					/>
+				) }
 				{ settings.confirm && (
 					<TextareaControl
 						__nextHasNoMarginBottom

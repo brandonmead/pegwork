@@ -239,7 +239,7 @@ A form either creates or updates a record of a content type (`target`) or, witho
 | `fields` | one of | | list of items |
 | `steps` | one of | | list of `{ key, label, description, fields }`; step keys unique. Exactly one of `fields` or `steps` (`form_fields_or_steps`) |
 | `notifications` | no | `[]` | list of notifications, keys unique |
-| `messages` | no | | `{ success, submit_label, confirm_failed }`, non-empty strings. `confirm_failed` is shown after a confirmation whose values no longer pass validation (the entry is `failed`, a draft is kept for review) |
+| `messages` | no | | `{ success, submit_label, confirmed, confirm_failed }`, non-empty strings. `confirmed` is shown after a successful email confirmation (default "Thank you. Your submission is confirmed."). `confirm_failed` is shown after a confirmation whose values no longer pass validation (the entry is `failed`, a draft is kept for review) |
 | `retention_days` | no | | positive integer; entries older than this are deleted |
 
 ### Form items
@@ -360,7 +360,7 @@ Durations are ISO 8601 (`P7D`, `PT6H`, `P1Y2M`; `invalid_duration`), from one ho
 
 ### Paths and templates
 
-Paths are dot-separated (`invalid_var`). Templates are `{{ path }}` or `{{ path | default:"text" }}` (`invalid_template`).
+Paths are dot-separated (`invalid_var`). Templates are `{{ path }}`, optionally followed by `| date` (date fields only: the site date format) and then `| default:"text"`, for example `{{ record.last_verified | date | default:"never" }}`; anything else is `invalid_template`.
 
 | Root | Paths |
 |---|---|
@@ -369,6 +369,7 @@ Paths are dot-separated (`invalid_var`). Templates are `{{ path }}` or `{{ path 
 | `steps` | `steps.<id>.<output>` of an earlier step (`create_record`: `record_id`) |
 | `site` | `site.name`, `site.url` |
 | `today`, `now`, `run.id`, `link.<name>` | templates only |
+| `option` | `option:<options page>.<field>`, templates only. Page and field must exist (`unknown_options_page`, `unknown_field`); a private field is `automation_private_field` in any template |
 
 Private fields may be read in conditions, emails, `values` and `idempotency`, but not in public contexts: `call_webhook` (`url`, `fields`) and link page texts (`automation_private_field`).
 

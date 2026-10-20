@@ -90,29 +90,42 @@ final class PostTypes {
 		$many = $labels['plural'];
 
 		return array(
-			'name'               => $many,
-			'singular_name'      => $one,
-			'menu_name'          => $many,
+			'name'                     => $many,
+			'singular_name'            => $one,
+			'menu_name'                => $many,
 			/* translators: %s: plural content type name. */
-			'all_items'          => sprintf( __( 'All %s', 'pegwork' ), $many ),
+			'all_items'                => sprintf( __( 'All %s', 'pegwork' ), $many ),
 			/* translators: %s: singular content type name. */
-			'add_new_item'       => sprintf( __( 'Add New %s', 'pegwork' ), $one ),
+			'add_new_item'             => sprintf( __( 'Add New %s', 'pegwork' ), $one ),
 			/* translators: %s: singular content type name. */
-			'new_item'           => sprintf( __( 'New %s', 'pegwork' ), $one ),
+			'new_item'                 => sprintf( __( 'New %s', 'pegwork' ), $one ),
 			/* translators: %s: singular content type name. */
-			'edit_item'          => sprintf( __( 'Edit %s', 'pegwork' ), $one ),
+			'edit_item'                => sprintf( __( 'Edit %s', 'pegwork' ), $one ),
 			/* translators: %s: singular content type name. */
-			'view_item'          => sprintf( __( 'View %s', 'pegwork' ), $one ),
+			'view_item'                => sprintf( __( 'View %s', 'pegwork' ), $one ),
 			/* translators: %s: plural content type name. */
-			'view_items'         => sprintf( __( 'View %s', 'pegwork' ), $many ),
+			'view_items'               => sprintf( __( 'View %s', 'pegwork' ), $many ),
 			/* translators: %s: plural content type name. */
-			'search_items'       => sprintf( __( 'Search %s', 'pegwork' ), $many ),
+			'search_items'             => sprintf( __( 'Search %s', 'pegwork' ), $many ),
 			/* translators: %s: plural content type name. */
-			'not_found'          => sprintf( __( 'No %s found.', 'pegwork' ), $many ),
+			'not_found'                => sprintf( __( 'No %s found.', 'pegwork' ), $many ),
 			/* translators: %s: plural content type name. */
-			'not_found_in_trash' => sprintf( __( 'No %s found in Trash.', 'pegwork' ), $many ),
+			'not_found_in_trash'       => sprintf( __( 'No %s found in Trash.', 'pegwork' ), $many ),
 			/* translators: %s: singular content type name. */
-			'archives'           => sprintf( __( '%s Archives', 'pegwork' ), $one ),
+			'archives'                 => sprintf( __( '%s Archives', 'pegwork' ), $one ),
+			// The block editor's snackbars ("Project published.", not "Post published.").
+			/* translators: %s: singular content type name. */
+			'item_published'           => sprintf( __( '%s published.', 'pegwork' ), $one ),
+			/* translators: %s: singular content type name. */
+			'item_published_privately' => sprintf( __( '%s published privately.', 'pegwork' ), $one ),
+			/* translators: %s: singular content type name. */
+			'item_reverted_to_draft'   => sprintf( __( '%s reverted to draft.', 'pegwork' ), $one ),
+			/* translators: %s: singular content type name. */
+			'item_scheduled'           => sprintf( __( '%s scheduled.', 'pegwork' ), $one ),
+			/* translators: %s: singular content type name. */
+			'item_updated'             => sprintf( __( '%s updated.', 'pegwork' ), $one ),
+			/* translators: %s: singular content type name. */
+			'item_trashed'             => sprintf( __( '%s trashed.', 'pegwork' ), $one ),
 		);
 	}
 }

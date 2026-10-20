@@ -1,6 +1,6 @@
 /**
  * Forms view script: enhances server-rendered Pegwork forms. One step at a time with Back and Next
- * ("Step 2 of 3: Links" in a polite live region, focus to the step heading), hint checks before Next
+ * ("Step 2 of 3" in a polite live region, focus to the step heading), hint checks before Next
  * and submit (the server checks everything again), `show_when` items toggled in place, live word
  * counters, error summary links that switch steps, and a submitting state. Without this script the
  * form is one page with one submit button and works the same.
@@ -21,6 +21,7 @@ import {
 	debounce,
 	firstErrorStep,
 	hints,
+	isRequired,
 	parseConfig,
 	progressText,
 	wordCountText,
@@ -161,11 +162,40 @@ function enhance( form ) {
 		}
 	}
 
+	// Items required only while their `required_when` holds: the page without JavaScript says
+	// "(required if ...)"; here the marker reads "(required)" and aria-required is set while it holds.
+	const conditional = [];
+	for ( const field of fields.values() ) {
+		const marker = field.item.required
+			? null
+			: field.wrapper?.querySelector( '[data-pegwork-required-when]' );
+		if ( ! marker || ! field.item.required_when ) {
+			continue;
+		}
+		marker.textContent = __( '(required)', 'pegwork' );
+		// Checkbox groups take no aria-required (not allowed on a group); radio groups carry it on the fieldset.
+		let target = field.control;
+		if ( field.item.group ) {
+			target = field.item.multiple ? null : field.wrapper;
+		}
+		conditional.push( { field, marker, target } );
+	}
+
 	const applyConditions = () => {
-		const shown = visible( config.items, read().values );
+		const { values } = read();
+		const shown = visible( config.items, values );
 		for ( const [ key, field ] of fields ) {
 			if ( field.wrapper ) {
 				field.wrapper.hidden = shown[ key ] === false;
+			}
+		}
+		for ( const { field, marker, target } of conditional ) {
+			const required = isRequired( field.item, values );
+			marker.hidden = ! required;
+			if ( required ) {
+				target?.setAttribute( 'aria-required', 'true' );
+			} else {
+				target?.removeAttribute( 'aria-required' );
 			}
 		}
 		return shown;
@@ -382,7 +412,7 @@ function enhance( form ) {
 		back.hidden = index === 0;
 		next.hidden = index === last;
 		submit.hidden = index !== last;
-		const text = progressText( index, steps.length, steps[ index ].label );
+		const text = progressText( index, steps.length );
 		if ( progress.textContent !== text ) {
 			progress.textContent = text;
 		}
@@ -418,11 +448,7 @@ function enhance( form ) {
 		progress.className = 'pegwork-form__progress';
 		progress.id = `${ base }-progress`;
 		progress.setAttribute( 'aria-live', 'polite' );
-		progress.textContent = progressText(
-			current,
-			steps.length,
-			steps[ current ].label
-		);
+		progress.textContent = progressText( current, steps.length );
 		stepElements[ 0 ].before( progress );
 
 		back = doc.createElement( 'button' );

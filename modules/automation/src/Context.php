@@ -160,6 +160,11 @@ final class Context {
 	 * @return mixed
 	 */
 	public function resolve( string $path ): mixed {
+		if ( str_starts_with( $path, 'option:' ) ) {
+			$parts = explode( '.', substr( $path, 7 ) );
+			// Templates only (the registry allows option paths nowhere else); null without options pages.
+			return 2 === count( $parts ) && function_exists( 'pegwork_get_option' ) ? call_user_func( 'pegwork_get_option', $parts[0], $parts[1] ) : null;
+		}
 		$parts = explode( '.', $path );
 		$root  = array_shift( $parts );
 
@@ -246,6 +251,11 @@ final class Context {
 	 * @return array<string, mixed>|null
 	 */
 	private function field( string $path ): ?array {
+		if ( str_starts_with( $path, 'option:' ) ) {
+			$parts = explode( '.', substr( $path, 7 ) );
+			$page  = 2 === count( $parts ) ? pegwork_registry()->options_page( $parts[0] ) : null;
+			return is_array( $page ) ? ( array_column( $page['fields'] ?? array(), null, 'key' )[ $parts[1] ] ?? null ) : null;
+		}
 		[ $type, $key ] = $this->path_key( $path );
 		return null === $type ? null : ( pegwork_registry()->fields( $type )[ $key ] ?? null );
 	}

@@ -156,7 +156,7 @@ test( 'test keys pass: the real widget on the last step, keyboard only', async (
 	await page.keyboard.press( 'Enter' );
 	await expect( lastStep.locator( 'h2' ) ).toBeFocused();
 	await expect( page.locator( '.pegwork-form__progress' ) ).toHaveText(
-		'Step 2 of 2: Contact'
+		'Step 2 of 2'
 	);
 	await expect( lastStep.locator( '.cf-turnstile' ) ).toBeVisible();
 	await checkLayout( page );

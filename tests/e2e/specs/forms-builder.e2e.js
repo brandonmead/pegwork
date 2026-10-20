@@ -378,7 +378,7 @@ test( 'build a two-step form by keyboard and drag and drop, save it, place it an
 		form.getByRole( 'group', { name: 'About you' } )
 	).toBeVisible();
 	await expect( form.locator( '.pegwork-form__progress' ) ).toHaveText(
-		'Step 1 of 2: About you'
+		'Step 1 of 2'
 	);
 	await form.getByLabel( /Your name/ ).fill( 'Ada Lovelace' );
 	await form.getByLabel( /Email/ ).fill( 'ada@example.org' );

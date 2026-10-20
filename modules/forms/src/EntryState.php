@@ -105,4 +105,21 @@ final class EntryState {
 
 		return (int) $count;
 	}
+
+	/**
+	 * When those confirmation emails went out (as confirm_mails() counts them), as Unix times, oldest first.
+	 *
+	 * @param string $email Lowercased address.
+	 * @param int    $since Unix time.
+	 * @return int[]
+	 */
+	public static function confirm_mail_times( string $email, int $since ): array {
+		global $wpdb;
+
+		$table = Schema::table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
+		$times = $wpdb->get_col( $wpdb->prepare( "SELECT created_at FROM {$table} WHERE email = %s AND token_hash IS NOT NULL AND created_at >= %s ORDER BY created_at ASC", $email, gmdate( 'Y-m-d H:i:s', $since ) ) );
+
+		return array_map( fn( $time ) => (int) strtotime( (string) $time . ' UTC' ), (array) $times );
+	}
 }

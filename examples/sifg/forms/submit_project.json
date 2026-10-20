@@ -31,6 +31,7 @@
     { "key": "submitter", "when": "confirmed", "to": "{field:contact_email}",
       "subject": "Your project is in review", "body": "Thanks. A person will review \"{field:name}\" before it goes live." }
   ],
-  "messages": { "success": "Check your email to confirm your submission. The link expires in 72 hours." },
+  "messages": { "success": "Check your email to confirm your submission. The link expires in 72 hours.",
+    "confirmed": "Thank you. Your submission is confirmed. A person will review it, and we will email you when it is listed." },
   "retention_days": 365
 }

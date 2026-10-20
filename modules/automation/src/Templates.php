@@ -12,7 +12,12 @@ namespace PegworkAutomation;
 use WP_Term;
 
 /**
- * Renders `{{ path }}` and `{{ path | default:"text" }}` (syntax validated at load time by the registry).
+ * Renders `{{ path }}`, `{{ path | date }}`, `{{ path | default:"text" }}` and `{{ path | date | default:"text" }}`
+ * (syntax validated at load time by the registry). A path is a context path (`record.name`) or
+ * `option:<page>.<field>`, an options page field read with pegwork_get_option() (public fields only, checked
+ * by the registry). `date` formats a `Y-m-d` date or an ISO 8601 date and time with the site's date format
+ * (Settings > General) in site time; other values pass through unchanged. `default` applies when the value
+ * is empty, and its text is never date-formatted.
  *
  * Modes:
  * - `raw` (record values, idempotency keys): lists render as comma-separated slugs, booleans as 1/0.
@@ -56,9 +61,9 @@ final class Templates {
 	public const LINK_MASK = '[link]';
 
 	/**
-	 * One merge tag: path and optional default.
+	 * One merge tag: path (1), optional `date` filter (2), optional default (3).
 	 */
-	private const TAG = '/\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(?:\|\s*default:"([^"]*)"\s*)?\}\}/';
+	private const TAG = '/\{\{\s*((?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(\|\s*date\s*)?(?:\|\s*default:"([^"]*)"\s*)?\}\}/';
 
 	/**
 	 * Paths whose values are URLs (escaped with esc_url in HTML).
@@ -142,10 +147,32 @@ final class Templates {
 	 */
 	private static function lookup( array $m, Context $context ): mixed {
 		$value = $context->resolve( $m[1] );
-		if ( ( null === $value || '' === $value || array() === $value ) && isset( $m[2] ) ) {
-			return $m[2];
+		if ( null === $value || '' === $value || array() === $value ) {
+			return isset( $m[3] ) ? $m[3] : $value;
 		}
-		return $value;
+		return '' !== ( $m[2] ?? '' ) ? self::date( $value ) : $value;
+	}
+
+	/**
+	 * A date as the site shows dates: `Y-m-d` (a date field, `today`) or ISO 8601 with a time (`now`) in
+	 * the site's date format and time zone. Anything else is returned unchanged.
+	 *
+	 * @param mixed $value Value.
+	 * @return mixed
+	 */
+	public static function date( mixed $value ): mixed {
+		if ( ! is_string( $value ) ) {
+			return $value;
+		}
+		$zone   = wp_timezone();
+		$parsed = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value )
+			? \DateTimeImmutable::createFromFormat( '!Y-m-d', $value, $zone )
+			: ( preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?$/', $value ) ? date_create_immutable( $value, $zone ) : false );
+		if ( false === $parsed || ( 10 === strlen( $value ) && $parsed->format( 'Y-m-d' ) !== $value ) ) {
+			return $value;
+		}
+
+		return (string) wp_date( (string) get_option( 'date_format', 'F j, Y' ), $parsed->getTimestamp(), $zone );
 	}
 
 	/**

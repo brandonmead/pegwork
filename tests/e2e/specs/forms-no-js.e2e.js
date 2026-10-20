@@ -243,6 +243,33 @@ test( 'validation errors show a summary and linked field messages', async ( {
 	expect( await mail() ).toHaveLength( 1 );
 } );
 
+test( 'a corrected submission sent at once is accepted, not spam', async ( {
+	page,
+} ) => {
+	await page.goto( pageUrl );
+	await fillValid( page, `Corrected ${ Date.now() }` );
+	await page.getByRole( 'textbox', { name: /^Email/ } ).fill( 'ada@example' );
+	await page.waitForTimeout( HUMAN_PAUSE_MS );
+	await page.getByRole( 'button', { name: 'Send message' } ).click();
+	await page.waitForLoadState();
+	await expect( page.locator( '.pegwork-form__errors' ) ).toBeFocused();
+	expect( await entries() ).toHaveLength( 0 );
+
+	// The error page keeps the first render time: fixing one field and sending at once is human.
+	await page
+		.getByRole( 'textbox', { name: /^Email/ } )
+		.fill( 'ada@example.org' );
+	await page.getByRole( 'button', { name: 'Send message' } ).click();
+	await page.waitForURL( /pegwork_sent=e2e_contact/ );
+	await expect( page.getByRole( 'status' ) ).toHaveText(
+		'Thanks. Your message is on its way.'
+	);
+	const stored = await entries();
+	expect( stored.map( ( e ) => e.status ) ).toEqual( [ 'received' ] );
+	expect( stored[ 0 ].meta.spam ).toBeUndefined();
+	expect( await mail() ).toHaveLength( 1 );
+} );
+
 test( 'honeypot and too-fast submissions are rejected quietly', async ( {
 	page,
 } ) => {

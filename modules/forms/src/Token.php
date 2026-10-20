@@ -61,6 +61,19 @@ final class Token {
 	}
 
 	/**
+	 * The render time of a posted token that passes (`ok`), else null. A re-render with errors issues its
+	 * token for this time again, so a visitor who corrects an error and sends at once is as old as the
+	 * first render (which already passed the floor), while a bot posting a fresh page is still too fast.
+	 *
+	 * @param string $form  Form key.
+	 * @param mixed  $token Posted value.
+	 * @param int    $now   Unix time.
+	 */
+	public static function issued( string $form, mixed $token, int $now ): ?int {
+		return is_string( $token ) && 'ok' === self::check( $form, $token, $now ) ? (int) strtok( $token, '.' ) : null;
+	}
+
+	/**
 	 * Signature of a form key and time.
 	 *
 	 * @param string $form Form key.

@@ -51,6 +51,9 @@ class FormsRendererTest extends FormsTestCase {
 		$this->assertStringContainsString( '<fieldset class="pegwork-form__field pegwork-form__field--select" role="radiogroup"><legend class="pegwork-form__label">Topic</legend>', $html );
 		$this->assertStringContainsString( '<input type="radio" id="pegwork-fr_contact-topic-1" name="pegwork[topic]" value="other"> <label for="pegwork-fr_contact-topic-1">Something else</label>', $html );
 		$this->assertStringContainsString( '<p class="pegwork-form__help" id="pegwork-fr_contact-frequency-help">Only needed if &quot;Send me the newsletter&quot; is checked.</p>', $html );
+		// required_when: the condition as text without JavaScript, no aria-required (the view script sets it while the condition holds).
+		$this->assertStringContainsString( '<label class="pegwork-form__label" for="pegwork-fr_contact-frequency">How often <span class="pegwork-form__required" data-pegwork-required-when>(required if &quot;Send me the newsletter&quot; is checked)</span></label>', $html );
+		$this->assertDoesNotMatchRegularExpression( '/id="pegwork-fr_contact-frequency"[^>]*aria-required/', $html );
 		$this->assertStringContainsString( '<option value="">Choose an option</option>', $html );
 		$this->assertStringContainsString( 'name="pegwork[message]" rows="6" aria-required="true" aria-describedby="pegwork-fr_contact-message-help"></textarea>', $html );
 		$this->assertStringContainsString( '<input type="checkbox" class="pegwork-form__checkbox" id="pegwork-fr_contact-consent" name="pegwork[consent]" value="1" aria-required="true">', $html );

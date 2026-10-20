@@ -102,7 +102,9 @@ final class Renderer {
 		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
 		$files  = is_array( $state['files'] ?? null ) ? $state['files'] : array();
 		$values = is_array( $state['values'] ?? null ) ? $state['values'] : ( $record_id > 0 ? RecordWriter::prefill( $form, $record_id ) : array() );
-		$notice = self::outcome_notice( (string) ( $state['outcome'] ?? '' ) );
+		$notice = self::outcome_notice( is_array( $state ) ? $state : array() );
+		// A re-render keeps the posted token's render time (Submission::process() `issued`).
+		$issued = is_int( $state['issued'] ?? null ) ? $state['issued'] : $now;
 
 		if ( null !== $confirm ) {
 			$html .= $confirm['html'];
@@ -123,7 +125,7 @@ final class Renderer {
 		$html .= '<form class="pegwork-form__form" method="post" action="' . esc_url( Submission::current_url() ) . '"'
 			. ( Definition::has_files( $form ) ? ' enctype="multipart/form-data"' : '' ) . ' novalidate data-pegwork-config="' . esc_attr( (string) wp_json_encode( View::config( $form, $base ) ) ) . '">';
 		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[key]" value="' . esc_attr( $key ) . '">';
-		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[token]" value="' . esc_attr( Token::create( $key, $now ) ) . '">';
+		$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[token]" value="' . esc_attr( Token::create( $key, $issued ) ) . '">';
 		if ( is_user_logged_in() ) {
 			$html .= '<input type="hidden" name="' . esc_attr( Submission::CONTROL ) . '[nonce]" value="' . esc_attr( wp_create_nonce( self::nonce_action( $key ) ) ) . '">';
 		}
@@ -237,7 +239,7 @@ final class Renderer {
 			$described[] = $id . '-error';
 			$extra      .= '<p class="pegwork-form__error" id="' . esc_attr( $id ) . '-error"><span class="pegwork-form__sr">' . esc_html__( 'Error:', 'pegwork' ) . ' </span>' . esc_html( $error ) . '</p>';
 		}
-		$label = esc_html( $item['label'] ) . ( $required ? ' <span class="pegwork-form__required">' . esc_html__( '(required)', 'pegwork' ) . '</span>' : '' );
+		$label = esc_html( $item['label'] ) . self::required_marker( $item, $by_key );
 		$aria  = ( $required ? ' aria-required="true"' : '' )
 			. ( '' !== $error ? ' aria-invalid="true"' : '' )
 			. ( $described ? ' aria-describedby="' . esc_attr( implode( ' ', $described ) ) . '"' : '' );
@@ -326,7 +328,7 @@ final class Renderer {
 			$described[] = $id . '-error';
 			$extra      .= '<p class="pegwork-form__error" id="' . esc_attr( $id ) . '-error"><span class="pegwork-form__sr">' . esc_html__( 'Error:', 'pegwork' ) . ' </span>' . esc_html( $error ) . '</p>';
 		}
-		$label = esc_html( $item['label'] ) . ( $required ? ' <span class="pegwork-form__required">' . esc_html__( '(required)', 'pegwork' ) . '</span>' : '' );
+		$label = esc_html( $item['label'] ) . self::required_marker( $item, $by_key );
 		$aria  = ( '' !== $error ? ' aria-invalid="true"' : '' ) . ( $described ? ' aria-describedby="' . esc_attr( implode( ' ', $described ) ) . '"' : '' );
 		$class = 'pegwork-form__field pegwork-form__field--choices' . ( '' !== $error ? ' pegwork-form__field--error' : '' );
 
@@ -347,6 +349,24 @@ final class Renderer {
 				. ( in_array( (string) $option['value'], $chosen, true ) ? ' checked' : '' ) . '> <label for="' . esc_attr( $option_id ) . '">' . esc_html( $option['label'] ) . '</label></div>';
 		}
 		return $html . '</fieldset>';
+	}
+
+	/**
+	 * The label's required marker: "(required)", or for an item required only when its `required_when`
+	 * holds "(required if ...)" with `data-pegwork-required-when`. The view script turns that into
+	 * "(required)" plus `aria-required` while the condition holds, and hides it otherwise. Without
+	 * JavaScript it stays as text (no `aria-required`, which would be wrong half the time).
+	 *
+	 * @param array<string, mixed>                $item   Item.
+	 * @param array<string, array<string, mixed>> $by_key Items by key.
+	 */
+	private static function required_marker( array $item, array $by_key ): string {
+		if ( ! empty( $item['required'] ) ) {
+			return ' <span class="pegwork-form__required">' . esc_html__( '(required)', 'pegwork' ) . '</span>';
+		}
+		$when = Definition::required_text( $item, $by_key );
+
+		return '' === $when ? '' : ' <span class="pegwork-form__required" data-pegwork-required-when>(' . esc_html( $when ) . ')</span>';
 	}
 
 	/**
@@ -404,11 +424,11 @@ final class Renderer {
 	/**
 	 * The message for a re-render outcome, or ''.
 	 *
-	 * @param string $outcome Outcome.
+	 * @param array<string, mixed> $state Submission::state(): `outcome`, plus `limit` and `retry_after` when rate limited.
 	 */
-	private static function outcome_notice( string $outcome ): string {
-		return match ( $outcome ) {
-			'rate_limited' => __( 'Too many submissions. Try again later.', 'pegwork' ),
+	private static function outcome_notice( array $state ): string {
+		return match ( (string) ( $state['outcome'] ?? '' ) ) {
+			'rate_limited' => self::rate_limit_notice( (string) ( $state['limit'] ?? '' ), (int) ( $state['retry_after'] ?? 0 ) ),
 			'expired'      => __( 'This page was open too long. Check your answers and send again.', 'pegwork' ),
 			'denied'       => __( 'You do not have permission to use this form.', 'pegwork' ),
 			'failed'       => __( 'Your submission could not be saved. Try again later.', 'pegwork' ),
@@ -417,6 +437,33 @@ final class Renderer {
 			'record_failed' => __( 'Your submission was received, but it could not be processed. The site team has been told and will follow up.', 'pegwork' ),
 			default        => '',
 		};
+	}
+
+	/**
+	 * The rate-limit notice: which limit, and when to try again ("in about 7 minutes", or hours past 90 minutes).
+	 *
+	 * @param string $limit       `ip`, `email` or `confirm`.
+	 * @param int    $retry_after Seconds until a submission would pass.
+	 */
+	public static function rate_limit_notice( string $limit, int $retry_after ): string {
+		$what = match ( $limit ) {
+			'email'   => __( 'Too many submissions with this email address.', 'pegwork' ),
+			'confirm' => __( 'Too many confirmation emails to this address.', 'pegwork' ),
+			default   => __( 'Too many submissions from your connection.', 'pegwork' ),
+		};
+		if ( $retry_after <= 0 ) {
+			return $what . ' ' . __( 'Try again later.', 'pegwork' );
+		}
+
+		$minutes = (int) ceil( $retry_after / MINUTE_IN_SECONDS );
+		if ( $minutes > 90 ) {
+			$hours = (int) ceil( $retry_after / HOUR_IN_SECONDS );
+			/* translators: %d: number of hours. */
+			return $what . ' ' . sprintf( _n( 'Try again in about %d hour.', 'Try again in about %d hours.', $hours, 'pegwork' ), $hours );
+		}
+
+		/* translators: %d: number of minutes. */
+		return $what . ' ' . sprintf( _n( 'Try again in about %d minute.', 'Try again in about %d minutes.', $minutes, 'pegwork' ), $minutes );
 	}
 
 	/**

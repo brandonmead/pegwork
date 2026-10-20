@@ -84,6 +84,7 @@
 	flex: none;
 }
 
+/* In a row, the toggle is padded down by a label's height so it sits on the search box's line. */
 .wp-block-pegwork-filters .pegwork-filters__toggle {
 	align-self: flex-start;
 	padding-top: 1.75rem;
@@ -91,6 +92,16 @@
 
 .wp-block-pegwork-filters.is-style-vertical .pegwork-filters__toggle {
 	padding-top: 0;
+}
+
+/* On phones the block is narrower than two 12rem fields plus the gap, so every field wraps onto its own
+   line and the padding would only leave a gap above the toggle. A viewport query rather than a container
+   query, which would need size containment on the block and collapse it inside a theme's flex row. */
+@media (max-width: 480px) {
+
+	.wp-block-pegwork-filters .pegwork-filters__toggle {
+		padding-top: 0;
+	}
 }
 
 /* Disclosure: the native marker is dropped (themes often reset list-style) for a currentColor chevron

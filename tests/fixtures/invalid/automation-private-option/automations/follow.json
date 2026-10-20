@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "record.published",
+    "content_type": "thing"
+  },
+  "steps": [
+    {
+      "subject": "Hi",
+      "id": "mail",
+      "type": "send_email",
+      "to": "{option:desk.secret_email}",
+      "reply_to": "{{ option:desk.public_email }}",
+      "text": "Write to {{ option:desk.secret_email }}"
+    }
+  ]
+}

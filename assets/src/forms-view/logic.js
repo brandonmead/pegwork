@@ -137,6 +137,57 @@ function isEmpty( value ) {
 }
 
 /**
+ * Whether an item is required for these values: `required`, or its `required_when` holds.
+ *
+ * @param {Object}                  item   Config item.
+ * @param {Object<string, unknown>} values Cast values by key.
+ * @return {boolean} Required.
+ */
+export function isRequired( item, values ) {
+	const when = item.required_when;
+	return (
+		item.required ||
+		( when !== null && ( values[ when.field ] ?? null ) === when.equals )
+	);
+}
+
+/**
+ * Whether text is a web address as the server accepts it (Pegwork\Content\Meta::sanitize_url() and
+ * valid_url()): `https://` assumed without a scheme, http or https, no user or password, a host that is
+ * an IPv4 address or labels ending in a top-level label of two or more letters. Never stricter than the
+ * server: the browser's URL parser also turns IDNs into punycode, which the server accepts too.
+ *
+ * @param {string} text Text.
+ * @return {boolean} Valid.
+ */
+export function isWebAddress( text ) {
+	const value = String( text ).trim();
+	const candidate = /^[a-z][a-z0-9+.-]*:/i.test( value )
+		? value
+		: `https://${ value.replace( /^\/+/, '' ) }`;
+	let url;
+	try {
+		url = new URL( candidate );
+	} catch {
+		return false;
+	}
+	if (
+		( url.protocol !== 'http:' && url.protocol !== 'https:' ) ||
+		url.username !== '' ||
+		url.password !== ''
+	) {
+		return false;
+	}
+	const host = url.hostname.replace( /\.$/, '' );
+	if ( /^[0-9]{1,3}(\.[0-9]{1,3}){3}$/.test( host ) ) {
+		return true;
+	}
+	return /^(?:[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/.test(
+		host
+	);
+}
+
+/**
  * Text length in characters (code points, as PHP mb_strlen).
  *
  * @param {string} text Text.
@@ -148,7 +199,7 @@ function length( text ) {
 
 /**
  * One item's hint: the message the server would give for a rule it surely enforces, or null. Never
- * stricter than the server (URLs, dates and patterns are left to it).
+ * stricter than the server (dates and patterns are left to it).
  *
  * @param {Object}                  item    Config item.
  * @param {Object<string, unknown>} values  Cast values by key.
@@ -157,10 +208,7 @@ function length( text ) {
  */
 export function hint( item, values, texts = {} ) {
 	const value = values[ item.key ];
-	const when = item.required_when;
-	const required =
-		item.required ||
-		( when !== null && ( values[ when.field ] ?? null ) === when.equals );
+	const required = isRequired( item, values );
 
 	if ( item.type === 'boolean' ) {
 		// Only unbound items must be checked; a bound boolean's "required" accepts false.
@@ -220,6 +268,16 @@ export function hint( item, values, texts = {} ) {
 			/* translators: %s: field label. */
 			__(
 				'Enter %s as an email address, like name@example.com.',
+				'pegwork'
+			),
+			item.label
+		);
+	}
+	if ( item.type === 'url' && ! isWebAddress( value ) ) {
+		return sprintf(
+			/* translators: %s: field label. */
+			__(
+				'Enter %s as a web address, like https://example.org.',
 				'pegwork'
 			),
 			item.label
@@ -322,20 +380,19 @@ export function firstErrorStep( steps, keys ) {
 }
 
 /**
- * The progress announcement, such as "Step 2 of 3: Links".
+ * The progress announcement, such as "Step 2 of 3". The step's label is its heading, which gets focus,
+ * so the counter does not repeat it.
  *
  * @param {number} index Step index (0-based).
  * @param {number} total Number of steps.
- * @param {string} label Step label.
  * @return {string} Text.
  */
-export function progressText( index, total, label ) {
+export function progressText( index, total ) {
 	return sprintf(
-		/* translators: 1: step number, 2: number of steps, 3: step label. */
-		__( 'Step %1$d of %2$d: %3$s', 'pegwork' ),
+		/* translators: 1: step number, 2: number of steps. */
+		__( 'Step %1$d of %2$d', 'pegwork' ),
 		index + 1,
-		total,
-		label
+		total
 	);
 }
 
@@ -363,8 +420,8 @@ export function wordCountText( count, limits ) {
 		return sprintf(
 			/* translators: 1: current word count, 2: minimum, 3: maximum. */
 			_n(
-				'%1$d of %2$d to %3$d words',
-				'%1$d of %2$d to %3$d words',
+				'%1$d word (%2$d to %3$d)',
+				'%1$d words (%2$d to %3$d)',
 				count,
 				'pegwork'
 			),
@@ -377,8 +434,8 @@ export function wordCountText( count, limits ) {
 		return sprintf(
 			/* translators: 1: current word count, 2: minimum. */
 			_n(
-				'%1$d word, at least %2$d needed',
-				'%1$d words, at least %2$d needed',
+				'%1$d word (at least %2$d)',
+				'%1$d words (at least %2$d)',
 				count,
 				'pegwork'
 			),
@@ -389,8 +446,8 @@ export function wordCountText( count, limits ) {
 	return sprintf(
 		/* translators: 1: current word count, 2: maximum. */
 		_n(
-			'%1$d of up to %2$d words',
-			'%1$d of up to %2$d words',
+			'%1$d word (up to %2$d)',
+			'%1$d words (up to %2$d)',
 			count,
 			'pegwork'
 		),

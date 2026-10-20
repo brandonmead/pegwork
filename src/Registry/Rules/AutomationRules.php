@@ -51,9 +51,9 @@ trait AutomationRules {
 	public const VAR_PATTERN = '/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/';
 
 	/**
-	 * One merge tag body: a path and an optional default filter.
+	 * One merge tag body: a path or `option:<page>.<field>` (1), an optional `date` filter (2), an optional default filter.
 	 */
-	public const TEMPLATE_TAG_PATTERN = '/^\s*([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(?:\|\s*default:"[^"]*"\s*)?$/';
+	public const TEMPLATE_TAG_PATTERN = '/^\s*((?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(\|\s*date\s*)?(?:\|\s*default:"[^"]*"\s*)?$/';
 
 	/**
 	 * Condition operators.
@@ -749,10 +749,67 @@ trait AutomationRules {
 		foreach ( $tags[1] as $tag ) {
 			if ( ! preg_match( self::TEMPLATE_TAG_PATTERN, $tag, $match ) ) {
 				/* translators: %s: merge tag. */
-				$this->add( 'invalid_template', $pointer, sprintf( __( 'Merge tag "{{%s}}" is not "{{ path }}" or "{{ path | default:"text" }}".', 'pegwork' ), $tag ) );
+				$this->add( 'invalid_template', $pointer, sprintf( __( 'Merge tag "{{%s}}" is not "{{ path }}", "{{ path | date }}" or "{{ path | default:"text" }}" (date before default).', 'pegwork' ), $tag ) );
 				continue;
 			}
-			$this->scan_path( $match[1], $pointer, $context, true, $scope, $uses );
+			$path = $match[1];
+			$date = '' !== trim( $match[2] ?? '' );
+			if ( str_starts_with( $path, 'option:' ) ) {
+				$parts = explode( '.', substr( $path, 7 ) );
+				if ( 2 !== count( $parts ) ) {
+					/* translators: %s: path. */
+					$this->add( 'invalid_var', $pointer, sprintf( __( 'Path "%s": use "option:<page>.<field>".', 'pegwork' ), $path ) );
+					continue;
+				}
+				$uses[] = array(
+					'use'     => 'option',
+					'pointer' => $pointer,
+					'page'    => $parts[0],
+					'key'     => $parts[1],
+					'date'    => $date,
+				);
+				continue;
+			}
+			$this->scan_path( $path, $pointer, $context, true, $scope, $uses );
+			if ( $date ) {
+				$this->scan_date_filter( $path, $pointer, $scope, $uses );
+			}
+		}
+	}
+
+	/**
+	 * Checks a `| date` filter's path: `today`, `now`, a record (or `trigger.old`) field that must be a date
+	 * field (checked in references()), or a path whose type is not known here (payloads, step outputs).
+	 *
+	 * @param string                     $path    Path.
+	 * @param string                     $pointer JSON pointer of the template.
+	 * @param array<string, mixed>       $scope   Scan scope.
+	 * @param list<array<string, mixed>> $uses    Uses, appended to.
+	 */
+	private function scan_date_filter( string $path, string $pointer, array $scope, array &$uses ): void {
+		$parts = explode( '.', $path );
+		$key   = null;
+		if ( 2 === count( $parts ) && 'record' === $parts[0] ) {
+			$key = $parts[1];
+		} elseif ( 3 === count( $parts ) && 'trigger' === $parts[0] && 'old' === $parts[1] ) {
+			$key = $parts[2];
+		} elseif ( ! in_array( $parts[0], array( 'site', 'run', 'link' ), true ) ) {
+			return;
+		}
+
+		if ( null === $key || in_array( $key, array( 'id', 'status', 'type', 'permalink', 'edit_url' ), true ) ) {
+			/* translators: %s: path. */
+			$this->add( 'invalid_template', $pointer, sprintf( __( 'Path "%s" is not a date, so it cannot take "| date".', 'pegwork' ), $path ) );
+			return;
+		}
+		if ( $scope['binds'] || 'trigger' === $parts[0] ) {
+			$uses[] = array(
+				'use'     => 'date_filter',
+				'pointer' => $pointer,
+				'key'     => $key,
+				'type'    => $scope['type'],
+				'path'    => $path,
+			);
 		}
 	}
 
@@ -964,6 +1021,8 @@ trait AutomationRules {
 			}
 			match ( $found['use'] ) {
 				'record_key'    => $this->check_record_key( $found, $known ),
+				'option'        => $this->check_option( $found, $known ),
+				'date_filter'   => $this->check_date_filter( $found, $known ),
 				'form_value'    => $this->check_form_value( $found, $known ),
 				'leaf'          => $this->check_leaf( $found, $known ),
 				'write'         => $this->check_write( $found, $known ),
@@ -1028,6 +1087,59 @@ trait AutomationRules {
 		if ( is_array( $definition ) && 'public' === $found['context'] && 'private' === ( $definition['visibility'] ?? 'public' ) ) {
 			/* translators: %s: field key. */
 			$this->add( 'automation_private_field', $found['pointer'], sprintf( __( 'Field "%s" is private and cannot appear in webhook bodies or link pages.', 'pegwork' ), $found['key'] ) );
+		}
+	}
+
+	/**
+	 * Checks an `{{option:<page>.<field>}}` merge tag: the page and field exist, the field is public (a
+	 * template's value can reach the run log, webhooks and pages), and `| date` is on a date field. A private
+	 * address belongs in `to` as `{option:<page>.<field>}`, which only the mail itself reads.
+	 *
+	 * @param array<string, mixed>                $found Use from automation_scan().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_option( array $found, array $known ): void {
+		$page = $known['options_page'][ $found['page'] ] ?? null;
+		if ( null === $page ) {
+			/* translators: %s: options page key. */
+			$this->add( 'unknown_options_page', $found['pointer'], sprintf( __( 'Options page "%s" is not defined.', 'pegwork' ), $found['page'] ) );
+			return;
+		}
+		if ( ! is_array( $page ) ) {
+			return;
+		}
+		$field = array_column( $page['fields'] ?? array(), null, 'key' )[ $found['key'] ] ?? null;
+		if ( null === $field ) {
+			/* translators: 1: field key, 2: options page key. */
+			$this->add( 'unknown_field', $found['pointer'], sprintf( __( 'Field "%1$s" is not defined on options page "%2$s".', 'pegwork' ), $found['key'], $found['page'] ) );
+			return;
+		}
+		if ( 'private' === ( $field['visibility'] ?? 'public' ) ) {
+			$this->add(
+				'automation_private_field',
+				$found['pointer'],
+				/* translators: 1: options page key, 2: field key. */
+				sprintf( __( 'Options field "%1$s.%2$s" is private and cannot appear in templates. For a recipient, write "{option:%1$s.%2$s}" in "to".', 'pegwork' ), $found['page'], $found['key'] )
+			);
+			return;
+		}
+		if ( $found['date'] && 'date' !== ( $field['type'] ?? '' ) ) {
+			/* translators: 1: options page key, 2: field key. */
+			$this->add( 'invalid_template', $found['pointer'], sprintf( __( 'Options field "%1$s.%2$s" is not a date field, so it cannot take "| date".', 'pegwork' ), $found['page'], $found['key'] ) );
+		}
+	}
+
+	/**
+	 * Checks that a `| date` filter on a record field names a date field.
+	 *
+	 * @param array<string, mixed>                $found Use from scan_date_filter().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_date_filter( array $found, array $known ): void {
+		$definition = $this->record_key_definition( $found['type'], $found['key'], $known );
+		if ( is_array( $definition ) && 'date' !== ( $definition['type'] ?? '' ) ) {
+			/* translators: %s: path. */
+			$this->add( 'invalid_template', $found['pointer'], sprintf( __( 'Path "%s" is not a date field, so it cannot take "| date".', 'pegwork' ), $found['path'] ) );
 		}
 	}
 

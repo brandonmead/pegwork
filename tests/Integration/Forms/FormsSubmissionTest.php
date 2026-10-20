@@ -10,7 +10,9 @@ namespace Pegwork\Tests\Integration\Forms;
 use Pegwork\Tests\Support\FormsTestCase;
 use PegworkForms\Entries;
 use PegworkForms\Notifications;
+use PegworkForms\RateLimit;
 use PegworkForms\Submission;
+use PegworkForms\Token;
 
 require_once dirname( __DIR__, 2 ) . '/Support/FormsTestCase.php';
 
@@ -70,6 +72,7 @@ class FormsSubmissionTest extends FormsTestCase {
 		$this->assertStringContainsString( 'Reply-To: Ada@Example.org', $mail[0]['header'] );
 		$this->assertStringContainsString( "Name: Ada Lovelace\n\nEmail: Ada@Example.org\n\nTopic: Talks", $mail[0]['body'] );
 		$this->assertStringContainsString( 'Send me the newsletter: No', $mail[0]['body'] );
+		$this->assertStringNotContainsString( 'Website:', $mail[0]['body'], 'Empty items are left out.' );
 		$this->assertStringContainsString( 'Entry ' . $result['entry_id'] . ' on Test Blog: ', $mail[0]['body'] );
 		$this->assertStringContainsString( 'page=pegwork-entries&entry=' . $result['entry_id'], $mail[0]['body'] );
 		$this->assertStringNotContainsString( '{unknown_tag}', $mail[0]['body'] );
@@ -420,5 +423,118 @@ class FormsSubmissionTest extends FormsTestCase {
 
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		unset( $_POST['pegwork_form'], $_POST['pegwork'] );
+	}
+
+	/**
+	 * A re-render with errors keeps the first render's time, so fixing an error and sending again at once
+	 * is accepted; a fresh page posted under 3 seconds is still spam.
+	 */
+	public function test_corrected_submission_is_not_too_fast() {
+		$first = $this->submit( $this->contact_values( array( 'email' => 'not an email' ) ), 'fr_contact', array(), 10 );
+		$this->assertSame( 'invalid', $first['outcome'] );
+		$this->assertSame( self::NOW - 10, $first['issued'], 'The posted token passed, so its render time is kept.' );
+
+		// The re-render issues the token for that time again.
+		Submission::reset();
+		\PegworkForms\Renderer::reset();
+		$this->set_state( 'fr_contact', $first );
+		$html = \PegworkForms\Renderer::render( 'fr_contact', self::NOW );
+		$this->assertStringContainsString( 'name="pegwork_form[token]" value="' . Token::create( 'fr_contact', self::NOW - 10 ) . '"', $html );
+
+		// Resubmitted one second later with the re-rendered token: 11 seconds old, accepted.
+		$fixed = Submission::process( pegwork_registry()->form( 'fr_contact' ), $this->contact_values(), $this->control( 'fr_contact', 30, array( 'token' => Token::create( 'fr_contact', $first['issued'] ) ) ), self::NOW + 1 );
+		$this->assertSame( 'sent', $fixed['outcome'] );
+		$this->assertSame( 'received', Entries::get( $fixed['entry_id'] )['status'] );
+
+		// A bot posting a fresh page within 3 seconds is still caught.
+		$bot = $this->submit( $this->contact_values( array( 'name' => 'Bot' ) ), 'fr_contact', array(), 2 );
+		$this->assertSame( 'spam', $bot['outcome'] );
+		$this->assertSame( array( 'too_fast' ), Entries::get( $bot['entry_id'] )['meta']['spam'] );
+
+		// Invalid or expired tokens are not kept: the re-render gets a fresh one.
+		$this->assertNull( $this->submit( $this->contact_values(), 'fr_contact', array( 'token' => 'nope' ) )['issued'] );
+		$this->assertNull( Token::issued( 'fr_contact', Token::create( 'fr_contact', self::NOW - Token::MAX_SECONDS - 1 ), self::NOW ) );
+		$this->assertNull( Token::issued( 'fr_contact', Token::create( 'fr_contact', self::NOW - 1 ), self::NOW ), 'Too fast is not kept either (it is stored as spam, never re-rendered).' );
+		$this->assertNull( Token::issued( 'other_form', Token::create( 'fr_contact', self::NOW - 30 ), self::NOW ) );
+	}
+
+	/**
+	 * The rate-limit notice says which limit and in about how many minutes (or hours) to try again.
+	 */
+	public function test_rate_limit_notice_has_a_time_frame() {
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$this->assertSame( 'sent', $this->submit( $this->contact_values( array( 'email' => "p$i@example.org" ) ), 'fr_contact', array(), 30, self::NOW + $i * MINUTE_IN_SECONDS )['outcome'] );
+		}
+		// Hits at NOW+1..5 minutes; at NOW+7 the oldest leaves the 10-minute window at NOW+11: 4 minutes.
+		$over = $this->submit( $this->contact_values( array( 'email' => 'p6@example.org' ) ), 'fr_contact', array(), 30, self::NOW + 7 * MINUTE_IN_SECONDS );
+		$this->assertSame( 'rate_limited', $over['outcome'] );
+		$this->assertSame( 'ip', $over['limit'] );
+		$this->assertSame( 4 * MINUTE_IN_SECONDS, $over['retry_after'] );
+
+		Submission::reset();
+		\PegworkForms\Renderer::reset();
+		$this->set_state( 'fr_contact', $over );
+		$html = \PegworkForms\Renderer::render( 'fr_contact', self::NOW );
+		$this->assertStringContainsString( 'Too many submissions from your connection. Try again in about 4 minutes.', $html );
+		$this->assertStringContainsString( 'value="p6@example.org"', $html, 'Values are kept.' );
+
+		$this->assertSame( 'Too many submissions with this email address. Try again in about 1 minute.', \PegworkForms\Renderer::rate_limit_notice( 'email', 20 ) );
+		$this->assertSame( 'Too many confirmation emails to this address. Try again in about 23 hours.', \PegworkForms\Renderer::rate_limit_notice( 'confirm', 22 * HOUR_IN_SECONDS + 5 ) );
+		$this->assertSame( 'Too many submissions from your connection. Try again later.', \PegworkForms\Renderer::rate_limit_notice( 'ip', 0 ) );
+		$this->assertSame( 0, RateLimit::wait( array( 1, 2 ), 3, 600, 10 ) );
+		$this->assertSame( 595, RateLimit::wait( array( 7, 5, 9 ), 3, 600, 10 ), 'The oldest of the hits over the limit leaves the window first.' );
+	}
+
+	/**
+	 * URLs: http or https with a real-looking host; a bare host gets https://; "not a url" is a format error.
+	 */
+	public function test_url_validation() {
+		$field = array( 'type' => 'url' );
+		$this->assertSame( 'https://example.org/path?q=1', pegwork_sanitize_field( $field, ' https://example.org/path?q=1 ' ) );
+		$this->assertSame( 'https://example.org', pegwork_sanitize_field( $field, 'example.org' ) );
+		$this->assertSame( 'http://192.0.2.4:8080/x', pegwork_sanitize_field( $field, 'http://192.0.2.4:8080/x' ) );
+		$this->assertSame( 'https://sub.example.co.uk', pegwork_sanitize_field( $field, 'https://sub.example.co.uk' ) );
+		foreach ( array( 'not a url', 'https://', 'https://localhost/', 'example', 'ftp://example.org', 'javascript:alert(1)', 'https://user:pw@example.org', 'https://exa mple.org', 'https://example.123' ) as $bad ) {
+			$this->assertSame( '', pegwork_sanitize_field( $field, $bad ), $bad );
+		}
+
+		$result = $this->submit( $this->contact_values( array( 'website' => 'not a url' ) ) );
+		$this->assertSame( 'invalid', $result['outcome'] );
+		$this->assertSame( 'Enter Website as a web address, like https://example.org.', $result['errors']['website'] );
+		$this->assertSame( 0, $this->count_entries() );
+	}
+
+	/**
+	 * `{all_fields}` leaves out empty items and adds no colon after a label that ends in "?".
+	 */
+	public function test_all_fields_skips_empty_values() {
+		$form                       = pegwork_registry()->form( 'fr_contact' );
+		$form['fields'][0]['label'] = 'What is your name?';
+		$text                       = Notifications::render(
+			'{all_fields}',
+			$form,
+			array(
+				'values' => array(
+					'name'      => 'Ada',
+					'email'     => 'ada@example.org',
+					'website'   => '',
+					'subscribe' => false,
+					'message'   => "Line one\nLine two",
+				),
+			)
+		);
+		$this->assertSame( "What is your name? Ada\n\nEmail: ada@example.org\n\nSend me the newsletter: No\n\nMessage:\nLine one\nLine two", $text );
+	}
+
+	/**
+	 * Puts a process() result in the renderer's state, as handle() does for a re-render.
+	 *
+	 * @param string $key    Form key.
+	 * @param array  $result process() result.
+	 */
+	private function set_state( $key, $result ) {
+		$state = new \ReflectionProperty( Submission::class, 'state' );
+		$state->setAccessible( true );
+		$state->setValue( null, array( $key => $result ) );
 	}
 }

@@ -74,6 +74,42 @@ final class RateLimit {
 	}
 
 	/**
+	 * Seconds until another submission would be within the limit (0 when it already is): when enough of
+	 * the hits in the window have aged out of it.
+	 *
+	 * @param string $kind    `ip` or `email`.
+	 * @param string $form    Form key.
+	 * @param string $subject IP address or email address.
+	 * @param int    $now     Unix time.
+	 */
+	public static function retry_after( string $kind, string $form, string $subject, int $now ): int {
+		$limit = self::limits( $form )[ $kind ] ?? null;
+		if ( null === $limit || 0 === $limit['max'] || '' === $subject ) {
+			return 0;
+		}
+
+		return self::wait( self::hits( $kind, $form, $subject, $now, $limit['window'] ), $limit['max'], $limit['window'], $now );
+	}
+
+	/**
+	 * Seconds until fewer than `max` of these hit times are inside the window.
+	 *
+	 * @param int[] $hits   Hit times inside the window.
+	 * @param int   $max    Allowed hits per window.
+	 * @param int   $window Window in seconds.
+	 * @param int   $now    Unix time.
+	 */
+	public static function wait( array $hits, int $max, int $window, int $now ): int {
+		$excess = count( $hits ) - $max;
+		if ( $excess < 0 ) {
+			return 0;
+		}
+		sort( $hits );
+
+		return max( 1, $hits[ $excess ] + $window - $now );
+	}
+
+	/**
 	 * Records one submission.
 	 *
 	 * @param string $kind    `ip` or `email`.

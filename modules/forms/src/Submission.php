@@ -151,8 +151,10 @@ final class Submission {
 	 *                              stored), `captcha_failed` (re-render; stored as spam), `captcha_missing` (no
 	 *                              token field at all, so no JavaScript: re-render; stored as spam), `record_failed` (re-render;
 	 *                              the entry is stored as `failed` and the admin told); plus `entry_id`, `record_id`,
-	 *                              `errors` (message by item key), `values` (posted text) and `files` (names of the
-	 *                              files chosen, which a re-render cannot keep).
+	 *                              `errors` (message by item key), `values` (posted text), `files` (names of the
+	 *                              files chosen, which a re-render cannot keep) and `issued` (render time of the
+	 *                              posted token when it passed, for the re-render's token; else null); `rate_limited`
+	 *                              adds `limit` (`ip`, `email` or `confirm`) and `retry_after` (seconds).
 	 */
 	public static function process( array $form, mixed $raw, mixed $control, int $now, int $page_id = 0, array $files = array() ): array {
 		$key     = (string) $form['key'];
@@ -163,11 +165,15 @@ final class Submission {
 		foreach ( $files as $file_key => $file ) {
 			$chosen[ (string) $file_key ] = sanitize_file_name( wp_basename( str_replace( '\\', '/', (string) ( $file['name'] ?? '' ) ) ) );
 		}
-		$fail = fn( string $outcome, array $errors = array() ) => array(
+		// A re-render keeps the first render's time (see Token::issued()), so correcting an error and
+		// sending at once is not mistaken for a bot.
+		$issued = Token::issued( $key, $control['token'] ?? null, $now );
+		$fail   = fn( string $outcome, array $errors = array() ) => array(
 			'outcome' => $outcome,
 			'errors'  => $errors,
 			'values'  => $posted,
 			'files'   => $chosen,
+			'issued'  => $issued,
 		);
 
 		if ( ! Access::allowed( $form ) ) {
@@ -191,7 +197,10 @@ final class Submission {
 
 		$ip = RateLimit::client_ip();
 		if ( RateLimit::exceeded( 'ip', $key, $ip, $now ) ) {
-			return $fail( 'rate_limited' );
+			return $fail( 'rate_limited' ) + array(
+				'limit'       => 'ip',
+				'retry_after' => RateLimit::retry_after( 'ip', $key, $ip, $now ),
+			);
 		}
 
 		[ $values, $format_errors ]         = self::collect( $form, $raw );
@@ -247,7 +256,10 @@ final class Submission {
 		}
 
 		if ( RateLimit::exceeded( 'email', $key, $email, $now ) ) {
-			return $fail( 'rate_limited' );
+			return $fail( 'rate_limited' ) + array(
+				'limit'       => 'email',
+				'retry_after' => RateLimit::retry_after( 'email', $key, $email, $now ),
+			);
 		}
 		if ( Entries::fingerprint_seen( $fingerprint, $now - self::DUPLICATE_WINDOW ) ) {
 			return array(
@@ -257,7 +269,10 @@ final class Submission {
 		}
 		$confirm = isset( $form['confirm'] );
 		if ( $confirm && Confirm::cap_reached( $email, $now ) ) {
-			return $fail( 'rate_limited' );
+			return $fail( 'rate_limited' ) + array(
+				'limit'       => 'confirm',
+				'retry_after' => Confirm::cap_retry_after( $email, $now ),
+			);
 		}
 
 		// Turnstile last, after the cheap checks, so a valid token is spent only on a submission that
@@ -548,7 +563,7 @@ final class Submission {
 			/* translators: %s: field label. */
 			'email'  => sprintf( __( 'Enter %s as an email address, like name@example.com.', 'pegwork' ), $label ),
 			/* translators: %s: field label. */
-			'url'    => sprintf( __( 'Enter %s as a web address starting with https://.', 'pegwork' ), $label ),
+			'url'    => sprintf( __( 'Enter %s as a web address, like https://example.org.', 'pegwork' ), $label ),
 			/* translators: %s: field label. */
 			'date'   => sprintf( __( 'Enter %s as a real date, like 2026-03-31.', 'pegwork' ), $label ),
 			/* translators: %s: field label. */
