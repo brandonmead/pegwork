@@ -1,0 +1,185 @@
+{
+  "description": "Rules table for form show_when conditions. PHP (PegworkForms\\Definition::shown, ::visible, Pegwork\\Content\\RecordValidator::count_words) and the view script (assets/src/forms-view) run every case and must agree. Values are sanitized values: booleans for checkboxes, strings, numbers, lists of option values for multi-choice items.",
+  "shown": [
+    { "name": "no condition", "show_when": null, "values": {}, "expected": true },
+    { "name": "condition without field", "show_when": { "equals": true }, "values": {}, "expected": true },
+    { "name": "boolean true, checked", "show_when": { "field": "a", "equals": true }, "values": { "a": true }, "expected": true },
+    { "name": "boolean true, unchecked", "show_when": { "field": "a", "equals": true }, "values": { "a": false }, "expected": false },
+    { "name": "boolean true, missing", "show_when": { "field": "a", "equals": true }, "values": {}, "expected": false },
+    { "name": "boolean false, unchecked", "show_when": { "field": "a", "equals": false }, "values": { "a": false }, "expected": true },
+    { "name": "boolean false, missing", "show_when": { "field": "a", "equals": false }, "values": {}, "expected": true },
+    { "name": "boolean false, checked", "show_when": { "field": "a", "equals": false }, "values": { "a": true }, "expected": false },
+    { "name": "boolean true, string 0 is false", "show_when": { "field": "a", "equals": true }, "values": { "a": "0" }, "expected": false },
+    { "name": "boolean true, empty string", "show_when": { "field": "a", "equals": true }, "values": { "a": "" }, "expected": false },
+    { "name": "boolean true, text", "show_when": { "field": "a", "equals": true }, "values": { "a": "yes" }, "expected": true },
+    { "name": "boolean true, string 0.0 is true", "show_when": { "field": "a", "equals": true }, "values": { "a": "0.0" }, "expected": true },
+    { "name": "boolean true, number 0", "show_when": { "field": "a", "equals": true }, "values": { "a": 0 }, "expected": false },
+    { "name": "boolean true, number 2", "show_when": { "field": "a", "equals": true }, "values": { "a": 2 }, "expected": true },
+    { "name": "string, same", "show_when": { "field": "a", "equals": "other" }, "values": { "a": "other" }, "expected": true },
+    { "name": "string, different", "show_when": { "field": "a", "equals": "other" }, "values": { "a": "help" }, "expected": false },
+    { "name": "string, case matters", "show_when": { "field": "a", "equals": "other" }, "values": { "a": "Other" }, "expected": false },
+    { "name": "string, missing", "show_when": { "field": "a", "equals": "other" }, "values": {}, "expected": false },
+    { "name": "string, empty value", "show_when": { "field": "a", "equals": "other" }, "values": { "a": "" }, "expected": false },
+    { "name": "empty string equals empty value", "show_when": { "field": "a", "equals": "" }, "values": { "a": "" }, "expected": true },
+    { "name": "empty string, missing", "show_when": { "field": "a", "equals": "" }, "values": {}, "expected": false },
+    { "name": "string 1, checked boolean", "show_when": { "field": "a", "equals": "1" }, "values": { "a": true }, "expected": true },
+    { "name": "empty string, unchecked boolean", "show_when": { "field": "a", "equals": "" }, "values": { "a": false }, "expected": true },
+    { "name": "string 5, number 5", "show_when": { "field": "a", "equals": "5" }, "values": { "a": 5 }, "expected": true },
+    { "name": "string 5, number 5.5", "show_when": { "field": "a", "equals": "5" }, "values": { "a": 5.5 }, "expected": false },
+    { "name": "number, same integer", "show_when": { "field": "a", "equals": 3 }, "values": { "a": 3 }, "expected": true },
+    { "name": "number, numeric string", "show_when": { "field": "a", "equals": 3 }, "values": { "a": "3" }, "expected": true },
+    { "name": "number, padded numeric string", "show_when": { "field": "a", "equals": 3 }, "values": { "a": " 3.0 " }, "expected": true },
+    { "name": "number, exponent string", "show_when": { "field": "a", "equals": 300 }, "values": { "a": "3e2" }, "expected": true },
+    { "name": "number, leading dot", "show_when": { "field": "a", "equals": 0.5 }, "values": { "a": ".5" }, "expected": true },
+    { "name": "number, trailing dot", "show_when": { "field": "a", "equals": 3 }, "values": { "a": "3." }, "expected": true },
+    { "name": "number, plus sign", "show_when": { "field": "a", "equals": 3 }, "values": { "a": "+3" }, "expected": true },
+    { "name": "number, hex is not numeric", "show_when": { "field": "a", "equals": 26 }, "values": { "a": "0x1A" }, "expected": false },
+    { "name": "number, text", "show_when": { "field": "a", "equals": 3 }, "values": { "a": "three" }, "expected": false },
+    { "name": "number, empty", "show_when": { "field": "a", "equals": 0 }, "values": { "a": "" }, "expected": false },
+    { "name": "number, missing", "show_when": { "field": "a", "equals": 0 }, "values": {}, "expected": false },
+    { "name": "number, boolean is not numeric", "show_when": { "field": "a", "equals": 1 }, "values": { "a": true }, "expected": false },
+    { "name": "number, float", "show_when": { "field": "a", "equals": 2.5 }, "values": { "a": 2.5 }, "expected": true },
+    { "name": "list, contains", "show_when": { "field": "a", "equals": "sdg-06" }, "values": { "a": [ "sdg-01", "sdg-06" ] }, "expected": true },
+    { "name": "list, lacks", "show_when": { "field": "a", "equals": "sdg-06" }, "values": { "a": [ "sdg-01" ] }, "expected": false },
+    { "name": "list, empty", "show_when": { "field": "a", "equals": "sdg-06" }, "values": { "a": [] }, "expected": false },
+    { "name": "list, true when any chosen", "show_when": { "field": "a", "equals": true }, "values": { "a": [ "sdg-01" ] }, "expected": true },
+    { "name": "list, true when none chosen", "show_when": { "field": "a", "equals": true }, "values": { "a": [] }, "expected": false },
+    { "name": "list, false when none chosen", "show_when": { "field": "a", "equals": false }, "values": { "a": [] }, "expected": true },
+    { "name": "list, number compared as string", "show_when": { "field": "a", "equals": 2 }, "values": { "a": [ "1", "2" ] }, "expected": true },
+    { "name": "other field set, this one missing", "show_when": { "field": "a", "equals": true }, "values": { "b": true }, "expected": false }
+  ],
+  "visible": [
+    {
+      "name": "volunteer link follows the checkbox",
+      "items": [
+        { "key": "needs_volunteers" },
+        { "key": "volunteer_link", "show_when": { "field": "needs_volunteers", "equals": true } }
+      ],
+      "values": { "needs_volunteers": false, "volunteer_link": "https://example.org/join" },
+      "expected": { "needs_volunteers": true, "volunteer_link": false }
+    },
+    {
+      "name": "checked shows the link",
+      "items": [
+        { "key": "needs_volunteers" },
+        { "key": "volunteer_link", "show_when": { "field": "needs_volunteers", "equals": true } }
+      ],
+      "values": { "needs_volunteers": true, "volunteer_link": "" },
+      "expected": { "needs_volunteers": true, "volunteer_link": true }
+    },
+    {
+      "name": "a chain hides when its first link is hidden, even if the middle value matches",
+      "items": [
+        { "key": "a" },
+        { "key": "b", "show_when": { "field": "a", "equals": true } },
+        { "key": "c", "show_when": { "field": "b", "equals": "yes" } }
+      ],
+      "values": { "a": false, "b": "yes", "c": "" },
+      "expected": { "a": true, "b": false, "c": false }
+    },
+    {
+      "name": "a chain shows when every link holds",
+      "items": [
+        { "key": "a" },
+        { "key": "b", "show_when": { "field": "a", "equals": true } },
+        { "key": "c", "show_when": { "field": "b", "equals": "yes" } }
+      ],
+      "values": { "a": true, "b": "yes", "c": "" },
+      "expected": { "a": true, "b": true, "c": true }
+    },
+    {
+      "name": "the controlling item may come later in the form",
+      "items": [
+        { "key": "detail", "show_when": { "field": "kind", "equals": "other" } },
+        { "key": "kind" }
+      ],
+      "values": { "kind": "other" },
+      "expected": { "detail": true, "kind": true }
+    },
+    {
+      "name": "a condition on an item the form lacks hides the item",
+      "items": [
+        { "key": "detail", "show_when": { "field": "missing", "equals": false } }
+      ],
+      "values": {},
+      "expected": { "detail": false }
+    },
+    {
+      "name": "a cycle hides both items",
+      "items": [
+        { "key": "a", "show_when": { "field": "b", "equals": false } },
+        { "key": "b", "show_when": { "field": "a", "equals": false } }
+      ],
+      "values": { "a": false, "b": false },
+      "expected": { "a": false, "b": false }
+    },
+    {
+      "name": "a self reference hides the item",
+      "items": [
+        { "key": "a", "show_when": { "field": "a", "equals": "" } }
+      ],
+      "values": { "a": "" },
+      "expected": { "a": false }
+    },
+    {
+      "name": "multi-choice controls a follow-up",
+      "items": [
+        { "key": "sifg_impact" },
+        { "key": "water_detail", "show_when": { "field": "sifg_impact", "equals": "sdg-06" } }
+      ],
+      "values": { "sifg_impact": [ "sdg-06", "sdg-14" ] },
+      "expected": { "sifg_impact": true, "water_detail": true }
+    },
+    {
+      "name": "a chain 12 long in form order is shown (each link is decided before the next)",
+      "items": [
+        { "key": "k0" },
+        { "key": "k1", "show_when": { "field": "k0", "equals": "" } },
+        { "key": "k2", "show_when": { "field": "k1", "equals": "" } },
+        { "key": "k3", "show_when": { "field": "k2", "equals": "" } },
+        { "key": "k4", "show_when": { "field": "k3", "equals": "" } },
+        { "key": "k5", "show_when": { "field": "k4", "equals": "" } },
+        { "key": "k6", "show_when": { "field": "k5", "equals": "" } },
+        { "key": "k7", "show_when": { "field": "k6", "equals": "" } },
+        { "key": "k8", "show_when": { "field": "k7", "equals": "" } },
+        { "key": "k9", "show_when": { "field": "k8", "equals": "" } },
+        { "key": "k10", "show_when": { "field": "k9", "equals": "" } },
+        { "key": "k11", "show_when": { "field": "k10", "equals": "" } }
+      ],
+      "values": { "k0": "", "k1": "", "k2": "", "k3": "", "k4": "", "k5": "", "k6": "", "k7": "", "k8": "", "k9": "", "k10": "", "k11": "" },
+      "expected": { "k0": true, "k1": true, "k2": true, "k3": true, "k4": true, "k5": true, "k6": true, "k7": true, "k8": true, "k9": true, "k10": true, "k11": true }
+    },
+    {
+      "name": "the same chain defined in reverse stops at the depth limit of 10",
+      "items": [
+        { "key": "k11", "show_when": { "field": "k10", "equals": "" } },
+        { "key": "k10", "show_when": { "field": "k9", "equals": "" } },
+        { "key": "k9", "show_when": { "field": "k8", "equals": "" } },
+        { "key": "k8", "show_when": { "field": "k7", "equals": "" } },
+        { "key": "k7", "show_when": { "field": "k6", "equals": "" } },
+        { "key": "k6", "show_when": { "field": "k5", "equals": "" } },
+        { "key": "k5", "show_when": { "field": "k4", "equals": "" } },
+        { "key": "k4", "show_when": { "field": "k3", "equals": "" } },
+        { "key": "k3", "show_when": { "field": "k2", "equals": "" } },
+        { "key": "k2", "show_when": { "field": "k1", "equals": "" } },
+        { "key": "k1", "show_when": { "field": "k0", "equals": "" } },
+        { "key": "k0" }
+      ],
+      "values": { "k0": "", "k1": "", "k2": "", "k3": "", "k4": "", "k5": "", "k6": "", "k7": "", "k8": "", "k9": "", "k10": "", "k11": "" },
+      "expected": { "k11": false, "k10": false, "k9": false, "k8": false, "k7": false, "k6": false, "k5": false, "k4": false, "k3": false, "k2": false, "k1": false, "k0": true }
+    }
+  ],
+  "words": [
+    { "name": "empty", "text": "", "count": 0 },
+    { "name": "spaces only", "text": "   \n\t ", "count": 0 },
+    { "name": "plain words", "text": "one two  three\nfour", "count": 4 },
+    { "name": "leading and trailing space", "text": "  one two  ", "count": 2 },
+    { "name": "non-breaking space and entity", "text": "a b&nbsp;c&#160;d", "count": 4 },
+    { "name": "unicode spaces", "text": "a b　c d﻿e", "count": 5 },
+    { "name": "tags split words", "text": "<p>one</p><p>two</p>", "count": 2 },
+    { "name": "block comments", "text": "<!-- wp:paragraph --><p>River watch</p><!-- /wp:paragraph -->", "count": 2 },
+    { "name": "punctuation stays with words", "text": "Volunteers test water, every week.", "count": 5 },
+    { "name": "hyphens and apostrophes", "text": "well-known river's edge", "count": 3 },
+    { "name": "accented and CJK", "text": "café naïve 河流", "count": 3 }
+  ]
+}

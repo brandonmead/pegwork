@@ -360,7 +360,7 @@ test( 'build a two-step form by keyboard and drag and drop, save it, place it an
 	expect( status ).toBe( 'private' );
 	await expect( page.getByLabel( 'Form key' ) ).toBeDisabled();
 
-	// Place it on a page and submit it (no JavaScript needed by the form).
+	// Place it on a page and submit it (the view script shows one step at a time).
 	const pageRecord = await adminCall( 'POST', '/wp/v2/pages', {
 		title: 'E2E built form',
 		status: 'publish',
@@ -374,11 +374,15 @@ test( 'build a two-step form by keyboard and drag and drop, save it, place it an
 	await expect(
 		form.getByRole( 'group', { name: 'About you' } )
 	).toBeVisible();
+	await expect( form.locator( '.pegwork-form__progress' ) ).toHaveText(
+		'Step 1 of 2: About you'
+	);
+	await form.getByLabel( /Your name/ ).fill( 'Ada Lovelace' );
+	await form.getByLabel( /Email/ ).fill( 'ada@example.org' );
+	await form.getByRole( 'button', { name: 'Next' } ).click();
 	await expect(
 		form.getByRole( 'group', { name: 'Your message' } )
 	).toBeVisible();
-	await form.getByLabel( /Your name/ ).fill( 'Ada Lovelace' );
-	await form.getByLabel( /Email/ ).fill( 'ada@example.org' );
 	await form.getByLabel( /Message/ ).fill( 'Built in the block editor.' );
 	// The time trap needs 3 seconds between render and submit.
 	await page.waitForTimeout( 3200 );

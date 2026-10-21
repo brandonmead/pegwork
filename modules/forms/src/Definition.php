@@ -303,6 +303,40 @@ final class Definition {
 	}
 
 	/**
+	 * Which items are shown for these values: an item is shown when it has no `show_when`, or when the
+	 * item its condition names exists, is itself shown, and the condition holds (chains up to 10 deep).
+	 *
+	 * The view script (`assets/src/forms-view/conditions.js`) mirrors this and `shown()`; both run the
+	 * rules table `tests/fixtures/forms/conditions.json`.
+	 *
+	 * @param array<string, array<string, mixed>> $by_key Items by key, in form order.
+	 * @param array<string, mixed>                $values Sanitized values by key (every item, shown or not).
+	 * @return array<string, bool> Shown flag by item key.
+	 */
+	public static function visible( array $by_key, array $values ): array {
+		$visible = array();
+		$check   = function ( string $key, int $depth ) use ( &$check, &$visible, $by_key, $values ): bool {
+			if ( isset( $visible[ $key ] ) ) {
+				return $visible[ $key ];
+			}
+			$condition = $by_key[ $key ]['show_when']['field'] ?? null;
+			$shown     = true;
+			if ( is_string( $condition ) ) {
+				$shown = $depth < 10 && isset( $by_key[ $condition ] ) && $check( $condition, $depth + 1 )
+					&& self::shown( $by_key[ $key ], $values );
+			}
+			$visible[ $key ] = $shown;
+			return $shown;
+		};
+
+		$result = array();
+		foreach ( array_keys( $by_key ) as $key ) {
+			$result[ $key ] = $check( (string) $key, 0 );
+		}
+		return $result;
+	}
+
+	/**
 	 * Help text that states an item's condition, for the page without JavaScript.
 	 *
 	 * @param array<string, mixed>                $item   Item.

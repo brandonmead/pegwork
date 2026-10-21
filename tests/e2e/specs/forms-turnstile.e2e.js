@@ -62,6 +62,8 @@ async function fill( page ) {
 	await page
 		.getByRole( 'textbox', { name: /^Message/ } )
 		.fill( 'Hello from the Turnstile spec.' );
+	// The view script shows one step at a time; Email is on the last step.
+	await page.getByRole( 'button', { name: 'Next' } ).click();
 	await page
 		.getByRole( 'textbox', { name: /^Email/ } )
 		.fill( 'ada@example.org' );
@@ -140,14 +142,8 @@ test( 'test keys pass: the real widget on the last step, keyboard only', async (
 	);
 	await waitForToken( page );
 	await checkLayout( page );
-	// The flexible widget redraws after the viewport changes back. A full-page capture leaves
-	// Cloudflare's iframe blank, so the form itself is captured.
-	await page.waitForTimeout( 1500 );
-	await page.locator( '.pegwork-form' ).screenshot( {
-		path: 'test-results/forms-turnstile.png',
-	} );
 
-	// Keyboard only: fields in order, the file input, past the widget, to the button.
+	// Keyboard only: fields in order, Next to the last step, the file input, past the widget, to the button.
 	await page.getByRole( 'textbox', { name: /^Name/ } ).focus();
 	await page.keyboard.type( 'Ada Lovelace' );
 	await page.keyboard.press( 'Tab' );
@@ -155,6 +151,21 @@ test( 'test keys pass: the real widget on the last step, keyboard only', async (
 		page.getByRole( 'textbox', { name: /^Message/ } )
 	).toBeFocused();
 	await page.keyboard.type( 'Hello from the keyboard.' );
+	await page.keyboard.press( 'Tab' );
+	await expect( page.getByRole( 'button', { name: 'Next' } ) ).toBeFocused();
+	await page.keyboard.press( 'Enter' );
+	await expect( lastStep.locator( 'h2' ) ).toBeFocused();
+	await expect( page.locator( '.pegwork-form__progress' ) ).toHaveText(
+		'Step 2 of 2: Contact'
+	);
+	await expect( lastStep.locator( '.cf-turnstile' ) ).toBeVisible();
+	await checkLayout( page );
+	// The flexible widget redraws after the viewport changes back. A full-page capture leaves
+	// Cloudflare's iframe blank, so the form itself is captured.
+	await page.waitForTimeout( 1500 );
+	await page.locator( '.pegwork-form' ).screenshot( {
+		path: 'test-results/forms-turnstile.png',
+	} );
 	await page.keyboard.press( 'Tab' );
 	await expect(
 		page.getByRole( 'textbox', { name: /^Email/ } )
