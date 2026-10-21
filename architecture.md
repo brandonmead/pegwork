@@ -37,12 +37,12 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 | PHP namespace | `Pegwork\` (public API `Pegwork\Api`) |
 | WP-CLI | `wp pegwork` |
 | Future REST namespace | `pegwork/v1` |
-| Repo | `brandonmead/pegwork` (private for now) |
+| Repo | `brandonmead/pegwork` (public since 2026-10-21) |
 | License | GPL-2.0-or-later |
 - Likely-free domains at naming time: pegwork.org, pegworkwp.com, getpegwork.com (not registered).
 
 ## Repo
-- GitHub `brandonmead/pegwork` (private for now). Local folder `/Users/bmead/Documents/Mead Drive/AI Stuff/Claude/Claude Code Projects/Pegwork` (main checkout); session worktrees under `~/worktrees/pegwork/`.
+- GitHub `brandonmead/pegwork`, public since 2026-10-21 (GitHub Actions runs free; while private, Actions stopped starting jobs on a billing limit, so PRs #30 and #35 merged on a full local CI run). Main checkout in Brandon's synced Mead Drive folder; session clones under `~/worktrees/pegwork/`.
 
 ## Dev environment
 - LocalWP site `siforgood`: domain siforgood.local, path `~/Local Sites/siforgood`, PHP 8.2.29, nginx, MySQL 8.4. Created 2026-10-17 via Local's GraphQL API.
