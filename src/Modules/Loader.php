@@ -42,12 +42,19 @@ final class Loader {
 	 * @return array<string, array{label: string, description: string, requires: string[], path: string}>
 	 */
 	public static function manifest(): array {
+		$built_in = require __DIR__ . '/manifest.php';
+		foreach ( $built_in as $slug => $entry ) {
+			$built_in[ $slug ]['label']       = self::text( $entry['label'], $slug );
+			$built_in[ $slug ]['description'] = self::text( $entry['description'], '' );
+		}
+
 		/**
 		 * Filters the module manifest.
 		 *
-		 * @param array $manifest Slug => array( label, description, requires, path ).
+		 * @param array $manifest Slug => array( label, description, requires, path ). Labels and
+		 *                        descriptions are translated strings once init has fired.
 		 */
-		$raw = apply_filters( 'pegwork_module_manifest', require __DIR__ . '/manifest.php' );
+		$raw = apply_filters( 'pegwork_module_manifest', $built_in );
 		if ( ! is_array( $raw ) ) {
 			return array();
 		}
@@ -58,13 +65,28 @@ final class Loader {
 				continue;
 			}
 			$manifest[ $slug ] = array(
-				'label'       => isset( $entry['label'] ) ? (string) $entry['label'] : $slug,
-				'description' => isset( $entry['description'] ) ? (string) $entry['description'] : '',
+				'label'       => isset( $entry['label'] ) ? self::text( $entry['label'], $slug ) : $slug,
+				'description' => isset( $entry['description'] ) ? self::text( $entry['description'], '' ) : '',
 				'requires'    => isset( $entry['requires'] ) ? array_values( array_filter( (array) $entry['requires'], 'is_string' ) ) : array(),
 				'path'        => $entry['path'],
 			);
 		}
 		return $manifest;
+	}
+
+	/**
+	 * A manifest label or description: a string as is, or a closure that translates it, called only once
+	 * init has fired (before that, translations are not loaded and the fallback is used; nothing shows
+	 * labels that early).
+	 *
+	 * @param mixed  $value    String or closure returning one.
+	 * @param string $fallback Text before init.
+	 */
+	private static function text( $value, string $fallback ): string {
+		if ( $value instanceof \Closure ) {
+			return did_action( 'init' ) ? (string) $value() : $fallback;
+		}
+		return is_scalar( $value ) ? (string) $value : $fallback;
 	}
 
 	/**

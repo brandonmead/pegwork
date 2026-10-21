@@ -50,7 +50,27 @@ final class BuilderEditor {
 			add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue' ) );
 			add_action( 'enqueue_block_assets', array( self::class, 'enqueue_style' ) );
 			add_action( 'load-post-new.php', array( self::class, 'prepare_duplicate' ) );
+			add_filter( 'admin_body_class', array( self::class, 'body_class' ) );
 		}
+	}
+
+	/**
+	 * Adds `pegwork-form-readonly` to the editor body of a file form, for the read-only styles: the
+	 * inserter button is hidden (FormPost::editor_settings() already locks every block, but core keeps
+	 * the button enabled) and so is the "Last edited" line (the post is regenerated from the file, so
+	 * that time says nothing). Hooked to admin_body_class.
+	 *
+	 * @param string $classes Space-separated classes.
+	 */
+	public static function body_class( $classes ): string {
+		$classes = is_string( $classes ) ? $classes : '';
+		$screen  = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$post    = get_post();
+		if ( null === $screen || 'post' !== $screen->base || FormPost::TYPE !== $screen->post_type || ! $post instanceof WP_Post ) {
+			return $classes;
+		}
+		$key = FormPost::key_of( $post->ID );
+		return '' !== $key && FormPost::is_file_form( $key ) ? $classes . ' pegwork-form-readonly' : $classes;
 	}
 
 	/**

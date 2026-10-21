@@ -26,9 +26,10 @@
 	display: none !important;
 }
 
+/* "Step 2 of 3": a caption above the step heading, which names the step. */
 .pegwork-form__progress {
-	font-weight: 600;
-	margin: 0 0 0.75em;
+	font-size: 0.875em;
+	margin: 0 0 0.25em;
 }
 
 .pegwork-form__count {
@@ -85,7 +86,7 @@ fieldset.pegwork-form__field {
 .pegwork-form__input,
 .pegwork-form__select,
 .pegwork-form__textarea {
-	border: 2px solid currentcolor;
+	border: 1px solid currentcolor;
 	box-sizing: border-box;
 	font: inherit;
 	max-width: 100%;
@@ -93,8 +94,10 @@ fieldset.pegwork-form__field {
 	width: 100%;
 }
 
+/* Controls do not inherit the font size (browsers default to 13.33px), so set it before sizing in em. */
 .pegwork-form__checkbox,
 .pegwork-form__option input {
+	font-size: inherit;
 	height: 1.25em;
 	width: 1.25em;
 	vertical-align: middle;
@@ -105,7 +108,7 @@ fieldset.pegwork-form__field {
 }
 
 .pegwork-form__file {
-	border: 2px dashed currentcolor;
+	border: 1px dashed currentcolor;
 	box-sizing: border-box;
 	font: inherit;
 	max-width: 100%;
@@ -130,12 +133,37 @@ fieldset.pegwork-form__field {
 .pegwork-form button:focus-visible,
 .pegwork-form a:focus-visible,
 .pegwork-form__step-heading:focus-visible,
-.pegwork-form__errors:focus,
-.pegwork-form__status:focus,
-.pegwork-form__notice:focus {
+.pegwork-form__errors:focus {
 	outline: 3px solid #1e1e1e;
 	outline-offset: 2px;
 	box-shadow: 0 0 0 5px #fff;
+}
+
+/* Focused on load so screen readers start there; not controls (tabindex -1, never in the tab order),
+   and their own border already marks them, so no second ring. */
+.pegwork-form__status:focus,
+.pegwork-form__notice:focus,
+.pegwork-form__confirm-title:focus {
+	outline: none;
+}
+
+.pegwork-form__confirm-title {
+	margin: 0 0 0.5em;
+}
+
+.pegwork-form__status .pegwork-form__confirm-title,
+.pegwork-form__notice .pegwork-form__confirm-title {
+	font-size: 1.25em;
+}
+
+.pegwork-form__confirm > p:last-child {
+	margin-bottom: 0;
+}
+
+/* A Turnstile form's button stays disabled without JavaScript (see the noscript notice). */
+.pegwork-form__submit:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
 }
 
 .pegwork-form__error {
@@ -148,6 +176,7 @@ fieldset.pegwork-form__field {
 .pegwork-form__field--error .pegwork-form__select,
 .pegwork-form__field--error .pegwork-form__textarea {
 	border-color: #b3261e;
+	border-width: 2px;
 }
 
 .pegwork-form__errors,

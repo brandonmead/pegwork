@@ -10,6 +10,7 @@ namespace Pegwork\Tests\Integration;
 use Pegwork\Admin\Overview;
 use Pegwork\Api\RegistryBuilder;
 use Pegwork\Plugin;
+use Pegwork\Registry\Status;
 use WPDieException;
 use WP_UnitTestCase;
 
@@ -118,14 +119,31 @@ class AdminOverviewTest extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '#<th scope="row" class="column-kind">content_type</th><td class="column-key"><code>sifg_project</code></td><td class="column-by"><code>sifg</code></td>#', $html );
 		$this->assertStringNotContainsString( 'Shadows', $html );
 
-		// Rejected package with file and pointer.
-		$this->assertStringContainsString( '<code>' . $invalid . '</code>', $html );
-		$this->assertStringContainsString( 'content-types/thing.json</code>', $html );
+		// Rejected package with file and pointer, as paths relative to the package (never absolute).
+		$this->assertStringContainsString( '<th scope="row" class="column-source"><code>invalid-key</code></th>', $html );
+		$this->assertStringContainsString( '<code>invalid-key/content-types/thing.json</code>', $html );
+		$this->assertStringNotContainsString( $invalid, $html );
 		$this->assertStringContainsString( '<code>/key</code>', $html );
 
 		// Relationships: the example's story_projects, required.
 		$this->assertStringContainsString( '<th scope="row" class="column-key"><code>story_projects</code></th><td class="column-from">sifg_story</td><td class="column-to">sifg_project</td><td class="column-cardinality">many_to_many</td><td class="column-required">Yes</td>', $html );
 		$this->assertStringContainsString( 'wp pegwork schema import', $html );
+	}
+
+	/**
+	 * Admin screens show short paths: wp-content/... under the content directory, else relative to the
+	 * package directory that holds the file, else the file name; the DB source label is kept.
+	 */
+	public function test_display_path_hides_absolute_paths() {
+		$package = dirname( __DIR__ ) . '/fixtures/invalid/invalid-key';
+		$status  = new Status( Plugin::result(), array( $package ) );
+
+		$this->assertSame( 'wp-content/plugins/demo/schema/forms/x.json', $status->display_path( WP_CONTENT_DIR . '/plugins/demo/schema/forms/x.json' ) );
+		$this->assertSame( 'invalid-key/content-types/thing.json', $status->display_path( $package . '/content-types/thing.json' ) );
+		$this->assertSame( 'invalid-key/content-types/thing.json', $status->display_path( (string) realpath( $package ) . '/content-types/thing.json' ), 'The real path of a package counts too.' );
+		$this->assertSame( 'invalid-key', $status->display_path( $package ) );
+		$this->assertSame( 'other.json', $status->display_path( '/srv/elsewhere/other.json' ) );
+		$this->assertSame( 'option:pegwork_schema', $status->display_path( 'option:pegwork_schema' ) );
 	}
 
 	/**

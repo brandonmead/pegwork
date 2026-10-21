@@ -1,6 +1,6 @@
 # Pegwork architecture
 
-Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-18.
+Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-20.
 
 ## Product
 - Pegwork (full name "Pegwork Platform for WordPress"): one WordPress plugin, an application builder: content builder (JetEngine-like CPTs, fields, taxonomies, relationships), listings/templates, filters (JetSmartFilters-like), form builder (Gravity Forms-like), automation builder (Salesforce Flow-like), all on one schema registry.
@@ -260,6 +260,16 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Gotcha: `wp_insert_post_data` must leave `auto-draft`, `trash` and `inherit` alone when forcing `private`, or new posts and trashing break.
 - Gotcha: a `meta_key` lookup trips the VIP `slow_db_query_meta_key` sniff; `FormPost::find()` ignores it with that sniff named (one indexed query per admin screen).
 - Local runs: test DB `pegwork_tests_formsbuilder` (core `~/wp-envs/core-latest`, WP 7.1.3); site `~/wp-envs/formsbuilder` (`bin/e2e-local-site.sh start formsbuilder 8213`, DB `wpenv_formsbuilder`). Last verified 2026-10-18.
+- Gotcha: `templateLock: all` does not disable core's block inserter toggle (WP 7.1 passes only `disableBlockTools`); read-only file forms hide it with CSS under body class `pegwork-form-readonly` (`BuilderEditor::body_class()`).
+- Gotcha: `removeEditorPanel( 'post-status' )` removes the whole Summary status group (status, publish date, sticky, author, template), not only the date row; Trash stays in the document Actions menu.
+- Gotcha: core's Publish button wording has no filter of its own; the builder rewrites it with `i18n.gettext_default` (from `@wordpress/hooks`), which only runs on screens that load the builder script.
+- Gotcha: `FormPost::sync()` would bump `post_modified` on every regenerate, so the "Last edited" line of a file form showed the open time; sync now keeps the stored modified date.
+- UX polish run (2026-10-20): test DB `pegwork_tests_uxpolish`; site `~/wp-envs/uxpolish` (`bin/e2e-local-site.sh start uxpolish 8217`).
+
+## Version
+- Plugin version 0.2.0 (header, `PEGWORK_VERSION`, readme Stable tag, package.json), equal to `Pegwork\Api\VERSION` for now (`PluginLoadsTest`). Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
+- Module manifest `label` and `description` are closures around `__()`, resolved after `init` (WordPress 6.7 just-in-time textdomain loading warns on earlier calls).
+- Schema error paths in admin screens go through `Registry\Status::display_path()` (relative to `wp-content/` or the package); `wp pegwork schema` keeps absolute paths.
 
 ## Admin area (content builder PR 1)
 - Top-level menu slug `Pegwork\Api\ADMIN_MENU` (`pegwork`), `manage_options`: Overview (`pegwork`, `admin_menu` priority 9, position 0), Modules (`pegwork-modules`, priority 999 so it stays last). Submenu `position` is an index into the list built so far, not a sort key; contract in `docs/extension-api.md`.

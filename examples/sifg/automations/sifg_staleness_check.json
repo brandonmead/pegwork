@@ -12,7 +12,7 @@
   "steps": [
     { "id": "ask", "type": "send_email", "to": "{{record.contact_email}}",
       "subject": "Is {{record.name}} still active?",
-      "text": "{{record.name}} was last verified on {{record.last_verified}}. One click keeps your listing live on {{site.name}}:\n\n{{link.still_active}}\n\nIf we do not hear from you within 30 days, we will pause the listing. The link works for a year." },
+      "text": "{{record.name}} was last verified on {{record.last_verified | date}}. One click keeps your listing live on {{site.name}}:\n\n{{link.still_active}}\n\nIf we do not hear from you within 30 days, we will pause the listing. The link works for a year." },
     { "id": "grace", "type": "wait", "for": "P30D" },
     { "id": "still_stale", "type": "condition",
       "when": { "all": [

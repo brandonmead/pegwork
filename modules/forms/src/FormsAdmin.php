@@ -80,7 +80,11 @@ final class FormsAdmin {
 		$table = new FormsTable();
 		$table->prepare_items();
 
-		echo '<style>.pegwork-forms__markup{display:inline-block;max-width:100%;font-size:12px;word-break:break-all;}</style>';
+		// Block markup breaks at its spaces (a word is split only when it cannot fit at all); narrow count
+		// columns give it room; form keys break after an underscore, never inside a word.
+		echo '<style>.pegwork-forms__markup{display:inline-block;max-width:100%;font-size:12px;word-break:normal;overflow-wrap:anywhere;}'
+			. '.pegwork-forms .column-received,.pegwork-forms .column-unconfirmed{width:7.5em;}.pegwork-forms .column-block{width:26%;}'
+			. '.pegwork-forms td.column-key code{word-break:normal;overflow-wrap:anywhere;}</style>';
 		echo '<div class="wrap pegwork-forms">';
 		echo '<h1 class="wp-heading-inline">' . esc_html__( 'Forms', 'pegwork' ) . '</h1>';
 		echo ' <a class="page-title-action" href="' . esc_url( admin_url( 'post-new.php?post_type=' . FormPost::TYPE ) ) . '">' . esc_html__( 'Add form', 'pegwork' ) . '</a>';

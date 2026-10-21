@@ -105,6 +105,12 @@ Conditions (`Conditions::evaluate`): lists compare as sets (`eq` with a scalar m
 
 Templates (`Templates::render( $template, $context, $mode )`): `raw` (values, idempotency keys: lists as comma-separated slugs, booleans `1`/`0`), `text` and `html` (email, above), `log` (private fields as `[private]`, signed links as `[link]`, never minted). `Context::is_private()`, `field_type()` and `taxonomy()` answer for `record.<key>` and `trigger.old.<key>` paths. `{{link.<name>}}` mints a signed URL for the run's record (see below); `Context` takes the automation key as its sixth argument for this, and without a record or key it renders empty.
 
+Tag syntax: `{{ <path> [| date] [| default:"text"] }}`, filters in that order.
+
+- `| date`: a `Y-m-d` value or an ISO datetime becomes the site's date format (Settings > General, `get_option( 'date_format' )`) in the site time zone, through `wp_date()` (`Templates::date()`); anything else is left as it is. `{{record.last_verified | date}}` gives "November 2, 2026". The registry allows it only on `date` fields (`record.<field>`, `trigger.old.<field>`, a date option field); on other paths, including `record.id`, `site.*`, `run.*`, `link.*`, `status`, `type`, `permalink` and `edit_url`, it is `invalid_template`.
+- `{{option:<page>.<field>}}`: a field of an options page, read with `pegwork_get_option()` (it renders empty without the options pages feature). Only public fields: a `private` field is `automation_private_field` in every template, the same rule as private record fields in public contexts. Unknown page or field: `unknown_options_page` or `unknown_field`. Field types apply as for record fields (a `url` field is escaped as a URL in HTML, `log` masks nothing because the field is public). The tag also works in `to` and `reply_to` (for example `"reply_to": "{{option:sifg_settings.contact_email}}"`), alongside the `{option:...}` recipient form above.
+- `| default:"text"`: used when the value is empty; `| date` does not apply to it.
+
 ## Signed links
 
 An automation's `links.<name>` (`docs/registry-reference.md#signed-links`) is a one-click action on one record. `{{link.<name>}}` in an email renders `home_url( '/?pegwork_link=<token>' )`; opening it runs only that link's steps (`update_record`, `condition`), only on that record, as a run with `trigger_type` `link`. The owner needs no account.

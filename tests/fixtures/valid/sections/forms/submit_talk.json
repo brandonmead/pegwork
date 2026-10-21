@@ -29,6 +29,6 @@
     { "key": "speaker", "when": "confirmed", "to": "{field:speaker_email}", "subject": "Your talk is in review",
       "body": "Thanks. We will review \"{field:title}\"." }
   ],
-  "messages": { "success": "Check your email to confirm.", "submit_label": "Send talk" },
+  "messages": { "success": "Check your email to confirm.", "submit_label": "Send talk", "confirm_failed": "Thanks for confirming. An organizer will check your talk and get back to you." },
   "retention_days": 365
 }

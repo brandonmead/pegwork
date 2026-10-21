@@ -343,19 +343,64 @@ final class Definition {
 	 * @param array<string, array<string, mixed>> $by_key Items by key.
 	 */
 	public static function condition_text( array $item, array $by_key ): string {
-		$condition = $item['show_when'] ?? null;
-		if ( ! is_array( $condition ) || ! isset( $by_key[ $condition['field'] ?? '' ] ) ) {
+		$parts = self::condition_parts( $item['show_when'] ?? null, $by_key );
+		if ( null === $parts ) {
 			return '';
+		}
+		[ $type, $label, $shown ] = $parts;
+
+		return match ( $type ) {
+			/* translators: %s: label of a checkbox. */
+			'checked'   => sprintf( __( 'Only needed if "%s" is checked.', 'pegwork' ), $label ),
+			/* translators: %s: label of a checkbox. */
+			'unchecked' => sprintf( __( 'Only needed if "%s" is not checked.', 'pegwork' ), $label ),
+			/* translators: 1: label of another field, 2: the value that makes this field needed. */
+			default     => sprintf( __( 'Only needed if "%1$s" is "%2$s".', 'pegwork' ), $label, $shown ),
+		};
+	}
+
+	/**
+	 * The required marker of an item that is required only when its `required_when` holds, for the page
+	 * without JavaScript, such as `required if "Needs volunteers" is checked`; '' for other items.
+	 *
+	 * @param array<string, mixed>                $item   Item.
+	 * @param array<string, array<string, mixed>> $by_key Items by key.
+	 */
+	public static function required_text( array $item, array $by_key ): string {
+		$parts = empty( $item['required'] ) ? self::condition_parts( $item['required_when'] ?? null, $by_key ) : null;
+		if ( null === $parts ) {
+			return '';
+		}
+		[ $type, $label, $shown ] = $parts;
+
+		return match ( $type ) {
+			/* translators: %s: label of a checkbox. */
+			'checked'   => sprintf( __( 'required if "%s" is checked', 'pegwork' ), $label ),
+			/* translators: %s: label of a checkbox. */
+			'unchecked' => sprintf( __( 'required if "%s" is not checked', 'pegwork' ), $label ),
+			/* translators: 1: label of another field, 2: the value that makes this field required. */
+			default     => sprintf( __( 'required if "%1$s" is "%2$s"', 'pegwork' ), $label, $shown ),
+		};
+	}
+
+	/**
+	 * A condition as words: its kind (`checked`, `unchecked` or `equals`), the other item's label and
+	 * the value shown (an option's label when it has one); null when the condition names no item here.
+	 *
+	 * @param mixed                               $condition `show_when` or `required_when`.
+	 * @param array<string, array<string, mixed>> $by_key    Items by key.
+	 * @return array{0: string, 1: string, 2: string}|null
+	 */
+	private static function condition_parts( mixed $condition, array $by_key ): ?array {
+		if ( ! is_array( $condition ) || ! isset( $by_key[ $condition['field'] ?? '' ] ) ) {
+			return null;
 		}
 		$other  = $by_key[ $condition['field'] ];
 		$equals = $condition['equals'] ?? null;
+		$label  = (string) $other['label'];
 
 		if ( 'boolean' === ( $other['type'] ?? '' ) ) {
-			return $equals
-				/* translators: %s: label of a checkbox. */
-				? sprintf( __( 'Only needed if "%s" is checked.', 'pegwork' ), $other['label'] )
-				/* translators: %s: label of a checkbox. */
-				: sprintf( __( 'Only needed if "%s" is not checked.', 'pegwork' ), $other['label'] );
+			return array( $equals ? 'checked' : 'unchecked', $label, '' );
 		}
 
 		$shown = is_scalar( $equals ) ? (string) $equals : '';
@@ -365,8 +410,7 @@ final class Definition {
 			}
 		}
 
-		/* translators: 1: label of another field, 2: the value that makes this field needed. */
-		return sprintf( __( 'Only needed if "%1$s" is "%2$s".', 'pegwork' ), $other['label'], $shown );
+		return array( 'equals', $label, $shown );
 	}
 
 	/**

@@ -144,11 +144,52 @@ final class Meta {
 	}
 
 	/**
+	 * An untrusted web address as a clean URL, or '' when it is not one: trimmed, `https://` added when
+	 * it has no scheme, esc_url_raw() with http and https only, then valid_url().
+	 *
+	 * @param string $value Raw value.
+	 */
+	public static function sanitize_url( string $value ): string {
+		$value = trim( $value );
+		if ( '' === $value ) {
+			return '';
+		}
+		if ( ! preg_match( '#^[a-z][a-z0-9+.-]*:#i', $value ) ) {
+			$value = 'https://' . ltrim( $value, '/' );
+		}
+		$url = esc_url_raw( $value, array( 'http', 'https' ) );
+
+		return '' !== $url && self::valid_url( $url ) ? $url : '';
+	}
+
+	/**
+	 * Whether a URL is a web address, by the rules of core's wp_http_validate_url() that need no network:
+	 * http or https, a host, no user or password; the host an IPv4 address or dot-separated labels (letters,
+	 * digits, hyphens, underscores, non-ASCII for IDNs) ending in a top-level label of two or more letters
+	 * (or `xn--` punycode). No DNS lookup, so typos in real-looking hosts pass and offline sites still work.
+	 *
+	 * @param string $url URL.
+	 */
+	public static function valid_url( string $url ): bool {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || ! in_array( strtolower( (string) ( $parts['scheme'] ?? '' ) ), array( 'http', 'https' ), true )
+			|| empty( $parts['host'] ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return false;
+		}
+		$host = rtrim( strtolower( (string) $parts['host'] ), '.' );
+		if ( false !== filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return true;
+		}
+
+		return 1 === preg_match( '/^(?:[a-z0-9_\x80-\xff](?:[a-z0-9_\x80-\xff-]{0,61}[a-z0-9_\x80-\xff])?\.)+(?:[a-z\x80-\xff]{2,63}|xn--[a-z0-9-]{1,59})$/', $host );
+	}
+
+	/**
 	 * Sanitizes one untrusted value (public form input) for a field, as a typed value.
 	 *
 	 * Booleans return bool (missing is false); numbers int or float, '' when empty or not numeric;
 	 * every other type a string, '' when empty or invalid (a malformed email, URL or date, an option
-	 * the field does not define). URLs keep only http and https. Arrays and objects count as empty.
+	 * the field does not define). URLs must pass valid_url() (see sanitize_url()). Arrays and objects count as empty.
 	 *
 	 * @param array<string, mixed> $field Normalized field.
 	 * @param mixed                $value Raw value.
@@ -164,7 +205,7 @@ final class Meta {
 		$value = (string) $value;
 
 		return match ( $field['type'] ) {
-			'url'    => esc_url_raw( trim( $value ), array( 'http', 'https' ) ),
+			'url'    => self::sanitize_url( $value ),
 			'email'  => is_email( trim( $value ) ) ? sanitize_email( trim( $value ) ) : '',
 			'select' => in_array( $value, array_map( 'strval', array_column( $field['options'] ?? array(), 'value' ) ), true ) ? $value : '',
 			'number' => self::sanitize_number( $value ),

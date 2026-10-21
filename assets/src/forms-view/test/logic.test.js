@@ -12,6 +12,8 @@ import {
 	firstErrorStep,
 	hint,
 	hints,
+	isRequired,
+	isWebAddress,
 	parseConfig,
 	progressText,
 	stepOf,
@@ -238,7 +240,7 @@ describe( 'hints', () => {
 		expect( hint( bound, { consent: false } ) ).toBeNull();
 	} );
 
-	it( 'never checks URL format (the server adds a missing scheme)', () => {
+	it( 'accepts a URL without a scheme (the server adds https)', () => {
 		expect(
 			hint( item( 'volunteer_link' ), {
 				volunteer_link: 'example.org/join',
@@ -283,8 +285,65 @@ describe( 'steps', () => {
 		).toBe( 0 );
 	} );
 
-	it( 'announces progress', () => {
-		expect( progressText( 1, 3, 'Links' ) ).toBe( 'Step 2 of 3: Links' );
+	it( 'announces progress without repeating the step heading', () => {
+		expect( progressText( 1, 3 ) ).toBe( 'Step 2 of 3' );
+	} );
+} );
+
+describe( 'conditional required', () => {
+	it( 'is required while required_when holds', () => {
+		const link = item( 'volunteer_link' );
+		expect( isRequired( link, { needs_volunteers: true } ) ).toBe( true );
+		expect( isRequired( link, { needs_volunteers: false } ) ).toBe( false );
+		expect( isRequired( item( 'name' ), {} ) ).toBe( true );
+		expect( isRequired( item( 'age' ), {} ) ).toBe( false );
+	} );
+} );
+
+describe( 'web addresses', () => {
+	it( 'accepts what the server accepts', () => {
+		for ( const ok of [
+			'https://example.org',
+			'http://example.org/path?q=1#x',
+			'example.org',
+			'sub.example.co.uk/page',
+			'http://192.0.2.4:8080/x',
+			'https://bücher.de',
+		] ) {
+			expect( [ ok, isWebAddress( ok ) ] ).toEqual( [ ok, true ] );
+		}
+	} );
+
+	it( 'rejects what is not a web address', () => {
+		for ( const bad of [
+			'not a url',
+			'https://',
+			'https://localhost/',
+			'example',
+			'ftp://example.org',
+			'javascript:alert(1)',
+			'https://user:pw@example.org',
+			'https://example.123',
+		] ) {
+			expect( [ bad, isWebAddress( bad ) ] ).toEqual( [ bad, false ] );
+		}
+	} );
+
+	it( 'hints for a bad URL', () => {
+		expect(
+			hint( item( 'volunteer_link' ), {
+				needs_volunteers: true,
+				volunteer_link: 'not a url',
+			} )
+		).toBe(
+			'Enter Volunteer link as a web address, like https://example.org.'
+		);
+		expect(
+			hint( item( 'volunteer_link' ), {
+				needs_volunteers: true,
+				volunteer_link: 'riverwatch.example.org/join',
+			} )
+		).toBeNull();
 	} );
 } );
 
@@ -296,13 +355,13 @@ describe( 'word counter', () => {
 		} );
 		expect( wordLimits( item( 'name' ) ) ).toBeNull();
 		expect( wordCountText( 12, { min: 50, max: 300 } ) ).toBe(
-			'12 of 50 to 300 words'
+			'12 words (50 to 300)'
 		);
 		expect( wordCountText( 1, { min: 5, max: null } ) ).toBe(
-			'1 word, at least 5 needed'
+			'1 word (at least 5)'
 		);
 		expect( wordCountText( 7, { min: null, max: 10 } ) ).toBe(
-			'7 of up to 10 words'
+			'7 words (up to 10)'
 		);
 	} );
 

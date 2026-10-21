@@ -55,6 +55,7 @@ async function open( page, params = {} ) {
 				.some( ( r ) => r.name.includes( 'filters-view.js' ) )
 	);
 	// Hydration: the store sets no visible change, so wait for the router to be importable and idle.
+	// Safe here only because the directory page has no Turnstile form (see docs/e2e.md).
 	await page.waitForLoadState( 'networkidle' );
 	await page.evaluate( () => {
 		window.pegworkE2eMarker = 'same-document';

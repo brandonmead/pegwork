@@ -40,6 +40,18 @@ final class EntriesAdmin {
 	private const COLUMNS = '<colgroup><col style="width:30%"><col></colgroup>';
 
 	/**
+	 * Styles core lacks: a destructive button (red, as core's `button-link-delete`), outlined on the entry
+	 * screen and filled on the delete confirmation, with a visible focus ring.
+	 */
+	private const STYLE = '.pegwork-entries .button.pegwork-button-delete{color:#b32d2e;border-color:#b32d2e;background:#fff;}'
+		. '.pegwork-entries .button.pegwork-button-delete:hover{color:#fff;border-color:#8a2424;background:#b32d2e;}'
+		. '.pegwork-entries .button.pegwork-button-delete.button-primary{color:#fff;border-color:#b32d2e;background:#b32d2e;}'
+		. '.pegwork-entries .button.pegwork-button-delete.button-primary:hover{border-color:#8a2424;background:#8a2424;}'
+		. '.pegwork-entries .button.pegwork-button-delete:focus{border-color:#b32d2e;box-shadow:0 0 0 1px #fff,0 0 0 3px #b32d2e;outline:2px solid transparent;}'
+		// Core hides top table actions at 782px; here they hold the only bulk actions and the form filter (needed for CSV export).
+		. '@media screen and (max-width:782px){.pegwork-entries .tablenav.top{height:auto;}.pegwork-entries .tablenav.top .actions{display:block;margin:0 0 8px;}}';
+
+	/**
 	 * List arguments and their defaults, read from the query string (and echoed through action forms).
 	 */
 	private const LIST_DEFAULTS = array(
@@ -171,6 +183,7 @@ final class EntriesAdmin {
 		$args   = self::list_args_from( $_GET );
 		// phpcs:enable
 
+		echo '<style>' . self::STYLE . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A constant.
 		echo '<div class="wrap pegwork-entries">';
 		if ( $entry > 0 ) {
 			self::render_entry( $entry );
@@ -385,7 +398,8 @@ final class EntriesAdmin {
 		if ( isset( $meta['errors'] ) && is_array( $meta['errors'] ) && array() !== $meta['errors'] ) {
 			$lines = array();
 			foreach ( $meta['errors'] as $key => $message ) {
-				$lines[] = esc_html( ( is_string( $key ) ? $key . ': ' : '' ) . ( is_scalar( $message ) ? (string) $message : (string) wp_json_encode( $message ) ) );
+				// Key '' is a whole-form error: no "key: " prefix.
+				$lines[] = esc_html( ( is_string( $key ) && '' !== $key ? $key . ': ' : '' ) . ( is_scalar( $message ) ? (string) $message : (string) wp_json_encode( $message ) ) );
 			}
 			$rows[ __( 'Errors', 'pegwork' ) ] = implode( '<br>', $lines );
 		}
@@ -421,7 +435,7 @@ final class EntriesAdmin {
 		} elseif ( 'processing' !== $entry['status'] ) {
 			echo '<button type="submit" class="button" name="op" value="spam">' . esc_html__( 'Mark as spam', 'pegwork' ) . '</button> ';
 		}
-		echo '<a class="button" href="' . esc_url(
+		echo '<a class="button pegwork-button-delete" href="' . esc_url(
 			self::url(
 				array(
 					'delete'       => (string) $id,
@@ -483,7 +497,7 @@ final class EntriesAdmin {
 			echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( (string) $args[ $key ] ) . '">';
 		}
 		wp_nonce_field( EntryActions::NONCE, '_wpnonce', true );
-		echo '<p><button type="submit" class="button button-primary" id="pegwork-entries-delete-confirm">' . esc_html__( 'Delete permanently', 'pegwork' ) . '</button> ';
+		echo '<p><button type="submit" class="button button-primary pegwork-button-delete" id="pegwork-entries-delete-confirm">' . esc_html__( 'Delete permanently', 'pegwork' ) . '</button> ';
 		echo '<a class="button" href="' . esc_url( $cancel ) . '">' . esc_html__( 'Cancel', 'pegwork' ) . '</a></p>';
 		echo '</form>';
 	}

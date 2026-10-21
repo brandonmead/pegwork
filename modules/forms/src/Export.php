@@ -12,6 +12,9 @@ namespace PegworkForms;
 /**
  * Streams one form's entries in the current view (status and email search) as CSV: UTF-8 with a BOM,
  * fixed columns (entry ID, submitted, status, email, post ID) then one per value key (EntryFields::columns).
+ * The fixed email column is left out when the form's email field (Definition::email_key()) has its own
+ * column and every exported entry's email is the lowercased copy of that field's value, as it is when
+ * the pipeline stores it.
  * Every cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading `'`, so a
  * spreadsheet shows it as text instead of running it as a formula.
  */
@@ -106,20 +109,34 @@ final class Export {
 		// Columns need every extra key first, so read the entries in batches once for the header.
 		$definition = pegwork_registry()->form( $form );
 		$columns    = EntryFields::columns( $definition, array() );
+		// The entry email is a lowercased copy of the form's email field. When every entry's copy matches
+		// its field value, that field's column already holds it and the fixed column would repeat it.
+		$email_key  = is_array( $definition ) ? Definition::email_key( $definition ) : null;
+		$with_email = null === $email_key;
 		for ( $page = 1; ; $page++ ) {
 			$batch    = Entries::query( $args + array( 'page' => $page ) );
 			$columns += EntryFields::columns( $definition, $batch['items'] );
+			foreach ( $with_email ? array() : $batch['items'] as $entry ) {
+				$value      = $entry['values'][ $email_key ] ?? null;
+				$with_email = ! is_string( $value ) || strtolower( $value ) !== (string) $entry['email'];
+				if ( $with_email ) {
+					break;
+				}
+			}
 			if ( count( $batch['items'] ) < self::BATCH ) {
 				break;
 			}
 		}
-		$items = EntryFields::items( $definition );
+		$items      = EntryFields::items( $definition );
+		$with_email = $with_email || ! isset( $columns[ (string) $email_key ] );
 
 		fwrite( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Stream output; UTF-8 BOM so spreadsheets read the encoding.
 		self::row(
 			$out,
 			array_merge(
-				array( __( 'Entry ID', 'pegwork' ), __( 'Submitted (UTC)', 'pegwork' ), __( 'Status', 'pegwork' ), __( 'Email', 'pegwork' ), __( 'Post ID', 'pegwork' ) ),
+				array( __( 'Entry ID', 'pegwork' ), __( 'Submitted (UTC)', 'pegwork' ), __( 'Status', 'pegwork' ) ),
+				$with_email ? array( __( 'Email', 'pegwork' ) ) : array(),
+				array( __( 'Post ID', 'pegwork' ) ),
 				array_values( $columns )
 			)
 		);
@@ -128,7 +145,11 @@ final class Export {
 		for ( $page = 1; ; $page++ ) {
 			$batch = Entries::query( $args + array( 'page' => $page ) );
 			foreach ( $batch['items'] as $entry ) {
-				$row = array( (string) $entry['id'], (string) $entry['created_at'], (string) $entry['status'], (string) $entry['email'], null === $entry['post_id'] ? '' : (string) $entry['post_id'] );
+				$row = array_merge(
+					array( (string) $entry['id'], (string) $entry['created_at'], (string) $entry['status'] ),
+					$with_email ? array( (string) $entry['email'] ) : array(),
+					array( null === $entry['post_id'] ? '' : (string) $entry['post_id'] )
+				);
 				foreach ( array_keys( $columns ) as $key ) {
 					$row[] = array_key_exists( $key, $entry['values'] ) ? EntryFields::text( $items[ $key ] ?? null, $entry['values'][ $key ] ) : '';
 				}

@@ -156,7 +156,7 @@ test( 'test keys pass: the real widget on the last step, keyboard only', async (
 	await page.keyboard.press( 'Enter' );
 	await expect( lastStep.locator( 'h2' ) ).toBeFocused();
 	await expect( page.locator( '.pegwork-form__progress' ) ).toHaveText(
-		'Step 2 of 2: Contact'
+		'Step 2 of 2'
 	);
 	await expect( lastStep.locator( '.cf-turnstile' ) ).toBeVisible();
 	await checkLayout( page );
@@ -295,6 +295,34 @@ test( 'without JavaScript the form says it needs JavaScript', async ( {
 			( el ) => el.nextElementSibling?.tagName.toLowerCase() || ''
 		)
 	).toBe( 'form' );
+	// The submit button stays disabled: only the inline script after it enables it.
+	await expect(
+		page.getByRole( 'button', { name: 'Send message' } )
+	).toBeDisabled();
+
+	// A POST without the token field (a forced no-JavaScript submit) gets the honest message.
+	const form = {};
+	for ( const input of await page
+		.locator(
+			'form.pegwork-form__form input[type="hidden"], form.pegwork-form__form input[name="pegwork_form[url]"]'
+		)
+		.all() ) {
+		form[ await input.getAttribute( 'name' ) ] =
+			( await input.getAttribute( 'value' ) ) || '';
+	}
+	expect( Object.keys( form ) ).not.toContain( 'pegwork_form[captcha]' );
+	Object.assign( form, {
+		'pegwork[name]': 'Ada Lovelace',
+		'pegwork[message]': 'No JavaScript here.',
+		'pegwork[email]': 'ada@example.org',
+	} );
+	await page.waitForTimeout( HUMAN_PAUSE_MS );
+	const res = await context.request.post( pageUrl, { multipart: form } );
+	expect( await res.text() ).toContain(
+		'This form needs JavaScript for its spam check. Turn on JavaScript in your browser to send it.'
+	);
+	const [ entry ] = await entries();
+	expect( entry.meta.spam ).toEqual( [ 'captcha_missing' ] );
 	await context.close();
 } );
 

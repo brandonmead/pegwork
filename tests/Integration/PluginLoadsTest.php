@@ -22,7 +22,8 @@ class PluginLoadsTest extends WP_UnitTestCase {
 		$this->assertTrue( defined( 'PEGWORK_VERSION' ) );
 		$this->assertTrue( defined( 'PEGWORK_FILE' ) );
 		$this->assertTrue( defined( 'PEGWORK_DIR' ) );
-		$this->assertSame( '0.1.0', PEGWORK_VERSION );
+		$this->assertSame( '0.2.0', PEGWORK_VERSION );
+		$this->assertSame( \Pegwork\Api\VERSION, PEGWORK_VERSION, 'Plugin and API versions move together for now.' );
 		$this->assertSame( 'pegwork.php', basename( PEGWORK_FILE ) );
 		$this->assertFileExists( PEGWORK_DIR . 'pegwork.php' );
 	}

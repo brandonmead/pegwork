@@ -111,6 +111,9 @@ final class Screen {
 			. '.pegwork-options .pegwork-badge{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #8c8f94;border-radius:2px;font-size:12px;font-weight:400;line-height:1.6;}'
 			. '.pegwork-options .pegwork-required{font-weight:400;}'
 			. '.pegwork-options .pegwork-post-picker{max-width:25rem;}'
+			// The combobox box is transparent outside the editor; give it the admin input look (white, same border).
+			. '.pegwork-options .pegwork-post-picker .components-combobox-control__suggestions-container{background:#fff;border-color:#8c8f94;border-radius:4px;}'
+			. '@media screen and (max-width:782px){.pegwork-options .pegwork-post-picker{max-width:none;}}'
 			. '.pegwork-options .pegwork-post-picker__status{margin:4px 0 0;}'
 			. '.pegwork-options .pegwork-notice-list{margin:.5em 0 .5em 1.5em;list-style:disc;}'
 		);

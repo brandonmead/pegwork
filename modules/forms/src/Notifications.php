@@ -248,7 +248,9 @@ final class Notifications {
 	}
 
 	/**
-	 * `Label: value` per collected item, in form order; multi-line values start on the next line.
+	 * `Label: value` per collected item with a value, in form order (empty items are left out; a checkbox
+	 * always has one, Yes or No). Multi-line values start on the next line. A label that already ends in
+	 * `?`, `:` or `!` gets no extra colon.
 	 *
 	 * @param array<string, array<string, mixed>> $by_key Items by key.
 	 * @param array<string, mixed>                $values Values by key.
@@ -259,8 +261,13 @@ final class Notifications {
 			if ( ! array_key_exists( $key, $values ) ) {
 				continue;
 			}
-			$text    = self::display( $item, $values[ $key ] );
-			$lines[] = str_contains( $text, "\n" ) ? $item['label'] . ":\n" . $text : $item['label'] . ': ' . $text;
+			$text = self::display( $item, $values[ $key ] );
+			if ( '' === trim( $text ) ) {
+				continue;
+			}
+			$label   = rtrim( (string) $item['label'] );
+			$label  .= preg_match( '/[?:!]$/u', $label ) ? '' : ':';
+			$lines[] = $label . ( str_contains( $text, "\n" ) ? "\n" : ' ' ) . $text;
 		}
 		return implode( "\n\n", $lines );
 	}

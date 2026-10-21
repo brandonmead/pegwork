@@ -129,9 +129,11 @@ class FormsTurnstileTest extends FormsTestCase {
 		$this->assertSame( Turnstile::SCRIPT_URL, wp_scripts()->registered[ Turnstile::HANDLE ]->src );
 		$this->assertNull( wp_scripts()->registered[ Turnstile::HANDLE ]->ver, 'No version query on Cloudflare\'s URL.' );
 		$this->assertStringNotContainsString( self::TURNSTILE_SECRET_KEY, $html );
+		$this->assertMatchesRegularExpression( '#<button type="submit" class="pegwork-form__submit wp-element-button" disabled>[^<]*</button><script[^>]*>\s*(?:/\* <!\[CDATA\[ \*/\s*)?document\.currentScript\.previousElementSibling\.disabled=false;\s*(?:/\* \]\]> \*/\s*)?</script>#', $html, 'Disabled until a script runs: without JavaScript it cannot be sent (WordPress 6.7 adds a CDATA wrapper for themes without html5 script support).' );
 
 		$plain = do_blocks( '<!-- wp:pegwork/form {"form":"fr_contact"} /-->' );
 		$this->assertStringNotContainsString( 'cf-turnstile', $plain );
+		$this->assertStringNotContainsString( ' disabled>', $plain );
 		$this->assertStringNotContainsString( '<noscript>', $plain );
 	}
 
@@ -176,14 +178,21 @@ class FormsTurnstileTest extends FormsTestCase {
 	}
 
 	/**
-	 * No token (the widget never ran): a failure without calling Cloudflare.
+	 * No token field at all (the widget never ran: no JavaScript): a failure without calling Cloudflare,
+	 * told honestly that the form needs JavaScript. An empty token (the widget ran but gave none) is a
+	 * failed check as before.
 	 */
 	public function test_missing_token_fails_without_siteverify() {
 		$result = $this->submit( $this->values(), 'fr_turnstile' );
 
-		$this->assertSame( 'captcha_failed', $result['outcome'] );
+		$this->assertSame( 'captcha_missing', $result['outcome'] );
 		$this->assertSame( array(), $this->requests );
 		$this->assertSame( 1, $this->count_entries( 'spam' ) );
+		$this->assertSame( array( 'captcha_missing' ), Entries::get( $result['entry_id'] )['meta']['spam'] );
+
+		$empty = $this->submit( array( 'note' => 'Empty token' ) + $this->values(), 'fr_turnstile', array( 'captcha' => '' ) );
+		$this->assertSame( 'captcha_failed', $empty['outcome'] );
+		$this->assertSame( array(), $this->requests );
 	}
 
 	/**
@@ -269,6 +278,16 @@ class FormsTurnstileTest extends FormsTestCase {
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fr_turnstile"} /-->' );
 		$this->assertStringContainsString( 'role="alert" tabindex="-1" autofocus><p>The spam check did not pass.', $html );
 		$this->assertStringContainsString( 'value="Hello"', $html );
+
+		// A no-JavaScript POST (no token field) gets the honest message.
+		\PegworkForms\Renderer::reset();
+		unset( $_POST['pegwork_form']['captcha'] );
+		$_POST['pegwork']['note'] = 'No script';
+		Submission::handle();
+		$this->assertSame( 'captcha_missing', Submission::state( 'fr_turnstile' )['outcome'] );
+		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fr_turnstile"} /-->' );
+		$this->assertStringContainsString( 'role="alert" tabindex="-1" autofocus><p>This form needs JavaScript for its spam check.', $html );
+		$_POST['pegwork_form']['captcha'] = self::TOKEN;
 
 		$redirect = null;
 		add_filter(

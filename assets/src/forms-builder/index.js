@@ -17,6 +17,7 @@ import {
 import { useDispatch } from '@wordpress/data';
 import { store as editorStore } from '@wordpress/editor';
 import { useEffect } from '@wordpress/element';
+import { addFilter } from '@wordpress/hooks';
 import { __, sprintf } from '@wordpress/i18n';
 import { registerPlugin } from '@wordpress/plugins';
 
@@ -47,6 +48,25 @@ const ICONS = {
 };
 
 const BOUND_PREFIX = 'bound-';
+
+/*
+ * A form post is always saved as private, so core's publish wording misleads: relabel it in this editor
+ * only (this script loads only for pegwork_form posts). Core strings, default text domain.
+ */
+const SAVE_WORDING = {
+	Publish: __( 'Save', 'pegwork' ),
+	'Are you ready to publish?': __( 'Ready to save this form?', 'pegwork' ),
+	'Double-check your settings before publishing.': __(
+		'Forms are always private. Saving makes the form available to the Form block.',
+		'pegwork'
+	),
+};
+addFilter(
+	'i18n.gettext_default',
+	'pegwork/forms-builder/save-wording',
+	( translation, text ) =>
+		Object.hasOwn( SAVE_WORDING, text ) ? SAVE_WORDING[ text ] : translation
+);
 
 registerBlockType( fieldMetadata, {
 	title: __( 'Form field', 'pegwork' ),
@@ -187,10 +207,27 @@ function ReadOnly() {
 	return null;
 }
 
+/**
+ * Removes the Summary panel's status rows (Status, Publish date, link, author, template): a form post is
+ * always private and has no public URL or publish date, so they only mislead. Core has no separate panel
+ * name for the date row; `post-status` covers the group. The title card above it stays, and with it the
+ * actions menu (Move to trash).
+ */
+function PrivateFormPanels() {
+	const { removeEditorPanel } = useDispatch( editorStore );
+
+	useEffect( () => {
+		removeEditorPanel( 'post-status' );
+	}, [ removeEditorPanel ] );
+
+	return null;
+}
+
 registerPlugin( 'pegwork-form-builder', {
 	render: () => (
 		<>
 			<BoundVariations />
+			<PrivateFormPanels />
 			<ReadOnly />
 			<SettingsPanels />
 		</>

@@ -116,6 +116,35 @@ class EntriesExportTest extends EntriesTestCase {
 	}
 
 	/**
+	 * When every entry email is the copy of the form's email field, the fixed Email column is left out
+	 * (no duplicate column); one entry whose copy differs brings it back.
+	 */
+	public function test_csv_has_one_email_column() {
+		$this->entry(
+			array(
+				'email'  => 'ada@example.org',
+				'values' => array(
+					'name'  => 'Ada',
+					'email' => 'Ada@Example.org',
+				),
+			)
+		);
+		$rows = $this->rows( $this->csv() );
+		$this->assertSame( array( 'Entry ID', 'Submitted (UTC)', 'Status', 'Post ID', 'Name', 'Email' ), array_slice( $rows[0], 0, 6 ) );
+		$this->assertCount( 1, array_keys( $rows[0], 'Email', true ) );
+		$this->assertSame( 'Ada@Example.org', $rows[1][5] );
+
+		$this->entry(
+			array(
+				'email'  => 'legacy@example.org',
+				'values' => array( 'name' => 'Old entry' ),
+			)
+		);
+		$rows = $this->rows( $this->csv() );
+		$this->assertSame( array( 'Entry ID', 'Submitted (UTC)', 'Status', 'Email', 'Post ID' ), array_slice( $rows[0], 0, 5 ) );
+	}
+
+	/**
 	 * Only the chosen form and view are exported: All leaves out spam; search narrows by email.
 	 */
 	public function test_csv_follows_the_current_view() {

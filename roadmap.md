@@ -27,6 +27,11 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 - Gate and docs (PR 6): `bin/perf-directory.sh`, CI timing guard, axe specs, docs, budget numbers (in review, branch `display-gate`). The size check landed with the filters PR. Next: PR 7 in the siforgood repo (owner sign-off).
 - Related records (closes `docs/content-builder-design.md` section 1 "Project page lists its stories"): `where.related` preset, Show if relationship condition, `pegwork/<type>-related-<key>` patterns; plus multi-slug `module enable|disable`, featured `{}` fix, export doc (in review, branch `listings-related`). Follow-up in the siforgood repo: Project template "Stories about this project" and Story and Resource "Related projects" from these patterns (Resources need a relationship first; `examples/sifg` has none).
 
+## UX polish PR (in review, branch `ux-polish`)
+- Clears the UX backlog and bumps the plugin to 0.2.0 (`changelog.md` 2026-10-20). Also holds the SI for Good final QA fixes (confirm panel, corrected submits, conditional required, step heading, URLs, rate-limit wording, `| date` and `{{option:...}}` templates).
+- Left from the SI for Good QA: the filters panel does not collapse on phones (a design change; per-facet disclosure is already a site config option). Follow-up in the siforgood repo: add `messages.confirmed` to Submit a project and use `| date` and `{{option:sifg_settings.contact_email}}` in `sifg-config` emails.
+- Left for later (minor, from the admin sweep): Overview pointer column wraps inside a pointer segment at 782 px; run log Automation select is very wide at 782 px; a read-only file form's title is still editable in the canvas (saving stays locked); the code padding in schema notices reads " : "; 8 jsdoc lint warnings in `assets/src/forms-builder/` (controls.js, field-edit.js, logic.js, step-edit.js).
+
 ## Shared registry sections PR (in review, branch `registry-sections`)
 - Registry side of `listing` (Phase 2), forms (Phase 3), automations (Phase 4) and options pages (content builder PR 4): schema, validation, normalization, export/import, API accessors. Runtime for each stays in its own PR.
 - Follow-up in the siforgood repo: copy `examples/sifg` `listing`, `options-pages/`, `forms/` and `automations/` into `sifg-config/schema/` once those modules ship.

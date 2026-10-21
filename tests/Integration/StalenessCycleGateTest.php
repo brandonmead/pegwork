@@ -58,7 +58,9 @@ class StalenessCycleGateTest extends AutomationTestCase {
 		$this->assertCount( 1, $mail );
 		$this->assertSame( 'Alpha Garden is live on Test Blog', $mail[0]['subject'] );
 		$this->assertStringContainsString( get_permalink( $alpha ), $mail[0]['body'] );
-		$this->assertStringContainsString( 'Last verified: 2026-11-02', $mail[0]['body'] );
+		// `| date`: the site's date format (default "F j, Y"), not the stored ISO date.
+		$this->assertSame( 'F j, Y', get_option( 'date_format' ) );
+		$this->assertStringContainsString( 'Last verified: November 2, 2026.', $mail[0]['body'] );
 
 		// 2. 2027-11-01: not yet 12 months. 2027-11-02: one email each, with a link; the runs wait 30 days.
 		$this->travel( '2027-11-01 09:00' );

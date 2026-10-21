@@ -86,10 +86,19 @@ test.beforeAll( async () => {
 		enabled: true,
 	} );
 	await adminCall( 'POST', '/pegwork-e2e/v1/reset' );
+	// A long page with the form at the end, like a "Get involved" page: the confirmation panel must
+	// still be the first thing the visitor sees.
+	const filler = Array.from(
+		{ length: 40 },
+		( _, i ) =>
+			`<!-- wp:paragraph -->\n<p>Filler paragraph ${
+				i + 1
+			} that makes this page long before the form.</p>\n<!-- /wp:paragraph -->`
+	).join( '\n' );
 	const created = await adminCall( 'POST', '/wp/v2/pages', {
 		status: 'publish',
 		title: `Submit a project E2E ${ Date.now() }`,
-		content: '<!-- wp:pegwork/form {"form":"e2e_project"} /-->',
+		content: `${ filler }\n<!-- wp:pegwork/form {"form":"e2e_project"} /-->`,
 	} );
 	pageId = created.id;
 	pageUrl = created.link;
@@ -186,9 +195,19 @@ test( 'submit a project, confirm by email, Pending project created', async ( {
 	const response = await page.goto( link );
 	expect( response.headers()[ 'referrer-policy' ] ).toBe( 'no-referrer' );
 	expect( response.headers()[ 'cache-control' ] ).toContain( 'no-store' );
+	// The panel stands in for the long page body: in view at once, its heading focused (no JavaScript).
+	const confirmHeading = page.getByRole( 'heading', {
+		name: 'Confirm your submission',
+	} );
+	await expect( confirmHeading ).toBeVisible();
+	await expect( confirmHeading ).toBeFocused();
+	await expect( confirmHeading ).toBeInViewport();
 	await expect(
-		page.getByRole( 'heading', { name: 'Confirm your submission' } )
-	).toBeVisible();
+		page.getByRole( 'button', { name: 'Confirm my submission' } )
+	).toBeInViewport();
+	await expect( page.locator( 'body' ) ).not.toContainText(
+		'Filler paragraph'
+	);
 	await expect( page.locator( 'meta[name="robots"]' ) ).toHaveAttribute(
 		'content',
 		/noindex/
@@ -201,11 +220,20 @@ test( 'submit a project, confirm by email, Pending project created', async ( {
 	await page.getByRole( 'button', { name: 'Confirm my submission' } ).click();
 	await page.waitForURL( /pegwork_confirmed=e2e_project/ );
 	expect( page.url() ).not.toContain( 'pegwork_confirm=' );
-	const thanks = page.getByRole( 'status' );
-	await expect( thanks ).toHaveText(
+	const thanks = page.getByRole( 'heading', {
+		name: 'Submission confirmed',
+	} );
+	await expect( thanks ).toBeFocused();
+	await expect( thanks ).toBeInViewport();
+	await expect( page.locator( '.pegwork-form__confirm' ) ).toContainText(
 		'Thank you. Your submission is confirmed.'
 	);
-	await expect( thanks ).toBeFocused();
+	await expect( page.locator( 'body' ) ).not.toContainText(
+		'Filler paragraph'
+	);
+	// A way back to the whole page, without the confirmation arguments.
+	const back = page.getByRole( 'link', { name: /^Continue to / } );
+	await expect( back ).toHaveAttribute( 'href', pageUrl );
 	await expectAccessible( browser, page );
 
 	stored = await entries();
@@ -250,7 +278,10 @@ test( 'submit a project, confirm by email, Pending project created', async ( {
 
 	// The link again: already confirmed, no second project.
 	await page.goto( link );
-	await expect( page.getByRole( 'status' ) ).toHaveText(
+	const already = page.getByRole( 'heading', { name: 'Already confirmed' } );
+	await expect( already ).toBeFocused();
+	await expect( already ).toBeInViewport();
+	await expect( page.locator( '.pegwork-form__confirm' ) ).toContainText(
 		'This submission is already confirmed. There is nothing more to do.'
 	);
 	await expectAccessible( browser, page );
@@ -268,7 +299,12 @@ test( 'submit a project, confirm by email, Pending project created', async ( {
 	await page.goto(
 		link.replace( /\.[A-Za-z0-9_-]{43}$/, '.' + 'A'.repeat( 43 ) )
 	);
-	await expect( page.getByRole( 'alert' ) ).toContainText(
+	const invalid = page.getByRole( 'heading', {
+		name: 'This link is not valid',
+	} );
+	await expect( invalid ).toBeFocused();
+	await expect( invalid ).toBeInViewport();
+	await expect( page.locator( '.pegwork-form__confirm' ) ).toContainText(
 		'This confirmation link is not valid.'
 	);
 	await expect( page.locator( 'form.pegwork-form__form' ) ).toBeVisible();

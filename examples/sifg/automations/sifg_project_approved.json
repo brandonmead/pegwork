@@ -9,6 +9,6 @@
     { "id": "verify", "type": "update_record", "values": { "last_verified": "{{today}}" } },
     { "id": "notify", "type": "send_email", "to": "{{record.contact_email}}",
       "subject": "{{record.name}} is live on {{site.name}}",
-      "text": "Thanks for sharing your project. It is now live: {{record.permalink}}\n\nLast verified: {{record.last_verified}}. Once a year we will email you a one-click link to confirm it is still active." }
+      "text": "Thanks for sharing your project. It is now live: {{record.permalink}}\n\nLast verified: {{record.last_verified | date}}. Once a year we will email you a one-click link to confirm it is still active." }
   ]
 }

@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": {
+    "type": "event",
+    "event": "record.published",
+    "content_type": "thing"
+  },
+  "steps": [
+    {
+      "subject": "Due {{ record.due | date }}, named {{ record.name | date }}",
+      "id": "mail",
+      "type": "send_email",
+      "to": "ops@example.org",
+      "text": "Hi"
+    }
+  ]
+}
