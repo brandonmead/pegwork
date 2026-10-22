@@ -558,14 +558,13 @@ final class Constraints {
 
 		$ids = get_posts(
 			array(
-				'post_type'        => $type,
-				'post_status'      => 'publish',
-				'numberposts'      => 1,
-				'orderby'          => 'date',
-				'order'            => 'DESC',
-				'fields'           => 'ids',
-				'no_found_rows'    => true,
-				'suppress_filters' => true,
+				'post_type'     => $type,
+				'post_status'   => 'publish',
+				'numberposts'   => 1,
+				'orderby'       => 'date',
+				'order'         => 'DESC',
+				'fields'        => 'ids',
+				'no_found_rows' => true,
 			)
 		);
 		$id  = isset( $ids[0] ) ? (int) $ids[0] : 0;

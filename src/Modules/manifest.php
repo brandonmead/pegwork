@@ -12,6 +12,8 @@
 
 declare( strict_types=1 );
 
+defined( 'ABSPATH' ) || exit;
+
 // Labels and descriptions are callables: the manifest is read on plugins_loaded, before translations
 // load, so Loader::manifest() calls them only once init has fired (render time).
 return array(
