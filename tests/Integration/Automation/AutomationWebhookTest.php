@@ -560,8 +560,14 @@ class AutomationWebhookTest extends AutomationTestCase {
 	public function test_inbound_limits_hold_for_any_route_case() {
 		$route = '/Pegwork/v1/automations/job_inbound/WEBHOOK';
 		$big   = wp_json_encode( array( 'title' => str_repeat( 'a', 200 * 1024 ) ) );
-		$this->assertSame( 413, $this->inbound( 'job_inbound', $big, array( 'route' => $route ) )->get_status() );
-		$this->assertSame( 413, $this->inbound( 'job_inbound', $big, array( 'route' => '/pegwork/V1/Automations/job_inbound/webhook' ) )->get_status() );
+		// Unsigned, so only the size gate (before decoding, before the signature) can answer 413.
+		$unsigned_big = array(
+			'route' => $route,
+			'sign'  => false,
+		);
+		$this->assertSame( 413, $this->inbound( 'job_inbound', $big, $unsigned_big )->get_status() );
+		$unsigned_big['route'] = '/pegwork/V1/Automations/job_inbound/webhook';
+		$this->assertSame( 413, $this->inbound( 'job_inbound', $big, $unsigned_big )->get_status() );
 		$plain = array(
 			'route' => $route,
 			'type'  => 'text/plain',
