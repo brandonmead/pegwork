@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace PegworkAutomation\Admin;
 
 use PegworkAutomation\Engine;
+use PegworkAutomation\Plan;
 use PegworkAutomation\Runs;
 
 /**
@@ -197,15 +198,40 @@ final class RunLog {
 		if ( array() === $steps ) {
 			echo '<tr class="no-items"><td colspan="7">' . esc_html__( 'No step has run yet.', 'pegwork' ) . '</td></tr>';
 		}
+		$plan     = Plan::for_run( $run, $automation );
+		$previous = null;
+		$taken    = array(); // Latest decision summary by decision id: the path as it ran.
 		foreach ( $steps as $step ) {
+			$step_id = (string) $step['step_id'];
+			$depth   = $plan?->depth( $step_id );
+			$where   = $plan?->location( $step_id );
+			if ( null !== $where && $where['first'] && $previous !== $step_id ) {
+				$label = $where['label'];
+				if ( ( $taken[ $where['decision'] ]['index'] ?? null ) === $where['branch'] && is_string( $taken[ $where['decision'] ]['branch'] ?? null ) ) {
+					$label = $taken[ $where['decision'] ]['branch'];
+				}
+				$text = -1 === $where['branch']
+					/* translators: %s: decision step ID. */
+					? sprintf( esc_html__( 'Otherwise branch of %s', 'pegwork' ), '<code>' . esc_html( $where['decision'] ) . '</code>' )
+					/* translators: 1: branch label, 2: decision step ID. */
+					: sprintf( esc_html__( 'Branch %1$s of %2$s', 'pegwork' ), '<strong>' . esc_html( $label ) . '</strong>', '<code>' . esc_html( $where['decision'] ) . '</code>' );
+				echo '<tr class="pegwork-branch-row"><td colspan="7" class="pegwork-depth-' . esc_attr( (string) max( 0, (int) $depth - 1 ) ) . '">' . $text . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+			}
+			if ( 'decision' === $step['step_type'] ) {
+				$taken[ $step_id ] = (array) $step['summary'];
+			}
+			$previous = $step_id;
+
+			$class = null !== $depth && $depth > 0 ? ' class="pegwork-depth-' . esc_attr( (string) $depth ) . '"' : '';
+			$gone  = null !== $plan && null === $depth ? '<span class="pegwork-meta">' . esc_html__( '(no longer in this automation)', 'pegwork' ) . '</span>' : '';
 			echo '<tr>';
-			echo '<th scope="row"><code>' . esc_html( (string) $step['step_id'] ) . '</code><span class="pegwork-meta">' . esc_html( (string) $step['step_type'] ) . '</span></th>';
+			echo '<th scope="row"' . $class . '><code>' . esc_html( $step_id ) . '</code><span class="pegwork-meta">' . esc_html( (string) $step['step_type'] ) . '</span>' . $gone . '</th>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
 			echo '<td>' . esc_html( number_format_i18n( (int) $step['attempt'] ) ) . '</td>';
 			echo '<td>' . Format::badge( (string) $step['status'], Format::step_status( (string) $step['status'] ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			echo '<td>' . Format::time( (string) $step['started_at'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			/* translators: %s: duration in milliseconds. */
 			echo '<td>' . esc_html( sprintf( __( '%s ms', 'pegwork' ), number_format_i18n( (int) $step['duration_ms'] ) ) ) . '</td>';
-			echo '<td>' . Format::summary( (array) $step['summary'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
+			echo '<td>' . ( 'decision' === $step['step_type'] ? Format::decision( (array) $step['summary'] ) : Format::summary( (array) $step['summary'] ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			echo '<td>' . esc_html( (string) $step['error'] ) . '</td>';
 			echo '</tr>';
 		}
