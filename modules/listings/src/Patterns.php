@@ -499,7 +499,7 @@ final class Patterns {
 				'orderBy'  => 'date',
 				'author'   => '',
 				'search'   => '',
-				'exclude'  => array(),
+				'exclude'  => array(), // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude -- A core/query block attribute, not a get_posts() argument; always empty.
 				'sticky'   => '',
 				'inherit'  => false,
 			),

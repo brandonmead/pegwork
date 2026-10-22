@@ -6,6 +6,7 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 wp_unschedule_hook( 'pegwork_forms_cleanup' );

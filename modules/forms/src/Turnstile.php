@@ -22,12 +22,12 @@ final class Turnstile {
 	/**
 	 * Cloudflare's widget script (implicit rendering of `.cf-turnstile` elements).
 	 */
-	public const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+	public const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js'; // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Cloudflare requires api.js from its own host; loaded only on forms that opt in (readme.txt, External services).
 
 	/**
 	 * Cloudflare's server-side validation endpoint.
 	 */
-	public const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+	public const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'; // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Server-side API endpoint, not an asset (readme.txt, External services).
 
 	/**
 	 * Script handle.

@@ -140,7 +140,6 @@ abstract class FormsTestCase extends WP_UnitTestCase {
 	 */
 	protected static function turnstile_constants( $site, $secret ) {
 		$property = new \ReflectionProperty( \PegworkForms\Turnstile::class, 'constants' );
-		$property->setAccessible( true );
 		$property->setValue(
 			null,
 			array(

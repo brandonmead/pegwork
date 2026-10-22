@@ -52,10 +52,10 @@ elif [[ $WP_VERSION =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
 elif [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
 	WP_TESTS_TAG="trunk"
 else
-	# http serves a single offer, whereas https serves multiple. we only want one
-	download http://api.wordpress.org/core/version-check/1.7/ /tmp/wp-latest.json
+	# https serves several offers, newest first; take the first one.
+	download https://api.wordpress.org/core/version-check/1.7/ /tmp/wp-latest.json
 	grep '[0-9]+\.[0-9]+(\.[0-9]+)?' /tmp/wp-latest.json
-	LATEST_VERSION=$(grep -o '"version":"[^"]*' /tmp/wp-latest.json | sed 's/"version":"//')
+	LATEST_VERSION=$(grep -o '"version":"[^"]*' /tmp/wp-latest.json | head -n 1 | sed 's/"version":"//')
 	if [[ -z "$LATEST_VERSION" ]]; then
 		echo "Latest WordPress version could not be found"
 		exit 1

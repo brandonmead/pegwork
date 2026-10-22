@@ -1,5 +1,7 @@
 name: CI
 
+# Runs on pull_request (never pull_request_target), so a fork's PR gets a read-only token and no
+# repository secrets. No step uses secrets.
 on:
   pull_request:
   push:
@@ -9,8 +11,9 @@ on:
 permissions:
   contents: read
 
+# A new push to the same PR or branch cancels the run it supersedes.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -18,9 +21,11 @@ jobs:
     name: Lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.2'
           coverage: none
@@ -34,9 +39,11 @@ jobs:
     name: JSON Schema fixture agreement
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.2'
           coverage: none
@@ -50,7 +57,9 @@ jobs:
     name: Module boundary
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - run: bash bin/check-module-boundary.sh modules tests/fixtures/modules
 
@@ -58,11 +67,13 @@ jobs:
     name: JS
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: '22'
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: '.nvmrc'
           cache: npm
 
       # npm 10 fails to resolve the Vitest peer set (arborist edgesOut bug); the lockfile is npm 11.
@@ -87,6 +98,13 @@ jobs:
       matrix:
         php: ['8.2', '8.4']
         wp: ['6.7', 'latest']
+        # PHP 8.5 runs against WordPress latest only. WordPress 6.7 predates PHP 8.5 and its own core
+        # code raises 8.5 deprecations (a null array offset in WP_Block_Type_Registry), which the
+        # suite turns into errors. That leg would only ever test core, so it is left out rather than
+        # kept as a continue-on-error job that is always red.
+        include:
+          - php: '8.5'
+            wp: 'latest'
     services:
       mysql:
         image: mysql:8.0
@@ -100,9 +118,11 @@ jobs:
           --health-timeout=5s
           --health-retries=10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           extensions: mysqli
@@ -115,7 +135,9 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q subversion
 
       - name: Install WordPress test suite
-        run: bash bin/install-wp-tests.sh wordpress_tests root root 127.0.0.1 ${{ matrix.wp }}
+        run: bash bin/install-wp-tests.sh wordpress_tests root root 127.0.0.1 "$WP_VERSION"
+        env:
+          WP_VERSION: ${{ matrix.wp }}
 
       - name: Run tests
         run: composer test
@@ -127,11 +149,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: '22'
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: '.nvmrc'
           cache: npm
 
       - run: npm install -g npm@11.20.0
@@ -141,7 +165,7 @@ jobs:
       - run: npm run build
 
       # The plugin loads vendor/autoload.php; wp-env mounts this checkout, so it must exist.
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.2'
           coverage: none
@@ -161,7 +185,7 @@ jobs:
 
       - name: Upload Playwright report and traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-report
           path: |
@@ -170,3 +194,33 @@ jobs:
             !test-results/.auth/
           retention-days: 7
           if-no-files-found: ignore
+
+  plugin-zip:
+    name: Release zip
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm install -g npm@11.20.0
+
+      - run: npm ci
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+
+      # Builds dist/pegwork.zip from a clean export with production dependencies only, and fails if a
+      # dev file or dev package would ship.
+      - run: bash bin/build-zip.sh
+
+      - name: List zip contents
+        run: unzip -Z1 dist/pegwork.zip
