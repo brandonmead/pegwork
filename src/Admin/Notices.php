@@ -49,7 +49,7 @@ final class Notices {
 		foreach ( array_slice( $errors, 0, self::MAX_LISTED ) as $error ) {
 			// Short path (wp-content/... or package-relative), never the server's absolute path.
 			$where = $status->display_path( $error->file ) . ( '' === $error->pointer ? '' : '#' . $error->pointer );
-			echo '<li><code>' . esc_html( $where ) . '</code>: ' . esc_html( $error->message ) . '</li>';
+			echo '<li><code style="padding-inline-end:0">' . esc_html( $where ) . '</code>: ' . esc_html( $error->message ) . '</li>';
 		}
 		echo '</ul><p>' . esc_html__( 'Run "wp pegwork schema validate" for the full list.', 'pegwork' ) . '</p></div>';
 	}

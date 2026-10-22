@@ -113,17 +113,18 @@ class AdminOverviewTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '<code>site_tag</code>', $html );
 		$this->assertStringContainsString( '&lt;script&gt;alert(1)&lt;/script&gt;Tags', $html );
 		$this->assertStringNotContainsString( '<script>', $html );
-		$this->assertStringContainsString( '<code>option:pegwork_schema</code>', $html );
+		$this->assertStringContainsString( '<code class="pegwork-path">option:pegwork_schema</code>', $html );
 
 		// Shadowed entry: kind, key, the package that wins.
 		$this->assertMatchesRegularExpression( '#<th scope="row" class="column-kind">content_type</th><td class="column-key"><code>sifg_project</code></td><td class="column-by"><code>sifg</code></td>#', $html );
 		$this->assertStringNotContainsString( 'Shadows', $html );
 
 		// Rejected package with file and pointer, as paths relative to the package (never absolute).
-		$this->assertStringContainsString( '<th scope="row" class="column-source"><code>invalid-key</code></th>', $html );
-		$this->assertStringContainsString( '<code>invalid-key/content-types/thing.json</code>', $html );
+		// Paths and pointers may break only after a slash (a <wbr> after each).
+		$this->assertStringContainsString( '<th scope="row" class="column-source"><code class="pegwork-path">invalid-key</code></th>', $html );
+		$this->assertStringContainsString( '<code class="pegwork-path">invalid-key/<wbr>content-types/<wbr>thing.json</code>', $html );
 		$this->assertStringNotContainsString( $invalid, $html );
-		$this->assertStringContainsString( '<code>/key</code>', $html );
+		$this->assertStringContainsString( '<code class="pegwork-path">/<wbr>key</code>', $html );
 
 		// Relationships: the example's story_projects, required.
 		$this->assertStringContainsString( '<th scope="row" class="column-key"><code>story_projects</code></th><td class="column-from">sifg_story</td><td class="column-to">sifg_project</td><td class="column-cardinality">many_to_many</td><td class="column-required">Yes</td>', $html );

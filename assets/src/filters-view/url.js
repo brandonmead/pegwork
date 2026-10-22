@@ -143,6 +143,37 @@ export function buildUrl( base, state, filters ) {
 }
 
 /**
+ * How many controls are active: the search when set, plus each filter with a value.
+ *
+ * @param {{q: string, values: Object<string, string[]>}} state State (only the shown filters).
+ * @return {number} Count.
+ */
+export function activeCount( state ) {
+	return (
+		( state.q !== '' ? 1 : 0 ) +
+		Object.values( state.values ).filter( ( values ) => values.length > 0 )
+			.length
+	);
+}
+
+/**
+ * Summary of the collapsed form: "Filters", or "Filters, 2 active".
+ *
+ * @param {{collapseActive: string, collapseNone: string}} strings Translated formats (`%s` count).
+ * @param {number}                                         count   Active filters.
+ * @return {string} Text.
+ */
+export function collapseText( strings, count ) {
+	if ( ! count ) {
+		return strings?.collapseNone || 'Filters';
+	}
+	return ( strings?.collapseActive || 'Filters, %s active' ).replace(
+		'%s',
+		String( count )
+	);
+}
+
+/**
  * Summary of a multi-value filter: "Impact category, 2 selected", or the label alone.
  *
  * @param {{selectedOne: string, selectedOther: string}} strings Translated formats (`%1$s` label, `%2$s` count).
