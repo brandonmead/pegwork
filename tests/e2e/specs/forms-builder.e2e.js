@@ -484,7 +484,7 @@ test( 'a file form opens read-only with Duplicate as site form', async ( {
 	await page.keyboard.press( 'End' );
 	await page.keyboard.type( ' edited' );
 	await page.keyboard.press( 'Backspace' );
-	await page.keyboard.press( 'Control+A' );
+	await page.keyboard.press( 'ControlOrMeta+A' );
 	await page.keyboard.press( 'Delete' );
 	await title.evaluate( ( element ) => {
 		const data = new window.DataTransfer();

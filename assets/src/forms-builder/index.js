@@ -171,7 +171,7 @@ const TITLE = '.editor-post-title__input';
  * Makes the post title read-only. Core has no setting for it (the title is a contenteditable the
  * template lock does not reach, and it lives in the editor canvas iframe, which the admin body
  * class does not cross), so the canvas body gets the same `pegwork-form-readonly` class (styles:
- * no caret, default cursor) and every edit of the title (typing, paste, cut, drop) is cancelled
+ * no caret, default cursor) and every edit of the title (typing, Backspace, Delete, paste, cut, drop) is cancelled
  * before it reaches the DOM. The title stays focusable and readable by a screen reader.
  *
  * @return {() => void} Stops watching.
@@ -179,9 +179,14 @@ const TITLE = '.editor-post-title__input';
 function lockTitle() {
 	const done = new WeakSet();
 	const cancel = ( event ) => {
-		if ( event.target?.closest?.( TITLE ) ) {
-			// Stopped as well: the rich text's own paste and cut handlers run on the element and
-			// would otherwise still insert or remove text.
+		// Keys that change text on their own (the rich text's delete handler acts on keydown, not on
+		// beforeinput); other keys, arrows and Tab included, still work.
+		const edits =
+			event.type !== 'keydown' ||
+			[ 'Backspace', 'Delete', 'Enter' ].includes( event.key );
+		if ( edits && event.target?.closest?.( TITLE ) ) {
+			// Stopped as well: the rich text's own paste, cut and delete handlers run on the element
+			// and would otherwise still insert or remove text.
 			event.preventDefault();
 			event.stopPropagation();
 		}
@@ -195,7 +200,13 @@ function lockTitle() {
 			}
 			done.add( doc );
 			doc.body.classList.add( 'pegwork-form-readonly' );
-			for ( const type of [ 'beforeinput', 'paste', 'cut', 'drop' ] ) {
+			for ( const type of [
+				'beforeinput',
+				'keydown',
+				'paste',
+				'cut',
+				'drop',
+			] ) {
 				doc.addEventListener( type, cancel, true );
 			}
 		}
