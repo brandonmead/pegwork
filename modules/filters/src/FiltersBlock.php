@@ -162,8 +162,8 @@ final class FiltersBlock {
 	/**
 	 * Everything render() needs for the current request.
 	 *
-	 * @param array<string, mixed> $attributes Block attributes (`postType`, `filters`, `showSearch`).
-	 * @param string               $wrapper    Wrapper attributes markup (get_block_wrapper_attributes() in a block).
+	 * @param array<string, mixed> $attributes Block attributes (`postType`, `filters`, `showSearch`, `collapseOnSmall`).
+	 * @param string               $wrapper   Wrapper attributes markup (get_block_wrapper_attributes() in a block).
 	 * @return array<string, mixed>|null State, or null when no content type with a `listing` applies.
 	 */
 	public static function state( array $attributes, string $wrapper = '' ): ?array {
@@ -193,6 +193,7 @@ final class FiltersBlock {
 			'url'        => $url,
 			'base'       => self::base_url( $type ),
 			'count'      => Count::for_type( $type ),
+			'collapse'   => ! empty( $attributes['collapseOnSmall'] ),
 			'id'         => 'pegwork-filters-' . ( ++self::$instances ),
 			'wrapper'    => '' !== $wrapper ? $wrapper : 'class="wp-block-pegwork-filters"',
 		);
@@ -259,10 +260,43 @@ final class FiltersBlock {
 	public static function strings(): array {
 		return array(
 			/* translators: 1: filter label, 2: number of selected options. */
-			'selectedOne'   => _n( '%1$s, %2$s selected', '%1$s, %2$s selected', 1, 'pegwork' ),
+			'selectedOne'    => _n( '%1$s, %2$s selected', '%1$s, %2$s selected', 1, 'pegwork' ),
 			/* translators: 1: filter label, 2: number of selected options. */
-			'selectedOther' => _n( '%1$s, %2$s selected', '%1$s, %2$s selected', 2, 'pegwork' ),
+			'selectedOther'  => _n( '%1$s, %2$s selected', '%1$s, %2$s selected', 2, 'pegwork' ),
+			/* translators: %s: number of active filters. */
+			'collapseActive' => __( 'Filters, %s active', 'pegwork' ),
+			'collapseNone'   => __( 'Filters', 'pegwork' ),
 		);
+	}
+
+	/**
+	 * The collapsed form's summary: "Filters", or "Filters, 2 active".
+	 *
+	 * @param int $active Active filters (the search counts as one).
+	 */
+	public static function collapse_label( int $active ): string {
+		if ( $active < 1 ) {
+			return __( 'Filters', 'pegwork' );
+		}
+		/* translators: %s: number of active filters. */
+		return sprintf( __( 'Filters, %s active', 'pegwork' ), number_format_i18n( $active ) );
+	}
+
+	/**
+	 * How many of the shown controls are active: the search when it is shown and set, plus each shown
+	 * filter with a value.
+	 *
+	 * @param array<string, mixed>                                  $definition Definition (after the block's choices).
+	 * @param array{q: string, values: array<string, list<string>>} $url        URL state.
+	 */
+	private static function active_count( array $definition, array $url ): int {
+		$count = ! empty( $definition['search'] ) && '' !== $url['q'] ? 1 : 0;
+		foreach ( $definition['filters'] as $filter ) {
+			if ( array() !== ( $url['values'][ $filter['key'] ] ?? array() ) ) {
+				++$count;
+			}
+		}
+		return $count;
 	}
 
 	/**
@@ -346,6 +380,14 @@ final class FiltersBlock {
 			'countText' => $count_text,
 		);
 
+		// Opt-in disclosure on small screens: a native details around the fields and actions, open when
+		// anything shown is active. The summary text follows the active count (the store updates it).
+		$collapse = ! empty( $state['collapse'] );
+		$shown    = self::active_count( $definition, $url );
+		if ( $collapse ) {
+			$context['collapseLabel'] = self::collapse_label( $shown );
+		}
+
 		list( $action, $hidden ) = self::action( $base );
 
 		$html  = '<div ' . $state['wrapper'] . ' data-wp-interactive="' . esc_attr( self::STORE ) . '" ' . wp_interactivity_data_wp_context( $context ) . ' data-wp-on-window--popstate="callbacks.popstate">';
@@ -356,11 +398,15 @@ final class FiltersBlock {
 		foreach ( $hidden as $name => $value ) {
 			$html .= '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '">';
 		}
+		if ( $collapse ) {
+			$html .= '<details class="pegwork-filters__collapse"' . ( $shown > 0 ? ' open' : '' ) . '>'
+				. '<summary class="pegwork-filters__collapse-summary" data-wp-text="context.collapseLabel">' . esc_html( self::collapse_label( $shown ) ) . '</summary>';
+		}
 		$html .= '<div class="pegwork-filters__fields">' . implode( '', $fields ) . '</div>';
 		$html .= '<div class="pegwork-filters__actions">';
 		$html .= '<button type="submit" class="pegwork-filters__apply wp-element-button">' . esc_html__( 'Apply filters', 'pegwork' ) . '</button>';
 		$html .= '<a class="pegwork-filters__clear" href="' . esc_url( $base ) . '" data-wp-on--click="actions.clear" data-wp-bind--hidden="!context.active"' . ( $active ? '' : ' hidden' ) . '>' . esc_html__( 'Clear all', 'pegwork' ) . '</a>';
-		$html .= '</div></form>';
+		$html .= '</div>' . ( $collapse ? '</details>' : '' ) . '</form>';
 		$html .= '<p class="pegwork-filters__count" role="status" data-wp-text="context.countText">' . esc_html( $count_text ) . '</p>';
 		$html .= '</div>';
 		return $html;

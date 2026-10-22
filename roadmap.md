@@ -29,8 +29,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## UX polish PR (in review, branch `ux-polish`)
 - Clears the UX backlog and bumps the plugin to 0.2.0 (`changelog.md` 2026-10-20). Also holds the SI for Good final QA fixes (confirm panel, corrected submits, conditional required, step heading, URLs, rate-limit wording, `| date` and `{{option:...}}` templates).
-- Left from the SI for Good QA: the filters panel does not collapse on phones (a design change; per-facet disclosure is already a site config option). Follow-up in the siforgood repo: add `messages.confirmed` to Submit a project and use `| date` and `{{option:sifg_settings.contact_email}}` in `sifg-config` emails.
-- Left for later (minor, from the admin sweep): Overview pointer column wraps inside a pointer segment at 782 px; run log Automation select is very wide at 782 px; a read-only file form's title is still editable in the canvas (saving stays locked); the code padding in schema notices reads " : "; 8 jsdoc lint warnings in `assets/src/forms-builder/` (controls.js, field-edit.js, logic.js, step-edit.js).
+- Done in branch `ux-leftovers` (`changelog.md` 2026-10-22): the filters panel can collapse on phones (`collapseOnSmall`, opt-in). Follow-up in the siforgood repo: add `messages.confirmed` to Submit a project and use `| date` and `{{option:sifg_settings.contact_email}}` in `sifg-config` emails.
+- Left for later (minor, from the admin sweep; the other four items are done in `ux-leftovers`): 8 jsdoc lint warnings in `assets/src/forms-builder/` (controls.js, field-edit.js, logic.js, step-edit.js).
 
 ## Shared registry sections PR (in review, branch `registry-sections`)
 - Registry side of `listing` (Phase 2), forms (Phase 3), automations (Phase 4) and options pages (content builder PR 4): schema, validation, normalization, export/import, API accessors. Runtime for each stays in its own PR.

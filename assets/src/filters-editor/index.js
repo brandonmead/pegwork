@@ -66,6 +66,18 @@ function Edit( { attributes, setAttributes } ) {
 							}
 						/>
 					) }
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __( 'Collapse on small screens', 'pegwork' ) }
+						help={ __(
+							'Under 600 px wide, the filters sit in a "Filters" disclosure, closed until a filter is active.',
+							'pegwork'
+						) }
+						checked={ attributes.collapseOnSmall === true }
+						onChange={ ( collapseOnSmall ) =>
+							setAttributes( { collapseOnSmall } )
+						}
+					/>
 					{ definition &&
 						definition.filters.map( ( filter ) => (
 							<CheckboxControl

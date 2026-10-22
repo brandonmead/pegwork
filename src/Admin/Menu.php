@@ -72,6 +72,7 @@ final class Menu {
 		wp_add_inline_style(
 			self::STYLE,
 			'.pegwork-admin .pegwork-table code{overflow-wrap:anywhere;}'
+			. '.pegwork-admin .pegwork-table code.pegwork-path{overflow-wrap:break-word;}'
 			. '.pegwork-admin .pegwork-modules th code{overflow-wrap:normal;word-break:normal;}'
 			. '.pegwork-admin h2{margin-top:2em;}'
 			. '.pegwork-admin .pegwork-fields{margin:1em 0;}'
