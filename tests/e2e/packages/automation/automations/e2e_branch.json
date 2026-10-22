@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "key": "e2e_branch",
+  "label": "E2E branching digest",
+  "description": "Browser tests of the run detail with decisions: indented rows, branch labels, decision summaries.",
+  "trigger": { "type": "schedule", "every": "day", "at": "03:30" },
+  "steps": [
+    { "id": "route", "type": "decision",
+      "branches": [
+        { "label": "No site name", "when": { "var": "site.name", "op": "empty" },
+          "steps": [
+            { "id": "unnamed", "type": "send_email", "to": "e2e-branch@example.org",
+              "subject": "Unnamed site", "text": "Run {{run.id}}." } ] },
+        { "label": "Named site", "when": { "var": "site.name", "op": "not_empty" },
+          "steps": [
+            { "id": "named", "type": "send_email", "to": "e2e-branch@example.org",
+              "subject": "Digest for {{site.name}}", "text": "Run {{run.id}}." },
+            { "id": "has_url", "type": "decision",
+              "branches": [
+                { "label": "Site URL set", "when": { "var": "site.url", "op": "not_empty" },
+                  "steps": [
+                    { "id": "with_url", "type": "send_email", "to": "e2e-branch@example.org",
+                      "subject": "Visit {{site.url}}", "text": "{{site.url}}" } ] } ] } ] } ],
+      "otherwise": [
+        { "id": "fallback", "type": "send_email", "to": "e2e-branch@example.org",
+          "subject": "Fallback", "text": "Run {{run.id}}." } ] },
+    { "id": "done", "type": "send_email", "to": "e2e-branch@example.org",
+      "subject": "Done", "text": "Run {{run.id}} is done." }
+  ]
+}
