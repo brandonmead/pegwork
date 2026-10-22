@@ -55,12 +55,13 @@ for dev in phpunit wp-phpunit yoast squizlabs wp-coding-standards phpcompatibili
 		exit 1
 	fi
 done
-rm "$PLUGIN/composer.json" "$PLUGIN/composer.lock"
+# composer.json stays: WordPress.org reviewers expect it next to a vendor/ directory (Plugin Check).
+rm "$PLUGIN/composer.lock"
 
 # Paths that must never ship (relative to the plugin folder).
 DENY=(
 	tests docs bin node_modules assets/src examples dist
-	composer.json composer.lock package.json package-lock.json
+	composer.lock package.json package-lock.json
 	phpcs.xml.dist phpunit.xml.dist playwright.config.js webpack.config.js eslint.config.cjs
 	README.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md CLAUDE.md
 	architecture.md changelog.md memory.md roadmap.md
