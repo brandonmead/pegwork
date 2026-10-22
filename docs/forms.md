@@ -81,7 +81,7 @@ Server-rendered, works without JavaScript:
 7. Spam: honeypot filled (or missing) adds `honeypot`; filter `pegwork_forms_spam_check` may add reasons. Any reason: the entry is stored as `spam` with `meta.spam`, no mail, no event, and the visitor gets the normal success redirect.
 8. Validate: unbound items with `pegwork_validate_fields()` (required, `required_when`, `validate`; a required boolean must be checked); bound items with `pegwork_validate_record()` on the target type (its rules, defined once in the registry; an update merges the record's stored values). Errors map to item keys; a record rule on a field the form does not show is listed in the summary without a link. Errors: re-render, nothing stored.
 9. Email rate limit (the confirm field, else the first email item). Over: "Too many submissions with this email address. Try again in about N minutes."
-10. Duplicate: the same fingerprint (sha256 of form key plus sorted values) stored as non-spam within 10 minutes returns the success redirect without a new entry (double clicks, back button).
+10. Duplicate: the same fingerprint (HMAC-SHA256 with `wp_salt( 'nonce' )` of form key, user ID, client IP and sorted values) stored as non-spam within 10 minutes returns the success redirect without a new entry (double clicks, back button). Two different people who send identical values are two entries; the IP is part of the HMAC input only, never stored.
 11. `confirm` forms: the confirmation email cap (below). Over: "Too many confirmation emails to this address. Try again in about N hours." re-render, nothing stored.
 12. Turnstile forms: siteverify (see Turnstile). Last of the checks, so a token is spent only on a submission that can be stored, and a double click meets the duplicate check, not a reused-token failure. No token field: stored as `spam` (`captcha_missing`), re-render saying the form needs JavaScript. Failed: stored as `spam` (`captcha_failed`), re-render with a message. Unverified: uploads stored, entry stored as `spam` (`captcha_unverified`), redirect to the held message.
 13. Uploads move into private storage. A failure deletes any file already moved: "could not be saved" re-render, nothing stored.
@@ -94,9 +94,9 @@ Server-rendered, works without JavaScript:
 `"captcha": "turnstile"` adds Cloudflare Turnstile to a form (`PegworkForms\Turnstile`). It is free and usually shows no puzzle (WCAG 2.2 3.3.8), but needs JavaScript, and visitors' browsers contact Cloudflare (the privacy policy text says so).
 
 - Keys: only the wp-config constants `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY`; never registry JSON, options or exports. Without both, Turnstile forms fail closed (not shown to visitors, POSTs ignored, a notice for managers in the block) and users with the forms capability get an admin notice naming the forms and the constants.
-- Widget: `<div class="cf-turnstile" data-sitekey="..." data-response-field-name="pegwork_form[captcha]">` at the end of the last step, so the token arrives with the other control fields. Cloudflare's `api.js` is enqueued (footer, `defer`, no version query: Cloudflare serves it from one fixed URL) only where such a form renders. Without JavaScript the form shows the `noscript` notice above it and cannot pass.
-- Check: one `wp_safe_remote_post()` to `https://challenges.cloudflare.com/turnstile/v0/siteverify` with the secret and token (no IP sent), timeout 10 s, after the cheaper checks.
-  - `success: true`: continue. The token is not stored.
+- Widget: `<div class="cf-turnstile" data-sitekey="..." data-action="<form key, at most 32 characters>" data-response-field-name="pegwork_form[captcha]">` at the end of the last step, so the token arrives with the other control fields. Cloudflare's `api.js` is enqueued (footer, `defer`, no version query: Cloudflare serves it from one fixed URL) only where such a form renders. Without JavaScript the form shows the `noscript` notice above it and cannot pass.
+- Check: one `wp_safe_remote_post()` to `https://challenges.cloudflare.com/turnstile/v0/siteverify` with the secret, the token and `remoteip` (the client IP, see Rate limits), timeout 10 s, after the cheaper checks.
+  - `success: true`: continue, provided the answer's `hostname` is this site's (the host of `home_url()`; filter `pegwork_forms_turnstile_hostnames`, `string[]`, for a site served on several hostnames) and its `action` is this form's. Otherwise `captcha_failed` as below: a token solved on another hostname or for another form does not pass. Cloudflare's test secrets answer with a placeholder hostname, so with a test secret those two checks are skipped. The token is not stored.
   - No token field at all (the page ran without JavaScript, or a script posted the form): entry stored as `spam` with reason `captcha_missing`, no files kept; re-render with values and "This form needs JavaScript for its spam check. Turn on JavaScript in your browser to send it." Nothing is sent to Cloudflare.
   - An empty token (the widget ran but gave none, such as with a blocking site key), or `success: false` for the visitor's token (a bot, an expired or reused token, the always-fail test secret): entry stored as `spam` with reason `captcha_failed`, no mail, no events, no files kept; re-render with values and "The spam check did not pass. Wait for the check to finish, then send the form again."
   - Network error, non-200, unreadable answer, or a site-side error code (`missing-input-secret`, `invalid-input-secret`, `internal-error`): nobody can tell, so the entry (files included) is stored as `spam` with reason `captcha_unverified` for an admin to rescue with "Not spam"; no mail, no events; the visitor sees "Your submission was saved, but our spam check could not be completed. The site team will review it, so there is no need to send it again."
@@ -116,7 +116,14 @@ A `file` item (`accept`, optional `max_size_mb`; `docs/registry-reference.md#for
 
 - Usable types: the item's `accept` extensions intersected with `get_allowed_mime_types()`, minus a runtime denylist that repeats the registry's (`php*`, `phtml`, `pht`, `phar`, `htm`, `html`, `xhtml`, `shtml`, `svg`, `svgz`, `js`, `mjs`, `exe`) plus `cgi`, `pl`, `py`, `sh`, `asp`, `aspx`, `jsp`, `bat`, `cmd`, `com`, so a definition that slipped past the validator still cannot accept them.
 - Checks, in order (message names the item): PHP upload errors (too large: `upload_max_filesize`), empty file, size over `max_size_mb` or `wp_max_upload_size()` (the smaller), no extension or one not usable, a denylisted extension anywhere in the name (`photo.php.png`, after `sanitize_file_name()`), then content sniffing with `wp_check_filetype_and_ext()`: the bytes must be what the extension says ("does not match its file type"; a PNG named `.pdf` or PHP named `.pdf` is refused). Only files PHP received for this request count (`is_uploaded_file()` in `Uploads::from_request()`), so a posted path cannot point at a file already on the server.
-- Storage: after every other check passes, `wp_handle_sideload()` (`test_form` off, the item's mimes; the same checks as `wp_handle_upload()`, whose `is_uploaded_file()` test already ran) moves the file to `wp-content/uploads/pegwork-forms/<32 hex random>/<sanitized name>`, outside the media library (attachments get public, guessable year/month URLs). `pegwork-forms/` gets `index.php` and a deny-all `.htaccess`; each random folder gets `index.php`. nginx ignores `.htaccess`, so the random folder name is the real guard.
+- Storage: after every other check passes, `wp_handle_sideload()` (`test_form` off, the item's mimes; the same checks as `wp_handle_upload()`, whose `is_uploaded_file()` test already ran) moves the file to `wp-content/uploads/pegwork-forms/<32 hex random>/<sanitized name>`, outside the media library (attachments get public, guessable year/month URLs). `pegwork-forms/` gets `index.php` and a deny-all `.htaccess`; each random folder gets `index.php`. nginx ignores `.htaccess`, so there the 128-bit random folder name is the only guard (paths never leave the site: see "Shown by name"). On nginx (including Cloudways, where nginx serves static files before Apache), add a deny rule to the site's server block; downloads go through `admin-post.php`, so nothing legitimate is lost:
+
+  ```nginx
+  location ^~ /wp-content/uploads/pegwork-forms/ {
+      deny all;
+  }
+  ```
+
 - Stored value: `{ "path": "pegwork-forms/<hex>/<name>", "name", "size", "mime" }` (`path` relative to the uploads base directory). Spam entries (honeypot, time trap, `captcha_failed`) keep `{ name, size, mime }` only; no file is written. A visible file item without a file is `''`.
 - Validation: `required` and `required_when` apply as to text (a file counts as given by its name).
 - Download: `admin-post.php?action=pegwork_forms_file&entry=<id>&field=<key>&_wpnonce=<nonce>` (`Files::url()`; nonce action `pegwork_forms_file_<entry>_<key>`), forms capability required, else 403; logged-out requests get admin-post.php's 400 (no `nopriv` handler); a missing file 404. Headers: `Content-Disposition: attachment` (ASCII name plus `filename*` UTF-8), `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, no-cache, `Referrer-Policy: no-referrer`; the stored mime as `Content-Type`. The resolved path must be a file inside `uploads/pegwork-forms/` (`realpath`), whatever the entry says.
@@ -146,7 +153,7 @@ A form with `confirm` holds the entry as `unconfirmed`; the record is created on
 - POST: token and expiry checked, then an atomic claim (`UPDATE ... SET status = 'processing' WHERE id = %d AND status = 'unconfirmed'`), so a second or concurrent confirm does nothing. Values are validated again against the current definition (`Submission::validate()`).
   - Valid: the record is written as above; the entry becomes `received` with `post_id` and `confirmed_at`; `confirmed` notifications go out (context `post_id`, so `{post:edit_url}` works); `form.confirmed` is emitted; redirect 303 to `?pegwork_confirmed=<key>`, which shows the heading "Submission confirmed" and `messages.confirmed` (default "Thank you. Your submission is confirmed."; the builder shows it under Messages when confirmation is on).
   - Invalid (or the write fails): a create form makes the record as a draft instead (keys the draft still rejects are dropped); the entry becomes `failed` with `meta.errors` and `post_id` of the draft; the site admin gets "Form submission needs attention" (`meta.failure_notice`); no notifications, no event. The submitter is told the truth: "We got your confirmation, but something in your submission needs a person to check it. We will be in touch." (`messages.confirm_failed` overrides it per form; the builder shows it under Messages when confirmation is on). The redirect adds `pegwork_review=1`, and reopening the link shows the same message. Nothing is lost. An update confirmed later also needs the submitter's `edit_post` at that moment.
-- States of the link page (heading, then text): pending ("Confirm your submission", the button), already confirmed ("Already confirmed", "This submission is already confirmed. There is nothing more to do."), held for review ("Confirmation received", the review message), expired ("This link has expired", "This confirmation link has expired. Submit the form again below." plus the form), not valid (wrong token or a spam entry: "This link is not valid", "This confirmation link is not valid..." plus the form). The form below a notice posts to the URL without the token.
+- States of the link page (heading, then text): pending ("Confirm your submission", the button), already confirmed ("Already confirmed", "This submission is already confirmed. There is nothing more to do."), held for review ("Confirmation received", the review message), expired ("This link has expired", "This confirmation link has expired. Submit the form again below." plus the form), not valid (wrong token or a spam entry: "This link is not valid", "This confirmation link is not valid..." plus the form). The form below a notice posts to the URL without the token. The page content is replaced only when the token matches the entry's hash; a made-up link leaves the page as it is, and every form on it shows the same "not valid" notice, so a link reveals neither which form an entry ID belongs to nor whether it exists.
 - `Confirm::complete( $entry, $now )` runs only from the confirm link. The entries admin's "Create post anyway" claims the same way (`EntryState::claim( $id, $status, 'processing' )`) but writes a Draft with `RecordWriter::draft()` instead of completing, so nothing is mailed to an unproven address (see Entries admin).
 
 ### Rate limits
@@ -154,20 +161,53 @@ A form with `confirm` holds the entry as `unconfirmed`; the record is created on
 | Kind | Default | Counts |
 |---|---|---|
 | `ip` | 5 per form per 10 minutes | every stored entry, spam included (so a bot cannot fill the table) |
-| `email` | 3 per form per hour | accepted entries |
-| confirmation emails | 3 per address per 24 hours, all forms | entries holding a token (`Confirm::MAX_MAILS`, from the entries table, not a transient; not filtered) |
+| `email` | 3 per form per hour | accepted entries (not entries held as `captcha_unverified`) |
+| confirmation emails | 3 per address per 24 hours, all forms | entries holding a token (`Confirm::MAX_MAILS`, from the entries table; not filtered) |
 
-Kept in transients `pegwork_forms_rl_<hmac>`, keyed by an HMAC of kind, form and subject (IP or lowercased address). No IP is stored anywhere. Filters: `pegwork_forms_rate_limits` (`array( 'ip' => array( 'max', 'window' ), 'email' => ... ), $form_key`; `max` 0 disables a limit) and `pegwork_forms_client_ip` (default `REMOTE_ADDR`; return a proxy header only when the origin accepts traffic from that proxy alone).
+Counted with `Pegwork\Api\Throttle` (table `{prefix}pegwork_throttle`, see `docs/extension-api.md`): the slot is taken right before the entry is stored (insert, then count), so parallel requests cannot store more than the limit, with or without a persistent object cache; a request that loses the race gets the "Too many submissions" re-render. Buckets are stored as an HMAC of kind, form and subject (IP or lowercased address), so no IP or address is stored. Filters: `pegwork_forms_rate_limits` (`array( 'ip' => array( 'max', 'window' ), 'email' => ... ), $form_key`; `max` 0 disables a limit) and `pegwork_forms_client_ip` (`( string $ip )`, applied after the shared `pegwork_client_ip`).
+
+Client IP: `REMOTE_ADDR` only, so forwarded headers cannot be forged to dodge a limit. Behind Cloudflare or another proxy that the server does not resolve to the visitor's address, every visitor shares one address, so one visitor can use up a form's limit for everyone. Fix that with the `pegwork_client_ip` filter (used by forms, signed links and the inbound webhook), trusting the proxy header only from the proxy's own addresses. For Cloudflare, in a small mu-plugin, with the ranges from https://www.cloudflare.com/ips/ (keep them current):
+
+```php
+add_filter( 'pegwork_client_ip', function ( string $ip ): string {
+	$cloudflare = array( '173.245.48.0/20', '103.21.244.0/22', /* ...the rest of the published IPv4 and IPv6 ranges */ );
+	$header     = isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) : '';
+	$peer       = inet_pton( $ip );
+	if ( '' === $header || false === $peer || ! filter_var( $header, FILTER_VALIDATE_IP ) ) {
+		return $ip;
+	}
+	foreach ( $cloudflare as $range ) {
+		[ $net, $bits ] = explode( '/', $range );
+		$net            = inet_pton( $net );
+		if ( false === $net || strlen( $net ) !== strlen( $peer ) ) {
+			continue;
+		}
+		$bytes = intdiv( (int) $bits, 8 );
+		$rest  = (int) $bits % 8;
+		$mask  = 0 === $rest ? 0 : ( 0xff << ( 8 - $rest ) ) & 0xff;
+		if ( substr( $peer, 0, $bytes ) === substr( $net, 0, $bytes )
+			&& ( 0 === $rest || ( ord( $peer[ $bytes ] ) & $mask ) === ( ord( $net[ $bytes ] ) & $mask ) ) ) {
+			return $header; // The request came from Cloudflare, so its header names the visitor.
+		}
+	}
+	return $ip;
+} );
+```
+
+Full IPv6 addresses are the keys, so a client with a /64 can rotate addresses; a site that sees that can return the /64 prefix from the same filter. A host that already restores the visitor address (nginx `real_ip`, Apache `mod_remoteip`, Cloudways' Cloudflare setting) needs no filter.
+
+Known trade-off (security review L-09): anyone can submit a form with someone else's address, so three accepted entries block that address on that form for an hour, and three confirmation emails (sent to that person) block them from every confirm form for a day. Kept: the limits exist to stop one address being flooded with mail, and counting only confirmed entries would let a bot send unlimited confirmation emails. The message names the wait, not the count.
 
 ### Time token
 
-`<render time>.<HMAC-SHA256("pegwork_form|<key>|<time>", wp_salt( 'nonce' ))>`. Page caches make the render time older, never newer, so they only weaken the 3-second floor; honeypot and rate limits carry the load. An error re-render reuses the posted token's time when `Token::issued()` accepts it (valid signature, this form, under 7 days), so the floor counts from the first render, not the error page.
+`<render time>.<HMAC-SHA256("pegwork_form|<key>|<time>", wp_salt( 'nonce' ))>`. Page caches make the render time older, never newer, so they only weaken the 3-second floor; honeypot and rate limits carry the load. An error re-render reuses the posted token's time when `Token::issued()` accepts it (valid signature, this form, under 7 days), so the floor counts from the first render, not the error page. It is a time trap, not a one-time token: a bot can fetch one page and reuse its token for 7 days (by design, security review I-01; cached pages must keep working). Honeypot, rate limits and Turnstile carry the load against bots.
 
 ## Notifications
 
-`notifications[]` with `when: submitted` are sent through `wp_mail`, plain text, synchronously, after the entry is stored. Results per key: `sent`, `failed` or `skipped` (no valid recipient), in `meta.notifications`.
+`notifications[]` with `when: submitted` are sent through `wp_mail`, plain text, synchronously, after the entry is stored. Pegwork forces `text/plain` for its own mail (a `wp_mail_content_type` filter at `PHP_INT_MAX`, removed after the send), so a site that switches mail to HTML globally cannot turn submitted values into markup. Results per key: `sent`, `failed` or `skipped` (no valid recipient), in `meta.notifications`.
 
 - `to`, `reply_to`: a literal address, `{admin_email}`, `{field:<email item>}` (sent only when the submitter gave a valid address) or `{option:<page>.<field>}`, read through `pegwork_get_option()` when the options pages feature provides it. An unset or invalid option address in `to` falls back to the site admin email.
+- A submitter copy (`to: {field:email}` on a form without `confirm`) lets anyone have the site send mail, with their own text in `{all_fields}`, to any address, bounded only by the rate limits. Prefer `confirm` forms for submitter copies, or keep the copy's body to fixed text (security review I-06).
 - `when: confirmed` notifications are sent after email confirmation writes the record (see above).
 - Merge tags in `subject` and `body`: `{field:key}` (booleans Yes/No, selects and taxonomies their option labels, several joined with ", "), `{all_fields}` ("Label: value" per collected item with a value, blank line between; no colon after a label ending in `?`, `:` or `!`; a multi-line value starts on the next line), `{form:label}`, `{form:key}`, `{entry:id}`, `{entry:admin_url}` (`admin.php?page=pegwork-entries&entry=<id>`, the entries screen of PR 7), `{post:edit_url}` (the record written, empty without one), `{confirm_url}` (the confirmation email only), `{admin_email}`, `{site:name}`, `{option:page.field}`. Unknown tags render empty.
 - Control characters (CR, LF and the rest) are stripped from subjects and addresses; an address that is not a single valid email is dropped. A body that renders empty is replaced by `{all_fields}` (wp_mail refuses empty bodies).
@@ -212,10 +252,10 @@ Pegwork > Entries (`admin.php?page=pegwork-entries`, submenu position 21). Every
 
 ### Privacy
 
-- Tools > Export Personal Data and Erase Personal Data include "Pegwork form entries" (ID `pegwork-forms`), matched by the entry's `email` column (the confirm field, else the form's first email item, lowercased), 50 per page.
+- Tools > Export Personal Data and Erase Personal Data include "Pegwork form entries" (ID `pegwork-forms`), matched by the entry's `email` column (the confirm field, else the form's first email item, lowercased), or by `user_id` when the address belongs to a user account (entries a logged-in user sent on a form without an email item), 50 per page.
 - The exporter lists form, entry ID, submitted, status, confirmed, the published record's URL when there is one, and every value; a stored file as "<name> (uploaded file, included in the pegwork-form-files folder of this export)". On `wp_privacy_personal_data_export_file_created`, `Privacy::add_files()` adds the address's files to the export zip as `pegwork-form-files/<entry>-<item>-<name>` (needs `ZipArchive`, which the export itself needs).
 - The eraser deletes the entries and their files. Records created from them are reported as retained ("...was kept: edit or delete it yourself..."): they are directory records, and changing them is a person's decision.
-- Settings > Privacy gets suggested policy text: what is stored (no IP address), the retention below, uploaded files (private, downloadable only by people who manage forms, deleted with the submission), records created from submissions, and Turnstile's Cloudflare script.
+- Settings > Privacy gets suggested policy text: what is stored (no IP address, only keyed hashes of it: rate limit rows for up to a day and the duplicate fingerprint on the entry), the retention below, uploaded files (private, downloadable only by people who manage forms, deleted with the submission), records created from submissions, and Turnstile's Cloudflare script.
 
 ### Retention
 
@@ -245,7 +285,8 @@ A file value appears as `{ name, size, mime }`, never its contents or storage pa
 | `pegwork_forms_retention_days` | `( array $days )`: days to keep `spam` (30) and `unconfirmed` (7) entries; 0 keeps them. |
 | `pegwork_forms_spam_check` | `( string[] $reasons, array $form, array $values )`: add reasons to store a submission as spam. |
 | `pegwork_forms_rate_limits` | `( array $limits, string $form_key )`. |
-| `pegwork_forms_client_ip` | `( string $ip )`. |
+| `pegwork_forms_client_ip` | `( string $ip )`: forms only, after the shared `pegwork_client_ip` (see Rate limits). |
+| `pegwork_forms_turnstile_hostnames` | `( string[] $hostnames )`: hostnames a Turnstile token may be solved on; default the host of `home_url()`. |
 | `pegwork_event_form_submitted`, `pegwork_event_form_confirmed` | The events above. |
 
 Seams for the later PRs: `Definition::unsupported()` is the single fail-closed gate (Turnstile without keys, a missing target type); `Submission::process()` returns the outcome for each branch (including `captcha_failed` and `held`), and its `$files` argument takes uploads from `Uploads::from_request()`. The PR 5 view script should keep the widget's step (the last) visible when it renders, since `.cf-turnstile` renders on page load. "Create post anyway" claims with `EntryState::claim()` and writes with `RecordWriter::draft()`, not `Confirm::complete()`: completing would send `confirmed` notifications (including the submitter's) to an address nobody proved and emit `form.confirmed`. `Entries` holds the reads plus `insert()`, `update_meta()` and `delete()`; `EntryState` writes the lifecycle columns (the admin adds `EntryState::transition()` for bulk spam and not spam). `Notifications::ENTRIES_PAGE` (`pegwork-entries`) is the admin slug `{entry:admin_url}` links to.

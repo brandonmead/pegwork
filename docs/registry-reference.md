@@ -101,10 +101,10 @@ A package is a directory with `manifest.json` and one JSON file per object:
 | `type` | | `text`, `textarea`, `rich_text`, `url`, `email`, `boolean`, `date` (`Y-m-d`), `number`, `select`. Options pages add `post`; forms add `file` (`post_field_not_allowed` elsewhere) |
 | `label` | | non-empty string |
 | `required` | `false` | boolean |
-| `visibility` | `public` | `public` or `private` (private fields are edit-context only in REST and never leave the site through public outputs) |
+| `visibility` | `public` | `public` or `private` (private fields are edit-context only in REST and never leave the site through public outputs). A private field is stored in meta only: `wp.storage` (`post_title` and `post_content` are public in REST, feeds, search and the theme) is `private_storage` |
 | `default` | | must match the type (`invalid_default`); not allowed on `post` and `file` |
 | `options` | | `select` only, required there: `[ { "value", "label" } ]` |
-| `show_when`, `required_when` | | `{ "field": <key in the same object>, "equals": <scalar> }` (`unknown_field`) |
+| `show_when`, `required_when` | | `{ "field": <key in the same object>, "equals": <scalar> }` (`unknown_field`). On a public field, the target may not be private (`private_condition_field`): whether the public field shows would reveal the private value |
 | `validate` | | string types: `min_length`, `max_length`, `min_words`, `max_words`, `pattern` (valid regex, `invalid_pattern`); `number`: `min`, `max`. Other rules on a type are `validate_not_applicable` |
 | `wp` | | content types only: `storage` (`post_title` or `post_content`) or `meta_key` (`^_?[A-Za-z][A-Za-z0-9_]*$`, private fields need the leading `_`), not both |
 
@@ -371,7 +371,7 @@ Paths are dot-separated (`invalid_var`). Templates are `{{ path }}`, optionally 
 | `today`, `now`, `run.id`, `link.<name>` | templates only |
 | `option` | `option:<options page>.<field>`, templates only. Page and field must exist (`unknown_options_page`, `unknown_field`); a private field is `automation_private_field` in any template |
 
-Private fields may be read in conditions, emails, `values` and `idempotency`, but not in public contexts: `call_webhook` (`url`, `fields`) and link page texts (`automation_private_field`).
+Private fields may be read in conditions, emails, `values` and `idempotency`, but not in public contexts: `call_webhook` (`url`, `fields`) and link page texts (`automation_private_field`). A form value `trigger.values.<item key>` whose item binds a private field of the form's target type counts as that private field (rejected in public contexts, `[private]` in the run log).
 
 ## Reading definitions
 
@@ -391,7 +391,7 @@ $page    = pegwork_registry()->options_page( 'sifg_settings' );
 | Code | Kind |
 |---|---|
 | `invalid_json`, `missing_package`, `missing_manifest`, `duplicate_package`, `duplicate_key`, `unsupported_format`, `invalid_type`, `invalid_value`, `missing_property`, `unknown_property`, `callable_not_allowed`, `invalid_key`, `key_too_long`, `reserved_key`, `invalid_version` | any |
-| `unknown_taxonomy`, `invalid_slug`, `invalid_default`, `invalid_pattern`, `validate_not_applicable`, `invalid_meta_key`, `unknown_field`, `reserved_field_key`, `post_field_not_allowed` | content types, taxonomies, fields |
+| `unknown_taxonomy`, `invalid_slug`, `invalid_default`, `invalid_pattern`, `validate_not_applicable`, `invalid_meta_key`, `unknown_field`, `reserved_field_key`, `post_field_not_allowed`, `private_storage`, `private_condition_field` | content types, taxonomies, fields |
 | `listing_reserved_key`, `listing_duplicate_key`, `listing_one_target`, `listing_unknown_target`, `listing_private_field`, `listing_field_type` | listing |
 | `unknown_content_type`, `self_relationship`, `storage_not_supported`, `meta_key_conflict` | relationships |
 | `not_allowed_in_options_page` | options pages |
