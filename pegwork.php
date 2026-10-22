@@ -93,6 +93,9 @@ if ( pegwork_unmet_requirements( PHP_VERSION, get_bloginfo( 'version' ) ) ) {
 }
 
 require_once PEGWORK_DIR . 'vendor/autoload.php';
+// Not a Composer `files` autoload: it guards against direct access, and the test bootstrap loads the
+// autoloader before WordPress defines ABSPATH.
+require_once PEGWORK_DIR . 'src/Api/constants.php';
 require_once PEGWORK_DIR . 'includes/functions.php';
 
 Pegwork\Plugin::boot();

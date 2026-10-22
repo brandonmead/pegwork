@@ -3,6 +3,7 @@
 /node_modules/
 /build/
 /assets/build/
+/dist/
 .phpunit.result.cache
 .phpcs-cache
 # Playwright output

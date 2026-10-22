@@ -209,8 +209,7 @@ class AutomationEngineTest extends AutomationTestCase {
 	 */
 	public function test_unsupported_step_fails_the_run() {
 		$handlers = new \ReflectionProperty( Engine::class, 'steps' );
-		$handlers->setAccessible( true );
-		$steps = $handlers->getValue( Engine::instance() );
+		$steps    = $handlers->getValue( Engine::instance() );
 		unset( $steps['call_webhook'] );
 		$handlers->setValue( Engine::instance(), $steps );
 

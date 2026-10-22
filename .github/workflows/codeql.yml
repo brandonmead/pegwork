@@ -1,0 +1,50 @@
+name: CodeQL
+
+# Code scanning for the block editor JavaScript and the workflow files. CodeQL has no PHP support, so
+# the PHP side relies on PHPCS (WordPress coding standards, including its security sniffs) in CI and on
+# WordPress Plugin Check before a release.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '23 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript', 'actions']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          # Scan the sources, not the webpack output or dependencies.
+          config: |
+            paths-ignore:
+              - assets/build
+              - node_modules
+              - vendor
+
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: '/language:${{ matrix.language }}'
