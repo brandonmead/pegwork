@@ -32,6 +32,10 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 - Left: 40 Plugin Check `UnescapedDBParameter` warnings (prepared queries; switching table names to `%i` is a runtime change for the security review). Dependabot alerts are all npm dev tooling; most need majors (`@wordpress/env` 12, `@wordpress/scripts` 37).
 - Owner settings to consider (not changed): branch ruleset on `main` (PR required, required checks, no force-push or deletion), Dependabot security updates, secret scanning and push protection, "Require actions pinned to a full SHA", delete branch on merge, a WordPress.org username for `Contributors:` in readme.txt.
 
+## Security fixes (from `docs/security-review-2026-10.md`)
+- Fix SR-01 to SR-03 (medium, withheld until fixed) first, then publish their details in the review doc.
+- Then the low findings L-01 to L-10; informational items I-01 to I-11 as time allows. Item I-11 (pin actions by commit SHA) is done in the open-source readiness PR.
+
 ## UX polish PR (in review, branch `ux-polish`)
 - Clears the UX backlog and bumps the plugin to 0.2.0 (`changelog.md` 2026-10-20). Also holds the SI for Good final QA fixes (confirm panel, corrected submits, conditional required, step heading, URLs, rate-limit wording, `| date` and `{{option:...}}` templates).
 - Left from the SI for Good QA: the filters panel does not collapse on phones (a design change; per-facet disclosure is already a site config option). Follow-up in the siforgood repo: add `messages.confirmed` to Submit a project and use `| date` and `{{option:sifg_settings.contact_email}}` in `sifg-config` emails.
