@@ -370,6 +370,35 @@ class FiltersModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `collapseOnSmall` wraps the fields and actions in a details: off by default, closed with no filter,
+	 * open with the active count in the summary (the search and each shown filter with a value).
+	 */
+	public function test_collapse_on_small_screens() {
+		$base = get_post_type_archive_link( 'sifg_project' );
+		$this->go_to( $base );
+		$this->assertStringNotContainsString( '<details class="pegwork-filters__collapse"', do_blocks( '<!-- wp:pegwork/filters /-->' ) );
+		$this->assertStringNotContainsString( 'collapseLabel', do_blocks( '<!-- wp:pegwork/filters /-->' ) );
+
+		$html = do_blocks( '<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->' );
+		$this->assertStringContainsString( '<details class="pegwork-filters__collapse"><summary class="pegwork-filters__collapse-summary" data-wp-text="context.collapseLabel">Filters</summary><div class="pegwork-filters__fields">', $html );
+		$this->assertMatchesRegularExpression( '#</div></details></form><p class="pegwork-filters__count"#', $html );
+
+		$params = array(
+			'q'          => 'data',
+			'volunteers' => '1',
+			'impact'     => 'sdg-04,sdg-13',
+		);
+		$this->go_to( add_query_arg( urlencode_deep( $params ), $base ) );
+		$html = do_blocks( '<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->' );
+		$this->assertStringContainsString( '<details class="pegwork-filters__collapse" open>', $html );
+		$this->assertStringContainsString( '>Filters, 3 active</summary>', $html );
+
+		// Only shown controls count: no search box, and only the volunteers filter.
+		$html = do_blocks( '<!-- wp:pegwork/filters {"collapseOnSmall":true,"showSearch":false,"filters":["volunteers"]} /-->' );
+		$this->assertStringContainsString( '>Filters, 1 active</summary>', $html );
+	}
+
+	/**
 	 * Base URL: the page permalink without paging or filter params; plain permalinks keep their own
 	 * parameter as a hidden field (a GET form drops the action's query string).
 	 */

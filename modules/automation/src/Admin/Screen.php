@@ -103,7 +103,7 @@ final class Screen {
 			. '.pegwork-automations .pegwork-summary{margin:0;}'
 			. '.pegwork-automations .pegwork-summary li{margin:0 0 2px;}'
 			. '.pegwork-automations .pegwork-filters{margin:1em 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}'
-			. '.pegwork-automations .pegwork-filters select{max-width:100%;}'
+			. '.pegwork-automations .pegwork-filters select{width:auto;max-width:min(100%,26em);text-overflow:ellipsis;}'
 			. '.pegwork-automations .pegwork-pages{margin:1em 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}'
 			. '.pegwork-automations .pegwork-pages .page-numbers{display:inline-block;min-width:30px;padding:4px 8px;text-align:center;}'
 			. '.pegwork-automations .pegwork-pages .page-numbers.current{font-weight:600;}'

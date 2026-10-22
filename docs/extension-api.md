@@ -83,7 +83,7 @@ What the `listings` and `filters` modules offer to themes and add-ons (usage in 
 | `pegwork/field` | Block Bindings source | `args`: `key` (required), `format`, `prefix`, `label`, `keepEmpty`. Public fields only; private fields and records that are not publicly viewable resolve to nothing. |
 | `pegwork/option` | Block Bindings source | `args`: `page`, `field` (required), `format`. Public option fields only; an unresolved binding keeps the block's saved text. |
 | `pegwork/conditional` | block | `conditions` (`field` with `equals`, `not_equals`, `empty`, `not_empty`; `taxonomy` with `in`, `not_in`); fails closed. |
-| `pegwork/filters` | block | Attributes `postType`, `filters`, `showSearch`; filter keys come from the type's `listing`. |
+| `pegwork/filters` | block | Attributes `postType`, `filters`, `showSearch`, `collapseOnSmall`; filter keys come from the type's `listing`. |
 | `pegwork` attribute on `core/query` | block attribute | `filters` (bool) and `where` presets; context `pegwork/listing`. Any value makes the loop list published records only. |
 | `pegwork/<type>-<kind>` | block patterns | `card`, `details`, `directory`, `featured`, `latest`; a pattern registered earlier under the same name (a theme `patterns/` file) wins. |
 

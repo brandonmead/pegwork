@@ -196,3 +196,11 @@ $pegwork-muted: #50575e;
 .pegwork-form-readonly .editor-post-last-edited-panel {
 	display: none;
 }
+
+// The title cannot be locked through core, so the builder script cancels its edits (index.js lockTitle,
+// which also puts this class on the canvas iframe body); here it only looks like text: no caret, no
+// text cursor.
+.pegwork-form-readonly .editor-post-title__input {
+	caret-color: transparent;
+	cursor: default;
+}
