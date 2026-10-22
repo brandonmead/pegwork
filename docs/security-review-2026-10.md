@@ -74,6 +74,18 @@ The repository is public, so findings rated medium or higher were listed by ID o
 - Proof: on the throwaway site, which mounts a development checkout, a GET to the helper script with a script tag in the parameter returned it unescaped as `text/html` (HTTP 200).
 - Fix: #41 added `bin/build-zip.sh` and the release zip (`composer install --no-dev`, an export allowlist, and a check that fails when a development package or file would ship) and tells production installs to use it. #49 adds defence in depth: a Site Health test (`pegwork_dev_dependencies`, Security) that is critical when development dependencies are installed (`vendor/composer/installed.php`) on a site whose environment type is not `local` or `development`, plus direct-access guards on the e2e mu-plugins and `bin/check-schema-fixtures.php`. A site already installed from a checkout should be reinstalled from the release zip, or run `composer install --no-dev` in the plugin folder.
 
+![The Site Health warning on a site running a development checkout](screenshots/security-site-health.png)
+
+## Proofs after the fixes
+
+Rerun on a throwaway site (`bin/e2e-local-site.sh`, 8 PHP workers) at the head of #49:
+
+- SR-01: a 200 KB body gets 413 on the lower-case and the mixed-case route; `text/plain` to the mixed-case route gets 415; 35 unsigned POSTs to it get 30 answers of 401, then 429.
+- SR-02 (two client addresses through `pegwork_client_ip`): after the attacker's 31 junk POSTs (30 answers of 401, then 429), the sender's signed POST gets 202; after junk to an unknown key, another unknown key and the real key both answer 401.
+- L-01: 24 parallel honeypot posts from one IP stored 5 entries (the limit); 19 got "Too many submissions".
+- L-02: one signed body and timestamp sent with delivery `d1` gave 202 (a run), then `d1` again, `d2` and no header twice all gave 200 duplicate with no new run.
+- Signed links (unchanged behaviour): tampered token "This link does not work", POST without nonce 403, first POST acts, second "Already done".
+
 ## Low
 
 ### L-01 Rate limit counters are not atomic
