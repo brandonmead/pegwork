@@ -97,10 +97,12 @@ final class Turnstile {
 	 * The widget for the end of the last step. Enqueues Cloudflare's script (footer, deferred).
 	 *
 	 * The widget writes its token to `pegwork_form[captcha]`, so it arrives with the other control fields.
+	 * `data-action` names the form, so a token solved for another form is refused (verify()).
 	 *
-	 * @param string $base Base ID of the form instance.
+	 * @param string $base   Base ID of the form instance.
+	 * @param string $action Widget action (action()).
 	 */
-	public static function widget( string $base ): string {
+	public static function widget( string $base, string $action = '' ): string {
 		$keys = self::keys();
 		if ( null === $keys ) {
 			return '';
@@ -108,8 +110,17 @@ final class Turnstile {
 		self::enqueue();
 
 		return '<div class="pegwork-form__captcha" id="' . esc_attr( $base ) . '-captcha">'
-			. '<div class="cf-turnstile" data-sitekey="' . esc_attr( $keys['site'] ) . '" data-response-field-name="' . esc_attr( Submission::CONTROL . '[' . self::FIELD . ']' ) . '" data-theme="auto" data-size="flexible"></div>'
+			. '<div class="cf-turnstile" data-sitekey="' . esc_attr( $keys['site'] ) . '"' . ( '' !== $action ? ' data-action="' . esc_attr( $action ) . '"' : '' ) . ' data-response-field-name="' . esc_attr( Submission::CONTROL . '[' . self::FIELD . ']' ) . '" data-theme="auto" data-size="flexible"></div>'
 			. '</div>';
+	}
+
+	/**
+	 * The widget action of a form: its key, cut to Turnstile's 32 characters.
+	 *
+	 * @param array<string, mixed> $form Canonical form.
+	 */
+	public static function action( array $form ): string {
+		return substr( (string) $form['key'], 0, 32 );
 	}
 
 	/**
@@ -151,14 +162,19 @@ final class Turnstile {
 	}
 
 	/**
-	 * Checks a widget token with siteverify (`wp_safe_remote_post`).
+	 * Checks a widget token with siteverify (`wp_safe_remote_post`, with the client IP as `remoteip`). A
+	 * passing answer must also name this site's hostname (filter `pegwork_forms_turnstile_hostnames`) and,
+	 * when an action is given, that action, as Cloudflare recommends; Cloudflare's published test secrets
+	 * answer for any hostname, so those two checks are skipped for them.
 	 *
-	 * @param mixed $token Posted token.
+	 * @param mixed  $token  Posted token.
+	 * @param string $action Expected widget action (action()), or '' for none.
 	 * @return string `pass`; `fail` (no token, or Cloudflare rejected it: a bot, an expired or reused
-	 *                token); `unverified` (no keys, network error, unexpected answer, or a site-side error
-	 *                code such as a wrong secret: nobody can tell whether the visitor is a person).
+	 *                token, another hostname or form); `unverified` (no keys, network error, unexpected
+	 *                answer, or a site-side error code such as a wrong secret: nobody can tell whether the
+	 *                visitor is a person).
 	 */
-	public static function verify( mixed $token ): string {
+	public static function verify( mixed $token, string $action = '' ): string {
 		$keys = self::keys();
 		if ( null === $keys ) {
 			return 'unverified';
@@ -169,14 +185,19 @@ final class Turnstile {
 			return 'fail';
 		}
 
+		$fields = array(
+			'secret'   => $keys['secret'],
+			'response' => $token,
+		);
+		$ip     = RateLimit::client_ip();
+		if ( '' !== $ip ) {
+			$fields['remoteip'] = $ip;
+		}
 		$response = wp_safe_remote_post(
 			self::VERIFY_URL,
 			array(
 				'timeout' => 10,
-				'body'    => array(
-					'secret'   => $keys['secret'],
-					'response' => $token,
-				),
+				'body'    => $fields,
 			)
 		);
 		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
@@ -187,11 +208,34 @@ final class Turnstile {
 			return 'unverified';
 		}
 		if ( true === $body['success'] ) {
-			return 'pass';
+			if ( self::test_secret( $keys['secret'] ) ) {
+				return 'pass';
+			}
+
+			/**
+			 * Filters the hostnames a Turnstile token may have been solved on.
+			 *
+			 * @param string[] $hostnames Default: the host of home_url().
+			 */
+			$hostnames = (array) apply_filters( 'pegwork_forms_turnstile_hostnames', array( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) );
+			$hostname  = is_string( $body['hostname'] ?? null ) ? strtolower( $body['hostname'] ) : '';
+			if ( ! in_array( $hostname, array_map( 'strtolower', array_filter( $hostnames, 'is_string' ) ), true ) ) {
+				return 'fail';
+			}
+			return '' === $action || ( $body['action'] ?? null ) === $action ? 'pass' : 'fail';
 		}
 		$codes = is_array( $body['error-codes'] ?? null ) ? $body['error-codes'] : array();
 
 		return array() !== array_intersect( $codes, self::SITE_ERRORS ) ? 'unverified' : 'fail';
+	}
+
+	/**
+	 * Whether a secret is one of Cloudflare's published test secrets (`1x`, `2x` or `3x`, then zeros, `AA`).
+	 *
+	 * @param string $secret Secret key.
+	 */
+	private static function test_secret( string $secret ): bool {
+		return 1 === preg_match( '/^[123]x0{31}AA$/', $secret );
 	}
 
 	/**

@@ -285,7 +285,7 @@ final class Submission {
 
 		// Turnstile last, after the cheap checks, so a valid token is spent only on a submission that
 		// can be stored (a double click hits the duplicate check above, not a reused-token failure).
-		$verdict = Turnstile::enabled( $form ) ? Turnstile::verify( $control[ Turnstile::FIELD ] ?? null ) : 'pass';
+		$verdict = Turnstile::enabled( $form ) ? Turnstile::verify( $control[ Turnstile::FIELD ] ?? null, Turnstile::action( $form ) ) : 'pass';
 		if ( 'fail' === $verdict ) {
 			// No token field at all: the widget never ran, so the browser has no JavaScript.
 			$reason = array_key_exists( Turnstile::FIELD, $control ) ? 'captcha_failed' : 'captcha_missing';

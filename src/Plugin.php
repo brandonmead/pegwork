@@ -57,6 +57,7 @@ final class Plugin {
 		add_action( 'admin_notices', array( Notices::class, 'render' ) );
 		Admin\EditorPanel::register();
 		Admin\Menu::register();
+		Admin\SiteHealth::register();
 		Options\Screen::register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

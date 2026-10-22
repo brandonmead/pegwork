@@ -11,7 +11,8 @@ namespace PegworkForms;
 
 /**
  * Registers form entries with Tools > Export Personal Data and Erase Personal Data, matched by the
- * entry's `email` column (the confirm field, else the form's first email item). The eraser deletes the
+ * entry's `email` column (the confirm field, else the form's first email item), or by the user account
+ * with that address for entries it submitted while logged in (Entries::by_email()). The eraser deletes the
  * entries and reports records created from them as retained: those are directory records, and editing
  * them is a person's decision. Adds suggested text to Settings > Privacy.
  */

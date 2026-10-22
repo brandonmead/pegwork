@@ -154,7 +154,7 @@ final class Renderer {
 			}
 			// The Turnstile widget sits at the end of the last step, so it shows with the submit button.
 			if ( $turnstile && $index === $last ) {
-				$html .= Turnstile::widget( $base );
+				$html .= Turnstile::widget( $base, Turnstile::action( $form ) );
 			}
 			if ( $section['step'] ) {
 				$html .= '</fieldset>';
