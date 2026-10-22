@@ -292,13 +292,13 @@ final class Relationships {
 				'post_type'              => $relationship['from'],
 				'post_status'            => array_keys( get_post_stati() ),
 				'meta_query'             => array( self::link_clause( $key, $to_id ) ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Relationship lookup; unindexed by design (docs/relationships.md).
-				'post__not_in'           => $exclude > 0 ? array( $exclude ) : array(),
+				'post__not_in'           => $exclude > 0 ? array( $exclude ) : array(), // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- At most one ID (the "from" post being edited).
 				'posts_per_page'         => $limit,
 				'orderby'                => 'ID',
 				'order'                  => 'ASC',
 				'fields'                 => 'ids',
 				'no_found_rows'          => true,
-				'suppress_filters'       => true,
+				'suppress_filters'       => true, // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.SuppressFilters_suppress_filters -- Keeps link lookups independent of other plugins' posts_* query filters; dropping it would change which links are found.
 				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
 			)

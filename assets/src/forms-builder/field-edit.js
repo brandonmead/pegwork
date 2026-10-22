@@ -62,12 +62,21 @@ function rulesText( item, items ) {
 				unit
 			);
 		}
+		// Translator comments sit right before each __() so they survive minification.
 		if ( max !== null ) {
-			/* translators: 1: maximum, 2: unit such as "words". */
-			return sprintf( __( 'up to %1$s %2$s', 'pegwork' ), max, unit );
+			return sprintf(
+				/* translators: 1: maximum, 2: unit such as "words". */
+				__( 'up to %1$s %2$s', 'pegwork' ),
+				max,
+				unit
+			);
 		}
-		/* translators: 1: minimum, 2: unit such as "words". */
-		return sprintf( __( 'at least %1$s %2$s', 'pegwork' ), min, unit );
+		return sprintf(
+			/* translators: 1: minimum, 2: unit such as "words". */
+			__( 'at least %1$s %2$s', 'pegwork' ),
+			min,
+			unit
+		);
 	};
 	const words = ruleParts( item ).map( ( part ) => {
 		switch ( part.rule ) {
@@ -103,11 +112,17 @@ function rulesText( item, items ) {
 					);
 				}
 				if ( part.max !== null ) {
-					/* translators: %s: maximum. */
-					return sprintf( __( 'at most %s', 'pegwork' ), part.max );
+					return sprintf(
+						/* translators: %s: maximum. */
+						__( 'at most %s', 'pegwork' ),
+						part.max
+					);
 				}
-				/* translators: %s: minimum. */
-				return sprintf( __( 'at least %s', 'pegwork' ), part.min );
+				return sprintf(
+					/* translators: %s: minimum. */
+					__( 'at least %s', 'pegwork' ),
+					part.min
+				);
 			case 'pattern':
 				return __( 'must match a pattern', 'pegwork' );
 			case 'terms':

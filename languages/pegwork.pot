@@ -1,0 +1,4608 @@
+# Copyright (C) 2026 Brandon Mead
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Pegwork 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/brandonmead/pegwork/issues\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-22T22:59:18+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: pegwork\n"
+
+#. Plugin Name of the plugin
+#: pegwork.php
+#: modules/forms/src/Module.php:97
+#: modules/listings/src/Module.php:70
+#: modules/listings/src/Patterns.php:101
+#: src/Admin/Menu.php:90
+#: src/Admin/Menu.php:91
+msgid "Pegwork"
+msgstr ""
+
+#. Description of the plugin
+#: pegwork.php
+msgid "Application builder for WordPress: content types, fields and taxonomies defined in versioned JSON, on one schema registry."
+msgstr ""
+
+#. Author of the plugin
+#: pegwork.php
+msgid "Brandon Mead"
+msgstr ""
+
+#. translators: %s: per-field error messages.
+#: includes/functions.php:111
+#, php-format
+msgid "These values are not valid: %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Actions.php:50
+msgid "Unknown automation action."
+msgstr ""
+
+#. translators: %s: automation label.
+#: modules/automation/src/Admin/Actions.php:62
+#, php-format
+msgid "Automation %s enabled for this site."
+msgstr ""
+
+#. translators: %s: automation label.
+#: modules/automation/src/Admin/Actions.php:64
+#, php-format
+msgid "Automation %s disabled for this site. New runs do not start; queued runs are cancelled when they wake."
+msgstr ""
+
+#: modules/automation/src/Admin/Actions.php:83
+msgid "Run now is for schedule automations. Event automations run when their event fires."
+msgstr ""
+
+#. translators: 1: automation label, 2: number of records or firings matched, 3: number of runs created.
+#: modules/automation/src/Admin/Actions.php:99
+#, php-format
+msgid "%1$s: matched %2$s, created %3$s run. It runs in the background; reload this page to follow it."
+msgid_plural "%1$s: matched %2$s, created %3$s runs. They run in the background; reload this page to follow them."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of matches skipped.
+#: modules/automation/src/Admin/Actions.php:106
+#, php-format
+msgid "%s already had a run for its idempotency key."
+msgid_plural "%s already had a run for their idempotency key."
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/automation/src/Admin/Actions.php:109
+msgid "Stopped at max_runs; the rest are checked next time."
+msgstr ""
+
+#: modules/automation/src/Admin/Actions.php:112
+msgid "The sweep continues in the background."
+msgstr ""
+
+#. translators: %d: run ID.
+#: modules/automation/src/Admin/Actions.php:146
+#, php-format
+msgid "Run %d queued again from the step that failed. It runs in the background; reload this page to follow it."
+msgstr ""
+
+#: modules/automation/src/Admin/Actions.php:165
+msgid "Sorry, you are not allowed to manage Pegwork automations."
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:32
+#: modules/automation/src/Admin/AutomationList.php:40
+#: modules/automation/src/Admin/Screen.php:71
+msgid "Automations"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:33
+msgid "View run log"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:36
+msgid "Automations come from the schema registry and are edited as JSON. Here you can switch one on or off for this site, run a schedule now, and follow its runs."
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:42
+#: modules/automation/src/Admin/RunLog.php:56
+#: modules/automation/src/Admin/RunLog.php:88
+#: modules/automation/src/Admin/RunLog.php:150
+#: src/Modules/manifest.php:33
+msgid "Automation"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:43
+#: modules/automation/src/Admin/RunLog.php:89
+#: modules/automation/src/Admin/RunLog.php:161
+msgid "Trigger"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:44
+#: modules/automation/src/Admin/AutomationList.php:119
+#: src/Admin/Modules.php:85
+msgid "Enabled"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:45
+msgid "Last run"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:46
+msgid "Next run"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:47
+#: modules/forms/src/EntriesAdmin.php:419
+msgid "Actions"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:51
+msgid "No automations registered. Add an automations section to a schema package (see the registry reference) or import one with wp pegwork schema import."
+msgstr ""
+
+#. translators: %s: CLI command.
+#: modules/automation/src/Admin/AutomationList.php:79
+#, php-format
+msgid "The same rules apply to %s. Times are in the site time zone."
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:95
+msgid "POST signed JSON to"
+msgstr ""
+
+#. translators: %s: CLI command.
+#: modules/automation/src/Admin/AutomationList.php:98
+#, php-format
+msgid "Secret: %s"
+msgstr ""
+
+#. translators: 1: on or off (JSON default), 2: on or off (site override).
+#: modules/automation/src/Admin/AutomationList.php:111
+#: modules/automation/src/Admin/AutomationList.php:117
+#: assets/build/listings-editor.js:9
+msgid "on"
+msgstr ""
+
+#. translators: 1: on or off (JSON default), 2: on or off (site override).
+#: modules/automation/src/Admin/AutomationList.php:111
+#: modules/automation/src/Admin/AutomationList.php:117
+#: assets/build/listings-editor.js:9
+msgid "off"
+msgstr ""
+
+#. translators: %s: on or off.
+#: modules/automation/src/Admin/AutomationList.php:115
+#, php-format
+msgid "JSON default %s, no site override"
+msgstr ""
+
+#. translators: 1: on or off (JSON default), 2: on or off (site override).
+#: modules/automation/src/Admin/AutomationList.php:117
+#, php-format
+msgid "JSON default %1$s, site override %2$s"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:119
+#: src/Admin/Modules.php:85
+msgid "Disabled"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:130
+msgid "Never run"
+msgstr ""
+
+#. translators: %s: number of queued, running or waiting runs.
+#: modules/automation/src/Admin/AutomationList.php:139
+#, php-format
+msgid "%s open run"
+msgid_plural "%s open runs"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of failed runs.
+#: modules/automation/src/Admin/AutomationList.php:143
+#, php-format
+msgid "%s failed in the last 7 days"
+msgid_plural "%s failed in the last 7 days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/automation/src/Admin/AutomationList.php:159
+msgid "When a signed request arrives"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:160
+msgid "When its event fires"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:164
+msgid "None while disabled"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:166
+msgid "Scheduled on the next page load"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:185
+#: src/Admin/Modules.php:111
+msgid "Disable"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:185
+#: src/Admin/Modules.php:111
+msgid "Enable"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:193
+#: modules/automation/src/Admin/AutomationList.php:197
+msgid "Run now"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:198
+msgid "Enable it to run it now."
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:209
+msgid "View runs"
+msgstr ""
+
+#. translators: %s: automation label.
+#: modules/automation/src/Admin/AutomationList.php:211
+#, php-format
+msgid "of %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:28
+msgid "Queued"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:29
+msgid "Running"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:30
+msgid "Waiting"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:31
+msgid "Completed"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:32
+#: modules/automation/src/Admin/Format.php:47
+#: modules/forms/src/EntryFields.php:97
+msgid "Failed"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:33
+msgid "Cancelled"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:34
+msgid "Skipped"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:46
+msgid "OK"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:48
+msgid "Failed, will retry"
+msgstr ""
+
+#. translators: %s: event name such as record.updated.
+#: modules/automation/src/Admin/Format.php:98
+#, php-format
+msgid "On %s"
+msgstr ""
+
+#. translators: 1: event name such as record.updated, 2: content type or form key.
+#: modules/automation/src/Admin/Format.php:100
+#, php-format
+msgid "On %1$s (%2$s)"
+msgstr ""
+
+#. translators: %s: minutes past the hour, such as 30.
+#: modules/automation/src/Admin/Format.php:107
+#, php-format
+msgid "Every hour at %s minutes past"
+msgstr ""
+
+#. translators: 1: weekday name, 2: time HH:MM in site time.
+#: modules/automation/src/Admin/Format.php:113
+#, php-format
+msgid "Every week on %1$s at %2$s"
+msgstr ""
+
+#. translators: %s: time HH:MM in site time.
+#: modules/automation/src/Admin/Format.php:117
+#, php-format
+msgid "Every day at %s"
+msgstr ""
+
+#. translators: 1: schedule such as "Every day at 09:00", 2: content type key.
+#: modules/automation/src/Admin/Format.php:121
+#, php-format
+msgid "%1$s, for each %2$s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:126
+msgid "Inbound webhook"
+msgstr ""
+
+#. translators: %s: trigger type.
+#: modules/automation/src/Admin/Format.php:129
+#, php-format
+msgid "%s (not supported yet)"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:142
+msgid "Database (imported)"
+msgstr ""
+
+#. translators: %s: schema package id.
+#: modules/automation/src/Admin/Format.php:145
+#, php-format
+msgid "File package %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:155
+msgid "Event"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:156
+msgid "Schedule"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:157
+msgid "Manual"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:158
+msgid "Webhook"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:159
+msgid "Link"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:173
+#: modules/automation/src/Admin/RunLog.php:163
+#: modules/automation/src/Admin/RunLog.php:164
+#: modules/forms/src/EntriesAdmin.php:205
+#: modules/forms/src/EntriesAdmin.php:351
+#: modules/forms/src/EntriesTable.php:335
+#: src/Admin/Modules.php:84
+#: src/Options/Screen.php:289
+#: src/Options/Screen.php:366
+#: assets/build/editor-panel.js:9
+msgid "None"
+msgstr ""
+
+#. translators: %d: record (post) ID.
+#. translators: %d: post ID.
+#: modules/automation/src/Admin/Format.php:177
+#: src/Content/RecordValidator.php:242
+#, php-format
+msgid "#%d"
+msgstr ""
+
+#. translators: %s: record ID such as #24.
+#: modules/automation/src/Admin/Format.php:180
+#, php-format
+msgid "%s (deleted)"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:182
+#: modules/forms/src/EntriesAdmin.php:213
+#: assets/build/editor-panel.js:2
+msgid "(no title)"
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/Admin/Format.php:197
+#, php-format
+msgid "Stopped at condition %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:214
+msgid "yes"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:214
+msgid "no"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:47
+msgid "Automation run log"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:48
+msgid "Back to automations"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:58
+msgid "All automations"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:69
+#: modules/automation/src/Admin/RunLog.php:91
+#: modules/automation/src/Admin/RunLog.php:160
+#: modules/automation/src/Admin/RunLog.php:190
+#: modules/forms/src/EntriesAdmin.php:350
+#: modules/forms/src/EntriesTable.php:76
+#: modules/forms/src/Export.php:137
+#: modules/forms/src/Privacy.php:146
+#: src/Admin/Modules.php:68
+msgid "Status"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:71
+msgid "All statuses"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:76
+#: modules/forms/src/EntriesAdmin.php:519
+msgid "Filter"
+msgstr ""
+
+#. translators: %s: number of runs.
+#: modules/automation/src/Admin/RunLog.php:81
+#, php-format
+msgid "%s run"
+msgid_plural "%s runs"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/automation/src/Admin/RunLog.php:85
+msgid "Runs, newest first"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:87
+msgid "Run"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:90
+#: modules/automation/src/Admin/RunLog.php:162
+msgid "Record"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:92
+#: modules/automation/src/Admin/RunLog.php:164
+msgid "Outcome"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:93
+#: modules/automation/src/Admin/RunLog.php:169
+msgid "Created"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:98
+msgid "No runs yet. Runs appear here when an automation is triggered or run now."
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:99
+msgid "No runs match these filters."
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:104
+#: modules/automation/src/Admin/RunLog.php:144
+msgid "(removed)"
+msgstr ""
+
+#. translators: %d: run ID.
+#: modules/automation/src/Admin/RunLog.php:108
+#: modules/automation/src/Admin/RunLog.php:133
+#, php-format
+msgid "Run %d"
+msgstr ""
+
+#. translators: %d: run ID.
+#: modules/automation/src/Admin/RunLog.php:133
+msgid "Run not found"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:134
+msgid "Back to run log"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:139
+msgid "There is no run with this ID. Old finished runs are pruned after 90 days (failed runs after 180)."
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:148
+msgid "Run details"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:158
+msgid "All its runs"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:163
+msgid "Current step"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:164
+#: modules/automation/src/Admin/RunLog.php:194
+#: src/Admin/Overview.php:130
+msgid "Error"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:166
+msgid "Resumes at"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:166
+msgid "Not set"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:168
+msgid "Loop depth"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:170
+#: modules/automation/src/Admin/RunLog.php:191
+msgid "Started"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:170
+#: modules/automation/src/Admin/RunLog.php:171
+msgid "Not yet"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:171
+msgid "Finished"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:178
+msgid "Retry"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:179
+msgid "Resumes the run at the step that failed; earlier steps are not repeated."
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:184
+msgid "Step attempts"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:186
+msgid "Step attempts, oldest first"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:188
+msgid "Step"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:189
+msgid "Attempt"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:192
+msgid "Duration"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:193
+#: modules/forms/src/EntriesTable.php:75
+msgid "Summary"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:198
+msgid "No step has run yet."
+msgstr ""
+
+#. translators: %s: duration in milliseconds.
+#: modules/automation/src/Admin/RunLog.php:207
+#, php-format
+msgid "%s ms"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:265
+msgid "Newer runs"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:266
+msgid "Older runs"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:267
+#: modules/forms/src/EntriesAdmin.php:383
+msgid "Page"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:270
+msgid "Run log pages"
+msgstr ""
+
+#. translators: 1: current page, 2: number of pages.
+#: modules/automation/src/Admin/RunLog.php:273
+#, php-format
+msgid "Page %1$s of %2$s"
+msgstr ""
+
+#: modules/automation/src/Admin/Screen.php:70
+msgid "Pegwork Automations"
+msgstr ""
+
+#: modules/automation/src/Admin/Screen.php:130
+#: src/Admin/Modules.php:50
+#: src/Admin/Overview.php:26
+#: src/Options/Screen.php:141
+msgid "Sorry, you are not allowed to access this page."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:83
+msgid "Too many requests"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:83
+msgid "Please wait a few minutes, then try the link again."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:88
+#: modules/automation/src/Links/Handler.php:98
+msgid "This link does not work"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:88
+msgid "Open the link from the email in your browser."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:98
+msgid "The link may be incomplete or changed. Copy the whole link from the email into your browser, or contact the site team."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:104
+#: modules/forms/src/Confirm.php:397
+msgid "This link has expired"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:104
+msgid "For your security, links in our emails work for a limited time, so nothing was changed. Look for a newer email from us, or contact the site team."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:106
+msgid "This link is no longer available"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:106
+msgid "Nothing was changed. If you need help, contact the site team."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:129
+msgid "Confirm"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:133
+msgid "This page was open for a long time. Press the button again to confirm."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:135
+msgid "Please confirm"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:135
+msgid "Press the button below to confirm. Nothing changes until you do."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:152
+msgid "Thank you"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:152
+msgid "Your response has been recorded."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:188
+msgid "Already done"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:188
+msgid "This link has already been used, so there is nothing more to do. Thank you."
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:197
+msgid "Something went wrong"
+msgstr ""
+
+#: modules/automation/src/Links/Handler.php:197
+msgid "We could not complete this request. Please contact the site team, who can see what happened."
+msgstr ""
+
+#. translators: %s: site name.
+#: modules/automation/src/Links/Page.php:52
+#, php-format
+msgid "Go to %s"
+msgstr ""
+
+#: modules/automation/src/Webhooks/Inbound.php:128
+msgid "Too many webhook requests for this automation; try again later."
+msgstr ""
+
+#. translators: %d: maximum size in KB.
+#: modules/automation/src/Webhooks/Inbound.php:137
+#, php-format
+msgid "Webhook bodies are at most %d KB."
+msgstr ""
+
+#: modules/automation/src/Webhooks/Inbound.php:142
+msgid "Webhook bodies are application/json."
+msgstr ""
+
+#: modules/automation/src/Webhooks/Inbound.php:162
+#: modules/automation/src/Webhooks/Inbound.php:177
+msgid "The webhook signature is missing, invalid or expired."
+msgstr ""
+
+#: modules/automation/src/Webhooks/Inbound.php:182
+msgid "The webhook body is not a JSON object or array."
+msgstr ""
+
+#. translators: %d: maximum size in KB.
+#: modules/automation/src/Webhooks/Inbound.php:186
+#, php-format
+msgid "Webhook payloads are at most %d KB once decoded."
+msgstr ""
+
+#: modules/automation/src/Webhooks/Inbound.php:192
+msgid "X-Pegwork-Delivery is 1 to 128 letters, digits, dots, colons, underscores or hyphens."
+msgstr ""
+
+#. translators: 1: filter label, 2: number of selected options.
+#: modules/filters/src/FiltersBlock.php:262
+#: modules/filters/src/FiltersBlock.php:264
+#: modules/filters/src/FiltersBlock.php:292
+#, php-format
+msgid "%1$s, %2$s selected"
+msgid_plural "%1$s, %2$s selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/filters/src/FiltersBlock.php:275
+msgid "No results"
+msgstr ""
+
+#. translators: %s: number of results.
+#: modules/filters/src/FiltersBlock.php:278
+#, php-format
+msgid "%s result"
+msgid_plural "%s results"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: content type plural name, lowercase.
+#: modules/filters/src/FiltersBlock.php:354
+#, php-format
+msgid "Filter %s"
+msgstr ""
+
+#: modules/filters/src/FiltersBlock.php:361
+msgid "Apply filters"
+msgstr ""
+
+#: modules/filters/src/FiltersBlock.php:362
+msgid "Clear all"
+msgstr ""
+
+#. translators: %s: content type plural name, lowercase.
+#. translators: %s: plural content type name.
+#. translators: %s: plural taxonomy name.
+#: modules/filters/src/FiltersBlock.php:403
+#: src/Content/PostTypes.php:109
+#: src/Content/Taxonomies.php:183
+#, php-format
+msgid "Search %s"
+msgstr ""
+
+#: modules/filters/src/FiltersBlock.php:460
+#: modules/filters/src/FiltersBlock.php:489
+#: assets/build/listings-editor.js:5
+msgid "Any"
+msgstr ""
+
+#: modules/forms/src/Builder.php:97
+msgid "The form settings could not be read. Reload the editor and try again."
+msgstr ""
+
+#: modules/forms/src/Builder.php:105
+msgid "Add a form title. It is the form label."
+msgstr ""
+
+#: modules/forms/src/Builder.php:113
+msgid "Add a form key: lowercase letters, digits and underscores, starting with a letter."
+msgstr ""
+
+#: modules/forms/src/Builder.php:126
+msgid "Add at least one field."
+msgstr ""
+
+#: modules/forms/src/Builder.php:131
+msgid "Put every field inside a step, or remove the steps."
+msgstr ""
+
+#: modules/forms/src/Builder.php:183
+#: modules/forms/src/Builder.php:188
+msgid "A form can hold only form fields and steps. Remove other content."
+msgstr ""
+
+#: modules/forms/src/Builder.php:208
+msgid "Steps cannot be nested."
+msgstr ""
+
+#: modules/forms/src/Builder.php:218
+msgid "Add a label."
+msgstr ""
+
+#: modules/forms/src/BuilderEditor.php:240
+#: modules/forms/src/EntriesAdmin.php:107
+#: modules/forms/src/Files.php:96
+msgid "The link you followed has expired. Go back, reload the page and try again."
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/BuilderEditor.php:250
+#, php-format
+msgid "%s (copy)"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:236
+msgid "The form no longer exists."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:243
+msgid "The submitter can no longer edit this record."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:370
+#: modules/forms/src/Confirm.php:392
+msgid "Confirmation received"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:371
+msgid "Submission confirmed"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:393
+msgid "Already confirmed"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:393
+msgid "This submission is already confirmed. There is nothing more to do."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:397
+msgid "This confirmation link has expired. Submit the form again below."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:401
+msgid "This link is not valid"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:401
+msgid "This confirmation link is not valid. Check that you used the whole link from the email, or submit the form again below."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:480
+#: assets/build/forms-builder.js:9
+msgid "Confirm your submission"
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/Confirm.php:482
+#, php-format
+msgid "Your \"%s\" submission is waiting. Press the button to confirm it."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:486
+msgid "Confirm my submission"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:500
+#: assets/build/forms-builder.js:6
+msgid "We got your confirmation, but something in your submission needs a person to check it. We will be in touch."
+msgstr ""
+
+#: modules/forms/src/Confirm.php:510
+#: assets/build/forms-builder.js:6
+msgid "Thank you. Your submission is confirmed."
+msgstr ""
+
+#. translators: %s: page title.
+#: modules/forms/src/Confirm.php:538
+#, php-format
+msgid "Continue to %s"
+msgstr ""
+
+#: modules/forms/src/Confirm.php:539
+msgid "Continue to the site"
+msgstr ""
+
+#: modules/forms/src/Definition.php:252
+msgid "it uses Cloudflare Turnstile, and PEGWORK_TURNSTILE_SITE_KEY and PEGWORK_TURNSTILE_SECRET_KEY are not both set in wp-config.php"
+msgstr ""
+
+#. translators: %s: content type key.
+#: modules/forms/src/Definition.php:257
+#, php-format
+msgid "its target content type \"%s\" is not defined"
+msgstr ""
+
+#. translators: %s: label of a checkbox.
+#: modules/forms/src/Definition.php:354
+#, php-format
+msgid "Only needed if \"%s\" is checked."
+msgstr ""
+
+#. translators: %s: label of a checkbox.
+#: modules/forms/src/Definition.php:356
+#, php-format
+msgid "Only needed if \"%s\" is not checked."
+msgstr ""
+
+#. translators: 1: label of another field, 2: the value that makes this field needed.
+#: modules/forms/src/Definition.php:358
+#, php-format
+msgid "Only needed if \"%1$s\" is \"%2$s\"."
+msgstr ""
+
+#. translators: %s: label of a checkbox.
+#: modules/forms/src/Definition.php:378
+#, php-format
+msgid "required if \"%s\" is checked"
+msgstr ""
+
+#. translators: %s: label of a checkbox.
+#: modules/forms/src/Definition.php:380
+#, php-format
+msgid "required if \"%s\" is not checked"
+msgstr ""
+
+#. translators: 1: label of another field, 2: the value that makes this field required.
+#: modules/forms/src/Definition.php:382
+#, php-format
+msgid "required if \"%1$s\" is \"%2$s\""
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:80
+#: modules/forms/src/EntriesAdmin.php:81
+#: modules/forms/src/EntriesAdmin.php:231
+#: modules/forms/src/FormsTable.php:50
+msgid "Entries"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:94
+msgid "Sorry, you are not allowed to manage form entries."
+msgstr ""
+
+#. translators: %d: post ID.
+#: modules/forms/src/EntriesAdmin.php:210
+#, php-format
+msgid "Post %d (deleted)"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:233
+msgid "Export CSV"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:246
+msgid "Search by email"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:258
+msgid "To export entries as CSV, choose a form and select Filter."
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:269
+#: modules/forms/src/EntriesAdmin.php:469
+msgid "Back to entries"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:272
+msgid "Entry not found"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:274
+msgid "This entry does not exist. It may have been deleted."
+msgstr ""
+
+#. translators: %d: entry ID.
+#: modules/forms/src/EntriesAdmin.php:283
+#: modules/forms/src/EntriesAdmin.php:479
+#, php-format
+msgid "Entry %d"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:287
+msgid "Submitted values"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:291
+msgid "This entry has no values."
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:296
+msgid "(empty)"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:304
+#: assets/build/editor-panel.js:12
+msgid "Details"
+msgstr ""
+
+#. translators: 1: file size, such as "120 KB", 2: file type, such as "application/pdf".
+#: modules/forms/src/EntriesAdmin.php:333
+#, php-format
+msgid "%1$s, %2$s"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:335
+msgid "the file is missing from the server"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:335
+msgid "the file was not kept"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:349
+#: modules/forms/src/EntriesTable.php:74
+#: modules/forms/src/FormPost.php:104
+#: modules/forms/src/FormsTable.php:45
+#: modules/forms/src/Privacy.php:134
+#: assets/build/forms-editor.js:5
+msgid "Form"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:351
+#: modules/forms/src/EntriesTable.php:73
+#: modules/forms/src/Export.php:138
+#: assets/build/forms-builder.js:5
+msgid "Email"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:352
+#: modules/forms/src/EntriesTable.php:72
+#: modules/forms/src/Privacy.php:142
+#: assets/build/forms-builder.js:10
+msgid "Submitted"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:355
+#: modules/forms/src/Privacy.php:152
+msgid "Confirmed"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:357
+#: modules/forms/src/EntriesTable.php:77
+msgid "Post"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:362
+msgid "Post created by"
+msgstr ""
+
+#. translators: 1: user display name, 2: date.
+#: modules/forms/src/EntriesAdmin.php:365
+#, php-format
+msgid "%1$s, %2$s (Create post anyway)"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:366
+msgid "Unknown user"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:375
+msgid "Submitted by"
+msgstr ""
+
+#. translators: %d: user ID.
+#: modules/forms/src/EntriesAdmin.php:378
+#, php-format
+msgid "User %d (deleted)"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:391
+#: assets/build/forms-builder.js:9
+msgid "Notifications"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:395
+msgid "Spam reasons"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:404
+msgid "Errors"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:431
+msgid "Create post anyway"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:434
+#: modules/forms/src/EntriesTable.php:169
+msgid "Not spam"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:436
+#: modules/forms/src/EntriesTable.php:170
+msgid "Mark as spam"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:445
+#: modules/forms/src/EntriesAdmin.php:500
+#: modules/forms/src/EntriesTable.php:172
+msgid "Delete permanently"
+msgstr ""
+
+#. translators: %s: content type name.
+#: modules/forms/src/EntriesAdmin.php:450
+#, php-format
+msgid "Creates a Draft %s from this entry's values and links it here. Use it when a submitter lost the confirmation email, or to publish an entry-only submission."
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:466
+msgid "Delete entry"
+msgid_plural "Delete entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/forms/src/EntriesAdmin.php:468
+msgid "These entries no longer exist."
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:473
+msgid "This entry will be permanently deleted. This cannot be undone. A post created from it is kept."
+msgid_plural "These entries will be permanently deleted. This cannot be undone. Posts created from them are kept."
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/forms/src/EntriesAdmin.php:501
+msgid "Cancel"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:512
+msgid "Filter by form"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:514
+#: assets/build/forms-builder.js:11
+msgid "All forms"
+msgstr ""
+
+#: modules/forms/src/EntriesAdmin.php:552
+msgid "Edit the draft"
+msgstr ""
+
+#. translators: %s: number of entries.
+#: modules/forms/src/EntriesTable.php:134
+#, php-format
+msgctxt "entries"
+msgid "All <span class=\"count\">(%s)</span>"
+msgid_plural "All <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: modules/forms/src/EntriesTable.php:136
+#, php-format
+msgctxt "entries"
+msgid "Received <span class=\"count\">(%s)</span>"
+msgid_plural "Received <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: modules/forms/src/EntriesTable.php:138
+#, php-format
+msgctxt "entries"
+msgid "Unconfirmed <span class=\"count\">(%s)</span>"
+msgid_plural "Unconfirmed <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: modules/forms/src/EntriesTable.php:140
+#, php-format
+msgctxt "entries"
+msgid "Processing <span class=\"count\">(%s)</span>"
+msgid_plural "Processing <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: modules/forms/src/EntriesTable.php:142
+#, php-format
+msgctxt "entries"
+msgid "Failed <span class=\"count\">(%s)</span>"
+msgid_plural "Failed <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of entries.
+#: modules/forms/src/EntriesTable.php:144
+#, php-format
+msgctxt "entries"
+msgid "Spam <span class=\"count\">(%s)</span>"
+msgid_plural "Spam <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/forms/src/EntriesTable.php:185
+msgid "Select bulk action"
+msgstr ""
+
+#: modules/forms/src/EntriesTable.php:187
+msgid "Bulk actions"
+msgstr ""
+
+#: modules/forms/src/EntriesTable.php:192
+msgid "Apply"
+msgstr ""
+
+#: modules/forms/src/EntriesTable.php:215
+msgid "No entries match these filters."
+msgstr ""
+
+#: modules/forms/src/EntriesTable.php:218
+msgid "No entries yet. Entries appear here when someone submits a form."
+msgstr ""
+
+#. translators: %d: entry ID.
+#: modules/forms/src/EntriesTable.php:230
+#, php-format
+msgid "Select entry %d"
+msgstr ""
+
+#: modules/forms/src/EntriesTable.php:258
+#: modules/forms/src/FormsTable.php:122
+msgid "View"
+msgstr ""
+
+#. translators: %d: entry ID.
+#: modules/forms/src/EntriesTable.php:260
+#: modules/forms/src/EntriesTable.php:263
+#, php-format
+msgid "entry %d"
+msgstr ""
+
+#: modules/forms/src/EntriesTable.php:261
+msgid "Delete"
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:76
+msgid "Choose an action to apply."
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:81
+msgid "Select at least one entry."
+msgstr ""
+
+#. translators: %d: number of entries.
+#: modules/forms/src/EntryActions.php:89
+#, php-format
+msgid "%d entry marked as spam."
+msgid_plural "%d entries marked as spam."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of entries.
+#: modules/forms/src/EntryActions.php:95
+#, php-format
+msgid "%d entry marked as not spam."
+msgid_plural "%d entries marked as not spam."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of entries.
+#: modules/forms/src/EntryActions.php:111
+#, php-format
+msgid "%d entry permanently deleted."
+msgid_plural "%d entries permanently deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: post title.
+#: modules/forms/src/EntryActions.php:123
+#, php-format
+msgid "Draft \"%s\" created from the entry."
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:208
+msgid "That entry no longer exists."
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:211
+msgid "A post cannot be created from this entry: it already has one, is spam, or its form has no content type."
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:218
+msgid "You are not allowed to create posts of this type."
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:223
+msgid "This entry changed in the meantime. Reload and try again."
+msgstr ""
+
+#: modules/forms/src/EntryActions.php:232
+msgid "The draft could not be created."
+msgstr ""
+
+#: modules/forms/src/EntryFields.php:80
+#: modules/forms/src/Notifications.php:228
+#: src/Admin/Overview.php:276
+#: assets/build/listings-editor.js:3
+msgid "Yes"
+msgstr ""
+
+#: modules/forms/src/EntryFields.php:80
+#: modules/forms/src/Notifications.php:228
+#: src/Admin/Overview.php:276
+#: assets/build/listings-editor.js:3
+msgid "No"
+msgstr ""
+
+#: modules/forms/src/EntryFields.php:94
+#: modules/forms/src/FormsTable.php:48
+msgid "Received"
+msgstr ""
+
+#: modules/forms/src/EntryFields.php:95
+#: modules/forms/src/FormsTable.php:49
+msgid "Unconfirmed"
+msgstr ""
+
+#: modules/forms/src/EntryFields.php:96
+msgid "Processing"
+msgstr ""
+
+#: modules/forms/src/EntryFields.php:98
+msgid "Spam"
+msgstr ""
+
+#. translators: %s: form key.
+#: modules/forms/src/EntryFields.php:111
+#, php-format
+msgid "%s (deleted form)"
+msgstr ""
+
+#: modules/forms/src/Export.php:74
+msgid "Choose a form to export."
+msgstr ""
+
+#: modules/forms/src/Export.php:137
+#: modules/forms/src/Privacy.php:138
+msgid "Entry ID"
+msgstr ""
+
+#: modules/forms/src/Export.php:137
+msgid "Submitted (UTC)"
+msgstr ""
+
+#: modules/forms/src/Export.php:139
+msgid "Post ID"
+msgstr ""
+
+#: modules/forms/src/Files.php:90
+msgid "Sorry, you are not allowed to download form files."
+msgstr ""
+
+#: modules/forms/src/Files.php:103
+msgid "This file does not exist. It may have been deleted."
+msgstr ""
+
+#: modules/forms/src/FormPost.php:103
+#: modules/forms/src/FormPost.php:113
+#: modules/forms/src/FormsAdmin.php:46
+#: modules/forms/src/FormsAdmin.php:47
+#: modules/forms/src/FormsAdmin.php:89
+#: src/Modules/manifest.php:39
+msgid "Forms"
+msgstr ""
+
+#: modules/forms/src/FormPost.php:105
+#: modules/forms/src/FormPost.php:106
+#: modules/forms/src/FormsAdmin.php:90
+msgid "Add form"
+msgstr ""
+
+#: modules/forms/src/FormPost.php:107
+msgid "Edit form"
+msgstr ""
+
+#: modules/forms/src/FormPost.php:108
+msgid "New form"
+msgstr ""
+
+#: modules/forms/src/FormPost.php:109
+msgid "View form"
+msgstr ""
+
+#: modules/forms/src/FormPost.php:110
+msgid "Search forms"
+msgstr ""
+
+#: modules/forms/src/FormPost.php:111
+msgid "No forms found."
+msgstr ""
+
+#: modules/forms/src/FormPost.php:112
+msgid "No forms found in Trash."
+msgstr ""
+
+#: modules/forms/src/FormPost.php:114
+#: modules/forms/src/FormPost.php:115
+#: modules/forms/src/FormPost.php:116
+#: modules/forms/src/FormPost.php:117
+msgid "Form saved."
+msgstr ""
+
+#: modules/forms/src/FormPost.php:119
+msgid "Pegwork form definitions, edited in the block editor. The registry is the source."
+msgstr ""
+
+#. translators: %s: form key.
+#: modules/forms/src/FormPost.php:285
+#, php-format
+msgid "A form with key \"%s\" already exists. Choose another key."
+msgstr ""
+
+#. translators: %s: validation messages.
+#: modules/forms/src/FormPost.php:639
+#: src/Registry/Forms.php:167
+#, php-format
+msgid "This form cannot be saved: %s"
+msgstr ""
+
+#: modules/forms/src/FormsAdmin.php:76
+msgid "Sorry, you are not allowed to manage forms."
+msgstr ""
+
+#: modules/forms/src/FormsAdmin.php:92
+msgid "Build a form in the block editor, then place it on any page with the Form block, or paste its block markup into a pattern. Forms from a file package are read-only here: duplicate one to change it."
+msgstr ""
+
+#: modules/forms/src/FormsAdmin.php:104
+msgid "Copied the block markup to the clipboard."
+msgstr ""
+
+#: modules/forms/src/FormsAdmin.php:105
+msgid "Could not copy. Select the block markup and copy it yourself."
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:46
+#: src/Admin/Overview.php:42
+#: src/Admin/Overview.php:62
+#: src/Admin/Overview.php:107
+#: src/Admin/Overview.php:159
+#: src/Admin/Overview.php:194
+#: assets/build/forms-builder.js:5
+#: assets/build/forms-builder.js:10
+#: assets/build/forms-builder.js:23
+msgid "Key"
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:47
+#: src/Admin/Overview.php:46
+#: src/Admin/Overview.php:67
+#: src/Admin/Overview.php:85
+#: src/Admin/Overview.php:127
+#: src/Admin/Overview.php:164
+msgid "Source"
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:51
+msgid "Block"
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:87
+msgid "No forms yet. Select \"Add form\" to build one."
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/FormsTable.php:121
+#, php-format
+msgid "View \"%s\" (read-only)"
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/FormsTable.php:121
+#, php-format
+msgid "Edit \"%s\""
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:122
+msgid "Edit"
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/FormsTable.php:130
+#, php-format
+msgid "Duplicate \"%s\" as a site form"
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:131
+#: assets/build/forms-builder.js:7
+#: assets/build/forms-builder.js:15
+msgid "Duplicate as site form"
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:153
+msgid "Site"
+msgstr ""
+
+#. translators: %s: package ID.
+#: modules/forms/src/FormsTable.php:156
+#, php-format
+msgid "File: %s (read-only)"
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/FormsTable.php:187
+#, php-format
+msgid "Entries of \"%s\""
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:188
+msgid "View entries"
+msgstr ""
+
+#: modules/forms/src/FormsTable.php:203
+msgid "Copy block"
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/FormsTable.php:205
+#, php-format
+msgid "for \"%s\""
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/Notifications.php:108
+#, php-format
+msgid "A submission to \"%s\" was stored, but its record could not be saved as the form defines."
+msgstr ""
+
+#: modules/forms/src/Notifications.php:110
+msgid "Problems:"
+msgstr ""
+
+#. translators: %s: URL of the entry in the admin.
+#: modules/forms/src/Notifications.php:117
+#, php-format
+msgid "Entry: %s"
+msgstr ""
+
+#. translators: %s: URL to edit the draft record.
+#: modules/forms/src/Notifications.php:120
+#, php-format
+msgid "A draft was created instead: %s"
+msgstr ""
+
+#. translators: 1: site name, 2: form label.
+#: modules/forms/src/Notifications.php:125
+#, php-format
+msgid "[%1$s] Form submission needs attention: %2$s"
+msgstr ""
+
+#: modules/forms/src/Privacy.php:97
+#: modules/forms/src/Privacy.php:112
+msgid "Pegwork form entries"
+msgstr ""
+
+#: modules/forms/src/Privacy.php:158
+msgid "Published record"
+msgstr ""
+
+#. translators: 1: file name, 2: folder name in the export archive.
+#: modules/forms/src/Privacy.php:170
+#, php-format
+msgid "%1$s (uploaded file, included in the %2$s folder of this export)"
+msgstr ""
+
+#: modules/forms/src/Privacy.php:178
+msgid "Form entries"
+msgstr ""
+
+#. translators: 1: entry ID, 2: post title, 3: post ID.
+#: modules/forms/src/Privacy.php:210
+#, php-format
+msgid "Entry %1$d was deleted. The record created from it, \"%2$s\" (ID %3$d), was kept: edit or delete it yourself if it holds this person's data."
+msgstr ""
+
+#: modules/forms/src/Privacy.php:236
+msgid "When you submit a form on this site, we store what you entered, the time, and, if you are logged in, your user account. We do not store your IP address; a keyed hash of it is kept for a few minutes to limit repeated submissions."
+msgstr ""
+
+#: modules/forms/src/Privacy.php:237
+msgid "Some forms send you an email to confirm your submission. Unconfirmed submissions are deleted after 7 days. Submissions caught as spam are deleted after 30 days. Other submissions are kept for the period each form sets, or until deleted by a site administrator."
+msgstr ""
+
+#: modules/forms/src/Privacy.php:238
+msgid "Files you upload with a form are stored privately on this server, outside the public media library. Only the people who manage this site's forms can download them, and they are deleted with your submission."
+msgstr ""
+
+#: modules/forms/src/Privacy.php:239
+msgid "If a form creates a listing or post from your submission, that record is kept as site content. Asking us to erase your data deletes your form submissions; tell us if the record should change too."
+msgstr ""
+
+#: modules/forms/src/Privacy.php:240
+msgid "Forms that use Cloudflare Turnstile to check for spam load a script from Cloudflare, which receives information about your browser and visit. See Cloudflare's privacy policy: https://www.cloudflare.com/privacypolicy/"
+msgstr ""
+
+#: modules/forms/src/Privacy.php:243
+msgid "Pegwork Forms"
+msgstr ""
+
+#. translators: %s: form key.
+#: modules/forms/src/Renderer.php:49
+msgid "Choose a form for this block."
+msgstr ""
+
+#. translators: %s: form key.
+#: modules/forms/src/Renderer.php:49
+#, php-format
+msgid "Pegwork form \"%s\" is not defined."
+msgstr ""
+
+#. translators: 1: form label, 2: reason.
+#: modules/forms/src/Renderer.php:54
+#, php-format
+msgid "Form \"%1$s\" is not shown to visitors: %2$s."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:68
+msgid "Your submission was saved, but our spam check could not be completed. The site team will review it, so there is no need to send it again."
+msgstr ""
+
+#. translators: %s: login link.
+#: modules/forms/src/Renderer.php:83
+#, php-format
+msgid "Please %s to use this form."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:84
+msgid "log in"
+msgstr ""
+
+#: modules/forms/src/Renderer.php:87
+#: modules/forms/src/Renderer.php:433
+msgid "You do not have permission to use this form."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:97
+msgid "There is no record here that you can edit with this form."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:137
+msgid "Leave this empty"
+msgstr ""
+
+#: modules/forms/src/Renderer.php:164
+#: assets/build/forms-builder.js:11
+msgid "Send"
+msgstr ""
+
+#: modules/forms/src/Renderer.php:188
+#: assets/build/forms-view.js:17
+msgid "There is a problem"
+msgstr ""
+
+#. translators: %s: file name.
+#: modules/forms/src/Renderer.php:235
+#, php-format
+msgid "Choose the file again. \"%s\" was not kept."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:240
+#: modules/forms/src/Renderer.php:329
+#: assets/build/forms-builder.js:1
+#: assets/build/forms-view.js:17
+msgid "Error:"
+msgstr ""
+
+#: modules/forms/src/Renderer.php:274
+#: assets/build/editor-panel.js:2
+msgid "Choose an option"
+msgstr ""
+
+#: modules/forms/src/Renderer.php:365
+#: src/Options/Screen.php:228
+#: assets/build/forms-builder.js:23
+#: assets/build/forms-view.js:16
+msgid "(required)"
+msgstr ""
+
+#. translators: %d: number of hours.
+#: modules/forms/src/Renderer.php:408
+#, php-format
+msgid "Check your email for a link to confirm your submission. The link expires in %d hour."
+msgid_plural "Check your email for a link to confirm your submission. The link expires in %d hours."
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/forms/src/Renderer.php:412
+#: assets/build/forms-builder.js:6
+msgid "Thank you. Your message has been sent."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:432
+msgid "This page was open too long. Check your answers and send again."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:434
+msgid "Your submission could not be saved. Try again later."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:435
+msgid "The spam check did not pass. Wait for the check to finish, then send the form again."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:436
+#: modules/forms/src/Turnstile.php:119
+msgid "This form needs JavaScript for its spam check. Turn on JavaScript in your browser to send it."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:437
+msgid "Your submission was received, but it could not be processed. The site team has been told and will follow up."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:450
+msgid "Too many submissions with this email address."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:451
+msgid "Too many confirmation emails to this address."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:452
+msgid "Too many submissions from your connection."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:455
+msgid "Try again later."
+msgstr ""
+
+#. translators: %d: number of hours.
+#: modules/forms/src/Renderer.php:462
+#, php-format
+msgid "Try again in about %d hour."
+msgid_plural "Try again in about %d hours."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of minutes.
+#: modules/forms/src/Renderer.php:466
+#, php-format
+msgid "Try again in about %d minute."
+msgid_plural "Try again in about %d minutes."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:401
+#, php-format
+msgid "%s is too long."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:564
+#: assets/build/forms-view.js:7
+#, php-format,js-format
+msgid "Enter %s as an email address, like name@example.com."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:566
+#: assets/build/forms-view.js:8
+#, php-format,js-format
+msgid "Enter %s as a web address, like https://example.org."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:568
+#, php-format
+msgid "Enter %s as a real date, like 2026-03-31."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:570
+#: src/Options/Values.php:207
+#: assets/build/forms-view.js:3
+#, php-format,js-format
+msgid "%s must be a number."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:572
+#, php-format
+msgid "Choose one of the options for %s."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Submission.php:574
+#: src/Api/Records.php:159
+#, php-format
+msgid "%s has an invalid value."
+msgstr ""
+
+#. translators: %s: page title.
+#. translators: %s: error message.
+#: modules/forms/src/Submission.php:635
+#: src/Options/Screen.php:258
+#: assets/build/forms-view.js:17
+#, php-format,js-format
+msgid "Error: %s"
+msgstr ""
+
+#. translators: 1: list of form labels, 2: constant name, 3: constant name.
+#: modules/forms/src/Turnstile.php:227
+#, php-format
+msgid "Pegwork Forms: the form %1$s uses Cloudflare Turnstile, but its keys are not set, so visitors cannot see or send it. Define %2$s and %3$s in wp-config.php."
+msgid_plural "Pegwork Forms: the forms %1$s use Cloudflare Turnstile, but its keys are not set, so visitors cannot see or send them. Define %2$s and %3$s in wp-config.php."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: comma-separated file types, 2: the last file type.
+#: modules/forms/src/Uploads.php:140
+#, php-format
+msgid "%1$s or %2$s"
+msgstr ""
+
+#. translators: 1: accepted file types, 2: largest size, such as "5 MB".
+#: modules/forms/src/Uploads.php:146
+#, php-format
+msgid "%1$s, up to %2$s."
+msgstr ""
+
+#. translators: 1: field label, 2: largest size, such as "5 MB".
+#: modules/forms/src/Uploads.php:163
+#: modules/forms/src/Uploads.php:177
+#, php-format
+msgid "The file for %1$s is too large. Choose a file up to %2$s."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Uploads.php:167
+#, php-format
+msgid "The file for %s could not be uploaded. Try again."
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Uploads.php:173
+#, php-format
+msgid "The file for %s is empty."
+msgstr ""
+
+#. translators: 1: field label, 2: accepted types and size.
+#: modules/forms/src/Uploads.php:182
+#, php-format
+msgid "The file for %1$s must be %2$s"
+msgstr ""
+
+#. translators: %s: field label.
+#: modules/forms/src/Uploads.php:209
+#, php-format
+msgid "The file for %s does not match its file type. Choose the original file."
+msgstr ""
+
+#: modules/forms/src/Uploads.php:237
+msgid "The upload folder could not be created."
+msgstr ""
+
+#: modules/forms/src/Uploads.php:267
+msgid "The file could not be saved."
+msgstr ""
+
+#: modules/listings/src/BindingSource.php:38
+#: assets/build/listings-editor.js:7
+msgid "Pegwork field"
+msgstr ""
+
+#. translators: %s: content type plural name, lowercase.
+#. translators: %s: plural name of the related content type
+#: modules/listings/src/Patterns.php:175
+#: assets/build/listings-editor.js:2
+#, php-format,js-format
+msgid "Related %s"
+msgstr ""
+
+#. translators: 1: singular name of the type being viewed, 2: plural name of the related type.
+#: modules/listings/src/Patterns.php:200
+#, php-format
+msgid "%1$s related %2$s"
+msgstr ""
+
+#. translators: %s: content type singular name.
+#: modules/listings/src/Patterns.php:233
+#, php-format
+msgid "%s card"
+msgstr ""
+
+#. translators: %s: content type singular name.
+#: modules/listings/src/Patterns.php:237
+#, php-format
+msgid "%s details"
+msgstr ""
+
+#. translators: %s: content type plural name.
+#: modules/listings/src/Patterns.php:242
+#: assets/build/listings-editor.js:6
+#, php-format,js-format
+msgid "%s directory"
+msgstr ""
+
+#. translators: %s: content type singular name.
+#: modules/listings/src/Patterns.php:247
+#, php-format
+msgid "Featured %s"
+msgstr ""
+
+#. translators: %s: content type plural name.
+#: modules/listings/src/Patterns.php:252
+#, php-format
+msgid "Latest %s"
+msgstr ""
+
+#. translators: %s: content type plural name, lowercase.
+#: modules/listings/src/Patterns.php:479
+#, php-format
+msgid "No %s match your search or filters."
+msgstr ""
+
+#: modules/listings/src/Patterns.php:546
+msgid "Clear all filters"
+msgstr ""
+
+#. translators: %s: field or taxonomy label.
+#: modules/listings/src/Patterns.php:675
+#, php-format
+msgid "%s: "
+msgstr ""
+
+#. translators: 1: required PHP version, 2: current PHP version.
+#: pegwork.php:66
+#, php-format
+msgid "Pegwork requires PHP %1$s or later. This site runs PHP %2$s, so Pegwork is not loaded."
+msgstr ""
+
+#. translators: 1: required WordPress version, 2: current WordPress version.
+#: pegwork.php:80
+#, php-format
+msgid "Pegwork requires WordPress %1$s or later. This site runs WordPress %2$s, so Pegwork is not loaded."
+msgstr ""
+
+#: src/Admin/Menu.php:99
+#: src/Admin/Overview.php:33
+msgid "Pegwork Overview"
+msgstr ""
+
+#: src/Admin/Menu.php:100
+msgid "Overview"
+msgstr ""
+
+#: src/Admin/Menu.php:114
+#: src/Admin/Modules.php:57
+msgid "Pegwork Modules"
+msgstr ""
+
+#: src/Admin/Menu.php:115
+#: src/Admin/Modules.php:63
+msgid "Modules"
+msgstr ""
+
+#: src/Admin/Modules.php:59
+msgid "Optional parts of Pegwork. A disabled module does not load at all. A module can be enabled once the modules it requires are enabled, and disabled once no enabled module requires it."
+msgstr ""
+
+#: src/Admin/Modules.php:65
+msgid "Module"
+msgstr ""
+
+#: src/Admin/Modules.php:66
+msgid "Description"
+msgstr ""
+
+#: src/Admin/Modules.php:67
+msgid "Requires"
+msgstr ""
+
+#: src/Admin/Modules.php:69
+#: assets/build/forms-builder.js:7
+msgid "Action"
+msgstr ""
+
+#: src/Admin/Modules.php:73
+msgid "No modules available."
+msgstr ""
+
+#. translators: %s: CLI command.
+#: src/Admin/Modules.php:95
+#, php-format
+msgid "The same rules apply to %s."
+msgstr ""
+
+#. translators: %s: comma-separated module names.
+#: src/Admin/Modules.php:119
+#, php-format
+msgid "Required by %s"
+msgstr ""
+
+#. translators: %s: comma-separated module names.
+#: src/Admin/Modules.php:121
+#, php-format
+msgid "Requires %s"
+msgstr ""
+
+#: src/Admin/Modules.php:145
+msgid "Sorry, you are not allowed to manage Pegwork modules."
+msgstr ""
+
+#: src/Admin/Modules.php:158
+msgid "Unknown module action."
+msgstr ""
+
+#. translators: %s: module name.
+#: src/Admin/Modules.php:172
+#, php-format
+msgid "Module %s enabled."
+msgstr ""
+
+#. translators: %s: module name.
+#: src/Admin/Modules.php:174
+#, php-format
+msgid "Module %s disabled."
+msgstr ""
+
+#. translators: %d: number of errors.
+#: src/Admin/Notices.php:38
+#, php-format
+msgid "Pegwork found %d schema error. Packages with errors are not registered."
+msgid_plural "Pegwork found %d schema errors. Packages with errors are not registered."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/Notices.php:54
+msgid "Run \"wp pegwork schema validate\" for the full list."
+msgstr ""
+
+#: src/Admin/Overview.php:30
+msgid "None registered. Add a schema package (see the extension API docs)."
+msgstr ""
+
+#: src/Admin/Overview.php:34
+msgid "The schema registered on this site: file packages first, then site-local entries stored in the database. This screen is read-only."
+msgstr ""
+
+#: src/Admin/Overview.php:40
+#: src/Admin/Overview.php:163
+msgid "Taxonomies"
+msgstr ""
+
+#: src/Admin/Overview.php:43
+#: src/Admin/Overview.php:160
+#: src/Admin/Overview.php:196
+msgid "Label"
+msgstr ""
+
+#: src/Admin/Overview.php:44
+msgid "Seed terms"
+msgstr ""
+
+#: src/Admin/Overview.php:45
+msgid "Locked"
+msgstr ""
+
+#: src/Admin/Overview.php:60
+msgid "Relationships"
+msgstr ""
+
+#: src/Admin/Overview.php:63
+msgid "From"
+msgstr ""
+
+#: src/Admin/Overview.php:64
+#: assets/build/forms-builder.js:10
+msgid "To"
+msgstr ""
+
+#: src/Admin/Overview.php:65
+msgid "Cardinality"
+msgstr ""
+
+#: src/Admin/Overview.php:66
+#: src/Admin/Overview.php:197
+#: assets/build/editor-panel.js:1
+#: assets/build/forms-builder.js:5
+msgid "Required"
+msgstr ""
+
+#: src/Admin/Overview.php:78
+msgid "Options pages"
+msgstr ""
+
+#: src/Admin/Overview.php:80
+msgid "Key (option name)"
+msgstr ""
+
+#: src/Admin/Overview.php:81
+msgid "Title"
+msgstr ""
+
+#: src/Admin/Overview.php:82
+msgid "Menu item"
+msgstr ""
+
+#: src/Admin/Overview.php:83
+#: assets/build/forms-builder.js:9
+msgid "Capability"
+msgstr ""
+
+#: src/Admin/Overview.php:84
+#: src/Admin/Overview.php:162
+msgid "Fields"
+msgstr ""
+
+#. translators: 1: number of fields, 2: number of private fields.
+#: src/Admin/Overview.php:91
+#, php-format
+msgid "%1$s (%2$s private)"
+msgstr ""
+
+#: src/Admin/Overview.php:99
+msgid "Each page is one settings screen in this menu, saved as one option named by its key."
+msgstr ""
+
+#: src/Admin/Overview.php:104
+msgid "Shadowed DB entries"
+msgstr ""
+
+#: src/Admin/Overview.php:106
+msgid "Kind"
+msgstr ""
+
+#: src/Admin/Overview.php:108
+msgid "Shadowed by package"
+msgstr ""
+
+#: src/Admin/Overview.php:111
+msgid "No shadowed DB entries."
+msgstr ""
+
+#: src/Admin/Overview.php:112
+msgid "These site-local entries use a key that a file package already defines, so the file wins and they are ignored."
+msgstr ""
+
+#: src/Admin/Overview.php:125
+msgid "Rejected packages and DB entries"
+msgstr ""
+
+#: src/Admin/Overview.php:128
+#: assets/build/forms-builder.js:5
+msgid "File"
+msgstr ""
+
+#: src/Admin/Overview.php:129
+msgid "Pointer"
+msgstr ""
+
+#: src/Admin/Overview.php:133
+msgid "No rejected packages or DB entries."
+msgstr ""
+
+#: src/Admin/Overview.php:134
+msgid "A package with any error is not registered at all; a DB entry with an error is skipped on its own."
+msgstr ""
+
+#. translators: 1: CLI command, 2: CLI command, 3: CLI command.
+#: src/Admin/Overview.php:140
+#, php-format
+msgid "To change the schema, edit the package files or import a package with %1$s. %2$s and %3$s print the same information."
+msgstr ""
+
+#: src/Admin/Overview.php:157
+msgid "Content types"
+msgstr ""
+
+#: src/Admin/Overview.php:161
+msgid "REST base"
+msgstr ""
+
+#. translators: 1: content type label, 2: content type key, 3: number of fields.
+#: src/Admin/Overview.php:181
+#, php-format
+msgid "Fields of %1$s (%2$s): %3$s field"
+msgid_plural "Fields of %1$s (%2$s): %3$s fields"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: content type label.
+#: src/Admin/Overview.php:190
+#, php-format
+msgid "Fields of %s"
+msgstr ""
+
+#: src/Admin/Overview.php:195
+msgid "Type"
+msgstr ""
+
+#: src/Admin/Overview.php:198
+msgid "Visibility"
+msgstr ""
+
+#: src/Admin/Overview.php:199
+msgid "Meta key or column"
+msgstr ""
+
+#: src/Admin/Overview.php:204
+#: src/Options/Screen.php:231
+#: assets/build/editor-panel.js:1
+#: assets/build/editor-panel.js:2
+msgid "Private"
+msgstr ""
+
+#: src/Admin/Overview.php:204
+msgid "Public"
+msgstr ""
+
+#: src/Admin/Overview.php:208
+msgid "No fields."
+msgstr ""
+
+#. translators: %s: event name.
+#: src/Api/Events.php:39
+#, php-format
+msgid "Invalid event name \"%s\": use dot-separated lowercase segments, such as record.updated."
+msgstr ""
+
+#. translators: %s: content type key.
+#: src/Api/Records.php:65
+#: src/Content/RecordValidator.php:100
+#, php-format
+msgid "Unknown content type \"%s\"."
+msgstr ""
+
+#. translators: %s: post status.
+#: src/Api/Records.php:69
+#, php-format
+msgid "Unknown status \"%s\"."
+msgstr ""
+
+#. translators: %d: post ID.
+#: src/Api/Records.php:114
+#, php-format
+msgid "No record with ID %d."
+msgstr ""
+
+#. translators: 1: term slug, 2: taxonomy key.
+#: src/Api/Records.php:176
+#, php-format
+msgid "Unknown term \"%1$s\" in %2$s."
+msgstr ""
+
+#. translators: %s: value key.
+#: src/Api/Records.php:186
+#, php-format
+msgid "Unknown field or taxonomy \"%s\"."
+msgstr ""
+
+#. translators: %s: per-field error messages.
+#: src/Api/Records.php:201
+#: src/Content/RecordValidator.php:138
+#, php-format
+msgid "This record cannot be saved: %s"
+msgstr ""
+
+#. translators: %s: plural content type name.
+#. translators: %s: plural taxonomy name.
+#: src/Content/PostTypes.php:97
+#: src/Content/Taxonomies.php:171
+#, php-format
+msgid "All %s"
+msgstr ""
+
+#. translators: %s: singular content type name.
+#. translators: %s: singular taxonomy name.
+#: src/Content/PostTypes.php:99
+#: src/Content/Taxonomies.php:179
+#, php-format
+msgid "Add New %s"
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:101
+#, php-format
+msgid "New %s"
+msgstr ""
+
+#. translators: %s: singular content type name.
+#. translators: %s: singular taxonomy name.
+#: src/Content/PostTypes.php:103
+#: src/Content/Taxonomies.php:173
+#, php-format
+msgid "Edit %s"
+msgstr ""
+
+#. translators: %s: singular content type name.
+#. translators: %s: plural content type name.
+#. translators: %s: singular taxonomy name.
+#: src/Content/PostTypes.php:105
+#: src/Content/PostTypes.php:107
+#: src/Content/Taxonomies.php:175
+#, php-format
+msgid "View %s"
+msgstr ""
+
+#. translators: %s: plural content type name.
+#. translators: %s: plural taxonomy name.
+#: src/Content/PostTypes.php:111
+#: src/Content/Taxonomies.php:185
+#, php-format
+msgid "No %s found."
+msgstr ""
+
+#. translators: %s: plural content type name.
+#: src/Content/PostTypes.php:113
+#, php-format
+msgid "No %s found in Trash."
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:115
+#, php-format
+msgid "%s Archives"
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:118
+#, php-format
+msgid "%s published."
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:120
+#, php-format
+msgid "%s published privately."
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:122
+#, php-format
+msgid "%s reverted to draft."
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:124
+#, php-format
+msgid "%s scheduled."
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:126
+#, php-format
+msgid "%s updated."
+msgstr ""
+
+#. translators: %s: singular content type name.
+#: src/Content/PostTypes.php:128
+#, php-format
+msgid "%s trashed."
+msgstr ""
+
+#. translators: %s: taxonomy label.
+#: src/Content/RecordValidator.php:113
+#, php-format
+msgid "%s allows only one term."
+msgstr ""
+
+#. translators: %s: taxonomy label.
+#. translators: %s: field label.
+#: src/Content/RecordValidator.php:116
+#: src/Content/RecordValidator.php:285
+#: assets/build/forms-view.js:4
+#, php-format,js-format
+msgid "%s is required."
+msgstr ""
+
+#. translators: 1: record ID as given, 2: singular label of the linked content type.
+#: src/Content/RecordValidator.php:201
+#, php-format
+msgid "Record %1$s is not a %2$s."
+msgstr ""
+
+#. translators: 1: linked type label, 2: linked record title, 3: linking type label, 4: linking record title.
+#: src/Content/RecordValidator.php:213
+#, php-format
+msgid "%1$s \"%2$s\" is already linked from %3$s \"%4$s\"."
+msgstr ""
+
+#. translators: %s: singular label of the linked content type.
+#: src/Content/RecordValidator.php:225
+#, php-format
+msgid "At least one %s is required."
+msgstr ""
+
+#. translators: %s: checkbox label.
+#: src/Content/RecordValidator.php:281
+#: assets/build/forms-view.js:2
+#, php-format,js-format
+msgid "Check the box to confirm: %s"
+msgstr ""
+
+#. translators: 1: field label, 2: character count.
+#: src/Content/RecordValidator.php:293
+#: assets/build/forms-view.js:9
+#, php-format,js-format
+msgid "%1$s must be at least %2$d characters."
+msgstr ""
+
+#. translators: 1: field label, 2: character count.
+#: src/Content/RecordValidator.php:297
+#: assets/build/forms-view.js:10
+#, php-format,js-format
+msgid "%1$s must be at most %2$d characters."
+msgstr ""
+
+#. translators: 1: field label, 2: minimum words, 3: current words.
+#: src/Content/RecordValidator.php:303
+#: assets/build/forms-view.js:11
+#, php-format,js-format
+msgid "%1$s must be at least %2$d words (it has %3$d)."
+msgstr ""
+
+#. translators: 1: field label, 2: maximum words, 3: current words.
+#: src/Content/RecordValidator.php:307
+#: assets/build/forms-view.js:12
+#, php-format,js-format
+msgid "%1$s must be at most %2$d words (it has %3$d)."
+msgstr ""
+
+#. translators: 1: field label, 2: minimum value.
+#: src/Content/RecordValidator.php:312
+#: assets/build/forms-view.js:5
+#, php-format,js-format
+msgid "%1$s must be at least %2$s."
+msgstr ""
+
+#. translators: 1: field label, 2: maximum value.
+#: src/Content/RecordValidator.php:316
+#: assets/build/forms-view.js:6
+#, php-format,js-format
+msgid "%1$s must be at most %2$s."
+msgstr ""
+
+#. translators: %s: field label.
+#: src/Content/RecordValidator.php:320
+#, php-format
+msgid "%s is not in the expected format."
+msgstr ""
+
+#. translators: %s: singular label of the linked content type.
+#: src/Content/Relationships.php:144
+#, php-format
+msgid "Limit results to records linked to this %s ID."
+msgstr ""
+
+#: src/Content/Taxonomies.php:120
+msgid "Terms in this taxonomy are managed by site administrators."
+msgstr ""
+
+#. translators: %s: singular taxonomy name.
+#: src/Content/Taxonomies.php:177
+#, php-format
+msgid "Update %s"
+msgstr ""
+
+#. translators: %s: singular taxonomy name.
+#: src/Content/Taxonomies.php:181
+#, php-format
+msgid "New %s Name"
+msgstr ""
+
+#. translators: %s: module slug.
+#: src/Modules/Loader.php:197
+#, php-format
+msgid "Unknown module: %s."
+msgstr ""
+
+#. translators: 1: module slug, 2: comma-separated module slugs.
+#: src/Modules/Loader.php:205
+#, php-format
+msgid "Module %1$s requires these modules to be enabled first: %2$s."
+msgstr ""
+
+#. translators: %s: module slug.
+#: src/Modules/Loader.php:227
+#, php-format
+msgid "Module %s is not enabled."
+msgstr ""
+
+#. translators: 1: module slug, 2: comma-separated module slugs.
+#: src/Modules/Loader.php:235
+#, php-format
+msgid "Module %1$s is required by these enabled modules, so disable them first: %2$s."
+msgstr ""
+
+#. translators: %s: module slug
+#: src/Modules/Loader.php:287
+#, php-format
+msgid "Pegwork: the enabled module \"%s\" does not exist and was ignored."
+msgstr ""
+
+#. translators: 1: module slug, 2: comma-separated list of module slugs
+#: src/Modules/Loader.php:291
+#, php-format
+msgid "Pegwork: the module \"%1$s\" was skipped because it requires: %2$s."
+msgstr ""
+
+#. translators: %s: module slug
+#: src/Modules/Loader.php:295
+#, php-format
+msgid "Pegwork: the module \"%s\" was skipped because its module.php did not return a Pegwork module."
+msgstr ""
+
+#: src/Modules/manifest.php:21
+msgid "Listings"
+msgstr ""
+
+#: src/Modules/manifest.php:22
+msgid "Field output on core blocks (the pegwork/field binding source), the Show if block, and directories (Pegwork Query Loops and patterns)."
+msgstr ""
+
+#: src/Modules/manifest.php:27
+#: assets/build/filters-editor.js:1
+msgid "Filters"
+msgstr ""
+
+#: src/Modules/manifest.php:28
+msgid "Search and filters for directories: the Filters block, URL-only state, live results without a page load."
+msgstr ""
+
+#: src/Modules/manifest.php:34
+msgid "Runs registry automations in the background (WP-Cron), with a run log and wp pegwork automation."
+msgstr ""
+
+#: src/Modules/manifest.php:40
+msgid "Registry forms on pages (the pegwork/form block): server-rendered, validated, spam-checked, stored as entries, with email notifications."
+msgstr ""
+
+#: src/Options/BindingSource.php:56
+msgid "Pegwork option"
+msgstr ""
+
+#: src/Options/Pages.php:173
+msgid "The other fields were saved."
+msgstr ""
+
+#. translators: %s: comma-separated option names.
+#: src/Options/Pages.php:200
+#, php-format
+msgid "Pegwork did not register these options pages because another plugin already registered a setting with the same option name: %s. Rename the options page key."
+msgstr ""
+
+#. translators: %d: number of fields.
+#: src/Options/Screen.php:197
+#, php-format
+msgid "%d field was not saved:"
+msgid_plural "%d fields were not saved:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Options/Screen.php:253
+msgid "Private: used by the site, never shown to visitors."
+msgstr ""
+
+#: src/Options/Screen.php:280
+msgid "HTML allowed in posts is kept; other markup is removed."
+msgstr ""
+
+#. translators: %d: post ID.
+#: src/Options/Screen.php:350
+#: assets/build/options-page.js:3
+#, php-format,js-format
+msgid "(no title, #%d)"
+msgstr ""
+
+#. translators: %s: post title.
+#: src/Options/Screen.php:371
+#, php-format
+msgid "%s (not published)"
+msgstr ""
+
+#. translators: %d: number of posts listed.
+#: src/Options/Screen.php:381
+#, php-format
+msgid "Without JavaScript only the first %d published items are listed."
+msgstr ""
+
+#. translators: %s: field label.
+#: src/Options/Values.php:185
+#, php-format
+msgid "%s must be a single value."
+msgstr ""
+
+#. translators: %s: field label.
+#: src/Options/Values.php:197
+#, php-format
+msgid "%s must be a valid email address."
+msgstr ""
+
+#. translators: %s: field label.
+#: src/Options/Values.php:202
+#, php-format
+msgid "%s must be a web address starting with http:// or https://."
+msgstr ""
+
+#. translators: %s: field label.
+#: src/Options/Values.php:211
+#, php-format
+msgid "%s must be a date in the form YYYY-MM-DD."
+msgstr ""
+
+#. translators: %s: field label.
+#: src/Options/Values.php:215
+#, php-format
+msgid "%s must be one of its options."
+msgstr ""
+
+#. translators: 1: field label, 2: singular label of the content type.
+#: src/Options/Values.php:244
+#, php-format
+msgid "%1$s must be a published %2$s."
+msgstr ""
+
+#. translators: 1: error message, 2: rejected value.
+#: src/Options/Values.php:262
+#, php-format
+msgid "%1$s You entered \"%2$s\"."
+msgstr ""
+
+#: src/Options/Values.php:265
+msgid "The previous value was kept."
+msgstr ""
+
+#: src/Options/Values.php:265
+msgid "Nothing was saved for this field."
+msgstr ""
+
+#: src/Plugin.php:73
+msgid "Pegwork Platform for WordPress"
+msgstr ""
+
+#: src/Registry/Forms.php:83
+msgid "The form was not accepted by the registry."
+msgstr ""
+
+#. translators: %s: form key.
+#: src/Registry/Forms.php:109
+#, php-format
+msgid "No site form with key \"%s\"."
+msgstr ""
+
+#. translators: %s: form key.
+#: src/Registry/Forms.php:145
+#, php-format
+msgid "Form \"%s\" is defined by a file package and is read-only here. Duplicate it under a new key instead."
+msgstr ""
+
+#: src/Registry/Loader.php:89
+msgid "Expected a list."
+msgstr ""
+
+#. translators: %s: key.
+#: src/Registry/Loader.php:102
+#, php-format
+msgid "Key \"%s\" is already defined in the DB source."
+msgstr ""
+
+#: src/Registry/Loader.php:202
+msgid "Package directory not found."
+msgstr ""
+
+#: src/Registry/Loader.php:207
+msgid "Package has no manifest.json."
+msgstr ""
+
+#. translators: 1: key, 2: file that already defines it, relative to the package directory.
+#: src/Registry/Loader.php:234
+#, php-format
+msgid "Key \"%1$s\" is already defined in %2$s."
+msgstr ""
+
+#. translators: %s: package id.
+#: src/Registry/Loader.php:269
+#, php-format
+msgid "Package \"%s\" is already registered; this copy was not registered."
+msgstr ""
+
+#. translators: 1: key, 2: package that defines it, 3: rejected package.
+#: src/Registry/Loader.php:281
+#, php-format
+msgid "Key \"%1$s\" is already defined by package \"%2$s\"; package \"%3$s\" was not registered."
+msgstr ""
+
+#. translators: %s: JSON parser message.
+#: src/Registry/Loader.php:306
+#, php-format
+msgid "Invalid JSON: %s."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:168
+#: src/Registry/Rules/AutomationRules.php:255
+msgid "Missing required property \"type\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:181
+msgid "Event names are dot-separated keys, such as \"record.status_changed\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:196
+msgid "\"at\" is a site time of day, HH:MM (24-hour)."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:220
+msgid "\"content_type\" narrows record.* events only."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:223
+msgid "\"form\" narrows form.* events only."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:237
+msgid "Add at least one step."
+msgstr ""
+
+#. translators: %s: step type.
+#: src/Registry/Rules/AutomationRules.php:263
+#, php-format
+msgid "Link steps run within the click, so only update_record and condition are allowed, not \"%s\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:320
+msgid "Webhook URLs start with http:// or https://."
+msgstr ""
+
+#. translators: %d: maximum seconds.
+#: src/Registry/Rules/AutomationRules.php:327
+#, php-format
+msgid "\"timeout\" is more than 0 and at most %d seconds."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:351
+msgid "\"values\" needs at least one field."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:357
+msgid "Expected a string, number, boolean or list of strings."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:399
+msgid "A condition is exactly one of { \"all\": [...] }, { \"any\": [...] }, { \"not\": {...} } or { \"var\", \"op\", \"value\" }."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:412
+msgid "A condition group needs at least one condition."
+msgstr ""
+
+#. translators: %s: operator.
+#: src/Registry/Rules/AutomationRules.php:445
+#, php-format
+msgid "Operator \"%s\" takes no \"value\"."
+msgstr ""
+
+#. translators: %s: operator.
+#: src/Registry/Rules/AutomationRules.php:451
+#, php-format
+msgid "Operator \"%s\" needs a \"value\"."
+msgstr ""
+
+#. translators: %s: operator.
+#: src/Registry/Rules/AutomationRules.php:458
+#, php-format
+msgid "Operator \"%s\" needs a non-empty list of strings, numbers or booleans."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:477
+msgid "Offsets are ISO 8601 durations with an optional sign, such as \"-P12M\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:485
+msgid "A value is a string, number, boolean, { \"var\": \"<path>\" } or { \"date\": \"today|now\", \"offset\": \"-P12M\" }."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:496
+msgid "Paths are dot-separated keys, such as \"record.last_verified\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:512
+msgid "Durations are ISO 8601, such as \"P30D\" or \"PT1H\"."
+msgstr ""
+
+#. translators: 1: minimum duration, 2: maximum duration.
+#: src/Registry/Rules/AutomationRules.php:517
+#, php-format
+msgid "Duration must be from %1$s to %2$s."
+msgstr ""
+
+#. translators: %s: step id.
+#: src/Registry/Rules/AutomationRules.php:609
+#, php-format
+msgid "Step id \"%s\" is already used in this step list."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:619
+msgid "This trigger binds no record; give update_record a \"record\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:646
+msgid "This trigger binds no record, so the webhook has no record fields to send."
+msgstr ""
+
+#. translators: 1: nesting depth, 2: node count, 3: maximum depth, 4: maximum nodes.
+#: src/Registry/Rules/AutomationRules.php:684
+#, php-format
+msgid "Condition has depth %1$d and %2$d nodes; the limits are depth %3$d and %4$d nodes."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:722
+msgid "\"changed\" needs a record.updated trigger and a \"record.<key>\" var."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:746
+msgid "Unbalanced \"{{\" or \"}}\" in template."
+msgstr ""
+
+#. translators: %s: merge tag.
+#: src/Registry/Rules/AutomationRules.php:752
+#, php-format
+msgid "Merge tag \"{{%s}}\" is not \"{{ path }}\", \"{{ path | date }}\" or \"{{ path | default:\"text\" }}\" (date before default)."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:761
+#, php-format
+msgid "Path \"%s\": use \"option:<page>.<field>\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:802
+#, php-format
+msgid "Path \"%s\" is not a date, so it cannot take \"| date\"."
+msgstr ""
+
+#. translators: 1: path, 2: reason.
+#: src/Registry/Rules/AutomationRules.php:832
+#, php-format
+msgid "Path \"%1$s\": %2$s"
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:838
+#, php-format
+msgid "Path \"%s\" needs a record, but this trigger binds none (use a record.* event or a schedule with \"for_each\")."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:842
+msgid "use \"record.<key>\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:866
+msgid "use \"steps.<id>.<output>\"."
+msgstr ""
+
+#. translators: %s: step id.
+#: src/Registry/Rules/AutomationRules.php:869
+#, php-format
+msgid "no step \"%s\" runs before this point."
+msgstr ""
+
+#. translators: 1: step type, 2: output name.
+#: src/Registry/Rules/AutomationRules.php:872
+#, php-format
+msgid "%1$s steps have no output \"%2$s\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:879
+msgid "use \"site.name\" or \"site.url\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:886
+msgid "today and now have no sub-keys."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:892
+msgid "use \"run.id\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:898
+msgid "use \"link.<name>\"."
+msgstr ""
+
+#. translators: %s: link name.
+#: src/Registry/Rules/AutomationRules.php:901
+#, php-format
+msgid "Link \"%s\" is not defined in this automation's \"links\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:904
+#, php-format
+msgid "Path \"%s\" signs a link for the bound record, but this trigger binds none."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:911
+msgid "paths start with record, trigger, steps, site, today, now, run or link."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:912
+msgid "condition paths start with record, trigger, steps or site (use a date operand for today and now)."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:932
+msgid "webhook triggers expose \"trigger.payload.*\" only."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:937
+msgid "schedule triggers have no payload."
+msgstr ""
+
+#. translators: 1: event name, 2: comma-separated keys.
+#: src/Registry/Rules/AutomationRules.php:945
+#, php-format
+msgid "%1$s payloads have %2$s."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:950
+msgid "use \"trigger.old.<key>\"."
+msgstr ""
+
+#. translators: %s: comma-separated keys.
+#: src/Registry/Rules/AutomationRules.php:967
+#, php-format
+msgid "form event payloads have %s."
+msgstr ""
+
+#. translators: %s: content type key.
+#: src/Registry/Rules/AutomationRules.php:1008
+#: src/Registry/Rules/OptionsPageRules.php:225
+#: src/Registry/Validator.php:299
+#, php-format
+msgid "Content type \"%s\" is not defined."
+msgstr ""
+
+#. translators: %s: form key.
+#: src/Registry/Rules/AutomationRules.php:1014
+#, php-format
+msgid "Form \"%s\" is not defined."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/AutomationRules.php:1081
+#, php-format
+msgid "Field \"%s\" cannot be checked: name the trigger's \"content_type\" to use record fields."
+msgstr ""
+
+#. translators: 1: field key, 2: content type key.
+#: src/Registry/Rules/AutomationRules.php:1083
+#, php-format
+msgid "\"%1$s\" is not a field or taxonomy of content type \"%2$s\"."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/AutomationRules.php:1089
+#, php-format
+msgid "Field \"%s\" is private and cannot appear in webhook bodies or link pages."
+msgstr ""
+
+#. translators: %s: options page key.
+#: src/Registry/Rules/AutomationRules.php:1105
+#: src/Registry/Rules/FormRules.php:622
+#, php-format
+msgid "Options page \"%s\" is not defined."
+msgstr ""
+
+#. translators: 1: field key, 2: options page key.
+#: src/Registry/Rules/AutomationRules.php:1114
+#: src/Registry/Rules/FormRules.php:631
+#, php-format
+msgid "Field \"%1$s\" is not defined on options page \"%2$s\"."
+msgstr ""
+
+#. translators: 1: options page key, 2: field key.
+#: src/Registry/Rules/AutomationRules.php:1122
+#, php-format
+msgid "Options field \"%1$s.%2$s\" is private and cannot appear in templates. For a recipient, write \"{option:%1$s.%2$s}\" in \"to\"."
+msgstr ""
+
+#. translators: 1: options page key, 2: field key.
+#: src/Registry/Rules/AutomationRules.php:1128
+#, php-format
+msgid "Options field \"%1$s.%2$s\" is not a date field, so it cannot take \"| date\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:1142
+#, php-format
+msgid "Path \"%s\" is not a date field, so it cannot take \"| date\"."
+msgstr ""
+
+#. translators: 1: field key, 2: form key.
+#: src/Registry/Rules/AutomationRules.php:1160
+#, php-format
+msgid "Field \"%1$s\" is not a field of form \"%2$s\"."
+msgstr ""
+
+#. translators: 1: var path, 2: reason.
+#: src/Registry/Rules/AutomationRules.php:1209
+#, php-format
+msgid "Condition on \"%1$s\": %2$s"
+msgstr ""
+
+#. translators: 1: operator, 2: field type.
+#: src/Registry/Rules/AutomationRules.php:1214
+#, php-format
+msgid "\"%1$s\" compares numbers and dates, not %2$s values."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1218
+msgid "\"contains\" applies to multi-select taxonomies only."
+msgstr ""
+
+#. translators: %s: field type.
+#: src/Registry/Rules/AutomationRules.php:1229
+#, php-format
+msgid "a date operand cannot compare with a %s value."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1271
+msgid "only multi-select taxonomies take a list."
+msgstr ""
+
+#. translators: 1: field key, 2: reason.
+#: src/Registry/Rules/AutomationRules.php:1277
+#, php-format
+msgid "Value for \"%1$s\": %2$s"
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1304
+msgid "expected true or false."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1305
+msgid "expected a number."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1306
+msgid "expected a Y-m-d date."
+msgstr ""
+
+#. translators: %s: comma-separated option values.
+#: src/Registry/Rules/AutomationRules.php:1308
+#, php-format
+msgid "expected one of the options: %s."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1309
+msgid "expected a term slug."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1310
+msgid "expected a string."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:84
+msgid "The confirmation body must contain \"{confirm_url}\", or the submitter cannot confirm."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:145
+msgid "A form needs exactly one of \"fields\" or \"steps\"."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:162
+msgid "Bound fields need a form \"target\" content type."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/FormRules.php:172
+#: src/Registry/Rules/FormRules.php:581
+#, php-format
+msgid "Field \"%s\" is not a field of this form."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:181
+msgid "Forms that publish or update records need \"access\": { \"capability\": ... }, so anonymous visitors cannot use them."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:200
+msgid "With \"confirm\", a \"submitted\" notification cannot go to a submitted address: the confirmation email is the only mail before confirmation. Use \"when\": \"confirmed\"."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/FormRules.php:213
+#, php-format
+msgid "Merge tag \"{field:%s}\" names no field of this form."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:245
+msgid "\"bind\" needs exactly one of \"field\" or \"taxonomy\"."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:291
+msgid "\"display\" applies only to select fields and taxonomies."
+msgstr ""
+
+#. translators: %s: comma-separated allowed values.
+#: src/Registry/Rules/FormRules.php:293
+#, php-format
+msgid "This choice allows \"display\": %s."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:307
+msgid "\"access\" is \"anyone\" or { \"capability\": \"<capability>\" }."
+msgstr ""
+
+#. translators: %s: options page and field, such as sifg_settings.moderator_email.
+#: src/Registry/Rules/FormRules.php:326
+#, php-format
+msgid "Form merge tags use single braces: write \"{option:%s}\"."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:330
+msgid "Expected an email address, \"{admin_email}\", \"{field:<email field>}\" or \"{option:<page>.<email field>}\"."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:345
+msgid "Extensions use lowercase letters and digits, without the dot, such as \"pdf\"."
+msgstr ""
+
+#. translators: %s: file extension.
+#: src/Registry/Rules/FormRules.php:350
+#, php-format
+msgid "Uploads can never accept \"%s\" files (executable or script-bearing)."
+msgstr ""
+
+#: src/Registry/Rules/FormRules.php:362
+msgid "Expected an integer of at least 1."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/FormRules.php:430
+#, php-format
+msgid "Field \"%s\" appears more than once in this form."
+msgstr ""
+
+#. translators: %s: content type key.
+#: src/Registry/Rules/FormRules.php:456
+#, php-format
+msgid "Content type \"%s\" is not defined in the registry (forms cannot target core post types)."
+msgstr ""
+
+#. translators: 1: field key, 2: content type key.
+#: src/Registry/Rules/FormRules.php:512
+#, php-format
+msgid "Field \"%1$s\" is not defined on content type \"%2$s\"."
+msgstr ""
+
+#. translators: 1: field key, 2: condition name, 3: field key.
+#: src/Registry/Rules/FormRules.php:525
+#, php-format
+msgid "Field \"%1$s\" has a \"%2$s\" condition on \"%3$s\"; bind \"%3$s\" in this form too."
+msgstr ""
+
+#. translators: 1: taxonomy key, 2: content type key.
+#: src/Registry/Rules/FormRules.php:534
+#, php-format
+msgid "Taxonomy \"%1$s\" is not used by content type \"%2$s\"."
+msgstr ""
+
+#. translators: 1: content type key, 2: comma-separated field and taxonomy keys.
+#: src/Registry/Rules/FormRules.php:562
+#, php-format
+msgid "This form creates \"%1$s\" records but does not bind its required field(s) or taxonomy(ies): %2$s. Every submission would fail."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/FormRules.php:604
+#, php-format
+msgid "Field \"%s\" must be an email field that is always required."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/FormRules.php:606
+#, php-format
+msgid "Field \"%s\" is not an email field."
+msgstr ""
+
+#. translators: 1: options page key, 2: field key.
+#: src/Registry/Rules/FormRules.php:636
+#, php-format
+msgid "Options field \"%1$s.%2$s\" is not an email field."
+msgstr ""
+
+#. translators: %s: filter key.
+#: src/Registry/Rules/ListingRules.php:64
+#, php-format
+msgid "Filter key \"%s\" is reserved (a WordPress query var, \"q\" or a \"wp_\" name); choose another URL parameter."
+msgstr ""
+
+#: src/Registry/Rules/ListingRules.php:77
+msgid "A filter needs exactly one of \"taxonomy\" or \"field\"."
+msgstr ""
+
+#. translators: %s: filter key.
+#: src/Registry/Rules/ListingRules.php:116
+#, php-format
+msgid "Filter key \"%s\" is already used by another filter of this listing."
+msgstr ""
+
+#. translators: %s: taxonomy key.
+#: src/Registry/Rules/ListingRules.php:124
+#, php-format
+msgid "Taxonomy \"%s\" is not in this content type's \"taxonomies\"."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/ListingRules.php:134
+#: src/Registry/Validator.php:421
+#, php-format
+msgid "Field \"%s\" is not defined on this content type."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/ListingRules.php:139
+#, php-format
+msgid "Field \"%s\" is private; listings can only filter on public fields."
+msgstr ""
+
+#. translators: 1: field key, 2: field type.
+#: src/Registry/Rules/ListingRules.php:147
+#, php-format
+msgid "Field \"%1$s\" has type \"%2$s\"; listings filter only on boolean and select fields."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Rules/ListingRules.php:153
+#, php-format
+msgid "Field \"%s\" is a boolean; boolean filters cannot be \"multiple\"."
+msgstr ""
+
+#. translators: %s: filter key.
+#: src/Registry/Rules/ListingRules.php:173
+#, php-format
+msgid "Filter key \"%s\" is a content type or taxonomy key, which WordPress reads as a query var; choose another URL parameter."
+msgstr ""
+
+#. translators: %s: key.
+#: src/Registry/Rules/OptionsPageRules.php:174
+#, php-format
+msgid "\"%s\" is a WordPress option name or uses a reserved prefix (\"wp_\", \"pegwork_\"); the key is the option name, so choose another."
+msgstr ""
+
+#: src/Registry/Rules/OptionsPageRules.php:187
+msgid "Capabilities use lowercase letters, digits and underscores, such as \"manage_options\"."
+msgstr ""
+
+#. translators: %d: maximum key length.
+#: src/Registry/Rules/OptionsPageRules.php:204
+#: src/Registry/Validator.php:931
+#, php-format
+msgid "Key is longer than %d characters."
+msgstr ""
+
+#. translators: %s: taxonomy key.
+#: src/Registry/Validator.php:286
+#, php-format
+msgid "Taxonomy \"%s\" is not defined."
+msgstr ""
+
+#. translators: 1: meta key, 2: field key, 3: content type key.
+#: src/Registry/Validator.php:313
+#, php-format
+msgid "Meta key \"%1$s\" is already used by field \"%2$s\" on content type \"%3$s\"."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Registry/Validator.php:461
+#, php-format
+msgid "Field key \"%s\" is reserved: record events and automation paths use it for the post's own id, status and type."
+msgstr ""
+
+#. translators: %s: property name.
+#: src/Registry/Validator.php:495
+#, php-format
+msgid "\"%s\" is not allowed in options page fields (settings screens have no conditions or storage mapping)."
+msgstr ""
+
+#: src/Registry/Validator.php:505
+msgid "\"max_size_mb\" must be greater than 0."
+msgstr ""
+
+#: src/Registry/Validator.php:518
+msgid "Post fields need \"post_type\"."
+msgstr ""
+
+#: src/Registry/Validator.php:521
+msgid "\"post_type\" is only allowed on post fields."
+msgstr ""
+
+#: src/Registry/Validator.php:524
+msgid "File fields need \"accept\" (the allowed file extensions)."
+msgstr ""
+
+#. translators: %s: property name.
+#: src/Registry/Validator.php:529
+#, php-format
+msgid "\"%s\" is only allowed on file fields."
+msgstr ""
+
+#: src/Registry/Validator.php:538
+msgid "\"meta_key\" applies only to meta storage."
+msgstr ""
+
+#: src/Registry/Validator.php:541
+msgid "Private fields need a protected meta key (starting with \"_\")."
+msgstr ""
+
+#: src/Registry/Validator.php:545
+msgid "Select fields need \"options\"."
+msgstr ""
+
+#: src/Registry/Validator.php:548
+msgid "\"options\" is only allowed on select fields."
+msgstr ""
+
+#. translators: %s: field type.
+#: src/Registry/Validator.php:557
+#, php-format
+msgid "Default does not match field type \"%s\"."
+msgstr ""
+
+#. translators: 1: validation rule, 2: field type.
+#: src/Registry/Validator.php:575
+#, php-format
+msgid "Rule \"%1$s\" does not apply to %2$s fields."
+msgstr ""
+
+#: src/Registry/Validator.php:591
+msgid "Field type \"post\" is only allowed on options pages. Link records with a relationship instead."
+msgstr ""
+
+#: src/Registry/Validator.php:654
+msgid "A relationship must link two different content types."
+msgstr ""
+
+#: src/Registry/Validator.php:667
+msgid "Table storage is not supported yet; use \"meta\"."
+msgstr ""
+
+#: src/Registry/Validator.php:784
+msgid "Term slugs use lowercase letters, digits and single hyphens."
+msgstr ""
+
+#. translators: %s: property name.
+#: src/Registry/Validator.php:811
+#, php-format
+msgid "Missing required property \"%s\"."
+msgstr ""
+
+#. translators: %s: property name.
+#: src/Registry/Validator.php:819
+#, php-format
+msgid "Unknown property \"%s\"."
+msgstr ""
+
+#: src/Registry/Validator.php:841
+msgid "an object"
+msgstr ""
+
+#: src/Registry/Validator.php:842
+msgid "a list"
+msgstr ""
+
+#: src/Registry/Validator.php:843
+msgid "a non-empty string"
+msgstr ""
+
+#: src/Registry/Validator.php:844
+msgid "true or false"
+msgstr ""
+
+#: src/Registry/Validator.php:845
+msgid "a non-negative integer"
+msgstr ""
+
+#: src/Registry/Validator.php:846
+msgid "a number"
+msgstr ""
+
+#: src/Registry/Validator.php:847
+msgid "a string, number or boolean"
+msgstr ""
+
+#. translators: %s: expected type, such as "a non-empty string".
+#: src/Registry/Validator.php:852
+#, php-format
+msgid "Expected %s."
+msgstr ""
+
+#. translators: %s: comma-separated allowed values.
+#: src/Registry/Validator.php:868
+#, php-format
+msgid "Expected one of: %s."
+msgstr ""
+
+#. translators: 1: format found, 2: supported format.
+#: src/Registry/Validator.php:883
+#, php-format
+msgid "Format %1$d is not supported; expected %2$d."
+msgstr ""
+
+#: src/Registry/Validator.php:895
+msgid "Meta keys use letters, digits and underscores, optionally after one leading underscore."
+msgstr ""
+
+#: src/Registry/Validator.php:911
+msgid "Keys use lowercase letters, digits and underscores, and start with a letter."
+msgstr ""
+
+#. translators: %s: key.
+#: src/Registry/Validator.php:935
+#, php-format
+msgid "\"%s\" is reserved by WordPress."
+msgstr ""
+
+#: src/Registry/Validator.php:947
+msgid "Version must be semver, such as 1.2.0."
+msgstr ""
+
+#: src/Registry/Validator.php:963
+msgid "Pattern is not a valid regular expression."
+msgstr ""
+
+#. translators: %s: duplicated value.
+#: src/Registry/Validator.php:1015
+#, php-format
+msgid "Duplicate \"%s\"."
+msgstr ""
+
+#: src/Registry/Validator.php:1029
+msgid "PHP objects and callables are not allowed in a schema."
+msgstr ""
+
+#. translators: %s: property name.
+#: src/Registry/Validator.php:1039
+#, php-format
+msgid "\"%s\" looks like a PHP callable; callables are not allowed in a schema."
+msgstr ""
+
+#: assets/build/editor-panel.js:1
+#: assets/build/editor-panel.js:4
+#: assets/build/editor-panel.js:9
+msgid "Required to publish."
+msgstr ""
+
+#. translators: %s: label of the field this one depends on.
+#: assets/build/editor-panel.js:2
+#, js-format
+msgid "Required to publish because of \"%s\"."
+msgstr ""
+
+#: assets/build/editor-panel.js:2
+msgid "Not shown on the public site."
+msgstr ""
+
+#: assets/build/editor-panel.js:2
+msgid "Draft"
+msgstr ""
+
+#: assets/build/editor-panel.js:2
+msgid "Pending"
+msgstr ""
+
+#: assets/build/editor-panel.js:2
+msgid "Scheduled"
+msgstr ""
+
+#: assets/build/editor-panel.js:2
+msgid "Trash"
+msgstr ""
+
+#. translators: 1: record title, 2: status such as "Draft".
+#: assets/build/editor-panel.js:3
+#, js-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#: assets/build/editor-panel.js:3
+#: assets/build/options-page.js:3
+msgid "Searching"
+msgstr ""
+
+#: assets/build/editor-panel.js:3
+#: assets/build/options-page.js:3
+msgid "Search failed. Try again."
+msgstr ""
+
+#. translators: %s: search text.
+#: assets/build/editor-panel.js:4
+#, js-format
+msgid "No matches for \"%s\"."
+msgstr ""
+
+#: assets/build/editor-panel.js:4
+msgid "None linked yet."
+msgstr ""
+
+#. translators: %d: record ID.
+#: assets/build/editor-panel.js:5
+#, js-format
+msgid "(missing record #%d)"
+msgstr ""
+
+#: assets/build/editor-panel.js:5
+msgid "(opens in new tab)"
+msgstr ""
+
+#. translators: %s: record title.
+#: assets/build/editor-panel.js:6
+#, js-format
+msgid "Remove %s"
+msgstr ""
+
+#. translators: %s: record title.
+#: assets/build/editor-panel.js:7
+#, js-format
+msgid "Removed %s"
+msgstr ""
+
+#: assets/build/editor-panel.js:7
+msgid "Remove"
+msgstr ""
+
+#: assets/build/editor-panel.js:7
+msgid "Loading linked records"
+msgstr ""
+
+#: assets/build/editor-panel.js:7
+msgid "Could not load linked records."
+msgstr ""
+
+#. translators: %s: singular label of the linked type, such as "Project".
+#: assets/build/editor-panel.js:8
+#, js-format
+msgid "Add %s"
+msgstr ""
+
+#. translators: %s: record title.
+#: assets/build/editor-panel.js:9
+#, js-format
+msgid "Linked %s"
+msgstr ""
+
+#. translators: 1: current word count, 2: minimum, 3: maximum.
+#: assets/build/editor-panel.js:10
+#: assets/build/forms-view.js:14
+#, js-format
+msgid "%1$d word (%2$d to %3$d)"
+msgid_plural "%1$d words (%2$d to %3$d)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: current word count, 2: minimum.
+#: assets/build/editor-panel.js:11
+#: assets/build/forms-view.js:15
+#, js-format
+msgid "%1$d word (at least %2$d)"
+msgid_plural "%1$d words (at least %2$d)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: current word count, 2: maximum.
+#: assets/build/editor-panel.js:12
+#: assets/build/forms-view.js:16
+#, js-format
+msgid "%1$d word (up to %2$d)"
+msgid_plural "%1$d words (up to %2$d)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/editor-panel.js:12
+msgid "Edit this in the main content area."
+msgstr ""
+
+#: assets/build/filters-editor.js:1
+#: assets/build/listings-editor.js:7
+msgid "Content type"
+msgstr ""
+
+#: assets/build/filters-editor.js:1
+msgid "The archive being viewed"
+msgstr ""
+
+#: assets/build/filters-editor.js:1
+msgid "Search box"
+msgstr ""
+
+#: assets/build/filters-editor.js:1
+msgid "Choose a content type with a listing in the block settings."
+msgstr ""
+
+#: assets/build/forms-builder.js:1
+msgid "Always"
+msgstr ""
+
+#. translators: %s: field key.
+#: assets/build/forms-builder.js:2
+#, js-format
+msgid "%s (not in this form)"
+msgstr ""
+
+#: assets/build/forms-builder.js:2
+msgid "Is"
+msgstr ""
+
+#: assets/build/forms-builder.js:2
+msgid "Checked"
+msgstr ""
+
+#: assets/build/forms-builder.js:2
+msgid "Not checked"
+msgstr ""
+
+#: assets/build/forms-builder.js:2
+#: assets/build/forms-builder.js:5
+msgid "Choices"
+msgstr ""
+
+#: assets/build/forms-builder.js:2
+msgid "The value is stored; the label is shown. A new value follows its label until you edit it."
+msgstr ""
+
+#. translators: %d: choice number.
+#: assets/build/forms-builder.js:3
+#, js-format
+msgid "Choice %d label"
+msgstr ""
+
+#. translators: %d: choice number.
+#: assets/build/forms-builder.js:4
+#, js-format
+msgid "Choice %d value"
+msgstr ""
+
+#. translators: %d: choice number.
+#: assets/build/forms-builder.js:5
+#, js-format
+msgid "Remove choice %d"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Add choice"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Text"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Paragraph text"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "URL"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Number"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Date"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Checkbox"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Dropdown"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "One line of text."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "An email address."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Several lines of text."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "A web address (http or https)."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "A number."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "A date."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "A single checkbox, such as consent."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "One choice from a list."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "A file upload."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "No choices yet"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Choose…"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Field settings"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Names the value in entries and merge tags such as {field:key}. It follows the label until you change it."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Must be checked"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+#: assets/build/forms-builder.js:6
+msgid "Help text"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+#: assets/build/forms-builder.js:6
+msgid "Placeholder"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+#: assets/build/forms-builder.js:6
+msgid "Autocomplete"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+#: assets/build/forms-builder.js:6
+msgid "An autocomplete token such as name, email, organization or tel, so browsers can fill it in."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+#: assets/build/forms-builder.js:6
+msgid "Show as"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Radio buttons"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Validation"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Minimum"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Maximum"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Minimum characters"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Maximum characters"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Minimum words"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Maximum words"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Pattern"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "A regular expression the whole value must match."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Uploads"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Allowed file types"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Extensions separated by commas, such as pdf, docx, png. Scripts and web pages are never allowed."
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Largest file (MB)"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+#: assets/build/listings-editor.js:7
+msgid "Conditions"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Show only when"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Required when"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Checkboxes"
+msgstr ""
+
+#: assets/build/forms-builder.js:5
+msgid "Multiple select"
+msgstr ""
+
+#. translators: 1: content type label, 2: rules such as "Text, required, up to 200 characters".
+#: assets/build/forms-builder.js:6
+#, js-format
+msgid "From %1$s: %2$s. Change these rules in the content type."
+msgstr ""
+
+#: assets/build/forms-builder.js:6
+msgid "Form settings"
+msgstr ""
+
+#. translators: %s: package ID.
+#: assets/build/forms-builder.js:7
+#, js-format
+msgid "This form comes from the file package \"%s\" and is read-only here."
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Form key"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Locked: pages place the form by this key."
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Pages place the form by this key. Empty uses the title. It cannot change after the first save."
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Creates or updates"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Nothing: store entries only"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Create a record"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Update the record in the page URL (?record=ID)"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "New records are"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Pending review"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Drafts"
+msgstr ""
+
+#: assets/build/forms-builder.js:7
+msgid "Published"
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/forms-builder.js:8
+#, js-format
+msgid "Add all fields from %s"
+msgstr ""
+
+#: assets/build/forms-builder.js:8
+msgid "Every field and taxonomy is in the form."
+msgstr ""
+
+#. translators: %d: number of fields.
+#: assets/build/forms-builder.js:9
+#, js-format
+msgid "Adds %d field not yet in the form."
+msgid_plural "Adds %d fields not yet in the form."
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/forms-builder.js:9
+msgid "Who can use it"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Anyone"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Logged-in users with a capability"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Such as read (any logged-in user) or edit_posts. Forms that publish or update records need one."
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Merge tags: {field:key} (a field’s value), {all_fields}, {form:label}, {entry:id}, {entry:admin_url}, {post:edit_url}, {site:name}, {admin_email}, {option:page.field}."
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Send to: an address, {admin_email}, {option:page.field}, or an email field of the form:"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "(none yet)"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Email confirmation"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Hold entries until the email address is confirmed"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Submitters get a link by email; records are created only after they confirm."
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Confirm your submission within 72 hours:"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Email field"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "A required email field of this form."
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Choose a field"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+#: assets/build/forms-builder.js:10
+msgid "Subject"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+#: assets/build/forms-builder.js:10
+msgid "Message"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Must contain {confirm_url}, the confirmation link."
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "Link expires after (hours)"
+msgstr ""
+
+#: assets/build/forms-builder.js:9
+msgid "No emails are sent for entries yet."
+msgstr ""
+
+#. translators: 1: number, 2: notification key.
+#: assets/build/forms-builder.js:10
+#, js-format
+msgid "Notification %1$d: %2$s"
+msgstr ""
+
+#: assets/build/forms-builder.js:10
+msgid "Send when"
+msgstr ""
+
+#: assets/build/forms-builder.js:10
+msgid "Confirmed by email"
+msgstr ""
+
+#: assets/build/forms-builder.js:10
+msgid "Reply to (optional)"
+msgstr ""
+
+#. translators: %d: notification number.
+#: assets/build/forms-builder.js:11
+#, js-format
+msgid "Remove notification %d"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "New entry: {form:label}"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Add notification"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Messages, spam and privacy"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Success message"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Submit button label"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Message after confirmation"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Shown when the submitter confirms. Say what happens next, such as a review."
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Message when a confirmed submission needs review"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Shown after the submitter confirms if their values no longer pass the form rules. The entry is kept for you to check."
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Cloudflare Turnstile check"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Visitors pass a Cloudflare check before sending. The form then needs JavaScript."
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Unavailable: add PEGWORK_TURNSTILE_SITE_KEY and PEGWORK_TURNSTILE_SECRET_KEY to wp-config.php first."
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Delete entries after (days)"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Received and failed entries older than this are deleted daily. Empty keeps them."
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Save"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Ready to save this form?"
+msgstr ""
+
+#: assets/build/forms-builder.js:11
+msgid "Forms are always private. Saving makes the form available to the Form block."
+msgstr ""
+
+#. translators: 1: content type label, 2: field or taxonomy label.
+#. translators: 1: content type label, 2: field label.
+#: assets/build/forms-builder.js:12
+#: assets/build/forms-builder.js:23
+#, js-format
+msgid "%1$s: %2$s"
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/forms-builder.js:13
+#, js-format
+msgid "Takes its type and rules from the %s content type."
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/forms-builder.js:14
+#, js-format
+msgid "A choice of the terms the %s content type uses."
+msgstr ""
+
+#. translators: %s: package ID.
+#: assets/build/forms-builder.js:15
+#, js-format
+msgid "This form comes from the file package \"%s\" and is read-only. Duplicate it to make a site form you can change."
+msgstr ""
+
+#: assets/build/forms-builder.js:15
+msgid "Form field"
+msgstr ""
+
+#: assets/build/forms-builder.js:15
+msgid "One field of the form."
+msgstr ""
+
+#. translators: 1: minimum, 2: maximum, 3: unit such as "words".
+#: assets/build/forms-builder.js:16
+#, js-format
+msgid "%1$s to %2$s %3$s"
+msgstr ""
+
+#. translators: 1: maximum, 2: unit such as "words".
+#: assets/build/forms-builder.js:17
+#, js-format
+msgid "up to %1$s %2$s"
+msgstr ""
+
+#. translators: 1: minimum, 2: unit such as "words".
+#: assets/build/forms-builder.js:18
+#, js-format
+msgid "at least %1$s %2$s"
+msgstr ""
+
+#: assets/build/forms-builder.js:18
+msgid "required"
+msgstr ""
+
+#. translators: %s: label of another field.
+#: assets/build/forms-builder.js:19
+#, js-format
+msgid "required when \"%s\" is set"
+msgstr ""
+
+#. translators: %s: label of another field.
+#: assets/build/forms-builder.js:20
+#, js-format
+msgid "shown when \"%s\" is set"
+msgstr ""
+
+#: assets/build/forms-builder.js:20
+msgid "characters"
+msgstr ""
+
+#: assets/build/forms-builder.js:20
+msgid "words"
+msgstr ""
+
+#. translators: 1: minimum, 2: maximum.
+#: assets/build/forms-builder.js:21
+#, js-format
+msgid "from %1$s to %2$s"
+msgstr ""
+
+#. translators: %s: maximum.
+#: assets/build/forms-builder.js:22
+#, js-format
+msgid "at most %s"
+msgstr ""
+
+#. translators: %s: minimum.
+#: assets/build/forms-builder.js:23
+#, js-format
+msgid "at least %s"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "must match a pattern"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "any number of terms"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "one term"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "private"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Field label"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "This field is not on the target content type. Remove it or change the target."
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Bound fields need a target content type (Form settings)."
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Form step"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "One step of a multi-step form: a title and its fields."
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Step settings"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Identifies the step. It follows the title until you change it."
+msgstr ""
+
+#. translators: %d: step number.
+#: assets/build/forms-builder.js:23
+#, js-format
+msgid "Step %d"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Step title"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Step description (optional)"
+msgstr ""
+
+#: assets/build/forms-builder.js:23
+msgid "Step description"
+msgstr ""
+
+#: assets/build/forms-editor.js:1
+msgid "Choose a form"
+msgstr ""
+
+#. translators: %s: form label and key.
+#: assets/build/forms-editor.js:3
+#, js-format
+msgid "%s (not shown yet)"
+msgstr ""
+
+#. translators: %s: form key.
+#: assets/build/forms-editor.js:5
+#, js-format
+msgid "%s (not defined)"
+msgstr ""
+
+#: assets/build/forms-editor.js:5
+msgid "Type to search forms by label or key."
+msgstr ""
+
+#: assets/build/forms-editor.js:5
+msgid "Places a Pegwork registry form by its key."
+msgstr ""
+
+#: assets/build/forms-editor.js:5
+msgid "Choose another form"
+msgstr ""
+
+#: assets/build/forms-editor.js:5
+msgid "Change form"
+msgstr ""
+
+#: assets/build/forms-editor.js:5
+msgid "Choose the registry form to show here."
+msgstr ""
+
+#. translators: 1: step number, 2: number of steps.
+#: assets/build/forms-view.js:13
+#, js-format
+msgid "Step %1$d of %2$d"
+msgstr ""
+
+#: assets/build/forms-view.js:17
+msgid "Back"
+msgstr ""
+
+#: assets/build/forms-view.js:17
+msgid "Next"
+msgstr ""
+
+#: assets/build/forms-view.js:17
+msgid "Sending"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "is"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "is not"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "is empty"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "is not empty"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "is any of"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "is none of"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "Terms"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "On"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "Value"
+msgstr ""
+
+#: assets/build/listings-editor.js:2
+msgid "(unavailable field)"
+msgstr ""
+
+#. translators: %d: condition number
+#: assets/build/listings-editor.js:3
+#, js-format
+msgid "Condition %d"
+msgstr ""
+
+#: assets/build/listings-editor.js:3
+msgid "Operator"
+msgstr ""
+
+#: assets/build/listings-editor.js:3
+msgid "Remove condition"
+msgstr ""
+
+#. translators: 1: content type singular name, 2: relationship key.
+#: assets/build/listings-editor.js:4
+#, js-format
+msgid "The %1$s being viewed (%2$s)"
+msgstr ""
+
+#: assets/build/listings-editor.js:4
+msgid "Pegwork directory"
+msgstr ""
+
+#: assets/build/listings-editor.js:4
+msgid "Lists published records only, with the presets below and, when connected, the page filters."
+msgstr ""
+
+#: assets/build/listings-editor.js:4
+msgid "Connect to filters"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/listings-editor.js:5
+#, js-format
+msgid "Only: %s"
+msgstr ""
+
+#: assets/build/listings-editor.js:5
+msgid "Only records linked to"
+msgstr ""
+
+#: assets/build/listings-editor.js:5
+msgid "Lists the records linked to the record being shown: the viewed post, or the card record inside another Query Loop. With no such record, or nothing linked, the loop is empty: wrap it in a Show if block with a relationship condition to hide its heading too."
+msgstr ""
+
+#: assets/build/listings-editor.js:5
+msgid "Any record"
+msgstr ""
+
+#: assets/build/listings-editor.js:5
+msgid "Show the record chosen in"
+msgstr ""
+
+#: assets/build/listings-editor.js:5
+msgid "When nothing is chosen there, or it is not published, the newest published record shows."
+msgstr ""
+
+#: assets/build/listings-editor.js:5
+msgid "No option (all records)"
+msgstr ""
+
+#. translators: %s: content type plural name.
+#: assets/build/listings-editor.js:7
+#, js-format
+msgid "A grid of published %s with pagination, ready for filters."
+msgstr ""
+
+#: assets/build/listings-editor.js:7
+msgid "Show if"
+msgstr ""
+
+#: assets/build/listings-editor.js:7
+msgid "Shows its inner blocks only when every condition on the current record holds."
+msgstr ""
+
+#: assets/build/listings-editor.js:7
+msgid "Used only to list fields here; conditions apply to the record being shown."
+msgstr ""
+
+#: assets/build/listings-editor.js:7
+msgid "Add condition"
+msgstr ""
+
+#: assets/build/listings-editor.js:7
+msgid "A condition uses an unknown or private field, or a taxonomy or relationship this content type does not use. This block renders nothing on the site."
+msgstr ""
+
+#. translators: %s: list of conditions
+#: assets/build/listings-editor.js:8
+#, js-format
+msgid "Show if: %s"
+msgstr ""
+
+#. translators: %s: field or taxonomy key
+#: assets/build/listings-editor.js:9
+#, js-format
+msgid "%s (unavailable: renders nothing)"
+msgstr ""
+
+#. translators: %s: singular label of the content type, such as "Project".
+#: assets/build/options-page.js:4
+#, js-format
+msgid "Type to search published items (%s). Clear to choose none."
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block title"
+msgid "Filters"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block description"
+msgid "Search and filter controls for a Pegwork directory. Works without JavaScript; with it, results update in place."
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block keyword"
+msgid "search"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block keyword"
+msgid "filter"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block keyword"
+msgid "facets"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block keyword"
+msgid "directory"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+#: modules/forms/blocks/form/block.json
+#: modules/listings/blocks/conditional/block.json
+msgctxt "block keyword"
+msgid "pegwork"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block style label"
+msgid "Horizontal"
+msgstr ""
+
+#: modules/filters/blocks/filters/block.json
+msgctxt "block style label"
+msgid "Vertical"
+msgstr ""
+
+#: modules/forms/blocks/form-field/block.json
+msgctxt "block title"
+msgid "Form field"
+msgstr ""
+
+#: modules/forms/blocks/form-field/block.json
+msgctxt "block description"
+msgid "One field of a Pegwork form. Its attributes are the form item."
+msgstr ""
+
+#: modules/forms/blocks/form-field/block.json
+msgctxt "block keyword"
+msgid "field"
+msgstr ""
+
+#: modules/forms/blocks/form-field/block.json
+msgctxt "block keyword"
+msgid "input"
+msgstr ""
+
+#: modules/forms/blocks/form-field/block.json
+#: modules/forms/blocks/form-step/block.json
+#: modules/forms/blocks/form/block.json
+msgctxt "block keyword"
+msgid "form"
+msgstr ""
+
+#: modules/forms/blocks/form-step/block.json
+msgctxt "block title"
+msgid "Form step"
+msgstr ""
+
+#: modules/forms/blocks/form-step/block.json
+msgctxt "block description"
+msgid "One step of a multi-step Pegwork form: a heading and its fields."
+msgstr ""
+
+#: modules/forms/blocks/form-step/block.json
+msgctxt "block keyword"
+msgid "step"
+msgstr ""
+
+#: modules/forms/blocks/form-step/block.json
+msgctxt "block keyword"
+msgid "page"
+msgstr ""
+
+#: modules/forms/blocks/form-step/block.json
+msgctxt "block keyword"
+msgid "section"
+msgstr ""
+
+#: modules/forms/blocks/form/block.json
+msgctxt "block title"
+msgid "Form"
+msgstr ""
+
+#: modules/forms/blocks/form/block.json
+msgctxt "block description"
+msgid "Places a Pegwork registry form by its key."
+msgstr ""
+
+#: modules/forms/blocks/form/block.json
+msgctxt "block keyword"
+msgid "contact"
+msgstr ""
+
+#: modules/listings/blocks/conditional/block.json
+msgctxt "block title"
+msgid "Show if"
+msgstr ""
+
+#: modules/listings/blocks/conditional/block.json
+msgctxt "block description"
+msgid "Shows its inner blocks only when every condition on the current record holds."
+msgstr ""
+
+#: modules/listings/blocks/conditional/block.json
+msgctxt "block keyword"
+msgid "condition"
+msgstr ""
+
+#: modules/listings/blocks/conditional/block.json
+msgctxt "block keyword"
+msgid "visibility"
+msgstr ""

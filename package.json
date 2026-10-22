@@ -15,6 +15,8 @@
 		"lint:js": "wp-scripts lint-js",
 		"test:unit": "wp-scripts test-unit-js",
 		"test:e2e": "playwright test",
+		"make-pot": "npm run build && wp i18n make-pot . languages/pegwork.pot --slug=pegwork --domain=pegwork --exclude=assets/src,bin,docs,examples,dist,test-results,playwright-report --headers='{\"Report-Msgid-Bugs-To\":\"https://github.com/brandonmead/pegwork/issues\"}'",
+		"zip": "bash bin/build-zip.sh",
 		"wp-env": "wp-env"
 	},
 	"devDependencies": {

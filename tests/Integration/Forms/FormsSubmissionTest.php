@@ -534,7 +534,6 @@ class FormsSubmissionTest extends FormsTestCase {
 	 */
 	private function set_state( $key, $result ) {
 		$state = new \ReflectionProperty( Submission::class, 'state' );
-		$state->setAccessible( true );
 		$state->setValue( null, array( $key => $result ) );
 	}
 }

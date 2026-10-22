@@ -237,7 +237,7 @@ final class Privacy {
 			__( 'Some forms send you an email to confirm your submission. Unconfirmed submissions are deleted after 7 days. Submissions caught as spam are deleted after 30 days. Other submissions are kept for the period each form sets, or until deleted by a site administrator.', 'pegwork' ),
 			__( 'Files you upload with a form are stored privately on this server, outside the public media library. Only the people who manage this site\'s forms can download them, and they are deleted with your submission.', 'pegwork' ),
 			__( 'If a form creates a listing or post from your submission, that record is kept as site content. Asking us to erase your data deletes your form submissions; tell us if the record should change too.', 'pegwork' ),
-			__( 'Forms that use Cloudflare Turnstile to check for spam load a script from Cloudflare, which receives information about your browser and visit. See Cloudflare\'s privacy policy: https://www.cloudflare.com/privacypolicy/', 'pegwork' ),
+			__( 'Forms that use Cloudflare Turnstile to check for spam load a script from Cloudflare, which receives information about your browser and visit. See Cloudflare\'s privacy policy: https://www.cloudflare.com/privacypolicy/', 'pegwork' ), // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- A link in privacy policy text; nothing is loaded.
 		);
 
 		wp_add_privacy_policy_content( __( 'Pegwork Forms', 'pegwork' ), wp_kses_post( '<p>' . implode( '</p><p>', array_map( 'esc_html', $paragraphs ) ) . '</p>' ) );
