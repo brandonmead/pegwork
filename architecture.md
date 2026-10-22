@@ -1,6 +1,6 @@
 # Pegwork architecture
 
-Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-20.
+Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-22.
 
 ## Product
 - Pegwork (full name "Pegwork Platform for WordPress"): one WordPress plugin, an application builder: content builder (JetEngine-like CPTs, fields, taxonomies, relationships), listings/templates, filters (JetSmartFilters-like), form builder (Gravity Forms-like), automation builder (Salesforce Flow-like), all on one schema registry.
@@ -288,7 +288,11 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 
 ## Tooling
 - PHPUnit 9.6 (WP 6.7 test suite rejects PHPUnit 10+), yoast/phpunit-polyfills 3, WPCS 3, PHPCompatibilityWP 2.1 (PHPCompatibility 9.3.5; 10.x still alpha). `composer.lock` resolved for platform PHP 8.2.
-- CI matrix PHP 8.2/8.4 x WP 6.7/latest, MySQL 8.0 service; runner needs `subversion` for the install script.
+- CI matrix PHP 8.2/8.4 x WP 6.7/latest plus PHP 8.5 x WP latest (WP 6.7 core raises PHP 8.5 deprecations itself), MySQL 8.0 service; runner needs `subversion` for the install script. Actions pinned to commit SHAs (Dependabot bumps them); Node from `.nvmrc`. `codeql.yml`: javascript-typescript and actions (no PHP in CodeQL).
+- Release zip: `bin/build-zip.sh` from `git archive HEAD` (so commit first), `.gitattributes` `export-ignore` is the ship list, `composer install --no-dev`, keeps `composer.json` (Plugin Check wants it next to `vendor/`). Production installs use the zip, never a dev checkout.
+- Plugin Check: `wp plugin install plugin-check --activate` on a throwaway site, point `wp-content/plugins/pegwork` at the unzipped zip, `wp plugin check pegwork`. It honors `phpcs:ignore` codes. Its direct-access check reads only top-level statements, so a namespaced file needs `defined( 'ABSPATH' ) || exit;` within the first 50 lines, and `const`-only files count as code.
+- `languages/pegwork.pot`: `npm run make-pot` (builds, then WP-CLI scans `assets/build`, not `assets/src`). JS translator comments must sit directly before `__()` or the minifier drops them. `wp_set_script_translations()` passes no path, which is right for WordPress.org language packs.
+- Repo settings: private vulnerability reporting and Dependabot alerts on (2026-10-22). No rulesets or branch protection.
 - Verified 2026-10-17: `register_meta` `label` arg present in WP 6.7, absent in 6.6; `registerBlockBindingsSource` public in 6.7.
 - JS: `@wordpress/scripts` 36.0.0 (Node `^22.22.2`), `test-unit-js` runs Vitest 5 (Jest is legacy as of scripts 36). Lockfile needs npm 11 (npm 10.9 crashes with `edgesOut` on the Vitest peer set): locally `npx -y npm@11.20.0 ci`. WordPress packages are externals, declared in `eslint.config.cjs` `import/core-modules`, not installed.
 - WP admin user `admin`. Password not stored: use Local's one-click admin or `wp user update`.

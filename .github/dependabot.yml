@@ -1,0 +1,39 @@
+version: 2
+
+# Weekly. Minor and patch updates arrive as one grouped PR per ecosystem; major updates arrive one
+# PR each, since they need a changelog read.
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # The WordPress 6.7 test suite rejects PHPUnit 10 and later (architecture.md, Tooling).
+      - dependency-name: phpunit/phpunit
+        update-types:
+          - version-update:semver-major
+    groups:
+      composer-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch

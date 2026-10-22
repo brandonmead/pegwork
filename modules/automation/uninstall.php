@@ -6,6 +6,7 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 global $wpdb;
