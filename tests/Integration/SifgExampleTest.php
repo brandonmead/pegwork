@@ -161,7 +161,7 @@ class SifgExampleTest extends WP_UnitTestCase {
 		Notices::render();
 		$notice = ob_get_clean();
 		$this->assertStringContainsString( 'notice-error', $notice );
-		$this->assertStringContainsString( '<li><code>reserved-key/taxonomies/type.json#/key</code>: ', $notice, 'Path relative to the package, then the JSON pointer.' );
+		$this->assertStringContainsString( '<li><code style="padding-inline-end:0">reserved-key/taxonomies/type.json#/key</code>: ', $notice, 'Path relative to the package, then the JSON pointer.' );
 		$this->assertStringNotContainsString( dirname( __DIR__ ), $notice, 'No absolute path in the admin notice.' );
 		$this->assertStringContainsString( '&quot;type&quot; is reserved by WordPress.', $notice );
 

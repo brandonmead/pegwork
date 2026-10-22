@@ -250,6 +250,9 @@ Module `filters` (requires `listings`). One block per directory; it narrows ever
 | `postType` | `""` | Content type key. Empty: the archive's type, else the only type with a `listing`. No `listing`: renders nothing. |
 | `filters` | all | Filter keys from the `listing`, in this order. Unknown keys are ignored. |
 | `showSearch` | `true` | The search box, when the `listing` has `search: true`. |
+| `collapseOnSmall` | `false` | "Collapse on small screens" in the inspector. Under 600 px wide the whole form sits in a native disclosure (below). Off: nothing changes. |
+
+Collapse on small screens: the fields and the Apply and Clear buttons are wrapped in `<details class="pegwork-filters__collapse">` inside the form, with a `<summary>` of "Filters", or "Filters, 2 active" (the search and each shown filter with a value count one each; the summary follows changes when the script runs). It is closed by default and rendered open when any shown control is active, so a visitor who arrives on a filtered URL sees the controls. The result count stays outside it, always visible. It is plain `details`: it works without JavaScript, by keyboard (Enter or Space on the summary, which has the same visible focus outline as the other disclosures), and uses no ARIA. From 600 px up the summary is hidden and the controls show as usual, even though the `details` is closed, through `::details-content` (Chrome 131, Safari 18.4, Firefox 143); in a browser without it the disclosure stays available at every width, so nothing is lost. Block markup: `<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->`.
 
 Styles: Horizontal (default, wraps) and Vertical. Supports wide and full alignment, margin and padding. In the editor, the inspector picks the type, the search box and the filters, and the canvas shows a server render.
 

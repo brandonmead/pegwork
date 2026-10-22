@@ -14,7 +14,9 @@
  * Internal dependencies
  */
 import {
+	activeCount,
 	buildUrl,
+	collapseText,
 	isActive,
 	parseUrl,
 	stateFromEntries,
@@ -59,6 +61,12 @@ export function createStore( deps ) {
 	 */
 	function reflect( ctx, values ) {
 		ctx.active = isActive( values );
+		if ( typeof ctx.collapseLabel === 'string' ) {
+			ctx.collapseLabel = collapseText(
+				getState()?.strings,
+				activeCount( values )
+			);
+		}
 		for ( const filter of ctx.filters ) {
 			if ( filter.multiple ) {
 				ctx.summaries[ filter.key ] = summaryText(

@@ -20,6 +20,10 @@
 		},
 		"showSearch": {
 			"type": "boolean"
+		},
+		"collapseOnSmall": {
+			"type": "boolean",
+			"default": false
 		}
 	},
 	"supports": {
