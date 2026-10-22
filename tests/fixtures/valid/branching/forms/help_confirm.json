@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "help_confirm",
+  "label": "Ask for help (confirm by email)",
+  "target": { "content_type": "help_request", "action": "create" },
+  "confirm": { "field": "email", "subject": "Confirm your request", "body": "Confirm: {confirm_url}" },
+  "fields": [
+    { "bind": { "field": "name" } },
+    { "bind": { "field": "email" } }
+  ]
+}

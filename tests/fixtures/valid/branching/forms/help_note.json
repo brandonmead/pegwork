@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "key": "help_note",
+  "label": "Leave a note",
+  "fields": [
+    { "key": "message", "type": "textarea", "label": "Message", "required": true }
+  ]
+}

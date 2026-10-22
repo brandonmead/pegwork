@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "key": "br_hook",
+  "label": "New request: webhooks and a retry inside branches",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "help_request",
+    "when": { "var": "record.scenario", "op": "eq", "value": "hook" } },
+  "steps": [
+    { "id": "hook_route", "type": "decision",
+      "branches": [
+        { "label": "High", "when": { "var": "record.priority", "op": "eq", "value": "high" },
+          "steps": [
+            { "id": "hook_high", "type": "call_webhook", "url": "https://hooks.example.org/high",
+              "fields": [ "name", "priority" ], "retry": { "max": 2, "backoff": "PT5M" } } ] } ],
+      "otherwise": [
+        { "id": "hook_other", "type": "call_webhook", "url": "https://hooks.example.org/other", "fields": [ "name" ] } ] },
+    { "id": "hook_done", "type": "update_record", "values": { "notes": "sent" } }
+  ]
+}

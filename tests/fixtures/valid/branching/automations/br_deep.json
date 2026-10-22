@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "key": "br_deep",
+  "label": "New request: three nesting levels, a record created inside a branch",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "help_request",
+    "when": { "var": "record.scenario", "op": "eq", "value": "deep" } },
+  "steps": [
+    { "id": "level_1", "type": "decision",
+      "branches": [
+        { "label": "Any amount", "when": { "var": "record.amount", "op": "gt", "value": 0 },
+          "steps": [
+            { "id": "level_2", "type": "decision",
+              "branches": [
+                { "label": "Over 10", "when": { "var": "record.amount", "op": "gt", "value": 10 },
+                  "steps": [
+                    { "id": "level_3", "type": "decision",
+                      "branches": [
+                        { "label": "Over 100", "when": { "var": "record.amount", "op": "gt", "value": 100 },
+                          "steps": [
+                            { "id": "make_task", "type": "create_record", "content_type": "help_task",
+                              "values": { "name": "Call {{record.name}}", "related": "{{record.id}}", "due_on": "{{today}}" } },
+                            { "id": "task_mail", "type": "send_email", "to": "team@example.org",
+                              "subject": "Task {{steps.make_task.record_id}}", "text": "Task {{steps.make_task.record_id}} is for {{record.name}}." } ] } ],
+                      "otherwise": [ { "id": "small_note", "type": "update_record", "values": { "notes": "over 10" } } ] } ] } ] } ] } ] },
+    { "id": "deep_done", "type": "send_email", "to": "team@example.org", "subject": "Done: {{record.name}}", "text": "Notes: {{record.notes}}" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "join" },
+  "steps": [
+    { "id": "mark", "type": "update_record", "values": { "done": true } }
+  ]
+}

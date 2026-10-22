@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "thing" },
+  "steps": [
+    { "id": "route", "type": "decision", "branches": [ { "label": "Done", "when": { "var": "record.done", "op": "eq", "value": true },
+      "steps": [ { "id": "make", "type": "create_record", "content_type": "thing", "values": { "name": "Copy of {{record.name}}" } } ] } ] },
+    { "id": "mail", "type": "send_email", "to": "ops@example.org", "subject": "Made", "text": "Made {{steps.make.record_id}}" }
+  ]
+}

@@ -263,6 +263,78 @@ class NormalizerTest extends TestCase {
 	}
 
 	/**
+	 * Decisions normalize recursively: create_record defaults fill inside branches and otherwise, an empty
+	 * otherwise is dropped, empty branch lists stay, branch keys are sorted and list order is kept.
+	 */
+	public function test_decision_defaults() {
+		$create   = fn( $id ) => array(
+			'type'         => 'create_record',
+			'id'           => $id,
+			'values'       => array( 'name' => 'x' ),
+			'content_type' => 'thing',
+		);
+		$decision = array(
+			'type'      => 'decision',
+			'id'        => 'outer',
+			'branches'  => array(
+				array(
+					'when'  => array(
+						'var' => 'record.done',
+						'op'  => 'not_empty',
+					),
+					'steps' => array(
+						array(
+							'type'      => 'decision',
+							'id'        => 'inner',
+							'branches'  => array(
+								array(
+									'steps' => array( $create( 'b' ), $create( 'a' ) ),
+									'label' => 'Inner',
+									'when'  => array(
+										'var' => 'record.done',
+										'op'  => 'empty',
+									),
+								),
+							),
+							'otherwise' => array( $create( 'c' ) ),
+						),
+					),
+					'label' => 'Outer',
+				),
+				array(
+					'label' => 'Empty',
+					'when'  => array(
+						'var' => 'record.done',
+						'op'  => 'empty',
+					),
+					'steps' => array(),
+				),
+			),
+			'otherwise' => array(),
+		);
+
+		$automation = Normalizer::normalize(
+			'automation',
+			array(
+				'key'     => 'follow',
+				'trigger' => array( 'type' => 'webhook' ),
+				'steps'   => array( $decision ),
+			)
+		);
+		$outer      = $automation['steps'][0];
+
+		$this->assertArrayNotHasKey( 'otherwise', $outer );
+		$this->assertSame( array( 'branches', 'id', 'type' ), array_keys( $outer ) );
+		$this->assertSame( array( 'label', 'steps', 'when' ), array_keys( $outer['branches'][0] ) );
+		$this->assertSame( array(), $outer['branches'][1]['steps'] );
+		$inner = $outer['branches'][0]['steps'][0];
+		$this->assertSame( array( 'b', 'a' ), array_column( $inner['branches'][0]['steps'], 'id' ) );
+		$this->assertSame( array( 'draft', 'draft' ), array_column( $inner['branches'][0]['steps'], 'status' ) );
+		$this->assertSame( 'draft', $inner['otherwise'][0]['status'] );
+		$this->assertSame( wp_json_encode( $automation ), wp_json_encode( Normalizer::normalize( 'automation', $automation ) ) );
+	}
+
+	/**
 	 * Options page defaults: manage_options; fields get the content type field defaults; menu_title is not stored.
 	 */
 	public function test_options_page_defaults() {
@@ -329,7 +401,7 @@ class NormalizerTest extends TestCase {
 	 */
 	public function test_idempotent_on_fixtures() {
 		$root   = dirname( __DIR__, 3 );
-		$result = Loader::load( array( $root . '/examples/sifg', $root . '/tests/fixtures/valid/complete', $root . '/tests/fixtures/valid/sections' ) );
+		$result = Loader::load( array( $root . '/examples/sifg', $root . '/tests/fixtures/valid/complete', $root . '/tests/fixtures/valid/sections', $root . '/tests/fixtures/valid/branching' ) );
 		$this->assertTrue( $result->is_valid() );
 
 		foreach ( Loader::SECTIONS as $kind => $section ) {

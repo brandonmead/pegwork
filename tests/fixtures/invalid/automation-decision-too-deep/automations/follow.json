@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "thing" },
+  "steps": [
+    { "id": "one", "type": "decision", "branches": [ { "label": "A", "when": { "var": "record.done", "op": "eq", "value": true }, "steps": [
+      { "id": "two", "type": "decision", "branches": [ { "label": "B", "when": { "var": "record.count", "op": "gt", "value": 1 }, "steps": [
+        { "id": "three", "type": "decision", "branches": [ { "label": "C", "when": { "var": "record.count", "op": "gt", "value": 2 }, "steps": [
+          { "id": "four", "type": "decision", "branches": [ { "label": "D", "when": { "var": "record.count", "op": "gt", "value": 3 }, "steps": [
+            { "id": "mark", "type": "update_record", "values": { "done": false } } ] } ] } ] } ] } ] } ] } ] } ] }
+  ]
+}

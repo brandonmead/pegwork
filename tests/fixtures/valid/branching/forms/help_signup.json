@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "help_signup",
+  "label": "Ask for help",
+  "target": { "content_type": "help_request", "action": "create" },
+  "fields": [
+    { "bind": { "field": "name" } },
+    { "bind": { "field": "email" } },
+    { "bind": { "field": "priority" } }
+  ]
+}
