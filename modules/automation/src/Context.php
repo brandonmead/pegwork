@@ -210,13 +210,42 @@ final class Context {
 	}
 
 	/**
-	 * Whether a path reads a private field: `record.<key>` or `trigger.old.<key>` of a field with
-	 * visibility `private` (contexts that show values outside the email use this to hide them).
+	 * Whether a path reads a private field: `record.<key>`, `trigger.old.<key>` or (form events)
+	 * `trigger.values.<key>` of a field with visibility `private` (contexts that show values outside the
+	 * email use this to hide them).
 	 *
 	 * @param string $path Dot path.
 	 */
 	public function is_private( string $path ): bool {
-		return 'private' === ( $this->field( $path )['visibility'] ?? null );
+		return 'private' === ( ( $this->field( $path ) ?? $this->form_field( $path ) )['visibility'] ?? null );
+	}
+
+	/**
+	 * Registry field a `trigger.values.<key>` path of a form event reads, when that form item is bound to a
+	 * field of the form's target type (so a private field stays private when it arrives through a form).
+	 *
+	 * @param string $path Dot path.
+	 * @return array<string, mixed>|null
+	 */
+	private function form_field( string $path ): ?array {
+		$parts = explode( '.', $path );
+		if ( 3 !== count( $parts ) || 'trigger' !== $parts[0] || 'values' !== $parts[1] || ! is_string( $this->trigger['form'] ?? null ) ) {
+			return null;
+		}
+		$form = pegwork_registry()->form( $this->trigger['form'] );
+		$type = $form['target']['content_type'] ?? null;
+		if ( ! is_string( $type ) ) {
+			return null;
+		}
+		$lists = isset( $form['steps'] ) ? array_column( (array) $form['steps'], 'fields' ) : array( $form['fields'] ?? array() );
+		foreach ( $lists as $items ) {
+			foreach ( (array) $items as $item ) {
+				if ( ( $item['bind']['field'] ?? null ) === $parts[2] ) {
+					return pegwork_registry()->fields( $type )[ $parts[2] ] ?? null;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**

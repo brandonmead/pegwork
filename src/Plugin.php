@@ -74,9 +74,11 @@ final class Plugin {
 	}
 
 	/**
-	 * Runs once all plugins are loaded: loads the enabled modules (they boot on pegwork_loaded) and registers the CLI commands.
+	 * Runs once all plugins are loaded: installs the rate limit table when needed, loads the enabled modules
+	 * (they boot on pegwork_loaded) and registers the CLI commands.
 	 */
 	public static function plugins_loaded(): void {
+		Throttle\Schema::maybe_install();
 		Modules\Loader::load();
 		self::register_module_cli();
 	}

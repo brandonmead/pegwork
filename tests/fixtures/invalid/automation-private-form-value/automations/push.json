@@ -1,0 +1,5 @@
+{ "format": 1, "key": "push", "label": "Push suggestions",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "suggest" },
+  "steps": [
+    { "id": "push", "type": "call_webhook", "url": "https://hooks.example.org/n?name={{trigger.values.name}}&email={{trigger.values.contact_email}}" }
+  ] }

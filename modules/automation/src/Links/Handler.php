@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Links;
 
+use Pegwork\Api\Throttle;
 use PegworkAutomation\Context;
 use PegworkAutomation\Engine;
 use PegworkAutomation\Templates;
@@ -23,7 +24,7 @@ use PegworkAutomation\Templates;
  * - Acting runs the link's steps on its record as a `link` run (Links::run), then redirects to
  *   `success_url` (303) or shows a thank-you page with `success_message`.
  * - Expired (or `expired_url`), not valid, unavailable, already done and failed links get friendly pages
- *   and change nothing. Too many requests from one address get 429.
+ *   and change nothing. An address that sent too many links that do not verify gets 429.
  * - Pages are standalone, `noindex`, `no-store`, framed by nobody, sent with no referrer, and show no
  *   private field (page texts render in `log` mode, the record title only when its field is public).
  * - The confirm POST carries a WordPress nonce bound to the token. Nonces work for visitors who are not
@@ -32,7 +33,7 @@ use PegworkAutomation\Templates;
 final class Handler {
 
 	/**
-	 * Default requests per address per window (filter `pegwork_automation_link_rate_limit`).
+	 * Default requests with an invalid link per address per window (filter `pegwork_automation_link_rate_limit`).
 	 */
 	public const RATE_LIMIT = 30;
 
@@ -63,26 +64,30 @@ final class Handler {
 		$token = sanitize_text_field( wp_unslash( $source[ Links::QUERY_VAR ] ) );
 		$nonce = isset( $_POST['_wpnonce'] ) && is_string( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification
-		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-
-		self::send( self::respond( $method, $token, $nonce, $ip ) );
+		self::send( self::respond( $method, $token, $nonce, Throttle::client_ip() ) );
 		exit;
 	}
 
 	/**
 	 * The response to a link request, without sending it (tests call this directly).
 	 *
+	 * Only tokens that fail their HMAC check count against the address (atomically, Pegwork\Api\Throttle);
+	 * once it has used up its budget, every request from it gets 429 until the window has room. Real links
+	 * never count, so a person clicking several emails is never blocked.
+	 *
 	 * @param string $method HTTP method.
 	 * @param string $token  Token.
 	 * @param string $nonce  Nonce from the confirm form (POST).
-	 * @param string $ip     Client address for the rate limit (REMOTE_ADDR; proxies' headers are not trusted).
+	 * @param string $ip     Client address for the rate limit (Throttle::client_ip(): REMOTE_ADDR, filter `pegwork_client_ip`).
 	 * @return array{status: int, body?: string, location?: string, headers: array<string, string>}
 	 */
 	public static function respond( string $method, string $token, string $nonce = '', string $ip = '' ): array {
-		if ( ! self::allow( $ip ) ) {
-			$page                           = Page::response( 429, __( 'Too many requests', 'pegwork' ), __( 'Please wait a few minutes, then try the link again.', 'pegwork' ) );
-			$page['headers']['Retry-After'] = (string) self::RATE_WINDOW;
-			return $page;
+		$bucket = 'link|' . $ip;
+		$limit  = self::limit();
+		$now    = Engine::instance()->clock()->now()->getTimestamp();
+		$wait   = Throttle::wait( $bucket, $limit, $now );
+		if ( $wait > 0 ) {
+			return self::too_many( $wait );
 		}
 		if ( ! in_array( $method, array( 'GET', 'HEAD', 'POST' ), true ) ) {
 			$page                     = Page::response( 405, __( 'This link does not work', 'pegwork' ), __( 'Open the link from the email in your browser.', 'pegwork' ) );
@@ -95,6 +100,10 @@ final class Handler {
 
 		switch ( $check['state'] ) {
 			case 'invalid':
+				$wait = Throttle::take( $bucket, $limit, self::RATE_WINDOW, $now );
+				if ( $wait > 0 ) {
+					return self::too_many( $wait );
+				}
 				return Page::response( 403, __( 'This link does not work', 'pegwork' ), __( 'The link may be incomplete or changed. Copy the whole link from the email into your browser, or contact the site team.', 'pegwork' ) );
 			case 'expired':
 				$to = self::target( (string) ( $check['link']['expired_url'] ?? '' ), $links->context( array() ) );
@@ -252,27 +261,27 @@ final class Handler {
 	}
 
 	/**
-	 * Counts a request against the address's budget; false once it is used up.
-	 *
-	 * @param string $ip Client address.
+	 * Invalid-link requests one address may make per window.
 	 */
-	private static function allow( string $ip ): bool {
+	private static function limit(): int {
 		/**
-		 * Filters how many link requests one address may make per 10 minutes (0 turns the limit off).
-		 * Behind a proxy every visitor may share one address; raise the limit there.
+		 * Filters how many requests with a link that does not verify one address may make per 10 minutes
+		 * (0 turns the limit off). Behind a proxy every visitor may share one address; raise the limit there.
 		 *
 		 * @param int $limit Default 30.
 		 */
-		$limit = (int) apply_filters( 'pegwork_automation_link_rate_limit', self::RATE_LIMIT );
-		if ( $limit <= 0 ) {
-			return true;
-		}
-		$key   = 'pegwork_link_rate_' . md5( $ip );
-		$count = (int) get_transient( $key );
-		if ( $count >= $limit ) {
-			return false;
-		}
-		set_transient( $key, $count + 1, self::RATE_WINDOW );
-		return true;
+		return (int) apply_filters( 'pegwork_automation_link_rate_limit', self::RATE_LIMIT );
+	}
+
+	/**
+	 * The 429 page.
+	 *
+	 * @param int $wait Seconds until the address may try again.
+	 * @return array{status: int, body?: string, location?: string, headers: array<string, string>}
+	 */
+	private static function too_many( int $wait ): array {
+		$page                           = Page::response( 429, __( 'Too many requests', 'pegwork' ), __( 'Please wait a few minutes, then try the link again.', 'pegwork' ) );
+		$page['headers']['Retry-After'] = (string) $wait;
+		return $page;
 	}
 }

@@ -228,6 +228,11 @@
 					"if": { "required": [ "visibility", "wp" ], "properties": { "visibility": { "const": "private" }, "wp": { "required": [ "meta_key" ] } } },
 					"then": { "properties": { "wp": { "properties": { "meta_key": { "pattern": "^_" } } } } }
 				},
+				{
+					"description": "Private fields cannot be stored in post_title or post_content: those columns are public.",
+					"if": { "required": [ "visibility" ], "properties": { "visibility": { "const": "private" } } },
+					"then": { "properties": { "wp": { "not": { "required": [ "storage" ] } } } }
+				},
 				{ "$ref": "#/$defs/field_type_rules" }
 			]
 		},

@@ -6,6 +6,8 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
+
 add_action(
 	'rest_api_init',
 	static function () {

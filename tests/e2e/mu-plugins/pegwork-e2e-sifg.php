@@ -6,6 +6,8 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
+
 add_action(
 	'pegwork_register',
 	static function ( $builder ) {

@@ -147,7 +147,12 @@ final class SendEmail implements Step {
 				array_push( $addresses, ...$found );
 				continue;
 			}
-			array_push( $addresses, ...self::split( Templates::render( $part, $context, Templates::TEXT ) ) );
+			// One part, one recipient: a tag's value is never split, so a submitted text such as
+			// "a@example.org, b@example.org" is one invalid address, not two recipients.
+			$address = trim( Templates::render( $part, $context, Templates::TEXT ) );
+			if ( '' !== $address ) {
+				$addresses[] = $address;
+			}
 		}
 
 		$unique = array();
