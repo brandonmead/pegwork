@@ -255,10 +255,15 @@ final class Overview {
 			$first = true;
 			foreach ( array_keys( $columns ) as $key ) {
 				$value = (string) ( $row[ $key ] ?? '' );
-				$cell  = in_array( $key, array( 'key', 'source', 'by', 'file', 'pointer', 'stored_as', 'rest_base', 'capability' ), true ) && '' !== $value
-					? '<code>' . esc_html( $value ) . '</code>'
-					: esc_html( $value );
-				$tag   = $first ? 'th scope="row"' : 'td';
+				if ( in_array( $key, array( 'source', 'file', 'pointer' ), true ) && '' !== $value ) {
+					// Paths and JSON pointers may break only after a slash (CSS: overflow-wrap:break-word).
+					$cell = '<code class="pegwork-path">' . str_replace( '/', '/<wbr>', esc_html( $value ) ) . '</code>';
+				} elseif ( in_array( $key, array( 'key', 'by', 'stored_as', 'rest_base', 'capability' ), true ) && '' !== $value ) {
+					$cell = '<code>' . esc_html( $value ) . '</code>';
+				} else {
+					$cell = esc_html( $value );
+				}
+				$tag = $first ? 'th scope="row"' : 'td';
 				echo '<' . $tag . ' class="' . esc_attr( 'column-' . $key ) . '">' . $cell . '</' . ( $first ? 'th' : 'td' ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $tag is a literal; $cell is escaped above.
 				$first = false;
 			}
