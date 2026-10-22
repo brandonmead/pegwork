@@ -145,8 +145,11 @@ function ConditionRow( { condition, index, type, onChange, onRemove } ) {
 			<SelectControl
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
-				/* translators: %d: condition number */
-				label={ sprintf( __( 'Condition %d', 'pegwork' ), index + 1 ) }
+				label={ sprintf(
+					/* translators: %d: condition number */
+					__( 'Condition %d', 'pegwork' ),
+					index + 1
+				) }
 				value={ target }
 				options={ targets }
 				onChange={ ( value ) => {
