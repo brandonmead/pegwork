@@ -14,9 +14,9 @@ namespace PegworkAutomation\Scheduler;
  * automation state; `pegwork_runs` is the source of truth, so a lost or duplicated wake-up is harmless (the
  * executor claims runs atomically and the daily maintenance job re-schedules runs whose wake-up was lost).
  *
- * Implementations: WpCronScheduler (default, Engine::instance()), the test FakeScheduler (Engine::use()),
- * and later an Action Scheduler 4.2+ adapter once the WordPress minimum is 6.9 (as_schedule_single_action,
- * as_unschedule_action and as_next_scheduled_action map one to one).
+ * Implementations: WpCronScheduler (default, Engine::instance()), InlineScheduler (CLI `--sync`, `--now`)
+ * and the test FakeScheduler (Engine::use()). Production runs WP-Cron from a server cron (docs/automation.md,
+ * Production scheduling); there is no Action Scheduler adapter (decided 2026-10-22).
  */
 interface Scheduler {
 

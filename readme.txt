@@ -21,6 +21,12 @@ This is an early development release.
 1. Upload the `pegwork` folder to `/wp-content/plugins/`.
 2. Activate Pegwork from the Plugins screen.
 
+== Frequently Asked Questions ==
+
+= Automations run late or not at all. Why? =
+
+WP-Cron only runs when someone visits the site. On a production site set `define( 'DISABLE_WP_CRON', true );` in wp-config.php and add a server cron that runs `wp cron event run --due-now` every 5 minutes. Tools > Site Health shows whether Pegwork's automations are on time (see docs/automation.md, Production scheduling).
+
 == Changelog ==
 
 = 0.2.0 =
