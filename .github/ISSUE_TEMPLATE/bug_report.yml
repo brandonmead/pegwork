@@ -1,0 +1,57 @@
+name: Bug report
+description: Something in Pegwork does not work as documented.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security issue? Do not file it here. Use private reporting instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps on a clean site if you can. Include the registry JSON involved, trimmed to the smallest example that shows the bug.
+      placeholder: |
+        1. Register this package ...
+        2. Go to ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: pegwork
+    attributes:
+      label: Pegwork version
+      placeholder: '0.2.0'
+    validations:
+      required: true
+  - type: input
+    id: wordpress
+    attributes:
+      label: WordPress version
+      placeholder: '7.1'
+    validations:
+      required: true
+  - type: input
+    id: php
+    attributes:
+      label: PHP version
+      placeholder: '8.2'
+    validations:
+      required: true
+  - type: input
+    id: theme
+    attributes:
+      label: Theme and other active plugins
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors or logs
+      description: PHP errors from debug.log, browser console errors, or `wp pegwork schema status` output. Remove anything private.
+      render: text

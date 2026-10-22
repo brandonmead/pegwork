@@ -58,6 +58,23 @@ async function press( locator, key = 'Enter' ) {
 	await locator.page().keyboard.press( key );
 }
 
+// Adds a confirmed request on Tools > Export or Erase Personal Data and returns its table row. The
+// row's Download and Erase buttons do nothing until core's privacy-tools.js binds them on jQuery
+// ready, and the posted page shows the row before its footer scripts run. So wait for that page's
+// load event (after every ready handler), not just for the row to appear.
+async function addPrivacyRequest( page, email ) {
+	await page
+		.locator( '#username_or_email_for_privacy_request' )
+		.fill( email );
+	await page.locator( '#send_confirmation_email' ).uncheck();
+	const loaded = page.waitForEvent( 'load' );
+	await press( page.getByRole( 'button', { name: 'Send Request' } ) );
+	await loaded;
+	const row = page.locator( 'tr', { hasText: email } );
+	await expect( row ).toBeVisible();
+	return row;
+}
+
 test.beforeAll( async () => {
 	admin = await requestFactory.newContext( {
 		baseURL,
@@ -289,13 +306,7 @@ test( 'Tools > Export Personal Data includes the address entries', async ( {
 	} );
 
 	await page.goto( '/wp-admin/export-personal-data.php' );
-	await page
-		.locator( '#username_or_email_for_privacy_request' )
-		.fill( email );
-	await page.locator( '#send_confirmation_email' ).uncheck();
-	await press( page.getByRole( 'button', { name: 'Send Request' } ) );
-
-	const row = page.locator( 'tr', { hasText: email } );
+	const row = await addPrivacyRequest( page, email );
 	const [ download ] = await Promise.all( [
 		page.waitForEvent( 'download' ),
 		press( row.getByRole( 'button', { name: /Download personal data/ } ) ),
@@ -328,18 +339,9 @@ test( 'Tools > Erase Personal Data removes the address entries', async ( {
 	expect( ( await entries() ).map( ( e ) => e.email ) ).toContain( email );
 
 	await page.goto( '/wp-admin/erase-personal-data.php' );
-	await page
-		.locator( '#username_or_email_for_privacy_request' )
-		.fill( email );
-	await page.locator( '#send_confirmation_email' ).uncheck();
-	await press( page.getByRole( 'button', { name: 'Send Request' } ) );
-
-	const row = page.locator( 'tr', { hasText: email } );
+	const row = await addPrivacyRequest( page, email );
 	await press( row.getByRole( 'button', { name: /Erase personal data/ } ) );
-	// Core runs every registered eraser over admin-ajax first; allow for a slow full-suite site.
-	await expect( row.getByText( 'Erasure completed.' ) ).toBeVisible( {
-		timeout: 20000,
-	} );
+	await expect( row.getByText( 'Erasure completed.' ) ).toBeVisible();
 	await expect(
 		page.locator( '.request-results' ).filter( { hasText: /erased/ } )
 	).toBeVisible();

@@ -218,7 +218,6 @@ class FormsUploadsTest extends EntriesTestCase {
 		$this->assertDirectoryDoesNotExist( $this->uploads_dir . '/pegwork-forms' );
 
 		$state = new \ReflectionProperty( Submission::class, 'state' );
-		$state->setAccessible( true );
 		$state->setValue( null, array( 'fr_upload' => $result ) );
 		Renderer::reset();
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fr_upload"} /-->' );

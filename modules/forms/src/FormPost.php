@@ -507,15 +507,14 @@ final class FormPost {
 	private static function keys_with_posts(): array {
 		$ids  = get_posts(
 			array(
-				'post_type'        => self::TYPE,
-				'post_status'      => array( 'private', 'publish', 'draft', 'pending', 'future' ),
-				'posts_per_page'   => -1,
-				'orderby'          => 'ID',
-				'order'            => 'ASC',
-				'fields'           => 'ids',
-				'no_found_rows'    => true,
-				'suppress_filters' => true,
-				'meta_key'         => self::META_KEY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A handful of form posts; the key lives in meta.
+				'post_type'      => self::TYPE,
+				'post_status'    => array( 'private', 'publish', 'draft', 'pending', 'future' ),
+				'posts_per_page' => -1,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				'meta_key'       => self::META_KEY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A handful of form posts; the key lives in meta.
 			)
 		);
 		$held = array();

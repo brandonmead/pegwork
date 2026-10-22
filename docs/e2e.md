@@ -79,3 +79,4 @@ The plugin clone is the checkout the script lives in (override with `PEGWORK_DIR
 - With `javaScriptEnabled: false`, Chromium still parses `<noscript>` as raw text, so check its `textContent`, not its visible text.
 - A full-page screenshot leaves Cloudflare's widget iframe blank; take an element screenshot of the form instead.
 - Upload specs pass files with `setInputFiles( { name, mimeType, buffer } )`; a file input is focused with Tab and opened with Space.
+- After a form post that reloads a core admin screen, wait for the new page's `load` event (`const loaded = page.waitForEvent( 'load' )` before submitting, `await loaded` after) before pressing a button that core's footer scripts bind. The markup shows before those scripts run, and a press on an unbound `type="button"` does nothing (the old "Erase Personal Data" flake).

@@ -1,6 +1,6 @@
 <?php
 /**
- * Public API constants. Loaded by Composer's `files` autoload.
+ * Public API constants. Required by pegwork.php right after the Composer autoloader.
  *
  * @package Pegwork
  */
@@ -8,6 +8,8 @@
 declare( strict_types=1 );
 
 namespace Pegwork\Api;
+
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Semver of the public `Pegwork\Api` surface. Everything outside `Pegwork\Api` is internal.
