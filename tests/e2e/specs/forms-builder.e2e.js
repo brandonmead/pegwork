@@ -473,6 +473,39 @@ test( 'a file form opens read-only with Duplicate as site form', async ( {
 		page.locator( '.editor-post-last-edited-panel' )
 	).toBeHidden();
 	await expect( page.locator( '.editor-post-status' ) ).toHaveCount( 0 );
+	// The title is read-only too: typing, deleting and pasting change nothing and leave the post clean.
+	const title = canvas( page ).getByRole( 'textbox', { name: 'Add title' } );
+	const before = await title.innerText();
+	// The lock reaches the canvas shortly after it appears.
+	await expect( canvas( page ).locator( 'body' ) ).toHaveClass(
+		/pegwork-form-readonly/
+	);
+	await title.focus();
+	await page.keyboard.press( 'End' );
+	await page.keyboard.type( ' edited' );
+	await page.keyboard.press( 'Backspace' );
+	await page.keyboard.press( 'ControlOrMeta+A' );
+	await page.keyboard.press( 'Delete' );
+	await title.evaluate( ( element ) => {
+		const data = new window.DataTransfer();
+		data.setData( 'text/plain', 'pasted' );
+		element.dispatchEvent(
+			new window.ClipboardEvent( 'paste', {
+				clipboardData: data,
+				bubbles: true,
+				cancelable: true,
+			} )
+		);
+	} );
+	await expect( title ).toHaveText( before );
+	expect(
+		await page.evaluate( () =>
+			window.wp.data.select( 'core/editor' ).isEditedPostDirty()
+		)
+	).toBe( false );
+	await page.screenshot( {
+		path: path.join( SHOTS, 'forms-builder-readonly-title.png' ),
+	} );
 	const duplicate = page
 		.getByRole( 'link', { name: 'Duplicate as site form' } )
 		.or( page.getByRole( 'button', { name: 'Duplicate as site form' } ) )

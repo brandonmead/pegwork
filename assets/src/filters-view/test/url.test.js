@@ -7,7 +7,9 @@ import { describe, expect, it } from 'vitest';
  * Internal dependencies
  */
 import {
+	activeCount,
 	buildUrl,
+	collapseText,
 	isActive,
 	parseUrl,
 	stateFromEntries,
@@ -160,6 +162,28 @@ describe( 'isActive and summaryText', () => {
 				values: { ...empty.values, impact: [ 'a' ] },
 			} )
 		).toBe( true );
+	} );
+
+	it( 'counts active controls and formats the collapsed summary', () => {
+		expect( activeCount( empty ) ).toBe( 0 );
+		expect(
+			activeCount( {
+				q: 'x',
+				values: {
+					...empty.values,
+					impact: [ 'a', 'b' ],
+					volunteers: [ '1' ],
+				},
+			} )
+		).toBe( 3 );
+		const strings = {
+			collapseActive: 'Filtres, %s actifs',
+			collapseNone: 'Filtres',
+		};
+		expect( collapseText( strings, 0 ) ).toBe( 'Filtres' );
+		expect( collapseText( strings, 2 ) ).toBe( 'Filtres, 2 actifs' );
+		expect( collapseText( undefined, 2 ) ).toBe( 'Filters, 2 active' );
+		expect( collapseText( undefined, 0 ) ).toBe( 'Filters' );
 	} );
 
 	it( 'formats the multi-value summary with the translated strings', () => {

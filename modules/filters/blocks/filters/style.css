@@ -149,6 +149,43 @@
 	}
 }
 
+/* Collapse on small screens (opt-in): the whole form sits in a details. From 600px up it reads as
+   plain controls: the summary is hidden and the content shown even when the details is closed, where the
+   browser supports ::details-content; elsewhere the disclosure just stays available at every width. */
+.wp-block-pegwork-filters .pegwork-filters__collapse-summary {
+	cursor: pointer;
+	min-height: 2.75rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	font-weight: 600;
+	list-style: none;
+}
+
+.wp-block-pegwork-filters .pegwork-filters__collapse-summary::after {
+	margin-block-start: 0;
+}
+
+.wp-block-pegwork-filters .pegwork-filters__collapse[open] > .pegwork-filters__collapse-summary {
+	margin-block-end: 1rem;
+}
+
+@media (min-width: 600px) {
+
+	@supports selector(::details-content) {
+
+		.wp-block-pegwork-filters .pegwork-filters__collapse-summary {
+			display: none;
+		}
+
+		.wp-block-pegwork-filters .pegwork-filters__collapse::details-content {
+			content-visibility: visible;
+			display: block;
+		}
+	}
+}
+
 .wp-block-pegwork-filters .pegwork-filters__actions {
 	display: flex;
 	flex-wrap: wrap;
