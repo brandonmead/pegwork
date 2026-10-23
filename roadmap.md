@@ -14,8 +14,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Registry: `decision` step and form binding (merged, #42).
 2. Engine: branches, `Plan`, form binding in triggers, run log path (merged, #50).
 3. Save API and editing surface (merged, #52).
-4. Preview and dry run (in review, #53).
-5. Editor UI (planned).
+4. Preview and dry run (merged, #53).
+5. Editor UI (in review, #55, branch `phase6-editor`).
 6. BarnCRM proof (planned).
 
 ## Phase 1 PRs

@@ -155,7 +155,11 @@ async function insertMain( page, search ) {
 	} );
 	// Focus lands on the search box (WordPress 6.7) or the Blocks tab before it (later versions).
 	for ( let i = 0; i < 3; i++ ) {
-		if ( await box.evaluate( ( el ) => el === document.activeElement ) ) {
+		if (
+			await box.evaluate(
+				( el ) => el === el.ownerDocument.activeElement
+			)
+		) {
 			break;
 		}
 		await page.keyboard.press( 'Tab' );
@@ -172,7 +176,7 @@ const selectedId = ( page ) =>
 	page.evaluate( () => {
 		const editor = window.wp.data.select( 'core/block-editor' );
 		const id = editor.getSelectedBlockClientId();
-		return id ? editor.getBlockAttributes( id ).id ?? null : null;
+		return id ? ( editor.getBlockAttributes( id ).id ?? null ) : null;
 	} );
 
 // Selects a step or decision card by focusing its wrapper.
@@ -295,7 +299,10 @@ test( 'build a three-way decision with a nested If by keyboard, save, reload', a
 	await openEditor( page, /post-new\.php\?post_type=pegwork_automation/ );
 	const frame = canvas( page );
 
-	await typeInto( frame.getByRole( 'textbox', { name: 'Add title' } ), LABEL );
+	await typeInto(
+		frame.getByRole( 'textbox', { name: 'Add title' } ),
+		LABEL
+	);
 	await openPanel( page, 'Trigger' );
 	await choose(
 		sidebar( page ).getByRole( 'combobox', { name: 'Starts on' } ),
@@ -576,13 +583,13 @@ test( 'Test run shows the report of the saved automation', async ( {
 	if ( ( await previewToggle.getAttribute( 'aria-expanded' ) ) === 'false' ) {
 		await press( previewToggle );
 	}
-	await press( sidebar( page ).getByRole( 'button', { name: 'Show preview' } ) );
+	await press(
+		sidebar( page ).getByRole( 'button', { name: 'Show preview' } )
+	);
 	const preview = sidebar( page ).getByRole( 'region', { name: 'Preview' } );
 	await expect(
 		preview.locator( '.pegwork-automation__preview-text' ).nth( 1 )
-	).toHaveText(
-		new RegExp( `^Visit ${ baseURL.replace( /\/$/, '' ) }/?$` )
-	);
+	).toHaveText( new RegExp( `^Visit ${ baseURL.replace( /\/$/, '' ) }/?$` ) );
 	await checkPegworkA11y( page );
 	await preview.scrollIntoViewIfNeeded();
 	await page.screenshot( {
@@ -612,7 +619,10 @@ test( 'a file automation is read-only and duplicates as a site automation', asyn
 	await openPanel( page, 'Automation' );
 	expect(
 		await inert(
-			sidebar( page ).getByRole( 'textbox', { name: 'Label', exact: true } )
+			sidebar( page ).getByRole( 'textbox', {
+				name: 'Label',
+				exact: true,
+			} )
 		)
 	).toBe( true );
 	await openPanel( page, 'Trigger' );
