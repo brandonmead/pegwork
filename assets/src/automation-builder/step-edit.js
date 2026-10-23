@@ -50,6 +50,7 @@ import {
 	stepsBefore,
 	typeFields,
 	typedReference,
+	valueFields,
 } from './scope';
 import { config, useDefinition, useErrorOwners } from './store';
 
@@ -465,9 +466,7 @@ function TypeFields( {
 					<ValuesControl
 						values={ attributes.values }
 						onChange={ ( values ) => set( 'values', values ) }
-						fields={
-							known ? typeFields( config, known, '' ) : null
-						}
+						fields={ known ? valueFields( config, known ) : null }
 						pointer={ at( 'values' ) }
 						errors={ errors }
 						tags={ tags }
@@ -527,11 +526,7 @@ function TypeFields( {
 						onChange={ ( values ) => set( 'values', values ) }
 						fields={
 							attributes.content_type
-								? typeFields(
-										config,
-										attributes.content_type,
-										''
-									)
+								? valueFields( config, attributes.content_type )
 								: null
 						}
 						pointer={ at( 'values' ) }

@@ -2,7 +2,7 @@
  * Loops and lists in the automation editor (Automation v3 PR 7), by keyboard only (no mouse calls):
  * barn_tasks_digest (design worked example c) is built control by control from Pegwork >
  * Automations > Add automation, saved, and read back through the admin e2e route; its canonical JSON
- * must equal tests/fixtures/valid/reads/automations/barn_tasks_digest.json byte for byte, except
+ * must equal tests/fixtures/valid/barn/automations/barn_tasks_digest.json byte for byte, except
  * `enabled`. On the way: the "Repeat for each" block and its "For each" list, the loop body's
  * appender offering neither Wait nor another loop, Move to naming the loop body, the picker's "Each
  * Task (in each_task)" group, and "Insert list of records" in the summary email. Then a Wait pasted
@@ -10,9 +10,9 @@
  * tasks shows the item headings. Axe on the Pegwork parts and no horizontal scroll at 1280 and 782
  * px. Saves screenshots to docs/screenshots/.
  *
- * Needs tests/e2e/mu-plugins/pegwork-e2e-barn.php (switched to package barn-reads: the reads
- * fixture's types and options page; sample tasks; canonical compare; reset) and
- * pegwork-e2e-automation.php (module toggle).
+ * Needs tests/e2e/mu-plugins/pegwork-e2e-barn.php (package e2e_barn: the BarnCRM fixture's types and
+ * options page; sample tasks; canonical compare; reset) and pegwork-e2e-automation.php (module
+ * toggle).
  */
 const path = require( 'path' );
 const { test, expect, request: requestFactory } = require( '@playwright/test' );
@@ -45,7 +45,7 @@ const def = require(
 		'..',
 		'fixtures',
 		'valid',
-		'reads',
+		'barn',
 		'automations',
 		'barn_tasks_digest.json'
 	)
@@ -120,13 +120,11 @@ test.beforeAll( async () => {
 	await adminCall( 'POST', '/pegwork-e2e/v1/automation-module', {
 		enabled: true,
 	} );
-	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reads', { reads: true } );
 	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reset' );
 } );
 
 test.afterAll( async () => {
 	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reset' );
-	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reads', { reads: false } );
 	await adminCall( 'POST', '/pegwork-e2e/v1/automation-module', {
 		enabled: false,
 	} );

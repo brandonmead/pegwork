@@ -2,16 +2,16 @@
  * The read and link steps in the automation editor (Automation v3 PR 6), by keyboard only (no mouse
  * calls): barn_lifetime_milestone (design worked example b) is built control by control from
  * Pegwork > Automations > Add automation, saved, and read back through the admin e2e route; its
- * canonical JSON must equal tests/fixtures/valid/reads/automations/barn_lifetime_milestone.json byte
+ * canonical JSON must equal tests/fixtures/valid/barn/automations/barn_lifetime_milestone.json byte
  * for byte, except `enabled`. On the way: the variable picker groups read outputs ("Totals (from
  * giving)") and writes `| number:2`. Test run on a gift with a linked donor shows the read lines.
  * Then a new automation shows the "Started by staff" trigger picker, a Link records inspector and
  * the "If this step fails after retries" control. Axe on the Pegwork parts and no horizontal scroll
  * at 1280 and 782 px. Saves screenshots to docs/screenshots/.
  *
- * Needs tests/e2e/mu-plugins/pegwork-e2e-barn.php (switched to package e2e_barn_reads: the reads
- * fixture's types, relationships, fund and options page; sample gift with donor; canonical compare;
- * reset) and pegwork-e2e-automation.php (module toggle).
+ * Needs tests/e2e/mu-plugins/pegwork-e2e-barn.php (package e2e_barn: the BarnCRM fixture's types,
+ * relationships, form and options page; sample gift with donor; canonical compare; reset) and
+ * pegwork-e2e-automation.php (module toggle).
  */
 const path = require( 'path' );
 const { test, expect, request: requestFactory } = require( '@playwright/test' );
@@ -30,6 +30,8 @@ const {
 	openEditor,
 	openPanel,
 	press,
+	readByDonor,
+	relationship,
 	saveByKeyboard,
 	selectCard,
 	setCondition,
@@ -44,7 +46,7 @@ const def = require(
 		'..',
 		'fixtures',
 		'valid',
-		'reads',
+		'barn',
 		'automations',
 		'barn_lifetime_milestone.json'
 	)
@@ -88,40 +90,6 @@ async function setStepId( page, from, to ) {
 	).toHaveCount( 1 );
 }
 
-// Picks a radio of the selected block's inspector by keyboard.
-async function radio( page, name ) {
-	const option = sidebar( page ).getByRole( 'radio', { name, exact: true } );
-	await press( option, 'Space' );
-	await expect( option ).toBeChecked();
-}
-
-// Picks a relationship in the combobox by typing its label.
-async function relationship( page, label ) {
-	const box = sidebar( page ).getByRole( 'combobox', {
-		name: 'Relationship',
-	} );
-	await typeInto( box, label );
-	const option = sidebar( page ).getByRole( 'option', {
-		name: new RegExp( `^${ label } \\(` ),
-	} );
-	await expect( option ).toBeVisible();
-	await page.keyboard.press( 'ArrowDown' );
-	await page.keyboard.press( 'Enter' );
-	await expect( box ).toHaveValue( new RegExp( `^${ label } \\(` ) );
-}
-
-// Sets the selected read step's content type and finds it through gift_donor of `of`.
-async function readByDonor( page, contentType, of ) {
-	await openBlockTab( page );
-	await choose(
-		sidebar( page ).getByRole( 'combobox', { name: 'Content type' } ),
-		contentType
-	);
-	await radio( page, 'A relationship' );
-	await relationship( page, 'Donor' );
-	await insertInto( field( page, 'Of' ), of );
-}
-
 // A screenshot at 1280 px, tall enough to show the inspector.
 async function shot( page, name, height = 1100 ) {
 	await page.setViewportSize( { width: 1280, height } );
@@ -155,7 +123,6 @@ test.beforeAll( async () => {
 	await adminCall( 'POST', '/pegwork-e2e/v1/automation-module', {
 		enabled: true,
 	} );
-	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reads', { reads: true } );
 	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reset' );
 	gift = await adminCall( 'POST', '/pegwork-e2e/v1/barn/gift', {
 		amount: 1200,
@@ -164,7 +131,6 @@ test.beforeAll( async () => {
 
 test.afterAll( async () => {
 	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reset' );
-	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reads', { reads: false } );
 	await adminCall( 'POST', '/pegwork-e2e/v1/automation-module', {
 		enabled: false,
 	} );

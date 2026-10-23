@@ -29,7 +29,7 @@ import {
 	withSource,
 	withStatus,
 } from '../reads';
-import { mergeTags, typeFields, typedReference } from '../scope';
+import { mergeTags, typeFields, typedReference, valueFields } from '../scope';
 
 const root = new URL( '../../../../', import.meta.url );
 const READS = [ 'get_record', 'find_records', 'relate' ];
@@ -329,6 +329,23 @@ describe( 'read helpers', () => {
 			filter: { all: [ row ] },
 		} );
 		expect( withSource( {}, 'record', null ).record ).toBe( '' );
+	} );
+
+	it( 'offers the relationships a type is the "from" end of as values', () => {
+		expect(
+			valueFields( config, 'task' ).map( ( field ) => field.key )
+		).toEqual( [ 'task_gift' ] );
+		expect(
+			valueFields( config, 'gift' ).map( ( field ) => field.key )
+		).toEqual( [
+			'name',
+			'amount',
+			'notes',
+			'body',
+			'paid',
+			'gift_donor',
+		] );
+		expect( valueFields( config, 'contact' ).at( -1 ).key ).toBe( 'email' );
 	} );
 
 	it( 'filters, sorts and totals only the fields the query allows', () => {

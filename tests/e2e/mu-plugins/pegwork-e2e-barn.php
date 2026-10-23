@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E BarnCRM
- * Description: Test-only helpers for the BarnCRM flows browser test: registers tests/e2e/packages/barn (types, form and options page, no automations), or tests/e2e/packages/barn-reads while the reads spec has switched to it, and exposes admin-only REST routes to switch packages, to create a sample gift (with a linked donor under barn-reads) or task, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample gifts). Not shipped.
+ * Description: Test-only helpers for the BarnCRM browser tests: registers tests/e2e/packages/barn (types, relationships, form and options page, no automations), and exposes admin-only REST routes to create a sample gift (with a linked donor) or task, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample records). Not shipped.
  *
  * @package Pegwork
  */
@@ -14,33 +14,18 @@ add_action(
 	'pegwork_register',
 	static function ( $builder ) {
 		if ( defined( 'PEGWORK_DIR' ) ) {
-			$builder->add_package( PEGWORK_DIR . 'tests/e2e/packages/' . ( get_option( 'pegwork_e2e_barn_reads' ) ? 'barn-reads' : 'barn' ) );
+			$builder->add_package( PEGWORK_DIR . 'tests/e2e/packages/barn' );
 		}
 	}
 );
 
 /**
- * The automation keys the specs build, each with its fixture directory.
- *
- * @return array<string, string>
- */
-function pegwork_e2e_barn_fixtures() {
-	return array(
-		'barn_gift_thanks'        => 'barn',
-		'barn_gift_followup'      => 'barn',
-		'barn_volunteer_intake'   => 'barn',
-		'barn_lifetime_milestone' => 'reads',
-		'barn_tasks_digest'       => 'reads',
-	);
-}
-
-/**
- * The automation keys the specs build.
+ * The automation keys the specs build (each has its file in tests/fixtures/valid/barn/automations).
  *
  * @return string[]
  */
 function pegwork_e2e_barn_keys() {
-	return array_keys( pegwork_e2e_barn_fixtures() );
+	return array( 'barn_gift_thanks', 'barn_volunteer_intake', 'barn_lifetime_milestone', 'barn_tasks_digest' );
 }
 
 /**
@@ -60,7 +45,7 @@ add_action(
 	static function () {
 		$admin = static fn() => current_user_can( 'manage_options' );
 
-		// Creates a published sample task under barn-reads (body: name, due_on, assignee_email, done); returns its ID.
+		// Creates a published sample task (body: name, due_on, assignee_email, done); returns its ID.
 		register_rest_route(
 			'pegwork-e2e/v1',
 			'/barn/task',
@@ -75,7 +60,7 @@ add_action(
 			)
 		);
 
-		// Creates a private sample gift (no donor) with the given amount; returns its ID and title.
+		// Creates a private sample gift with the given amount, linked by gift_donor to a new donor contact; returns its ID and title.
 		register_rest_route(
 			'pegwork-e2e/v1',
 			'/barn/gift',
@@ -85,7 +70,19 @@ add_action(
 				'callback'            => static function ( WP_REST_Request $request ) {
 					$amount = (int) $request['amount'];
 					$title  = sprintf( 'E2E gift of %d', $amount );
-					$id     = wp_insert_post(
+					$donor  = wp_insert_post(
+						array(
+							'post_type'   => 'barn_contact',
+							'post_status' => 'private',
+							'post_title'  => 'E2E Donor',
+							'meta_input'  => array( '_barn_contact_email' => 'donor@example.org' ),
+						),
+						true
+					);
+					if ( is_wp_error( $donor ) ) {
+						return $donor;
+					}
+					$id = wp_insert_post(
 						array(
 							'post_type'   => 'barn_gift',
 							'post_status' => 'private',
@@ -93,8 +90,6 @@ add_action(
 							'meta_input'  => array(
 								'_barn_gift_amount'      => (string) $amount,
 								'_barn_gift_received_on' => wp_date( 'Y-m-d' ),
-								'_barn_gift_donor_name'  => 'E2E Donor',
-								'_barn_gift_donor_email' => 'donor@example.org',
 							),
 						),
 						true
@@ -102,24 +97,9 @@ add_action(
 					if ( is_wp_error( $id ) ) {
 						return $id;
 					}
-					// With the reads package, a donor contact linked by gift_donor.
-					if ( get_option( 'pegwork_e2e_barn_reads' ) ) {
-						$donor = wp_insert_post(
-							array(
-								'post_type'   => 'barn_contact',
-								'post_status' => 'private',
-								'post_title'  => 'E2E Donor',
-								'meta_input'  => array( '_barn_contact_email' => 'donor@example.org' ),
-							),
-							true
-						);
-						if ( is_wp_error( $donor ) ) {
-							return $donor;
-						}
-						$linked = \Pegwork\Api\Records::relate( 'gift_donor', (int) $id, (int) $donor );
-						if ( is_wp_error( $linked ) ) {
-							return $linked;
-						}
+					$linked = \Pegwork\Api\Records::relate( 'gift_donor', (int) $id, (int) $donor );
+					if ( is_wp_error( $linked ) ) {
+						return $linked;
 					}
 					return rest_ensure_response(
 						array(
@@ -145,7 +125,7 @@ add_action(
 						return new WP_Error( 'pegwork_e2e_barn_key', 'Unknown BarnCRM automation.', array( 'status' => 404 ) );
 					}
 					$saved = pegwork_registry()->automation( $key );
-					$file  = PEGWORK_DIR . 'tests/fixtures/valid/' . pegwork_e2e_barn_fixtures()[ $key ] . '/automations/' . $key . '.json';
+					$file  = PEGWORK_DIR . 'tests/fixtures/valid/barn/automations/' . $key . '.json';
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
 					$fixture = json_decode( (string) file_get_contents( $file ), true );
 					return rest_ensure_response(
@@ -160,31 +140,7 @@ add_action(
 			)
 		);
 
-		// Switches the registered package between barn and barn-reads (body `reads`: boolean).
-		register_rest_route(
-			'pegwork-e2e/v1',
-			'/barn/reads',
-			array(
-				'methods'             => 'POST',
-				'permission_callback' => $admin,
-				'args'                => array(
-					'reads' => array(
-						'type'     => 'boolean',
-						'required' => true,
-					),
-				),
-				'callback'            => static function ( WP_REST_Request $request ) {
-					if ( $request['reads'] ) {
-						update_option( 'pegwork_e2e_barn_reads', 1 );
-					} else {
-						delete_option( 'pegwork_e2e_barn_reads' );
-					}
-					return rest_ensure_response( (bool) $request['reads'] );
-				},
-			)
-		);
-
-		// Deletes the BarnCRM site automations (definition and post), unsaved automation posts, their runs and the sample gifts.
+		// Deletes the BarnCRM site automations (definition and post), unsaved automation posts, their runs and the sample records.
 		register_rest_route(
 			'pegwork-e2e/v1',
 			'/barn/reset',

@@ -203,6 +203,23 @@ export function typeFields( config, type, prefix ) {
 }
 
 /**
+ * What a create_record or update_record step can write on a content type: its fields and taxonomies,
+ * then the relationships whose "from" end it is (the value is the linked record's ID).
+ *
+ * @param {Object} config Parsed config.
+ * @param {string} type   Content type key.
+ * @return {Array<Object>} Rows with key and label.
+ */
+export function valueFields( config, type ) {
+	return [
+		...typeFields( config, type, '' ),
+		...( config.relationships || [] )
+			.filter( ( item ) => item.from === type )
+			.map( ( item ) => ( { key: item.key, label: item.label } ) ),
+	];
+}
+
+/**
  * A record of a content type as paths: id, status and type, then its fields and taxonomies.
  *
  * @param {Object}  config Parsed config.

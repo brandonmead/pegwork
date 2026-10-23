@@ -1,17 +1,21 @@
 /**
- * The BarnCRM example flows (Phase 6 PR 6, design "Worked examples: BarnCRM flows") built in the
- * automation editor by keyboard only (no mouse calls): from Pegwork > Automations > Add automation,
- * each of barn_gift_thanks, barn_volunteer_intake and barn_gift_followup is built control by
- * control, saved, and read back through the admin e2e route; its canonical JSON must equal the
+ * The BarnCRM example flows (design `docs/automation-v3-design.md`, "Worked examples: BarnCRM flows
+ * with reads", and the Phase 6 volunteer intake) built in the automation editor by keyboard only (no
+ * mouse calls): from Pegwork > Automations > Add automation, barn_gift_thanks (the donor read through
+ * the Donor relationship, the size decision, the call task linked to its gift, the stamp, the gift
+ * count, the 30-day wait, the recount and the follow-up) and barn_volunteer_intake are built control
+ * by control, saved, and read back through the admin e2e route; each canonical JSON must equal the
  * fixture in tests/fixtures/valid/barn/automations byte for byte, except `enabled` (a new site
  * automation is saved disabled). The texts typed come from the fixture; the structure, ids,
- * conditions and values are entered through the editor's controls. Test run on the saved
- * barn_gift_thanks with gifts of 300 and 40 shows the major branch and Otherwise. Axe on the Pegwork
- * parts and no horizontal scroll at 1280 and 782 px. Saves screenshots to docs/screenshots/.
+ * conditions, reads and values are entered through the editor's controls. Test run on the saved
+ * barn_gift_thanks with gifts of 300 and 40 (each with a linked donor) shows the read lines, the
+ * major branch and Otherwise. Axe on the Pegwork parts and no horizontal scroll at 1280 and 782 px.
+ * Saves screenshots to docs/screenshots/. barn_lifetime_milestone and barn_tasks_digest are built
+ * against the same fixture in automation-builder-reads.e2e.js and automation-builder-loops.e2e.js.
  *
- * Needs tests/e2e/mu-plugins/pegwork-e2e-barn.php (package e2e_barn: the fixture's types, form and
- * options page; sample gifts; canonical compare; reset) and pegwork-e2e-automation.php (module
- * toggle).
+ * Needs tests/e2e/mu-plugins/pegwork-e2e-barn.php (package e2e_barn: the fixture's types,
+ * relationships, form and options page; sample gifts with donors; canonical compare; reset) and
+ * pegwork-e2e-automation.php (module toggle).
  */
 const path = require( 'path' );
 const { test, expect, request: requestFactory } = require( '@playwright/test' );
@@ -30,6 +34,7 @@ const {
 	openEditor,
 	openPanel,
 	press,
+	readByDonor,
 	renameBranch,
 	saveByKeyboard,
 	selectCard,
@@ -112,34 +117,27 @@ async function fillEmail( page, step ) {
 	await insertInto( field( page, 'Text body' ), step.text );
 }
 
-// Adds one values row per entry: on a known type the row's field is picked from the list, otherwise
-// its key is typed; then its value is entered.
-async function fillValues( page, values, labels = null ) {
+// Adds one values row per entry: the row's field is picked from the list of the written type (its
+// fields, then the relationships it is the "from" end of); then its value is entered.
+async function fillValues( page, values, labels ) {
 	await openBlockTab( page );
 	const panel = sidebar( page );
 	let row = 0;
 	for ( const [ key, value ] of Object.entries( values ) ) {
 		row++;
 		await press( panel.getByRole( 'button', { name: 'Add value' } ) );
-		if ( labels ) {
-			await choose(
-				panel.getByRole( 'combobox', { name: `Field ${ row }` } ),
-				key
-			);
-		} else {
-			await typeInto(
-				panel.getByRole( 'textbox', { name: `Field key ${ row }` } ),
-				key
-			);
-		}
+		await choose(
+			panel.getByRole( 'combobox', { name: `Field ${ row }` } ),
+			key
+		);
 		await insertInto(
-			field( page, `Value of ${ labels ? labels[ key ] : key }` ),
+			field( page, `Value of ${ labels[ key ] }` ),
 			String( value )
 		);
 	}
 }
 
-// The condition value of the selected branch or step: a number, an option, or another field.
+// The condition value of the selected branch or step: a number or an option.
 async function setValue( page, kind, value ) {
 	const panel = sidebar( page );
 	if ( kind === 'number' ) {
@@ -147,18 +145,9 @@ async function setValue( page, kind, value ) {
 			panel.getByRole( 'spinbutton', { name: 'Value', exact: true } ),
 			String( value )
 		);
-	} else if ( kind === 'option' ) {
-		await choose(
-			panel.getByRole( 'combobox', { name: 'Value', exact: true } ),
-			value
-		);
 	} else {
 		await choose(
-			panel.getByRole( 'combobox', { name: 'Compare with' } ),
-			'var'
-		);
-		await choose(
-			panel.getByRole( 'combobox', { name: 'Other field' } ),
+			panel.getByRole( 'combobox', { name: 'Value', exact: true } ),
 			value
 		);
 	}
@@ -170,6 +159,15 @@ async function setWaitDays( page, days ) {
 	await typeInto(
 		sidebar( page ).getByRole( 'spinbutton', { name: 'Amount' } ),
 		String( days )
+	);
+}
+
+// The selected Find records step: the donor's gifts, none loaded (count only).
+async function findDonorGifts( page, of ) {
+	await readByDonor( page, 'barn_gift', of );
+	await typeInto(
+		sidebar( page ).getByRole( 'spinbutton', { name: 'Limit' } ),
+		'0'
 	);
 }
 
@@ -245,7 +243,7 @@ test.afterAll( async () => {
 test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', async ( {
 	page,
 } ) => {
-	test.setTimeout( 300_000 );
+	test.setTimeout( 420_000 );
 	const def = fixture( 'barn_gift_thanks' );
 	const frame = canvas( page );
 	await startAutomation( page, def );
@@ -262,25 +260,61 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 	await expect(
 		sidebar( page ).getByRole( 'combobox', { name: 'When a record is' } )
 	).toHaveValue( def.trigger.event );
+	for ( const title of [ 'Automation', 'Trigger' ] ) {
+		await closePanel( page, title );
+	}
 
-	// The main list: the decision, then "Continue only if" and Update record after it.
+	// donor and has_donor: the gift's Donor contact, and stop when there is none.
 	await insertFrom(
 		page,
 		frame.getByRole( 'button', { name: 'Add block' } ),
-		'If / Otherwise'
+		'Get a record'
 	);
-	await setStepId( page, 'decision', 'size' );
+	await setStepId( page, 'get', 'donor' );
+	await readByDonor(
+		page,
+		'barn_contact',
+		stepOf( def, 'donor' ).related.of
+	);
 	await insertMain( page, 'Continue only if' );
 	await setStepId( page, 'check', 'has_donor' );
-	await setCondition( page, 'record.donor_id', 'not_empty' );
+	await setCondition( page, 'steps.donor.found', 'eq' );
+	await expect(
+		sidebar( page ).getByRole( 'combobox', { name: 'Value', exact: true } )
+	).toHaveValue( 'true' );
+
+	// The main list after them: size, stamp_donor, gifts, first_gift, grace, gifts_later,
+	// no_second_gift, follow_up.
+	await insertMain( page, 'If / Otherwise' );
+	await setStepId( page, 'decision', 'size' );
 	await insertMain( page, 'Update record' );
 	await setStepId( page, 'update', 'stamp_donor' );
 	const stamp = stepOf( def, 'stamp_donor' );
+	await openBlockTab( page );
 	await insertInto( field( page, 'Record (optional)' ), stamp.record );
-	await fillValues( page, stamp.values );
+	// The typed reference names a Contact, so its fields are offered.
+	await fillValues( page, stamp.values, { last_gift_on: 'Last gift on' } );
+	for ( const id of [ 'gifts', 'gifts_later' ] ) {
+		await insertMain( page, 'Find records' );
+		await setStepId( page, 'find', id );
+		await findDonorGifts( page, stepOf( def, id ).related.of );
+		const check = id === 'gifts' ? 'first_gift' : 'no_second_gift';
+		await insertMain( page, 'Continue only if' );
+		await setStepId( page, 'check', check );
+		await setCondition( page, `steps.${ id }.count`, 'eq' );
+		await setValue( page, 'number', stepOf( def, check ).when.value );
+		if ( id === 'gifts' ) {
+			await insertMain( page, 'Wait' );
+			await setStepId( page, 'wait', 'grace' );
+			await setWaitDays( page, 30 );
+		}
+	}
+	await insertMain( page, 'Send email' );
+	await setStepId( page, 'email', 'follow_up' );
+	await fillEmail( page, stepOf( def, 'follow_up' ) );
 
-	// The major branch: its condition, the email and the call task.
-	const major = def.steps[ 0 ].branches[ 0 ];
+	// The major branch: its condition, the email and the call task linked to this gift.
+	const major = stepOf( def, 'size' ).branches[ 0 ];
 	await renameBranch( page, 'Path 1', major.label );
 	await setCondition( page, major.when.var, major.when.op );
 	await setValue( page, 'number', major.when.value );
@@ -306,7 +340,7 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 		name: 'Name',
 		due_on: 'Due on',
 		assignee_email: 'Assignee email',
-		related_gift: 'Related gift',
+		task_gift: 'Gift',
 	} );
 
 	// Otherwise: the plain thank-you.
@@ -328,10 +362,10 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 	await page.reload();
 	await openEditor( page, /post\.php\?post=\d+&action=edit/ );
 	await expect( frame.locator( '.pegwork-automation-step' ) ).toHaveCount(
-		5
+		12
 	);
 	await checkPegworkA11y( page );
-	await shot( page, 'automation-barn-gift-thanks-1280.png', 1100 );
+	await shot( page, 'automation-barn-gift-thanks-1280.png', 2000 );
 	await selectCard( page, 'call_task' );
 	await openBlockTab( page );
 	await checkPegworkA11y( page );
@@ -352,11 +386,11 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 	await openBlockTab( page );
 	await expect(
 		sidebar( page ).getByRole( 'combobox', { name: 'Field 4' } )
-	).toBeVisible();
+	).toHaveValue( 'task_gift' );
 	await checkPegworkA11y( page );
 } );
 
-test( 'Test run of barn_gift_thanks takes the major branch for 300 and Otherwise for 40', async ( {
+test( 'Test run of barn_gift_thanks reads the donor and takes the major branch for 300 and Otherwise for 40', async ( {
 	page,
 } ) => {
 	test.setTimeout( 120_000 );
@@ -394,14 +428,17 @@ test( 'Test run of barn_gift_thanks takes the major branch for 300 and Otherwise
 		await expect(
 			report.locator( '.pegwork-automation__report-heading' )
 		).toHaveText( [ heading ] );
-		// The sample has no donor, so the run stops at has_donor either way.
-		await expect( report ).toContainText( 'has_donor' );
+		// Each sample gift has its own donor: the reads find the contact and one gift, and the
+		// walk passes over the wait to the follow-up.
+		await expect( report ).toContainText(
+			'Get record donor: found Contact'
+		);
+		await expect( report ).toContainText( 'Find records gifts: 1 Gift' );
+		await expect( report ).toContainText( 'follow_up' );
 		if ( amount === 300 ) {
 			await expect( report ).toContainText( 'call_task' );
 			await checkPegworkA11y( page );
-			await page.screenshot( {
-				path: path.join( SHOTS, 'automation-barn-test-run-1280.png' ),
-			} );
+			await shot( page, 'automation-barn-test-run-1280.png', 1400 );
 		} else {
 			await expect( report ).not.toContainText( 'call_task' );
 		}
@@ -513,79 +550,4 @@ test( 'build barn_volunteer_intake by keyboard; it saves identical to the fixtur
 	await openEditor( page, /post\.php\?post=\d+&action=edit/ );
 	await checkPegworkA11y( page );
 	await shot( page, 'automation-barn-volunteer-intake-1280.png', 1750 );
-} );
-
-test( 'build barn_gift_followup by keyboard; it saves identical to the fixture', async ( {
-	page,
-} ) => {
-	test.setTimeout( 300_000 );
-	const def = fixture( 'barn_gift_followup' );
-	const frame = canvas( page );
-	await startAutomation( page, def );
-
-	// Record updated on contacts, only when the last gift date changed, once per contact and date.
-	await openPanel( page, 'Trigger' );
-	const panel = sidebar( page );
-	await choose(
-		panel.getByRole( 'combobox', { name: 'Starts on' } ),
-		'record'
-	);
-	await choose(
-		panel.getByRole( 'combobox', { name: 'Content type' } ),
-		def.trigger.content_type
-	);
-	await choose(
-		panel.getByRole( 'combobox', { name: 'When a record is' } ),
-		def.trigger.event
-	);
-	await setCondition( page, def.trigger.when.var, def.trigger.when.op );
-	await insertInto(
-		panel.getByRole( 'textbox', { name: 'Run once per (optional)' } ),
-		def.idempotency
-	);
-
-	// first_gift (If, no Otherwise steps), only_gift, grace, no_second_gift, follow_up.
-	await insertFrom(
-		page,
-		frame.getByRole( 'button', { name: 'Add block' } ),
-		'If / Otherwise'
-	);
-	await setStepId( page, 'decision', 'first_gift' );
-	for ( const id of [
-		'only_gift',
-		'grace',
-		'no_second_gift',
-		'follow_up',
-	] ) {
-		const step = stepOf( def, id );
-		if ( step.type === 'condition' ) {
-			await insertMain( page, 'Continue only if' );
-			await setStepId( page, 'check', id );
-			await setCondition( page, step.when.var, step.when.op );
-			await setValue( page, 'var', step.when.value.var );
-		} else if ( step.type === 'wait' ) {
-			await insertMain( page, 'Wait' );
-			await setStepId( page, 'wait', id );
-			await setWaitDays( page, 30 );
-		} else {
-			await insertMain( page, 'Send email' );
-			await setStepId( page, 'email', id );
-			await fillEmail( page, step );
-		}
-	}
-
-	const first = def.steps[ 0 ].branches[ 0 ];
-	await renameBranch( page, 'Path 1', first.label );
-	await setCondition( page, first.when.var, first.when.op );
-	await insertFrom(
-		page,
-		frame.getByRole( 'button', { name: `Add step to ${ first.label }` } ),
-		'Update record'
-	);
-	await setStepId( page, 'update', 'stamp_first' );
-	await fillValues( page, first.steps[ 0 ].values, {
-		first_gift_on: 'First gift on',
-	} );
-
-	await saveAndCompare( page, def.key );
 } );
