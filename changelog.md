@@ -2,6 +2,9 @@
 
 Purpose: dated, newest-first log of changes actually made.
 
+## 2026-10-23
+- Fix (branch `fix-builder-e2e`): main CI's `E2E (1/2)` failed in `automation-builder.e2e.js` ("build a three-way decision"): the outer Otherwise's quick inserter closed by itself, so "Send email" was never found (or, on #56, the next keystrokes went into the previous step). Cause: `BranchEdit` passed an inline arrow as `renderAppender`, which core renders as a component, so every branch re-render remounted the appender and closed its open inserter; focusing the appender of an unselected branch re-renders it, after Enter on a slow runner. The appender is now stable (`useCallback`). Regression test in the same spec opens that inserter under a 6x CPU slowdown and checks it stays open for 1.5 s (fails before the fix). Gotcha in `architecture.md`.
+
 ## 2026-10-22
 - Polish follow-ups from QA (branch `polish-followups`):
   - Site Health `pegwork_dev_dependencies`: on a local or development site with dev dependencies installed it still passes, now labeled "Pegwork development dependencies are allowed on local sites" with a matching explanation (it said "installed without development dependencies"). `SiteHealthTest` checks every label.

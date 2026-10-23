@@ -28,7 +28,7 @@ import {
 	ToolbarGroup,
 } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect } from '@wordpress/element';
+import { useCallback, useEffect } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
@@ -325,6 +325,13 @@ export function BranchEdit( {
 		? conditionText( attributes.when, fields )
 		: __( '(no condition yet)', 'pegwork' );
 	const label = wire( errors, `${ pointer }/label` );
+	// Stable between renders: core renders renderAppender as a component, so a new function on
+	// every render remounts the appender and closes its open quick inserter (focusing the
+	// appender of an unselected branch selects the branch and re-renders it).
+	const appender = useCallback(
+		() => <AddStep clientId={ clientId } name={ name } />,
+		[ clientId, name ]
+	);
 
 	const blockProps = useBlockProps( {
 		className: `pegwork-automation-branch${ attributes.otherwise ? ' is-otherwise' : '' }${ messages.length ? ' has-error' : '' }`,
@@ -333,9 +340,7 @@ export function BranchEdit( {
 		{ className: 'pegwork-automation-branch__steps' },
 		{
 			allowedBlocks: [ STEP, DECISION ],
-			renderAppender: config.readOnly
-				? false
-				: () => <AddStep clientId={ clientId } name={ name } />,
+			renderAppender: config.readOnly ? false : appender,
 		}
 	);
 
