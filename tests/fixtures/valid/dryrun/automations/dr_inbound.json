@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "dr_inbound",
+  "label": "Inbound webhook: open a case and say hello",
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "open", "type": "create_record", "content_type": "dr_case", "status": "draft",
+      "values": { "name": "{{trigger.payload.name}}" } },
+    { "id": "hello", "type": "send_email", "to": "{{trigger.payload.email}}", "subject": "Hello {{trigger.payload.name}}",
+      "text": "Case {{steps.open.record_id}} is open." }
+  ]
+}

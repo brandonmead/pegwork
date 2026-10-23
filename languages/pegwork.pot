@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T00:04:45+00:00\n"
+"POT-Creation-Date: 2026-10-23T01:04:48+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: pegwork\n"
@@ -110,16 +110,16 @@ msgid "Automations come from the schema registry and are edited as JSON. Here yo
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:42
-#: modules/automation/src/Admin/RunLog.php:56
-#: modules/automation/src/Admin/RunLog.php:88
-#: modules/automation/src/Admin/RunLog.php:150
+#: modules/automation/src/Admin/RunLog.php:57
+#: modules/automation/src/Admin/RunLog.php:89
+#: modules/automation/src/Admin/RunLog.php:151
 #: src/Modules/manifest.php:33
 msgid "Automation"
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:43
-#: modules/automation/src/Admin/RunLog.php:89
-#: modules/automation/src/Admin/RunLog.php:161
+#: modules/automation/src/Admin/RunLog.php:90
+#: modules/automation/src/Admin/RunLog.php:162
 msgid "Trigger"
 msgstr ""
 
@@ -373,8 +373,8 @@ msgid "Link"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:173
-#: modules/automation/src/Admin/RunLog.php:163
 #: modules/automation/src/Admin/RunLog.php:164
+#: modules/automation/src/Admin/RunLog.php:165
 #: modules/forms/src/EntriesAdmin.php:205
 #: modules/forms/src/EntriesAdmin.php:351
 #: modules/forms/src/EntriesTable.php:335
@@ -419,22 +419,36 @@ msgstr ""
 msgid "no"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:47
-msgid "Automation run log"
+#: modules/automation/src/Admin/Format.php:233
+msgid "Took Otherwise"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:236
+msgid "No branch matched"
+msgstr ""
+
+#. translators: %s: branch label.
+#: modules/automation/src/Admin/Format.php:239
+#, php-format
+msgid "Took branch %s"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:48
+msgid "Automation run log"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:49
 msgid "Back to automations"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:58
+#: modules/automation/src/Admin/RunLog.php:59
 msgid "All automations"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:69
-#: modules/automation/src/Admin/RunLog.php:91
-#: modules/automation/src/Admin/RunLog.php:160
-#: modules/automation/src/Admin/RunLog.php:190
+#: modules/automation/src/Admin/RunLog.php:70
+#: modules/automation/src/Admin/RunLog.php:92
+#: modules/automation/src/Admin/RunLog.php:161
+#: modules/automation/src/Admin/RunLog.php:191
 #: modules/forms/src/EntriesAdmin.php:350
 #: modules/forms/src/EntriesTable.php:76
 #: modules/forms/src/Export.php:137
@@ -443,185 +457,201 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:71
+#: modules/automation/src/Admin/RunLog.php:72
 msgid "All statuses"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:76
+#: modules/automation/src/Admin/RunLog.php:77
 #: modules/forms/src/EntriesAdmin.php:519
 msgid "Filter"
 msgstr ""
 
 #. translators: %s: number of runs.
-#: modules/automation/src/Admin/RunLog.php:81
+#: modules/automation/src/Admin/RunLog.php:82
 #, php-format
 msgid "%s run"
 msgid_plural "%s runs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/automation/src/Admin/RunLog.php:85
+#: modules/automation/src/Admin/RunLog.php:86
 msgid "Runs, newest first"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:87
+#: modules/automation/src/Admin/RunLog.php:88
 msgid "Run"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:90
-#: modules/automation/src/Admin/RunLog.php:162
+#: modules/automation/src/Admin/RunLog.php:91
+#: modules/automation/src/Admin/RunLog.php:163
 msgid "Record"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:92
-#: modules/automation/src/Admin/RunLog.php:164
+#: modules/automation/src/Admin/RunLog.php:93
+#: modules/automation/src/Admin/RunLog.php:165
 msgid "Outcome"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:93
-#: modules/automation/src/Admin/RunLog.php:169
+#: modules/automation/src/Admin/RunLog.php:94
+#: modules/automation/src/Admin/RunLog.php:170
 msgid "Created"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:98
+#: modules/automation/src/Admin/RunLog.php:99
 msgid "No runs yet. Runs appear here when an automation is triggered or run now."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:99
+#: modules/automation/src/Admin/RunLog.php:100
 msgid "No runs match these filters."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:104
-#: modules/automation/src/Admin/RunLog.php:144
+#: modules/automation/src/Admin/RunLog.php:105
+#: modules/automation/src/Admin/RunLog.php:145
 msgid "(removed)"
 msgstr ""
 
 #. translators: %d: run ID.
-#: modules/automation/src/Admin/RunLog.php:108
-#: modules/automation/src/Admin/RunLog.php:133
+#: modules/automation/src/Admin/RunLog.php:109
+#: modules/automation/src/Admin/RunLog.php:134
 #, php-format
 msgid "Run %d"
 msgstr ""
 
 #. translators: %d: run ID.
-#: modules/automation/src/Admin/RunLog.php:133
+#: modules/automation/src/Admin/RunLog.php:134
 msgid "Run not found"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:134
+#: modules/automation/src/Admin/RunLog.php:135
 msgid "Back to run log"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:139
+#: modules/automation/src/Admin/RunLog.php:140
 msgid "There is no run with this ID. Old finished runs are pruned after 90 days (failed runs after 180)."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:148
+#: modules/automation/src/Admin/RunLog.php:149
 msgid "Run details"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:158
+#: modules/automation/src/Admin/RunLog.php:159
 msgid "All its runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:163
+#: modules/automation/src/Admin/RunLog.php:164
 msgid "Current step"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:164
-#: modules/automation/src/Admin/RunLog.php:194
+#: modules/automation/src/Admin/RunLog.php:165
+#: modules/automation/src/Admin/RunLog.php:195
 #: src/Admin/Overview.php:130
 msgid "Error"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:166
+#: modules/automation/src/Admin/RunLog.php:167
 msgid "Resumes at"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:166
+#: modules/automation/src/Admin/RunLog.php:167
 msgid "Not set"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:168
+#: modules/automation/src/Admin/RunLog.php:169
 msgid "Loop depth"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:170
-#: modules/automation/src/Admin/RunLog.php:191
+#: modules/automation/src/Admin/RunLog.php:171
+#: modules/automation/src/Admin/RunLog.php:192
 msgid "Started"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:170
 #: modules/automation/src/Admin/RunLog.php:171
+#: modules/automation/src/Admin/RunLog.php:172
 msgid "Not yet"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:171
+#: modules/automation/src/Admin/RunLog.php:172
 msgid "Finished"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:178
+#: modules/automation/src/Admin/RunLog.php:179
 msgid "Retry"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:179
+#: modules/automation/src/Admin/RunLog.php:180
 msgid "Resumes the run at the step that failed; earlier steps are not repeated."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:184
+#: modules/automation/src/Admin/RunLog.php:185
 msgid "Step attempts"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:186
+#: modules/automation/src/Admin/RunLog.php:187
 msgid "Step attempts, oldest first"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:188
+#: modules/automation/src/Admin/RunLog.php:189
 msgid "Step"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:189
+#: modules/automation/src/Admin/RunLog.php:190
 msgid "Attempt"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:192
+#: modules/automation/src/Admin/RunLog.php:193
 msgid "Duration"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:193
+#: modules/automation/src/Admin/RunLog.php:194
 #: modules/forms/src/EntriesTable.php:75
 msgid "Summary"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:198
+#: modules/automation/src/Admin/RunLog.php:199
 msgid "No step has run yet."
 msgstr ""
 
+#. translators: %s: decision step ID.
+#: modules/automation/src/Admin/RunLog.php:215
+#, php-format
+msgid "Otherwise branch of %s"
+msgstr ""
+
+#. translators: 1: branch label, 2: decision step ID.
+#: modules/automation/src/Admin/RunLog.php:217
+#, php-format
+msgid "Branch %1$s of %2$s"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:226
+msgid "(no longer in this automation)"
+msgstr ""
+
 #. translators: %s: duration in milliseconds.
-#: modules/automation/src/Admin/RunLog.php:207
+#: modules/automation/src/Admin/RunLog.php:233
 #, php-format
 msgid "%s ms"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:265
+#: modules/automation/src/Admin/RunLog.php:291
 msgid "Newer runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:266
+#: modules/automation/src/Admin/RunLog.php:292
 msgid "Older runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:267
+#: modules/automation/src/Admin/RunLog.php:293
 #: modules/forms/src/EntriesAdmin.php:383
 msgid "Page"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:270
+#: modules/automation/src/Admin/RunLog.php:296
 msgid "Run log pages"
 msgstr ""
 
 #. translators: 1: current page, 2: number of pages.
-#: modules/automation/src/Admin/RunLog.php:273
+#: modules/automation/src/Admin/RunLog.php:299
 #, php-format
 msgid "Page %1$s of %2$s"
 msgstr ""
@@ -630,11 +660,171 @@ msgstr ""
 msgid "Pegwork Automations"
 msgstr ""
 
-#: modules/automation/src/Admin/Screen.php:130
+#: modules/automation/src/Admin/Screen.php:137
 #: src/Admin/Modules.php:50
 #: src/Admin/Overview.php:26
 #: src/Options/Screen.php:141
 msgid "Sorry, you are not allowed to access this page."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:77
+msgid "Choose a sample record."
+msgstr ""
+
+#. translators: %s: content type key.
+#: modules/automation/src/DryRun.php:79
+#, php-format
+msgid "Choose a sample %s record."
+msgstr ""
+
+#. translators: %d: record ID.
+#: modules/automation/src/DryRun.php:89
+#, php-format
+msgid "Record %d is not a Pegwork record."
+msgstr ""
+
+#. translators: 1: record ID, 2: content type key.
+#: modules/automation/src/DryRun.php:91
+#, php-format
+msgid "Record %1$d is not a %2$s record."
+msgstr ""
+
+#. translators: %s: automation key.
+#: modules/automation/src/DryRun.php:213
+#, php-format
+msgid "No automation with key \"%s\"."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:297
+msgid "A real trigger would start a run."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:298
+msgid "A real trigger would start a run for this record."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:301
+msgid "A real trigger would not start a run. The steps are tested anyway."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:302
+msgid "A real trigger would not start a run for this record. The steps are tested anyway."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:344
+#, php-format
+msgid "Decision %s: no branch matches; continues after the decision."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:347
+#, php-format
+msgid "Decision %s: takes Otherwise."
+msgstr ""
+
+#. translators: 1: step ID, 2: branch label.
+#: modules/automation/src/DryRun.php:349
+#, php-format
+msgid "Decision %1$s: takes \"%2$s\"."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:358
+#, php-format
+msgid "Condition %s holds; continues."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:360
+#, php-format
+msgid "Condition %s is false: stops here."
+msgstr ""
+
+#. translators: 1: step ID, 2: ISO 8601 duration.
+#: modules/automation/src/DryRun.php:368
+#, php-format
+msgid "Wait %1$s: waits %2$s. The test continues as if it had passed, against the record as it is now."
+msgstr ""
+
+#. translators: 1: step ID, 2: record ID, 3: field keys.
+#: modules/automation/src/DryRun.php:391
+#, php-format
+msgid "Update record %1$s: would write %3$s to record %2$s (not applied)."
+msgstr ""
+
+#. translators: 1: step ID, 2: content type key, 3: status, 4: field keys.
+#: modules/automation/src/DryRun.php:399
+#, php-format
+msgid "Create record %1$s: would create a %3$s %2$s with %4$s (not applied)."
+msgstr ""
+
+#. translators: 1: step ID, 2: host name, 3: field keys.
+#: modules/automation/src/DryRun.php:414
+#, php-format
+msgid "Call webhook %1$s: would POST to %2$s with %3$s (not sent)."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:417
+msgid "no record fields"
+msgstr ""
+
+#. translators: 1: step ID, 2: step type.
+#: modules/automation/src/DryRun.php:424
+#, php-format
+msgid "Step %1$s: type \"%2$s\" is not supported."
+msgstr ""
+
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:463
+#, php-format
+msgid "Send email %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: recipients, 3: subject.
+#: modules/automation/src/DryRun.php:473
+#, php-format
+msgid "Send email %1$s: to %2$s, subject \"%3$s\" (not sent)."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:490
+msgid "Otherwise:"
+msgstr ""
+
+#. translators: %s: branch label.
+#: modules/automation/src/DryRun.php:492
+#, php-format
+msgid "If %s:"
+msgstr ""
+
+#: modules/automation/src/DryRun.php:497
+msgid "The run would complete."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:498
+msgid "The run would stop there."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:499
+msgid "The run would hit the step limit."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:500
+msgid "The run would fail there."
+msgstr ""
+
+#: modules/automation/src/Editor/PreviewRoutes.php:142
+msgid "Sorry, you are not allowed to test automations."
+msgstr ""
+
+#: modules/automation/src/Editor/PreviewRoutes.php:169
+msgid "Send the request body as JSON (Content-Type: application/json)."
+msgstr ""
+
+#. translators: %d: maximum size in KB.
+#: modules/automation/src/Editor/PreviewRoutes.php:259
+#, php-format
+msgid "Sample payloads are at most %d KB."
 msgstr ""
 
 #: modules/automation/src/Health.php:91
@@ -799,6 +989,12 @@ msgstr ""
 #: modules/automation/src/Links/Page.php:52
 #, php-format
 msgid "Go to %s"
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/Templates.php:179
+#, php-format
+msgid "[from step %s]"
 msgstr ""
 
 #: modules/automation/src/Webhooks/Inbound.php:180
@@ -2843,243 +3039,261 @@ msgstr ""
 msgid "Invalid JSON: %s."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:168
-#: src/Registry/Rules/AutomationRules.php:255
+#: src/Registry/Rules/AutomationRules.php:186
+#: src/Registry/Rules/AutomationRules.php:307
 msgid "Missing required property \"type\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:181
+#: src/Registry/Rules/AutomationRules.php:199
 msgid "Event names are dot-separated keys, such as \"record.status_changed\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:196
+#: src/Registry/Rules/AutomationRules.php:214
 msgid "\"at\" is a site time of day, HH:MM (24-hour)."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:220
+#: src/Registry/Rules/AutomationRules.php:238
 msgid "\"content_type\" narrows record.* events only."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:223
+#: src/Registry/Rules/AutomationRules.php:241
 msgid "\"form\" narrows form.* events only."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:237
+#: src/Registry/Rules/AutomationRules.php:256
 msgid "Add at least one step."
 msgstr ""
 
+#. translators: %d: maximum number of branches.
+#: src/Registry/Rules/AutomationRules.php:287
+#, php-format
+msgid "A decision has from 1 to %d branches."
+msgstr ""
+
 #. translators: %s: step type.
-#: src/Registry/Rules/AutomationRules.php:263
+#: src/Registry/Rules/AutomationRules.php:315
 #, php-format
 msgid "Link steps run within the click, so only update_record and condition are allowed, not \"%s\"."
 msgstr ""
 
+#. translators: %d: maximum nesting levels.
 #: src/Registry/Rules/AutomationRules.php:320
+#, php-format
+msgid "Decisions nest at most %d levels deep."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:377
 msgid "Webhook URLs start with http:// or https://."
 msgstr ""
 
 #. translators: %d: maximum seconds.
-#: src/Registry/Rules/AutomationRules.php:327
+#: src/Registry/Rules/AutomationRules.php:384
 #, php-format
 msgid "\"timeout\" is more than 0 and at most %d seconds."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:351
+#: src/Registry/Rules/AutomationRules.php:418
 msgid "\"values\" needs at least one field."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:357
+#: src/Registry/Rules/AutomationRules.php:424
 msgid "Expected a string, number, boolean or list of strings."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:399
+#: src/Registry/Rules/AutomationRules.php:466
 msgid "A condition is exactly one of { \"all\": [...] }, { \"any\": [...] }, { \"not\": {...} } or { \"var\", \"op\", \"value\" }."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:412
+#: src/Registry/Rules/AutomationRules.php:479
 msgid "A condition group needs at least one condition."
 msgstr ""
 
 #. translators: %s: operator.
-#: src/Registry/Rules/AutomationRules.php:445
+#: src/Registry/Rules/AutomationRules.php:512
 #, php-format
 msgid "Operator \"%s\" takes no \"value\"."
 msgstr ""
 
 #. translators: %s: operator.
-#: src/Registry/Rules/AutomationRules.php:451
+#: src/Registry/Rules/AutomationRules.php:518
 #, php-format
 msgid "Operator \"%s\" needs a \"value\"."
 msgstr ""
 
 #. translators: %s: operator.
-#: src/Registry/Rules/AutomationRules.php:458
+#: src/Registry/Rules/AutomationRules.php:525
 #, php-format
 msgid "Operator \"%s\" needs a non-empty list of strings, numbers or booleans."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:477
+#: src/Registry/Rules/AutomationRules.php:544
 msgid "Offsets are ISO 8601 durations with an optional sign, such as \"-P12M\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:485
+#: src/Registry/Rules/AutomationRules.php:552
 msgid "A value is a string, number, boolean, { \"var\": \"<path>\" } or { \"date\": \"today|now\", \"offset\": \"-P12M\" }."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:496
+#: src/Registry/Rules/AutomationRules.php:563
 msgid "Paths are dot-separated keys, such as \"record.last_verified\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:512
+#: src/Registry/Rules/AutomationRules.php:579
 msgid "Durations are ISO 8601, such as \"P30D\" or \"PT1H\"."
 msgstr ""
 
 #. translators: 1: minimum duration, 2: maximum duration.
-#: src/Registry/Rules/AutomationRules.php:517
+#: src/Registry/Rules/AutomationRules.php:584
 #, php-format
 msgid "Duration must be from %1$s to %2$s."
 msgstr ""
 
 #. translators: %s: step id.
-#: src/Registry/Rules/AutomationRules.php:609
+#: src/Registry/Rules/AutomationRules.php:695
 #, php-format
-msgid "Step id \"%s\" is already used in this step list."
+msgid "Step id \"%s\" is already used in this automation."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:619
+#: src/Registry/Rules/AutomationRules.php:705
 msgid "This trigger binds no record; give update_record a \"record\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:646
+#: src/Registry/Rules/AutomationRules.php:732
 msgid "This trigger binds no record, so the webhook has no record fields to send."
 msgstr ""
 
 #. translators: 1: nesting depth, 2: node count, 3: maximum depth, 4: maximum nodes.
-#: src/Registry/Rules/AutomationRules.php:684
+#: src/Registry/Rules/AutomationRules.php:816
 #, php-format
 msgid "Condition has depth %1$d and %2$d nodes; the limits are depth %3$d and %4$d nodes."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:722
+#: src/Registry/Rules/AutomationRules.php:854
 msgid "\"changed\" needs a record.updated trigger and a \"record.<key>\" var."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:746
+#: src/Registry/Rules/AutomationRules.php:878
 msgid "Unbalanced \"{{\" or \"}}\" in template."
 msgstr ""
 
 #. translators: %s: merge tag.
-#: src/Registry/Rules/AutomationRules.php:752
+#: src/Registry/Rules/AutomationRules.php:884
 #, php-format
 msgid "Merge tag \"{{%s}}\" is not \"{{ path }}\", \"{{ path | date }}\" or \"{{ path | default:\"text\" }}\" (date before default)."
 msgstr ""
 
 #. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:761
+#: src/Registry/Rules/AutomationRules.php:893
 #, php-format
 msgid "Path \"%s\": use \"option:<page>.<field>\"."
 msgstr ""
 
 #. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:802
+#: src/Registry/Rules/AutomationRules.php:934
 #, php-format
 msgid "Path \"%s\" is not a date, so it cannot take \"| date\"."
 msgstr ""
 
 #. translators: 1: path, 2: reason.
-#: src/Registry/Rules/AutomationRules.php:832
+#: src/Registry/Rules/AutomationRules.php:964
 #, php-format
 msgid "Path \"%1$s\": %2$s"
 msgstr ""
 
 #. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:838
+#: src/Registry/Rules/AutomationRules.php:970
 #, php-format
-msgid "Path \"%s\" needs a record, but this trigger binds none (use a record.* event or a schedule with \"for_each\")."
+msgid "Path \"%s\" needs a record, but this trigger binds none (use a record.* event, a schedule with \"for_each\", or a form event that binds: form.confirmed, or form.submitted of a form without \"confirm\", of a form with a \"target\")."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:842
+#: src/Registry/Rules/AutomationRules.php:974
 msgid "use \"record.<key>\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:866
+#: src/Registry/Rules/AutomationRules.php:998
 msgid "use \"steps.<id>.<output>\"."
 msgstr ""
 
 #. translators: %s: step id.
-#: src/Registry/Rules/AutomationRules.php:869
+#: src/Registry/Rules/AutomationRules.php:1001
+#, php-format
+msgid "step \"%s\" runs only in another branch."
+msgstr ""
+
+#. translators: %s: step id.
+#: src/Registry/Rules/AutomationRules.php:1004
 #, php-format
 msgid "no step \"%s\" runs before this point."
 msgstr ""
 
 #. translators: 1: step type, 2: output name.
-#: src/Registry/Rules/AutomationRules.php:872
+#: src/Registry/Rules/AutomationRules.php:1007
 #, php-format
 msgid "%1$s steps have no output \"%2$s\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:879
+#: src/Registry/Rules/AutomationRules.php:1014
 msgid "use \"site.name\" or \"site.url\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:886
+#: src/Registry/Rules/AutomationRules.php:1021
 msgid "today and now have no sub-keys."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:892
+#: src/Registry/Rules/AutomationRules.php:1027
 msgid "use \"run.id\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:898
+#: src/Registry/Rules/AutomationRules.php:1033
 msgid "use \"link.<name>\"."
 msgstr ""
 
 #. translators: %s: link name.
-#: src/Registry/Rules/AutomationRules.php:901
+#: src/Registry/Rules/AutomationRules.php:1036
 #, php-format
 msgid "Link \"%s\" is not defined in this automation's \"links\"."
 msgstr ""
 
 #. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:904
+#: src/Registry/Rules/AutomationRules.php:1039
 #, php-format
 msgid "Path \"%s\" signs a link for the bound record, but this trigger binds none."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:911
+#: src/Registry/Rules/AutomationRules.php:1046
 msgid "paths start with record, trigger, steps, site, today, now, run or link."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:912
+#: src/Registry/Rules/AutomationRules.php:1047
 msgid "condition paths start with record, trigger, steps or site (use a date operand for today and now)."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:932
+#: src/Registry/Rules/AutomationRules.php:1067
 msgid "webhook triggers expose \"trigger.payload.*\" only."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:937
+#: src/Registry/Rules/AutomationRules.php:1072
 msgid "schedule triggers have no payload."
 msgstr ""
 
 #. translators: 1: event name, 2: comma-separated keys.
-#: src/Registry/Rules/AutomationRules.php:945
+#: src/Registry/Rules/AutomationRules.php:1080
 #, php-format
 msgid "%1$s payloads have %2$s."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:950
+#: src/Registry/Rules/AutomationRules.php:1085
 msgid "use \"trigger.old.<key>\"."
 msgstr ""
 
 #. translators: %s: comma-separated keys.
-#: src/Registry/Rules/AutomationRules.php:967
+#: src/Registry/Rules/AutomationRules.php:1102
 #, php-format
 msgid "form event payloads have %s."
 msgstr ""
 
 #. translators: %s: content type key.
-#: src/Registry/Rules/AutomationRules.php:1009
+#: src/Registry/Rules/AutomationRules.php:1142
 #: src/Registry/Rules/OptionsPageRules.php:225
 #: src/Registry/Validator.php:299
 #, php-format
@@ -3087,123 +3301,123 @@ msgid "Content type \"%s\" is not defined."
 msgstr ""
 
 #. translators: %s: form key.
-#: src/Registry/Rules/AutomationRules.php:1015
+#: src/Registry/Rules/AutomationRules.php:1148
 #, php-format
 msgid "Form \"%s\" is not defined."
 msgstr ""
 
 #. translators: %s: field key.
-#: src/Registry/Rules/AutomationRules.php:1082
+#: src/Registry/Rules/AutomationRules.php:1215
 #, php-format
 msgid "Field \"%s\" cannot be checked: name the trigger's \"content_type\" to use record fields."
 msgstr ""
 
 #. translators: 1: field key, 2: content type key.
-#: src/Registry/Rules/AutomationRules.php:1084
+#: src/Registry/Rules/AutomationRules.php:1217
 #, php-format
 msgid "\"%1$s\" is not a field or taxonomy of content type \"%2$s\"."
 msgstr ""
 
 #. translators: %s: field key.
-#: src/Registry/Rules/AutomationRules.php:1090
-#: src/Registry/Rules/AutomationRules.php:1169
+#: src/Registry/Rules/AutomationRules.php:1223
+#: src/Registry/Rules/AutomationRules.php:1302
 #, php-format
 msgid "Field \"%s\" is private and cannot appear in webhook bodies or link pages."
 msgstr ""
 
 #. translators: %s: options page key.
-#: src/Registry/Rules/AutomationRules.php:1106
+#: src/Registry/Rules/AutomationRules.php:1239
 #: src/Registry/Rules/FormRules.php:622
 #, php-format
 msgid "Options page \"%s\" is not defined."
 msgstr ""
 
 #. translators: 1: field key, 2: options page key.
-#: src/Registry/Rules/AutomationRules.php:1115
+#: src/Registry/Rules/AutomationRules.php:1248
 #: src/Registry/Rules/FormRules.php:631
 #, php-format
 msgid "Field \"%1$s\" is not defined on options page \"%2$s\"."
 msgstr ""
 
 #. translators: 1: options page key, 2: field key.
-#: src/Registry/Rules/AutomationRules.php:1123
+#: src/Registry/Rules/AutomationRules.php:1256
 #, php-format
 msgid "Options field \"%1$s.%2$s\" is private and cannot appear in templates. For a recipient, write \"{option:%1$s.%2$s}\" in \"to\"."
 msgstr ""
 
 #. translators: 1: options page key, 2: field key.
-#: src/Registry/Rules/AutomationRules.php:1129
+#: src/Registry/Rules/AutomationRules.php:1262
 #, php-format
 msgid "Options field \"%1$s.%2$s\" is not a date field, so it cannot take \"| date\"."
 msgstr ""
 
 #. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:1143
+#: src/Registry/Rules/AutomationRules.php:1276
 #, php-format
 msgid "Path \"%s\" is not a date field, so it cannot take \"| date\"."
 msgstr ""
 
 #. translators: 1: field key, 2: form key.
-#: src/Registry/Rules/AutomationRules.php:1162
+#: src/Registry/Rules/AutomationRules.php:1295
 #, php-format
 msgid "Field \"%1$s\" is not a field of form \"%2$s\"."
 msgstr ""
 
 #. translators: 1: var path, 2: reason.
-#: src/Registry/Rules/AutomationRules.php:1218
+#: src/Registry/Rules/AutomationRules.php:1351
 #, php-format
 msgid "Condition on \"%1$s\": %2$s"
 msgstr ""
 
 #. translators: 1: operator, 2: field type.
-#: src/Registry/Rules/AutomationRules.php:1223
+#: src/Registry/Rules/AutomationRules.php:1356
 #, php-format
 msgid "\"%1$s\" compares numbers and dates, not %2$s values."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1227
+#: src/Registry/Rules/AutomationRules.php:1360
 msgid "\"contains\" applies to multi-select taxonomies only."
 msgstr ""
 
 #. translators: %s: field type.
-#: src/Registry/Rules/AutomationRules.php:1238
+#: src/Registry/Rules/AutomationRules.php:1371
 #, php-format
 msgid "a date operand cannot compare with a %s value."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1280
+#: src/Registry/Rules/AutomationRules.php:1413
 msgid "only multi-select taxonomies take a list."
 msgstr ""
 
 #. translators: 1: field key, 2: reason.
-#: src/Registry/Rules/AutomationRules.php:1286
+#: src/Registry/Rules/AutomationRules.php:1419
 #, php-format
 msgid "Value for \"%1$s\": %2$s"
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1313
+#: src/Registry/Rules/AutomationRules.php:1446
 msgid "expected true or false."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1314
+#: src/Registry/Rules/AutomationRules.php:1447
 msgid "expected a number."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1315
+#: src/Registry/Rules/AutomationRules.php:1448
 msgid "expected a Y-m-d date."
 msgstr ""
 
 #. translators: %s: comma-separated option values.
-#: src/Registry/Rules/AutomationRules.php:1317
+#: src/Registry/Rules/AutomationRules.php:1450
 #, php-format
 msgid "expected one of the options: %s."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1318
+#: src/Registry/Rules/AutomationRules.php:1451
 msgid "expected a term slug."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1319
+#: src/Registry/Rules/AutomationRules.php:1452
 msgid "expected a string."
 msgstr ""
 

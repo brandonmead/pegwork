@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "dr_intake_notice",
+  "label": "Case form submitted: tell the team",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "dr_intake" },
+  "steps": [
+    { "id": "notice", "type": "send_email", "to": "team@example.org", "reply_to": "{{record.email}}",
+      "subject": "New case: {{trigger.values.name}} ({{record.priority}})", "text": "{{record.edit_url}}" }
+  ]
+}

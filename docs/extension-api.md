@@ -180,6 +180,8 @@ The `forms` module (`docs/forms.md`) renders registry forms, handles their submi
 
 REST: `POST /wp-json/pegwork/v1/automations/<key>/webhook` (inbound webhook trigger; signed with the automation's secret, see `docs/automation.md#webhooks`). Outbound `call_webhook` deliveries use `wp_safe_remote_post()`, so the core `http_request_host_is_external` and `http_allowed_safe_ports` filters apply to them.
 
+REST for the automation editor (`manage_options` with the cookie nonce, JSON bodies only, `Cache-Control: no-store`, no side effects): `POST /wp-json/pegwork/v1/automation-editor/preview` renders a template against a sample record, and `POST /wp-json/pegwork/v1/automation-editor/test` dry-runs a saved automation (`docs/automation.md#preview-and-test-run`). These are module routes for the editor, not a stable extension API.
+
 Records written by automation runs carry `origin.automation`, `origin.run_id` and `origin.depth` (run depth plus 1) in their record events.
 
 Enabled slugs live in the `pegwork_modules` option. Manage them on the Pegwork > Modules screen or with WP-CLI:
