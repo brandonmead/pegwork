@@ -1,0 +1,44 @@
+// Automation builder placeholder cards (Phase 6 PR 3). Nesting shows as an indent, a left rule and
+// heading text, never color alone.
+
+.pegwork-automation-step,
+.pegwork-automation-decision {
+	margin: 0 0 12px;
+	padding: 8px 12px;
+	border: 1px solid #8c8f94;
+	border-radius: 2px;
+	background: #fff;
+	color: #1e1e1e;
+}
+
+.pegwork-automation-decision__heading,
+.pegwork-automation-branch__heading,
+.pegwork-automation-decision__then {
+	margin: 0 0 8px;
+}
+
+.pegwork-automation-branch {
+	margin: 0 0 12px;
+	padding: 0 0 0 12px;
+	border-left: 3px solid #50575e;
+}
+
+.pegwork-automation-branch__heading {
+	font-weight: 600;
+}
+
+.pegwork-automation-decision__then {
+	margin: 8px 0 0;
+	color: #50575e;
+}
+
+.pegwork-automation-step code,
+.pegwork-automation-decision code {
+	overflow-wrap: anywhere;
+}
+
+// templateLock "all" leaves core's inserter toggle enabled; hide it for file automations.
+.pegwork-automation-readonly .editor-document-tools .editor-document-tools__left > .editor-document-tools__inserter-toggle,
+.pegwork-automation-readonly .editor-post-last-edited-panel {
+	display: none;
+}

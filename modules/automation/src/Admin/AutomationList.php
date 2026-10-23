@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Admin;
 
+use PegworkAutomation\Editor\AutomationPost;
+use PegworkAutomation\Editor\BuilderEditor;
 use PegworkAutomation\Engine;
 use PegworkAutomation\Overrides;
 use PegworkAutomation\Webhooks\Inbound;
@@ -24,16 +26,19 @@ final class AutomationList {
 	 * Prints the view.
 	 */
 	public static function render(): void {
+		AutomationPost::ensure_posts();
 		$registry    = pegwork_registry();
 		$automations = $registry->automations();
+		$posts       = AutomationPost::keys_with_posts();
 		$engine      = Engine::instance();
 		$summary     = $engine->runs()->summary( $engine->runs()->stamp( $engine->clock()->now()->modify( '-7 days' ) ) );
 
 		echo '<h1 class="wp-heading-inline">' . esc_html__( 'Automations', 'pegwork' ) . '</h1> ';
+		echo '<a class="page-title-action" href="' . esc_url( admin_url( 'post-new.php?post_type=' . AutomationPost::TYPE ) ) . '">' . esc_html__( 'Add automation', 'pegwork' ) . '</a> ';
 		echo '<a class="page-title-action" href="' . esc_url( Screen::url( array( 'view' => 'log' ) ) ) . '">' . esc_html__( 'View run log', 'pegwork' ) . '</a>';
 		echo '<hr class="wp-header-end">';
 		Screen::notice();
-		echo '<p>' . esc_html__( 'Automations come from the schema registry and are edited as JSON. Here you can switch one on or off for this site, run a schedule now, and follow its runs.', 'pegwork' ) . '</p>';
+		echo '<p>' . esc_html__( 'Automations come from the schema registry. Site automations are edited here; automations from a schema package are read-only and can be duplicated as site automations. You can also switch one on or off for this site, run a schedule now, and follow its runs.', 'pegwork' ) . '</p>';
 
 		// Not wp-list-table: its small-screen CSS stacks cells without their headers.
 		echo '<table class="widefat striped pegwork-table">';
@@ -68,6 +73,7 @@ final class AutomationList {
 			echo '<td>' . self::last_run( $summary[ $key ] ?? array() ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in last_run().
 			echo '<td>' . self::next_run( $key, $schedule, $is_enabled, $engine ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in next_run().
 			echo '<td class="pegwork-actions">';
+			self::edit_links( $key, (string) $definition['label'], $posts[ $key ] ?? 0 );
 			self::actions( $key, (string) $definition['label'], $schedule, $is_enabled );
 			echo '</td></tr>';
 		}
@@ -164,6 +170,27 @@ final class AutomationList {
 			return esc_html__( 'None while disabled', 'pegwork' );
 		}
 		return null === $next ? esc_html__( 'Scheduled on the next page load', 'pegwork' ) : Format::timestamp( $next );
+	}
+
+	/**
+	 * Edit (site automation), or View and "Duplicate as site automation" (file automation).
+	 *
+	 * @param string $key     Automation key.
+	 * @param string $label   Automation label.
+	 * @param int    $post_id Its `pegwork_automation` post, or 0.
+	 */
+	private static function edit_links( string $key, string $label, int $post_id ): void {
+		$name = '<span class="screen-reader-text"> ' . esc_html( $label ) . '</span>';
+		echo '<span class="pegwork-edit-links">';
+		if ( AutomationPost::is_file_automation( $key ) ) {
+			if ( $post_id > 0 ) {
+				echo '<a href="' . esc_url( (string) get_edit_post_link( $post_id, 'raw' ) ) . '">' . esc_html__( 'View', 'pegwork' ) . $name . '</a> '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $name is escaped above.
+			}
+			echo '<a href="' . esc_url( BuilderEditor::duplicate_url( $key ) ) . '">' . esc_html__( 'Duplicate as site automation', 'pegwork' ) . $name . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $name is escaped above.
+		} elseif ( $post_id > 0 ) {
+			echo '<a href="' . esc_url( (string) get_edit_post_link( $post_id, 'raw' ) ) . '">' . esc_html__( 'Edit', 'pegwork' ) . $name . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $name is escaped above.
+		}
+		echo '</span>';
 	}
 
 	/**

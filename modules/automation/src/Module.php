@@ -14,7 +14,8 @@ use Pegwork\Api\Module as ModuleContract;
 /**
  * Installs the run log tables, listens on the event bus, executes runs on scheduler wake-ups and
  * registers the signed link handler, the inbound webhook route, `wp pegwork automation`, Pegwork >
- * Automations and the scheduling health check. Nothing runs while the module is disabled.
+ * Automations, the `pegwork_automation` editing surface and the scheduling health check. Nothing runs
+ * while the module is disabled.
  */
 final class Module implements ModuleContract {
 
@@ -42,6 +43,8 @@ final class Module implements ModuleContract {
 		Engine::register();
 		Links\Handler::register();
 		Admin\Screen::register();
+		Editor\AutomationPost::register();
+		Editor\BuilderEditor::register();
 		Webhooks\Inbound::register();
 		Health::register();
 
