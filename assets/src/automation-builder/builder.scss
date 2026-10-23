@@ -42,7 +42,8 @@ $error: #cc1818;
 	}
 }
 
-.pegwork-automation-step__summary {
+.pegwork-automation-step__summary,
+.pegwork-automation-step__note {
 	margin: 0;
 	color: $muted;
 	overflow-wrap: anywhere;

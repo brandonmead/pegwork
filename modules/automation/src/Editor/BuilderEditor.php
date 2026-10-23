@@ -240,7 +240,7 @@ final class BuilderEditor {
 				'key'        => (string) $type_key,
 				'label'      => (string) ( $type['labels']['singular'] ?? $type_key ),
 				'plural'     => (string) ( $type['labels']['plural'] ?? ( $type['labels']['singular'] ?? $type_key ) ),
-				'fields'     =>array_map( $field, array_values( $registry->fields( (string) $type_key ) ) ),
+				'fields'     => array_map( $field, array_values( $registry->fields( (string) $type_key ) ) ),
 				'taxonomies' => $usages,
 			);
 		}
