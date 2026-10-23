@@ -121,8 +121,12 @@ final class Manual {
 		if ( null === $data ) {
 			return new WP_Error( 'pegwork_record_not_found', sprintf( 'No record with ID %d.', $record ) );
 		}
-		if ( isset( $trigger['content_type'] ) && $trigger['content_type'] !== $data['type'] ) {
-			return new WP_Error( 'pegwork_record_type', sprintf( 'Record %1$d is a %2$s; automation %3$s runs on %4$s.', $record, $data['type'], $key, $trigger['content_type'] ) );
+		$type = $trigger['content_type'] ?? null;
+		if ( null === $type && Triggers::binds_form( $trigger ) ) {
+			$type = pegwork_registry()->form( (string) $trigger['form'] )['target']['content_type'] ?? null; // A form-bound automation runs on its form's target type.
+		}
+		if ( null !== $type && $type !== $data['type'] ) {
+			return new WP_Error( 'pegwork_record_type', sprintf( 'Record %1$d is a %2$s; automation %3$s runs on %4$s.', $record, $data['type'], $key, $type ) );
 		}
 
 		$id = $engine->triggers()->manual( $key, $definition, $data );
