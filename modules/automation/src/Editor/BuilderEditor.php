@@ -130,7 +130,8 @@ final class BuilderEditor {
 
 	/**
 	 * Enqueues the builder stylesheet on automation editor screens. Hooked to enqueue_block_assets,
-	 * which the block editor also runs for its iframed canvas.
+	 * which the block editor also runs for its iframed canvas. Depends on dashicons, which the canvas
+	 * does not load by itself, for the card icons.
 	 */
 	public static function enqueue_style(): void {
 		if ( ! is_admin() ) {
@@ -142,7 +143,7 @@ final class BuilderEditor {
 		}
 		$asset_file = PEGWORK_DIR . 'assets/build/automation-builder.asset.php';
 		$version    = is_readable( $asset_file ) ? ( require $asset_file )['version'] : null;
-		wp_enqueue_style( self::HANDLE, plugins_url( 'assets/build/automation-builder.css', PEGWORK_FILE ), array(), $version );
+		wp_enqueue_style( self::HANDLE, plugins_url( 'assets/build/automation-builder.css', PEGWORK_FILE ), array( 'dashicons' ), $version );
 		wp_style_add_data( self::HANDLE, 'rtl', 'replace' );
 	}
 

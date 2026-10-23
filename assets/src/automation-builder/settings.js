@@ -91,7 +91,11 @@ function AutomationPanel() {
 		...errorsAt( errors, '/steps', false ),
 		...errorsAt( errors, '/format' ),
 	];
-	const enabled = settings.enabled !== false;
+	// Unset means off until the first save stores it (AutomationPost::save()), on after that.
+	const enabled =
+		settings.enabled === undefined
+			? config.lockedKey !== ''
+			: settings.enabled !== false;
 
 	return (
 		<PluginDocumentSettingPanel

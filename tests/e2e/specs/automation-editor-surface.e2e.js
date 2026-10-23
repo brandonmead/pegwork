@@ -235,7 +235,7 @@ test( 'list links by keyboard, the editor opens the tree and saves it unchanged;
 	);
 	await expect(
 		frame.locator( '.pegwork-automation-branch__heading' )
-	).toHaveText( [ 'If Kind A', 'Otherwise' ] );
+	).toHaveText( [ 'If trigger.payload.kind is "a"', 'Otherwise' ] );
 	await expect( frame.locator( '.pegwork-automation-step' ) ).toHaveCount(
 		3
 	);
@@ -271,9 +271,11 @@ test( 'a file automation is read-only; its duplicate saves as a disabled site au
 	);
 	await openEditor( page, /post\.php\?post=\d+&action=edit/ );
 
+	// The editor notice (the Automation panel, when the sidebar is open, holds a second one).
 	const notice = page
 		.locator( '.components-notice' )
-		.filter( { hasText: 'comes from the file package "e2e_automation"' } );
+		.filter( { hasText: 'comes from the file package "e2e_automation"' } )
+		.first();
 	await expect( notice ).toBeVisible();
 	expect(
 		await page.evaluate( () =>

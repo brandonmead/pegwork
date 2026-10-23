@@ -387,24 +387,43 @@ export function BranchEdit( {
 								words
 							) }
 				</p>
-				{ ! attributes.otherwise &&
-					( config.readOnly ? (
-						<span className="pegwork-automation-branch__label">
-							{ attributes.label }
-						</span>
-					) : (
-						<PlainText
-							className="pegwork-automation-branch__label"
-							value={ attributes.label ?? '' }
-							placeholder={ __( 'Branch name', 'pegwork' ) }
-							onChange={ ( value ) =>
-								setAttributes( {
-									label: value.replace( /[\r\n]+/g, ' ' ),
-								} )
-							}
-							aria-label={ __( 'Branch name', 'pegwork' ) }
-						/>
-					) ) }
+				{ ! attributes.otherwise && (
+					<div className="pegwork-automation-branch__name">
+						{ config.readOnly ? (
+							<span>
+								{
+									/* translators: %s: branch name. */ sprintf(
+										__( 'Name: %s', 'pegwork' ),
+										attributes.label ?? ''
+									)
+								}
+							</span>
+						) : (
+							<>
+								<label htmlFor={ `${ label.id }-name` }>
+									{ __( 'Name:', 'pegwork' ) }
+								</label>
+								<PlainText
+									id={ `${ label.id }-name` }
+									className="pegwork-automation-branch__label"
+									value={ attributes.label ?? '' }
+									placeholder={ __(
+										'Branch name',
+										'pegwork'
+									) }
+									onChange={ ( value ) =>
+										setAttributes( {
+											label: value.replace(
+												/[\r\n]+/g,
+												' '
+											),
+										} )
+									}
+								/>
+							</>
+						) }
+					</div>
+				) }
 			</div>
 			<Errors messages={ messages } />
 			<div { ...innerBlocksProps } />

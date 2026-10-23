@@ -5,6 +5,7 @@ $border: #8c8f94;
 $muted: #50575e;
 $error: #cc1818;
 
+// The canvas carries the theme's type; cards use the admin's, so they read as UI, not content.
 .pegwork-automation-step,
 .pegwork-automation-decision {
 	margin: 0 0 12px;
@@ -13,6 +14,14 @@ $error: #cc1818;
 	border-radius: 2px;
 	background: #fff;
 	color: #1e1e1e;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+
+	p {
+		font-size: inherit;
+		line-height: inherit;
+	}
 
 	&.has-error {
 		border-color: $error;
@@ -75,11 +84,34 @@ $error: #cc1818;
 	overflow-wrap: anywhere;
 }
 
-.pegwork-automation-branch__label {
+.pegwork-automation-branch__name {
+	display: flex;
 	flex: 1 1 12em;
+	align-items: baseline;
+	gap: 4px;
 	min-width: 0;
 	color: $muted;
 	font-size: 13px;
+
+	label {
+		flex: none;
+	}
+}
+
+.pegwork-automation-branch__label {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 0 4px;
+	border: 1px solid transparent;
+	border-radius: 2px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	resize: none;
+
+	&:hover {
+		border-color: #dcdcde;
+	}
 }
 
 .pegwork-automation-decision__then {
@@ -91,6 +123,14 @@ $error: #cc1818;
 .pegwork-automation-step code,
 .pegwork-automation-decision code {
 	overflow-wrap: anywhere;
+}
+
+// Core floats a nested block's appender over its last child; ours sit below the list instead.
+.pegwork-automation-branch__steps > .block-list-appender,
+.pegwork-automation-decision__branches > .block-list-appender {
+	position: static;
+	width: auto;
+	margin: 0;
 }
 
 .pegwork-automation__appender {
@@ -223,10 +263,22 @@ $error: #cc1818;
 	border: 1px solid #dcdcde;
 }
 
+.pegwork-automation__template textarea {
+	box-sizing: border-box;
+	width: 100%;
+}
+
 .pegwork-automation__report {
 	h3 {
 		margin: 0 0 8px;
 		font-size: 13px;
+		font-weight: 600;
+		text-transform: none;
+
+		&:focus {
+			outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+			outline-offset: 2px;
+		}
 	}
 
 	p,

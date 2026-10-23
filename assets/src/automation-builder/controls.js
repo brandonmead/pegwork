@@ -8,6 +8,7 @@
  */
 import apiFetch from '@wordpress/api-fetch';
 import {
+	BaseControl,
 	Button,
 	CheckboxControl,
 	ComboboxControl,
@@ -201,7 +202,6 @@ export function TemplateControl( {
 } ) {
 	const ref = useRef();
 	const { id, messages, props } = wire( errors, pointer, Boolean( help ) );
-	const Control = multiline ? TextareaControl : TextControl;
 	const current = typeof value === 'string' ? value : String( value ?? '' );
 
 	const insert = ( tag ) => {
@@ -220,18 +220,37 @@ export function TemplateControl( {
 
 	return (
 		<div className="pegwork-automation__template">
-			<Control
-				__next40pxDefaultSize={ ! multiline || undefined }
-				__nextHasNoMarginBottom
-				ref={ ref }
-				label={ label }
-				help={ help }
-				value={ current }
-				onChange={ onChange }
-				rows={ multiline ? 5 : undefined }
-				disabled={ disabled }
-				{ ...props }
-			/>
+			{ multiline ? (
+				// TextareaControl labels its own instance ID, not ours; BaseControl takes ours.
+				<BaseControl
+					__nextHasNoMarginBottom
+					id={ id }
+					label={ label }
+					help={ help }
+				>
+					<textarea
+						ref={ ref }
+						className="components-textarea-control__input"
+						rows={ 5 }
+						value={ current }
+						onChange={ ( event ) => onChange( event.target.value ) }
+						disabled={ disabled }
+						{ ...props }
+					/>
+				</BaseControl>
+			) : (
+				<TextControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					ref={ ref }
+					label={ label }
+					help={ help }
+					value={ current }
+					onChange={ onChange }
+					disabled={ disabled }
+					{ ...props }
+				/>
+			) }
 			{ ! disabled && tags?.length > 0 && (
 				<MergeTagInserter
 					tags={ tags }

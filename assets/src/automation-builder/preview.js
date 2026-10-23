@@ -14,7 +14,7 @@ import {
 	PluginDocumentSettingPanel,
 	store as editorStore,
 } from '@wordpress/editor';
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useCallback, useEffect, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
@@ -237,7 +237,9 @@ export function TestRunPanel() {
 		error: '',
 		report: null,
 	} );
-	const heading = useRef();
+	// The result heading takes focus when it mounts (after each run). A callback ref, not an effect:
+	// the panel's content renders through a slot, after this component's effects.
+	const heading = useCallback( ( node ) => node?.focus(), [] );
 	const { dirty, key } = useSelect(
 		( select ) => {
 			const editor = select( editorStore );
@@ -251,12 +253,6 @@ export function TestRunPanel() {
 		},
 		[ settings.key ]
 	);
-
-	useEffect( () => {
-		if ( state.report || state.error ) {
-			heading.current?.focus();
-		}
-	}, [ state ] );
 
 	const run = () => {
 		const { params, error } = sampleParams(
