@@ -196,6 +196,19 @@ class ConditionsTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Preview modes: links and step outputs are placeholders (even when the context has outputs), the
+	 * rest renders as text or escaped HTML, and nothing creates the link key.
+	 */
+	public function test_templates_preview_mode() {
+		$context = $this->context();
+		$this->assertSame( 'Clean water [signed link] [from step child] 10', Templates::render( '{{record.title}} {{link.confirm}} {{steps.child.record_id}} {{trigger.old.seats}}', $context, Templates::PREVIEW ) );
+		$this->assertSame( '<a href="[signed link]">[from step child]</a>', Templates::render( '<a href="{{link.confirm}}">{{steps.child.record_id}}</a>', $context, Templates::PREVIEW_HTML ) );
+		$this->assertSame( 'a, b', Templates::render( '{{record.tags}}', $context, Templates::PREVIEW ) );
+		$this->assertSame( 'none', Templates::render( '{{record.note | default:"none"}}', $context, Templates::PREVIEW_HTML ) );
+		$this->assertFalse( get_option( 'pegwork_link_secret' ) );
+	}
+
+	/**
 	 * The frozen clock moves only when told, in site-time calendar units.
 	 */
 	public function test_frozen_clock() {

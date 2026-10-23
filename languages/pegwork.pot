@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T00:39:47+00:00\n"
+"POT-Creation-Date: 2026-10-23T01:21:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: pegwork\n"
@@ -119,17 +119,17 @@ msgid "Automations come from the schema registry. Site automations are edited he
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:47
-#: modules/automation/src/Admin/RunLog.php:56
-#: modules/automation/src/Admin/RunLog.php:88
-#: modules/automation/src/Admin/RunLog.php:150
+#: modules/automation/src/Admin/RunLog.php:57
+#: modules/automation/src/Admin/RunLog.php:89
+#: modules/automation/src/Admin/RunLog.php:151
 #: modules/automation/src/Editor/AutomationPost.php:107
 #: src/Modules/manifest.php:33
 msgid "Automation"
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:48
-#: modules/automation/src/Admin/RunLog.php:89
-#: modules/automation/src/Admin/RunLog.php:161
+#: modules/automation/src/Admin/RunLog.php:90
+#: modules/automation/src/Admin/RunLog.php:162
 msgid "Trigger"
 msgstr ""
 
@@ -399,8 +399,8 @@ msgid "Link"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:173
-#: modules/automation/src/Admin/RunLog.php:163
 #: modules/automation/src/Admin/RunLog.php:164
+#: modules/automation/src/Admin/RunLog.php:165
 #: modules/forms/src/EntriesAdmin.php:205
 #: modules/forms/src/EntriesAdmin.php:351
 #: modules/forms/src/EntriesTable.php:335
@@ -445,22 +445,36 @@ msgstr ""
 msgid "no"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:47
-msgid "Automation run log"
+#: modules/automation/src/Admin/Format.php:233
+msgid "Took Otherwise"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:236
+msgid "No branch matched"
+msgstr ""
+
+#. translators: %s: branch label.
+#: modules/automation/src/Admin/Format.php:239
+#, php-format
+msgid "Took branch %s"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:48
+msgid "Automation run log"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:49
 msgid "Back to automations"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:58
+#: modules/automation/src/Admin/RunLog.php:59
 msgid "All automations"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:69
-#: modules/automation/src/Admin/RunLog.php:91
-#: modules/automation/src/Admin/RunLog.php:160
-#: modules/automation/src/Admin/RunLog.php:190
+#: modules/automation/src/Admin/RunLog.php:70
+#: modules/automation/src/Admin/RunLog.php:92
+#: modules/automation/src/Admin/RunLog.php:161
+#: modules/automation/src/Admin/RunLog.php:191
 #: modules/forms/src/EntriesAdmin.php:350
 #: modules/forms/src/EntriesTable.php:76
 #: modules/forms/src/Export.php:137
@@ -469,186 +483,202 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:71
+#: modules/automation/src/Admin/RunLog.php:72
 msgid "All statuses"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:76
+#: modules/automation/src/Admin/RunLog.php:77
 #: modules/forms/src/EntriesAdmin.php:519
 msgid "Filter"
 msgstr ""
 
 #. translators: %s: number of runs.
-#: modules/automation/src/Admin/RunLog.php:81
+#: modules/automation/src/Admin/RunLog.php:82
 #, php-format
 msgid "%s run"
 msgid_plural "%s runs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/automation/src/Admin/RunLog.php:85
+#: modules/automation/src/Admin/RunLog.php:86
 msgid "Runs, newest first"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:87
+#: modules/automation/src/Admin/RunLog.php:88
 msgid "Run"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:90
-#: modules/automation/src/Admin/RunLog.php:162
+#: modules/automation/src/Admin/RunLog.php:91
+#: modules/automation/src/Admin/RunLog.php:163
 msgid "Record"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:92
-#: modules/automation/src/Admin/RunLog.php:164
+#: modules/automation/src/Admin/RunLog.php:93
+#: modules/automation/src/Admin/RunLog.php:165
 msgid "Outcome"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:93
-#: modules/automation/src/Admin/RunLog.php:169
+#: modules/automation/src/Admin/RunLog.php:94
+#: modules/automation/src/Admin/RunLog.php:170
 msgid "Created"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:98
+#: modules/automation/src/Admin/RunLog.php:99
 msgid "No runs yet. Runs appear here when an automation is triggered or run now."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:99
+#: modules/automation/src/Admin/RunLog.php:100
 msgid "No runs match these filters."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:104
-#: modules/automation/src/Admin/RunLog.php:144
+#: modules/automation/src/Admin/RunLog.php:105
+#: modules/automation/src/Admin/RunLog.php:145
 msgid "(removed)"
 msgstr ""
 
 #. translators: %d: run ID.
-#: modules/automation/src/Admin/RunLog.php:108
-#: modules/automation/src/Admin/RunLog.php:133
+#: modules/automation/src/Admin/RunLog.php:109
+#: modules/automation/src/Admin/RunLog.php:134
 #, php-format
 msgid "Run %d"
 msgstr ""
 
 #. translators: %d: run ID.
-#: modules/automation/src/Admin/RunLog.php:133
+#: modules/automation/src/Admin/RunLog.php:134
 msgid "Run not found"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:134
+#: modules/automation/src/Admin/RunLog.php:135
 msgid "Back to run log"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:139
+#: modules/automation/src/Admin/RunLog.php:140
 msgid "There is no run with this ID. Old finished runs are pruned after 90 days (failed runs after 180)."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:148
+#: modules/automation/src/Admin/RunLog.php:149
 msgid "Run details"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:158
+#: modules/automation/src/Admin/RunLog.php:159
 msgid "All its runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:163
+#: modules/automation/src/Admin/RunLog.php:164
 msgid "Current step"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:164
-#: modules/automation/src/Admin/RunLog.php:194
+#: modules/automation/src/Admin/RunLog.php:165
+#: modules/automation/src/Admin/RunLog.php:195
 #: src/Admin/Overview.php:130
 msgid "Error"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:166
+#: modules/automation/src/Admin/RunLog.php:167
 msgid "Resumes at"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:166
+#: modules/automation/src/Admin/RunLog.php:167
 msgid "Not set"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:168
+#: modules/automation/src/Admin/RunLog.php:169
 msgid "Loop depth"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:170
-#: modules/automation/src/Admin/RunLog.php:191
+#: modules/automation/src/Admin/RunLog.php:171
+#: modules/automation/src/Admin/RunLog.php:192
 msgid "Started"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:170
 #: modules/automation/src/Admin/RunLog.php:171
+#: modules/automation/src/Admin/RunLog.php:172
 msgid "Not yet"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:171
+#: modules/automation/src/Admin/RunLog.php:172
 msgid "Finished"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:178
+#: modules/automation/src/Admin/RunLog.php:179
 msgid "Retry"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:179
+#: modules/automation/src/Admin/RunLog.php:180
 msgid "Resumes the run at the step that failed; earlier steps are not repeated."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:184
+#: modules/automation/src/Admin/RunLog.php:185
 msgid "Step attempts"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:186
+#: modules/automation/src/Admin/RunLog.php:187
 msgid "Step attempts, oldest first"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:188
+#: modules/automation/src/Admin/RunLog.php:189
 #: assets/build/automation-builder.js:1
 msgid "Step"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:189
+#: modules/automation/src/Admin/RunLog.php:190
 msgid "Attempt"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:192
+#: modules/automation/src/Admin/RunLog.php:193
 msgid "Duration"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:193
+#: modules/automation/src/Admin/RunLog.php:194
 #: modules/forms/src/EntriesTable.php:75
 msgid "Summary"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:198
+#: modules/automation/src/Admin/RunLog.php:199
 msgid "No step has run yet."
 msgstr ""
 
+#. translators: %s: decision step ID.
+#: modules/automation/src/Admin/RunLog.php:215
+#, php-format
+msgid "Otherwise branch of %s"
+msgstr ""
+
+#. translators: 1: branch label, 2: decision step ID.
+#: modules/automation/src/Admin/RunLog.php:217
+#, php-format
+msgid "Branch %1$s of %2$s"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:226
+msgid "(no longer in this automation)"
+msgstr ""
+
 #. translators: %s: duration in milliseconds.
-#: modules/automation/src/Admin/RunLog.php:207
+#: modules/automation/src/Admin/RunLog.php:233
 #, php-format
 msgid "%s ms"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:265
+#: modules/automation/src/Admin/RunLog.php:291
 msgid "Newer runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:266
+#: modules/automation/src/Admin/RunLog.php:292
 msgid "Older runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:267
+#: modules/automation/src/Admin/RunLog.php:293
 #: modules/forms/src/EntriesAdmin.php:383
 msgid "Page"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:270
+#: modules/automation/src/Admin/RunLog.php:296
 msgid "Run log pages"
 msgstr ""
 
 #. translators: 1: current page, 2: number of pages.
-#: modules/automation/src/Admin/RunLog.php:273
+#: modules/automation/src/Admin/RunLog.php:299
 #, php-format
 msgid "Page %1$s of %2$s"
 msgstr ""
@@ -657,11 +687,157 @@ msgstr ""
 msgid "Pegwork Automations"
 msgstr ""
 
-#: modules/automation/src/Admin/Screen.php:132
+#: modules/automation/src/Admin/Screen.php:139
 #: src/Admin/Modules.php:50
 #: src/Admin/Overview.php:26
 #: src/Options/Screen.php:141
 msgid "Sorry, you are not allowed to access this page."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:77
+msgid "Choose a sample record."
+msgstr ""
+
+#. translators: %s: content type key.
+#: modules/automation/src/DryRun.php:79
+#, php-format
+msgid "Choose a sample %s record."
+msgstr ""
+
+#. translators: %d: record ID.
+#: modules/automation/src/DryRun.php:89
+#, php-format
+msgid "Record %d is not a Pegwork record."
+msgstr ""
+
+#. translators: 1: record ID, 2: content type key.
+#: modules/automation/src/DryRun.php:91
+#, php-format
+msgid "Record %1$d is not a %2$s record."
+msgstr ""
+
+#. translators: %s: automation key.
+#: modules/automation/src/DryRun.php:213
+#, php-format
+msgid "No automation with key \"%s\"."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:297
+msgid "A real trigger would start a run."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:298
+msgid "A real trigger would start a run for this record."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:301
+msgid "A real trigger would not start a run. The steps are tested anyway."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:302
+msgid "A real trigger would not start a run for this record. The steps are tested anyway."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:344
+#, php-format
+msgid "Decision %s: no branch matches; continues after the decision."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:347
+#, php-format
+msgid "Decision %s: takes Otherwise."
+msgstr ""
+
+#. translators: 1: step ID, 2: branch label.
+#: modules/automation/src/DryRun.php:349
+#, php-format
+msgid "Decision %1$s: takes \"%2$s\"."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:358
+#, php-format
+msgid "Condition %s holds; continues."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:360
+#, php-format
+msgid "Condition %s is false: stops here."
+msgstr ""
+
+#. translators: 1: step ID, 2: ISO 8601 duration.
+#: modules/automation/src/DryRun.php:368
+#, php-format
+msgid "Wait %1$s: waits %2$s. The test continues as if it had passed, against the record as it is now."
+msgstr ""
+
+#. translators: 1: step ID, 2: record ID, 3: field keys.
+#: modules/automation/src/DryRun.php:391
+#, php-format
+msgid "Update record %1$s: would write %3$s to record %2$s (not applied)."
+msgstr ""
+
+#. translators: 1: step ID, 2: content type key, 3: status, 4: field keys.
+#: modules/automation/src/DryRun.php:399
+#, php-format
+msgid "Create record %1$s: would create a %3$s %2$s with %4$s (not applied)."
+msgstr ""
+
+#. translators: 1: step ID, 2: host name, 3: field keys.
+#: modules/automation/src/DryRun.php:414
+#, php-format
+msgid "Call webhook %1$s: would POST to %2$s with %3$s (not sent)."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:417
+msgid "no record fields"
+msgstr ""
+
+#. translators: 1: step ID, 2: step type.
+#: modules/automation/src/DryRun.php:424
+#, php-format
+msgid "Step %1$s: type \"%2$s\" is not supported."
+msgstr ""
+
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:463
+#, php-format
+msgid "Send email %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: recipients, 3: subject.
+#: modules/automation/src/DryRun.php:473
+#, php-format
+msgid "Send email %1$s: to %2$s, subject \"%3$s\" (not sent)."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:490
+msgid "Otherwise:"
+msgstr ""
+
+#. translators: %s: branch label.
+#: modules/automation/src/DryRun.php:492
+#, php-format
+msgid "If %s:"
+msgstr ""
+
+#: modules/automation/src/DryRun.php:497
+msgid "The run would complete."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:498
+msgid "The run would stop there."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:499
+msgid "The run would hit the step limit."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:500
+msgid "The run would fail there."
 msgstr ""
 
 #: modules/automation/src/Editor/AutomationPost.php:110
@@ -763,6 +939,20 @@ msgstr ""
 #: modules/forms/src/BuilderEditor.php:250
 #, php-format
 msgid "%s (copy)"
+msgstr ""
+
+#: modules/automation/src/Editor/PreviewRoutes.php:142
+msgid "Sorry, you are not allowed to test automations."
+msgstr ""
+
+#: modules/automation/src/Editor/PreviewRoutes.php:169
+msgid "Send the request body as JSON (Content-Type: application/json)."
+msgstr ""
+
+#. translators: %d: maximum size in KB.
+#: modules/automation/src/Editor/PreviewRoutes.php:259
+#, php-format
+msgid "Sample payloads are at most %d KB."
 msgstr ""
 
 #: modules/automation/src/Health.php:91
@@ -927,6 +1117,12 @@ msgstr ""
 #: modules/automation/src/Links/Page.php:52
 #, php-format
 msgid "Go to %s"
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/Templates.php:179
+#, php-format
+msgid "[from step %s]"
 msgstr ""
 
 #: modules/automation/src/Webhooks/Inbound.php:180

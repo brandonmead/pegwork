@@ -30,6 +30,9 @@ use WP_Term;
  * - `url` (render_url(), the `call_webhook` URL): as `raw`, then each value is rawurlencode()d, so a value
  *   cannot add query parameters, a fragment or a space. A tag at the very start of the template (a
  *   whole URL, or the site URL a path follows) renders as `raw`.
+ * - `preview` and `preview_html` (editor preview and dry run): as `text` and `html`, but `{{link.*}}`
+ *   renders `[signed link]` and is never looked up (nothing is minted, no key is created), and
+ *   `{{steps.<id>.*}}` renders `[from step <id>]`, since a preview runs no step.
  */
 final class Templates {
 
@@ -69,6 +72,21 @@ final class Templates {
 	public const LINK_MASK = '[link]';
 
 	/**
+	 * Preview of email text (see the class description).
+	 */
+	public const PREVIEW = 'preview';
+
+	/**
+	 * Preview of email HTML: values escaped.
+	 */
+	public const PREVIEW_HTML = 'preview_html';
+
+	/**
+	 * What a signed link renders as in the preview modes.
+	 */
+	public const PREVIEW_LINK = '[signed link]';
+
+	/**
 	 * One merge tag: path (1), optional `date` filter (2), optional default (3).
 	 */
 	private const TAG = '/\{\{\s*((?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(\|\s*date\s*)?(?:\|\s*default:"([^"]*)"\s*)?\}\}/';
@@ -83,7 +101,7 @@ final class Templates {
 	 *
 	 * @param string  $template Template.
 	 * @param Context $context  Run context.
-	 * @param string  $mode     raw, text, html or log.
+	 * @param string  $mode     raw, text, html, log, preview or preview_html.
 	 */
 	public static function render( string $template, Context $context, string $mode = self::RAW ): string {
 		return (string) preg_replace_callback(
@@ -152,6 +170,17 @@ final class Templates {
 		}
 
 		$path = $m[1];
+		if ( self::PREVIEW === $mode || self::PREVIEW_HTML === $mode ) {
+			if ( str_starts_with( $path, 'link.' ) ) {
+				return self::PREVIEW_LINK;
+			}
+			if ( str_starts_with( $path, 'steps.' ) ) {
+				/* translators: %s: step ID. */
+				$from = sprintf( __( '[from step %s]', 'pegwork' ), (string) ( explode( '.', $path )[1] ?? '' ) );
+				return self::PREVIEW_HTML === $mode ? esc_html( $from ) : $from;
+			}
+			$mode = self::PREVIEW_HTML === $mode ? self::HTML : self::TEXT;
+		}
 		if ( self::LOG === $mode && $context->is_private( $path ) ) {
 			return self::PRIVATE_MASK;
 		}

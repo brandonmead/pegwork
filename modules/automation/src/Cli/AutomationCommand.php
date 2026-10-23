@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace PegworkAutomation\Cli;
 
 use Pegwork\Api\Records;
+use PegworkAutomation\DryRun;
 use PegworkAutomation\Duration;
 use PegworkAutomation\Engine;
 use PegworkAutomation\Links\Key;
@@ -27,7 +28,8 @@ use WP_CLI;
  *
  * Output never includes run contexts (trigger payloads may hold private field values) or field values:
  * only statuses, step summaries (keys, IDs, masked recipients, subjects with private fields hidden) and
- * error messages.
+ * error messages. The exception is `test`, which shows the rendered templates of a dry run as the editor
+ * preview shows them to an administrator.
  */
 final class AutomationCommand {
 
@@ -363,6 +365,74 @@ final class AutomationCommand {
 				return;
 		}
 		WP_CLI::log( sprintf( 'No link key yet: one is generated in option %s the first time a link is minted.', Key::OPTION ) );
+	}
+
+	/**
+	 * Dry-runs an automation: reports whether a real trigger would start a run for the sample, then what
+	 * each step would do on the path the sample takes. Sends no email, makes no HTTP request, writes no
+	 * record and no run row, and mints no link. A false condition stops the walk; waits are reported and
+	 * passed over. The same report as the editor's Test run. It shows rendered subjects and texts, which
+	 * may hold private field values, as the editor preview does; recipients are masked.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <key>
+	 * : Automation key.
+	 *
+	 * [--record=<id>]
+	 * : Sample record (required when the trigger binds a record).
+	 *
+	 * [--payload=<json>]
+	 * : Sample payload, a JSON object: the body of a webhook trigger, or the payload of a custom event.
+	 *
+	 * [--format=<format>]
+	 * : Output format: text or json.
+	 * ---
+	 * default: text
+	 * options:
+	 *   - text
+	 *   - json
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp pegwork automation test barn_donor_thanks --record=42
+	 *     wp pegwork automation test sifg_inbound --payload='{"name":"Ada"}' --format=json
+	 *
+	 * @param string[]             $args       Positional arguments.
+	 * @param array<string,string> $assoc_args Named arguments.
+	 */
+	public function test( array $args, array $assoc_args ): void {
+		$result = self::test_result( (string) $args[0], $assoc_args );
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result->get_error_message() );
+		}
+		if ( 'json' === ( $assoc_args['format'] ?? 'text' ) ) {
+			WP_CLI::line( (string) wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+			return;
+		}
+		foreach ( $result['lines'] as $line ) {
+			WP_CLI::log( $line );
+		}
+	}
+
+	/**
+	 * The dry run of `test`, from its arguments: the same array the REST test route returns.
+	 *
+	 * @param string               $key        Automation key.
+	 * @param array<string,string> $assoc_args Named arguments (record, payload).
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	public static function test_result( string $key, array $assoc_args ): array|\WP_Error {
+		$payload = null;
+		if ( isset( $assoc_args['payload'] ) ) {
+			$payload = json_decode( (string) $assoc_args['payload'], true );
+			if ( ! is_array( $payload ) ) {
+				return new \WP_Error( 'pegwork_test_payload', 'The --payload is not a JSON object or array.' );
+			}
+		}
+		$record = isset( $assoc_args['record'] ) ? (int) $assoc_args['record'] : null;
+		return DryRun::result( $key, $record, $payload );
 	}
 
 	/**
