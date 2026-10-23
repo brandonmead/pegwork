@@ -1,6 +1,7 @@
 /**
  * WordPress dependencies
  */
+import { Slot } from '@wordpress/components';
 import { store as coreStore, useEntityProp } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import {
@@ -125,6 +126,8 @@ function TypePanel( { postType, typeConfig } ) {
 					error={ errors[ taxonomy.key ] }
 				/>
 			) ) }
+			{ /* Modules add sections here (the automation module's "Run an automation"). */ }
+			<Slot name="pegwork-editor-panel-after" />
 		</PluginDocumentSettingPanel>
 	);
 }

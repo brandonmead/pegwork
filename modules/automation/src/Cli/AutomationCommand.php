@@ -136,7 +136,9 @@ final class AutomationCommand {
 	/**
 	 * Runs an automation now: a schedule fires once (without moving its regular schedule), sweeping its
 	 * records or only --record; an event automation starts one run against --record (its `when` is not
-	 * evaluated). Idempotency keys still apply, so a repeat creates nothing.
+	 * evaluated); a manual automation starts one run, against --record when its trigger has a content type
+	 * (its `when` is checked; payload `trigger.user_id` is the --user, `trigger.source` is `cli`).
+	 * Idempotency keys still apply, so a repeat creates nothing.
 	 *
 	 * ## OPTIONS
 	 *
@@ -144,7 +146,7 @@ final class AutomationCommand {
 	 * : Automation key.
 	 *
 	 * [--record=<id>]
-	 * : Record to run against (required for event automations).
+	 * : Record to run against (required for event automations and manual automations with a content type).
 	 *
 	 * [--now=<datetime|offset>]
 	 * : Pretend it is this time, for this process only: a site-time datetime ("2027-11-02 09:00") or an
@@ -157,6 +159,7 @@ final class AutomationCommand {
 	 *
 	 *     wp pegwork automation run sifg_staleness_check --now=+12months
 	 *     wp pegwork automation run sifg_project_approved --record=24 --sync
+	 *     wp pegwork automation run barn_resend_thanks --record=31 --user=admin
 	 *
 	 * @param string[]             $args       Positional arguments.
 	 * @param array<string,string> $assoc_args Named arguments.
@@ -632,6 +635,8 @@ final class AutomationCommand {
 				return 'every ' . $trigger['every'] . ( isset( $trigger['at'] ) ? ' at ' . $trigger['at'] : '' ) . ( isset( $trigger['for_each'] ) ? ' for each ' . $trigger['for_each']['content_type'] : '' );
 			case 'webhook':
 				return 'webhook';
+			case 'manual':
+				return 'manual' . ( isset( $trigger['content_type'] ) ? ' (' . $trigger['content_type'] . ', ' . $trigger['allow'] . ')' : ' (' . $trigger['allow'] . ')' );
 		}
 		return $trigger['type'] . ' (not supported yet)';
 	}

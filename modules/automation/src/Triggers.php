@@ -206,6 +206,74 @@ final class Triggers {
 	}
 
 	/**
+	 * Starts a run of a `manual` automation for a staff member (the record editor button, the list's Run
+	 * now, or `wp pegwork automation run`). Callers authorize and check the record's type; this checks the
+	 * trigger's `when` against the record. The payload is `user_id` and `source` with origin depth 0. A
+	 * `request` ID (one per confirmation dialog or list page) is the idempotency key `manual:<user>:<request>`,
+	 * so a double submit starts one run; without one the automation's own `idempotency` template applies.
+	 *
+	 * @param string                    $key        Automation key.
+	 * @param array<string, mixed>      $definition Canonical automation.
+	 * @param array<string, mixed>|null $record     Records::get() shape, or null when the trigger has no content_type.
+	 * @param int                       $user       User who started it.
+	 * @param string                    $source     `editor`, `list` or `cli`.
+	 * @param string|null               $request    Request ID, or null.
+	 * @return array{run: int, duplicate: bool}|null The run (or the earlier run of the same key), or null when `when` is false.
+	 */
+	public function staff( string $key, array $definition, ?array $record, int $user, string $source, ?string $request = null ): ?array {
+		$payload = array(
+			'user_id' => $user,
+			'source'  => $source,
+			'origin'  => array(
+				'source' => 'manual',
+				'depth'  => 0,
+			),
+		);
+		$context = new Context( $this->engine->clock(), $record, $payload );
+		if ( isset( $definition['trigger']['when'] ) && ! Conditions::evaluate( $definition['trigger']['when'], $context ) ) {
+			return null;
+		}
+
+		$run = array(
+			'automation'      => $key,
+			'trigger_type'    => 'manual',
+			'record_id'       => null === $record ? null : (int) $record['id'],
+			'depth'           => 0,
+			'definition_hash' => self::hash( $definition ),
+			'context'         => array( 'trigger' => $payload ),
+		);
+		if ( null !== $request ) {
+			// The request ID wins over the automation's own idempotency template, as a delivery ID does.
+			unset( $definition['idempotency'] );
+			$run['idempotency_key'] = self::request_key( $user, $request );
+		}
+
+		$id = $this->enqueue( $run, $definition, $context );
+		if ( $id > 0 ) {
+			return array(
+				'run'       => $id,
+				'duplicate' => false,
+			);
+		}
+		$stored  = $run['idempotency_key'] ?? ( isset( $definition['idempotency'] ) ? self::key( Templates::render( (string) $definition['idempotency'], $context ) ) : null );
+		$earlier = null === $stored ? null : $this->engine->runs()->find_key( $key, $stored );
+		return array(
+			'run'       => (int) ( $earlier['id'] ?? 0 ),
+			'duplicate' => true,
+		);
+	}
+
+	/**
+	 * The stored idempotency key of a staff request ID.
+	 *
+	 * @param int    $user    User ID.
+	 * @param string $request Request ID.
+	 */
+	public static function request_key( int $user, string $request ): string {
+		return self::key( 'manual:' . $user . ':' . $request );
+	}
+
+	/**
 	 * Starts a run of a webhook automation from a verified inbound request. The payload is stored as
 	 * `trigger.payload`; the sender's X-Pegwork-Delivery, when given, is the idempotency key (so a
 	 * redelivery creates no second run), else the automation's `idempotency` template applies.

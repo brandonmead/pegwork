@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "key": "man_note",
+  "labels": { "singular": "Note", "plural": "Notes" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } }
+  ]
+}

@@ -317,7 +317,7 @@ class AutomationAdminTest extends AutomationTestCase {
 		// Event automation: refused, nothing created.
 		$this->post( Actions::RUN, array( 'automation' => 'job_approved' ) );
 		$this->assertSame( array(), $this->runs( 'job_approved' ) );
-		$this->assertStringContainsString( 'Run now is for schedule automations.', $this->render() );
+		$this->assertStringContainsString( 'Run now is for schedule automations and staff automations without a record.', $this->render() );
 
 		// Disabled: Manual::run()'s refusal, as the CLI gets it.
 		Overrides::set( 'job_sweep', 'off' );
