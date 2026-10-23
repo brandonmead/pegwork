@@ -201,10 +201,20 @@ final class RunLog {
 		$plan     = Plan::for_run( $run, $automation );
 		$previous = null;
 		$taken    = array(); // Latest decision summary by decision id: the path as it ran.
-		foreach ( $steps as $step ) {
+		$items    = Format::item_headings( $steps, $plan );
+		foreach ( array_values( $steps ) as $index => $step ) {
 			$step_id = (string) $step['step_id'];
 			$depth   = $plan?->depth( $step_id );
 			$where   = $plan?->location( $step_id );
+			if ( null !== $depth && 'loop' === $step['step_type'] && null !== $step['iteration'] ) {
+				++$depth; // A skipped item's row sits with the body.
+			}
+			if ( isset( $items[ $index ] ) ) {
+				$loop = 'loop' === $step['step_type'] ? $step_id : $plan?->loop_of( $step_id );
+				$at   = null === $loop ? 0 : (int) $plan?->depth( $loop );
+				echo '<tr class="pegwork-branch-row pegwork-item-row"><td colspan="7" class="pegwork-depth-' . esc_attr( (string) $at ) . '"><strong>' . esc_html( $items[ $index ] ) . '</strong></td></tr>';
+				$previous = null; // Each item's branches get their heading again.
+			}
 			if ( null !== $where && $where['first'] && $previous !== $step_id ) {
 				$label = $where['label'];
 				if ( ( $taken[ $where['decision'] ]['index'] ?? null ) === $where['branch'] && is_string( $taken[ $where['decision'] ]['branch'] ?? null ) ) {
@@ -231,7 +241,8 @@ final class RunLog {
 			echo '<td>' . Format::time( (string) $step['started_at'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			/* translators: %s: duration in milliseconds. */
 			echo '<td>' . esc_html( sprintf( __( '%s ms', 'pegwork' ), number_format_i18n( (int) $step['duration_ms'] ) ) ) . '</td>';
-			echo '<td>' . ( 'decision' === $step['step_type'] ? Format::decision( (array) $step['summary'] ) : Format::summary( (array) $step['summary'] ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
+			$reads = in_array( $step['step_type'], array( 'get_record', 'find_records' ), true ) ? Format::read_records( (array) $step['summary'] ) : '';
+			echo '<td>' . ( 'decision' === $step['step_type'] ? Format::decision( (array) $step['summary'] ) : Format::summary( (array) $step['summary'] ) ) . $reads . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			echo '<td>' . esc_html( (string) $step['error'] ) . '</td>';
 			echo '</tr>';
 		}

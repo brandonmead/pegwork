@@ -1,0 +1,24 @@
+{ "format": 1, "key": "lp_items", "label": "Loops: open tasks one by one, with a skip, a read, a decision, a webhook and a retried email",
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "open", "type": "find_records", "content_type": "barn_task", "status": [ "publish" ],
+      "filter": { "all": [ { "field": "done", "op": "ne", "value": true } ] },
+      "sort": { "field": "id", "order": "asc" }, "limit": 50 },
+    { "id": "each", "type": "loop", "over": "steps.open.records",
+      "steps": [
+        { "id": "has_email", "type": "condition", "when": { "var": "steps.each.item.assignee_email", "op": "not_empty" } },
+        { "id": "gift", "type": "get_record", "content_type": "barn_gift",
+          "related": { "relationship": "task_gift", "of": "{{steps.each.item.id}}" } },
+        { "id": "route", "type": "decision",
+          "branches": [
+            { "label": "Has a gift", "when": { "var": "steps.gift.found", "op": "eq", "value": true },
+              "steps": [ { "id": "notify", "type": "call_webhook", "url": "https://hooks.example.org/task",
+                "record": "{{steps.each.item.id}}", "content_type": "barn_task" } ] } ],
+          "otherwise": [ { "id": "mail", "type": "send_email", "retry": { "max": 1, "backoff": "PT5M" },
+            "to": "{{steps.each.item.assignee_email}}",
+            "subject": "Task {{steps.each.index}}: {{steps.each.item.name}}",
+            "text": "{{steps.each.item.name}} is open: {{steps.each.item.edit_url}}" } ] },
+        { "id": "stamp", "type": "update_record", "record": "{{steps.each.item.id}}", "values": { "reminded_on": "{{today}}" } } ] },
+    { "id": "after", "type": "send_email", "to": "{option:barn_settings.development_email}",
+      "subject": "Went through {{steps.each.count}} of {{steps.open.count}} open tasks",
+      "text": "Done." } ] }

@@ -16,17 +16,29 @@ namespace PegworkAutomation;
  * branch, next() of the enclosing decision, or null at the end of the tree. A flat Phase 4 list is a tree of
  * depth 0 only.
  *
- * Shared by the executor, the run detail and `wp pegwork automation log --run` (and later dry runs).
+ * Loop bodies are walked too: the last step of a body has next() = the loop's id, so the cursor returns to the
+ * loop after each item, and the loop decides whether to start the body again (body_first()) or continue
+ * after itself (next() of the loop). Loops do not nest (registry rule), so loop_of() names at most one loop.
+ *
+ * Shared by the executor, dry runs, the run detail and `wp pegwork automation log --run`.
  */
 final class Plan {
 
 	/**
-	 * Steps by id, in document order: `step`, `depth` (0 for the top list), `next` (id or null), and for a step
-	 * inside a branch `decision`, `branch` (index, -1 for otherwise) and `first` (whether it starts the branch).
+	 * Steps by id, in document order: `step`, `depth` (0 for the top list), `next` (id or null), `loop` (the
+	 * enclosing loop id or null), and for a step inside a branch `decision`, `branch` (index, -1 for
+	 * otherwise) and `first` (whether it starts the branch).
 	 *
 	 * @var array<string, array<string, mixed>>
 	 */
 	private array $nodes = array();
+
+	/**
+	 * First step id of each loop body (null for an empty body), by loop id.
+	 *
+	 * @var array<string, string|null>
+	 */
+	private array $bodies = array();
 
 	/**
 	 * First step id of each branch of each decision (null for an empty branch), by decision id then branch
@@ -56,7 +68,7 @@ final class Plan {
 	 * @param array<int, array<string, mixed>> $steps Canonical steps.
 	 */
 	public function __construct( array $steps ) {
-		$this->first = $this->walk( array_values( $steps ), 0, null, null, null );
+		$this->first = $this->walk( array_values( $steps ), 0, null, null, null, null );
 	}
 
 	/**
@@ -64,11 +76,13 @@ final class Plan {
 	 *
 	 * @param array<int, array<string, mixed>> $steps    Steps of the list.
 	 * @param int                              $depth    Depth of the list.
-	 * @param string|null                      $after    Id that follows the list (next of the enclosing decision).
+	 * @param string|null                      $after    Id that follows the list (next of the enclosing decision,
+	 *                                                   or the loop id after a loop body).
 	 * @param string|null                      $decision Enclosing decision id.
 	 * @param int|null                         $branch   Branch index in the enclosing decision (-1 for otherwise).
+	 * @param string|null                      $loop     Enclosing loop id.
 	 */
-	private function walk( array $steps, int $depth, ?string $after, ?string $decision, ?int $branch ): ?string {
+	private function walk( array $steps, int $depth, ?string $after, ?string $decision, ?int $branch, ?string $loop ): ?string {
 		// Ids are unique in a valid definition; should one repeat, its first position wins.
 		$kept = array();
 		foreach ( $steps as $step ) {
@@ -90,6 +104,7 @@ final class Plan {
 				'decision' => $decision,
 				'branch'   => $branch,
 				'first'    => null !== $decision && 0 === $index,
+				'loop'     => $loop,
 			);
 
 			if ( 'decision' === ( $step['type'] ?? null ) ) {
@@ -97,12 +112,16 @@ final class Plan {
 				$this->labels[ $id ]   = array();
 				foreach ( array_values( (array) ( $step['branches'] ?? array() ) ) as $branch_index => $item ) {
 					$this->labels[ $id ][ $branch_index ]   = (string) ( $item['label'] ?? '' );
-					$this->branches[ $id ][ $branch_index ] = $this->walk( (array) ( $item['steps'] ?? array() ), $depth + 1, $next, $id, $branch_index );
+					$this->branches[ $id ][ $branch_index ] = $this->walk( (array) ( $item['steps'] ?? array() ), $depth + 1, $next, $id, $branch_index, $loop );
 				}
 				if ( isset( $step['otherwise'] ) ) {
 					$this->labels[ $id ][-1]   = 'otherwise';
-					$this->branches[ $id ][-1] = $this->walk( (array) $step['otherwise'], $depth + 1, $next, $id, -1 );
+					$this->branches[ $id ][-1] = $this->walk( (array) $step['otherwise'], $depth + 1, $next, $id, -1, $loop );
 				}
+			}
+			if ( 'loop' === ( $step['type'] ?? null ) ) {
+				// The body ends back at the loop, which decides between the next item and the step after it.
+				$this->bodies[ $id ] = $this->walk( (array) ( $step['steps'] ?? array() ), $depth + 1, $id, null, null, $id );
 			}
 		}
 
@@ -195,6 +214,45 @@ final class Plan {
 			'label'    => $this->labels[ $node['decision'] ][ $node['branch'] ] ?? '',
 			'first'    => (bool) $node['first'],
 		);
+	}
+
+	/**
+	 * First step id of a loop's body, null for an empty body or an id that is not a loop.
+	 *
+	 * @param string $loop Loop id.
+	 */
+	public function body_first( string $loop ): ?string {
+		return $this->bodies[ $loop ] ?? null;
+	}
+
+	/**
+	 * The loop whose body holds a step (at any depth inside it), or null for a step outside every loop, a
+	 * loop itself, or an unknown id.
+	 *
+	 * @param string $id Step id.
+	 */
+	public function loop_of( string $id ): ?string {
+		return $this->nodes[ $id ]['loop'] ?? null;
+	}
+
+	/**
+	 * Whether an id is a loop step.
+	 *
+	 * @param string $id Step id.
+	 */
+	public function is_loop( string $id ): bool {
+		return array_key_exists( $id, $this->bodies );
+	}
+
+	/**
+	 * The step id whose `records` a loop iterates (`over` is `steps.<id>.records`), or null.
+	 *
+	 * @param string $loop Loop id.
+	 */
+	public function over( string $loop ): ?string {
+		$over  = (string) ( $this->step( $loop )['over'] ?? '' );
+		$parts = explode( '.', $over );
+		return 3 === count( $parts ) && 'steps' === $parts[0] && 'records' === $parts[2] ? $parts[1] : null;
 	}
 
 	/**

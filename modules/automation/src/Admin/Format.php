@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace PegworkAutomation\Admin;
 
 use PegworkAutomation\Executor;
+use PegworkAutomation\Plan;
 
 /**
  * Labels and escaped HTML fragments. Every method returns escaped HTML or plain text for esc_html().
@@ -234,6 +235,101 @@ final class Format {
 			$items .= '<li><code>' . esc_html( (string) $key ) . '</code> ' . esc_html( (string) $value ) . '</li>';
 		}
 		return '<ul class="pegwork-summary">' . $items . '</ul>';
+	}
+
+	/**
+	 * Plain-text headings that group a run's loop rows by item, keyed by the index of the first row of each
+	 * item: "Item 2 of 12: Task #38 (Call Ada)". The item IDs come from the loop's start row (`{ items, ids }`);
+	 * a row's loop is its own id for a loop row, else Plan::loop_of() under the current definition, else the
+	 * loop that started last. Shared by the run detail and `wp pegwork automation log --run`.
+	 *
+	 * @param array<int, array<string, mixed>> $steps Run-step rows, oldest first.
+	 * @param Plan|null                        $plan  Plan of the run under the current definition, or null.
+	 * @return array<int, string>
+	 */
+	public static function item_headings( array $steps, ?Plan $plan ): array {
+		$headings = array();
+		$started  = array(); // Start row summary by loop id.
+		$last     = null;
+		$current  = null;
+		foreach ( array_values( $steps ) as $index => $step ) {
+			$id        = (string) $step['step_id'];
+			$iteration = $step['iteration'] ?? null;
+			if ( null === $iteration ) {
+				if ( 'loop' === $step['step_type'] ) {
+					$started[ $id ] = (array) $step['summary'];
+					$last           = $id;
+				}
+				$current = null;
+				continue;
+			}
+			$loop = 'loop' === $step['step_type'] ? $id : ( $plan?->loop_of( $id ) ?? $last );
+			$key  = $loop . ':' . (int) $iteration;
+			if ( $key !== $current ) {
+				$current            = $key;
+				$headings[ $index ] = self::item( (array) ( $started[ (string) $loop ] ?? array() ), (int) $iteration );
+			}
+		}
+		return $headings;
+	}
+
+	/**
+	 * One item heading: "Item 2 of 12: Task #38 (Call Ada)", the title only when the viewer can read it.
+	 *
+	 * @param array<string, mixed> $summary   The loop's start row summary.
+	 * @param int                  $iteration 1-based item number.
+	 */
+	public static function item( array $summary, int $iteration ): string {
+		$ids   = array_values( (array) ( $summary['ids'] ?? array() ) );
+		$count = (int) ( $summary['items'] ?? count( $ids ) );
+		$id    = (int) ( $ids[ $iteration - 1 ] ?? 0 );
+		if ( $id <= 0 ) {
+			/* translators: 1: item number, 2: number of items. */
+			return sprintf( __( 'Item %1$d of %2$d', 'pegwork' ), $iteration, $count );
+		}
+		/* translators: 1: item number, 2: number of items, 3: record such as "Task #38 (Call Ada)". */
+		return sprintf( __( 'Item %1$d of %2$d: %3$s', 'pegwork' ), $iteration, $count, self::record_name( $id ) );
+	}
+
+	/**
+	 * A record as plain text: its type label and ID ("Task #38"), plus its title in parentheses when the
+	 * current user can read it (a run log never shows titles otherwise; it reads them live, never stores them).
+	 *
+	 * @param int $id Record ID.
+	 */
+	public static function record_name( int $id ): string {
+		$post  = get_post( $id );
+		$type  = null === $post ? null : pegwork_registry()->content_type( (string) $post->post_type );
+		$label = (string) ( $type['labels']['singular'] ?? '' );
+		/* translators: 1: content type label, 2: record ID. */
+		$name = '' === $label ? sprintf( __( '#%d', 'pegwork' ), $id ) : sprintf( __( '%1$s #%2$d', 'pegwork' ), $label, $id );
+		if ( null !== $post && '' !== $post->post_title && current_user_can( 'read_post', $id ) ) {
+			/* translators: 1: record such as "Task #38", 2: record title. */
+			$name = sprintf( __( '%1$s (%2$s)', 'pegwork' ), $name, wp_specialchars_decode( $post->post_title, ENT_QUOTES ) );
+		}
+		return $name;
+	}
+
+	/**
+	 * The records a read step found (`record_id` of a get_record, `ids` of a find_records summary), named
+	 * live for the run detail: at most 10, titled where the current user can read them. Empty for other
+	 * summaries.
+	 *
+	 * @param array<string, mixed> $summary Decoded summary.
+	 */
+	public static function read_records( array $summary ): string {
+		$ids = isset( $summary['ids'] ) && is_array( $summary['ids'] ) ? $summary['ids'] : ( isset( $summary['record_id'] ) && is_numeric( $summary['record_id'] ) ? array( $summary['record_id'] ) : array() );
+		$ids = array_values( array_filter( array_map( 'intval', $ids ), fn( int $id ) => $id > 0 ) );
+		if ( array() === $ids ) {
+			return '';
+		}
+		$names = array_map( array( self::class, 'record_name' ), array_slice( $ids, 0, 10 ) );
+		if ( count( $ids ) > 10 ) {
+			/* translators: %d: number of further records. */
+			$names[] = sprintf( __( 'and %d more', 'pegwork' ), count( $ids ) - 10 );
+		}
+		/* translators: %s: comma-separated records. */
+		return '<p class="pegwork-meta pegwork-read-records">' . esc_html( sprintf( __( 'Read: %s', 'pegwork' ), implode( ', ', $names ) ) ) . '</p>';
 	}
 
 	/**

@@ -476,10 +476,12 @@ class AutomationEngineTest extends AutomationTestCase {
 			array( 'id', 'automation', 'trigger_type', 'record_id', 'status', 'current_step', 'resume_at', 'depth', 'idempotency_key', 'definition_hash', 'context', 'error', 'created_at', 'claimed_at', 'started_at', 'finished_at' ),
 			$columns
 		);
-		$this->assertSame(
-			array( 'id', 'run_id', 'step_id', 'step_type', 'attempt', 'status', 'started_at', 'duration_ms', 'summary', 'error' ),
+		// Order-free: a fresh install puts `iteration` (Schema 2) after `attempt`, an upgrade from 1 appends it.
+		$this->assertEqualsCanonicalizing(
+			array( 'id', 'run_id', 'step_id', 'step_type', 'attempt', 'iteration', 'status', 'started_at', 'duration_ms', 'summary', 'error' ),
 			$wpdb->get_col( 'DESCRIBE ' . Schema::steps() ) // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Fixed table name.
 		);
+		$this->assertSame( '2', Schema::VERSION );
 		$this->assertSame( Schema::VERSION, get_option( Schema::OPTION ) );
 		$this->assertFalse( Schema::maybe_install() );
 	}

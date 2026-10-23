@@ -13,13 +13,16 @@ namespace PegworkAutomation;
  * Creates and upgrades `{prefix}pegwork_runs` and `{prefix}pegwork_run_steps` with dbDelta, versioned by
  * the `pegwork_automation_db_version` option. Checked on every boot (one autoloaded option read), so
  * enabling the module and updating the plugin both install or upgrade. Dropped by modules/automation/uninstall.php.
+ *
+ * Versions: 1 (Phase 4); 2 (Automation v3 loops) adds the nullable `pegwork_run_steps.iteration`. dbDelta
+ * only adds the column, so runs and step rows written under 1 (waiting runs included) are kept as they are.
  */
 final class Schema {
 
 	/**
 	 * Current table schema version.
 	 */
-	public const VERSION = '1';
+	public const VERSION = '2';
 
 	/**
 	 * Option holding the installed schema version.
@@ -97,6 +100,7 @@ run_id bigint(20) unsigned NOT NULL,
 step_id varchar(64) NOT NULL,
 step_type varchar(32) NOT NULL,
 attempt smallint(5) unsigned NOT NULL DEFAULT 1,
+iteration smallint(5) unsigned DEFAULT NULL,
 status varchar(16) NOT NULL,
 started_at datetime NOT NULL,
 duration_ms int(10) unsigned NOT NULL DEFAULT 0,

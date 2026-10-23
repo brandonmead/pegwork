@@ -182,6 +182,62 @@ class AutomationWpCronTest extends AutomationTestCase {
 	}
 
 	/**
+	 * A loop on real WP-Cron with a zero time budget: each wake-up runs one step and re-queues the run as a
+	 * new WP-Cron event, mid-loop included (`current_step` inside the body, `context.loops` stored); firing
+	 * the events as wp-cron.php does resumes each time at the same item and finishes the loop once.
+	 */
+	public function test_loop_resumes_after_a_time_budget_requeue_on_wp_cron() {
+		add_action( 'pegwork_register', fn( RegistryBuilder $b ) => $b->add_package( dirname( __DIR__, 2 ) . '/fixtures/valid/engine-loops' ) );
+		Plugin::init();
+		$this->assertNotNull( pegwork_registry()->automation( 'lp_items' ) );
+		update_option( 'barn_settings', array( 'development_email' => 'development@example.org' ) );
+		reset_phpmailer_instance();
+		add_filter( 'pegwork_automation_time_budget', fn() => 0 );
+
+		$tasks = array();
+		foreach ( array( 'Ada', 'Bo', 'Cy' ) as $name ) {
+			$tasks[] = \Pegwork\Api\Records::create(
+				'barn_task',
+				array(
+					'name'           => $name,
+					'due_on'         => '2026-11-04',
+					'assignee_email' => strtolower( $name ) . '@example.org',
+				),
+				'publish'
+			);
+		}
+		$id = Engine::instance()->triggers()->webhook( 'lp_items', pegwork_registry()->automation( 'lp_items' ), array(), null );
+		$this->assertGreaterThan( 0, $id );
+
+		$requeued = array();
+		for ( $i = 0; $i < 40; $i++ ) {
+			$this->assertNotFalse( wp_next_scheduled( Engine::RUN_HOOK, array( $id ) ), 'Each requeue is a WP-Cron event.' );
+			$this->assertSame( 1, $this->run_due_cron( Engine::RUN_HOOK ) );
+			$run = $this->run_row( $id );
+			if ( 'completed' === $run['status'] ) {
+				break;
+			}
+			$this->assertSame( 'queued', $run['status'] );
+			if ( isset( $run['context']['loops']['each'] ) ) {
+				$requeued[] = $run['current_step'] . '@' . $run['context']['loops']['each']['index'];
+			}
+		}
+
+		$this->assertSame( 'completed', $run['status'] );
+		$this->assertContains( 'mail@1', $requeued, 'Requeued mid-loop at the second item.' );
+		$this->assertContains( 'each@2', $requeued, 'Requeued at the loop between items.' );
+		$this->assertSame( array_unique( $requeued ), $requeued, 'Never the same position twice.' );
+		$this->assertArrayNotHasKey( 'loops', $run['context'] );
+		$this->assertSame(
+			array( 'ada@example.org', 'bo@example.org', 'cy@example.org', 'development@example.org' ),
+			array_map( fn( $mail ) => $mail['to'][0][0], tests_retrieve_phpmailer_instance()->mock_sent ),
+			'Each item emailed once, in order.'
+		);
+		$this->assertSame( $tasks, $this->steps( $id )[1]['summary']['ids'] );
+		$this->assertSame( array( 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3 ), array_values( array_filter( array_column( $this->steps( $id ), 'iteration' ) ) ) );
+	}
+
+	/**
 	 * The scheduler keeps one pending event per hook and args, and spawn honours the filter.
 	 */
 	public function test_wp_cron_scheduler() {

@@ -617,6 +617,9 @@ class ValidatorTest extends TestCase {
 		$this->assertSame( array(), $this->reads_codes( $bound ) );
 		$bound['steps'][] = array( 'id' => 'one_more' ) + $mail;
 		$this->assertSame( array( 'automation_too_large /steps' ), $this->reads_codes( $bound ) );
+		$message = Validator::validate( 'automation', $bound, 'f' )[0]->message;
+		$this->assertStringStartsWith( 'This automation can take 501 step attempts in one run; the limit is 500.', $message );
+		$this->assertStringContainsString( 'So with one step before a 50-item loop, the body can hold 9 steps: 1 + 1 + 9 x 50 = 452.', $message, 'The message says how to work out the room.' );
 	}
 
 	/**

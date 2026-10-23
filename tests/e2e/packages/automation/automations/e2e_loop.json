@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "e2e_loop",
+  "label": "E2E loop digest",
+  "description": "Browser tests of the run detail with a loop: item headings, a skipped item, read record titles.",
+  "trigger": { "type": "schedule", "every": "day", "at": "03:45" },
+  "steps": [
+    { "id": "drafts", "type": "find_records", "content_type": "sifg_project", "status": [ "draft" ],
+      "filter": { "all": [ { "field": "who_for", "op": "eq", "value": "E2E loop" } ] },
+      "sort": { "field": "id", "order": "asc" }, "limit": 10 },
+    { "id": "each", "type": "loop", "over": "steps.drafts.records",
+      "steps": [
+        { "id": "has_site", "type": "condition", "when": { "var": "steps.each.item.website", "op": "not_empty" } },
+        { "id": "mail", "type": "send_email", "to": "e2e-loop@example.org",
+          "subject": "Project {{steps.each.index}}: {{steps.each.item.name}}", "text": "{{steps.each.item.website}}" } ] },
+    { "id": "done", "type": "send_email", "to": "e2e-loop@example.org",
+      "subject": "Went through {{steps.each.count}} drafts", "text": "Run {{run.id}} is done." }
+  ]
+}

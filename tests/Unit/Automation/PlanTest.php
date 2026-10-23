@@ -190,6 +190,104 @@ class PlanTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A loop over a find's records.
+	 *
+	 * @param string $id    Step id.
+	 * @param array  $steps Body.
+	 * @return array<string, mixed>
+	 */
+	private static function loop( $id, $steps ) {
+		return array(
+			'id'    => $id,
+			'type'  => 'loop',
+			'over'  => 'steps.due.records',
+			'steps' => $steps,
+		);
+	}
+
+	/**
+	 * Loop next pointers: the last body step (also at the end of a branch inside the body) returns to the
+	 * loop, the loop's own next is the step after it; body_first, loop_of, depth and over.
+	 */
+	public function test_loop_next_pointers_body_first_and_loop_of() {
+		$steps = array(
+			self::step( 'due', 'find_records' ),
+			self::loop(
+				'each',
+				array(
+					self::step( 'has', 'condition' ),
+					self::decision(
+						'route',
+						array( 'Gift' => array( self::step( 'hook', 'call_webhook' ) ) ),
+						array( self::step( 'mail' ) )
+					),
+				)
+			),
+			self::step( 'summary' ),
+		);
+		$plan  = new Plan( $steps );
+
+		$this->assertSame( array( 'due', 'each', 'has', 'route', 'hook', 'mail', 'summary' ), $plan->ids() );
+		$this->assertSame( 'each', $plan->next( 'due' ) );
+		$this->assertSame( 'summary', $plan->next( 'each' ), 'After its last item the loop continues after itself.' );
+		$this->assertSame( 'has', $plan->body_first( 'each' ) );
+		$this->assertSame( 'route', $plan->next( 'has' ) );
+		$this->assertSame( 'each', $plan->next( 'route' ), 'A decision that branches nowhere at the end of the body returns to the loop.' );
+		$this->assertSame( 'each', $plan->next( 'hook' ), 'The end of a branch at the end of the body returns to the loop.' );
+		$this->assertSame( 'each', $plan->next( 'mail' ) );
+		$this->assertSame( 'each', $plan->after_branch( 'route', null ) );
+		$this->assertNull( $plan->next( 'summary' ) );
+
+		$this->assertSame( 'each', $plan->loop_of( 'has' ) );
+		$this->assertSame( 'each', $plan->loop_of( 'hook' ), 'At any depth inside the body.' );
+		$this->assertNull( $plan->loop_of( 'each' ), 'A loop is not inside itself.' );
+		$this->assertNull( $plan->loop_of( 'summary' ) );
+		$this->assertNull( $plan->loop_of( 'gone' ) );
+		$this->assertTrue( $plan->is_loop( 'each' ) );
+		$this->assertFalse( $plan->is_loop( 'route' ) );
+		$this->assertNull( $plan->body_first( 'route' ) );
+		$this->assertSame( 'due', $plan->over( 'each' ) );
+		$this->assertNull( $plan->over( 'route' ) );
+
+		$this->assertSame( array( 0, 0, 1, 1, 2, 2, 0 ), array_map( array( $plan, 'depth' ), $plan->ids() ) );
+		$this->assertNull( $plan->location( 'has' ), 'A body step is in no branch.' );
+		$this->assertSame( 'route', $plan->location( 'hook' )['decision'] );
+		$this->assertSame( array( 'find_records', 'loop', 'condition', 'decision', 'call_webhook', 'send_email' ), Plan::types( $steps ), 'Types include loop bodies.' );
+	}
+
+	/**
+	 * A loop inside a branch: its body returns to it, and after it the cursor continues after the decision;
+	 * a loop last in the tree ends it.
+	 */
+	public function test_loops_inside_branches() {
+		$plan = new Plan(
+			array(
+				self::step( 'due', 'find_records' ),
+				self::decision(
+					'any',
+					array( 'Some' => array( self::loop( 'each', array( self::step( 'remind' ), self::step( 'stamp', 'update_record' ) ) ) ) ),
+					array( self::step( 'none' ) )
+				),
+				self::step( 'summary' ),
+			)
+		);
+		$this->assertSame( 'each', $plan->branch_first( 'any', 0 ) );
+		$this->assertSame( 'remind', $plan->body_first( 'each' ) );
+		$this->assertSame( 'stamp', $plan->next( 'remind' ) );
+		$this->assertSame( 'each', $plan->next( 'stamp' ) );
+		$this->assertSame( 'summary', $plan->next( 'each' ), 'After the loop the branch ends: next of the decision.' );
+		$this->assertSame( 1, $plan->depth( 'each' ) );
+		$this->assertSame( 2, $plan->depth( 'stamp' ) );
+		$this->assertSame( 'each', $plan->loop_of( 'stamp' ) );
+		$this->assertNull( $plan->loop_of( 'none' ) );
+		$this->assertTrue( $plan->location( 'each' )['first'] );
+
+		$last = new Plan( array( self::step( 'due', 'find_records' ), self::loop( 'each', array( self::step( 'remind' ) ) ) ) );
+		$this->assertSame( 'each', $last->next( 'remind' ) );
+		$this->assertNull( $last->next( 'each' ) );
+	}
+
+	/**
 	 * A repeated id (never valid) keeps its first position.
 	 */
 	public function test_repeated_id_keeps_first_position() {
