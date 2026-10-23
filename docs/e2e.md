@@ -8,7 +8,7 @@ playwright.config.js
 bin/e2e-local-site.sh                 throwaway local site (no Docker)
 tests/e2e/mu-plugins/pegwork-e2e-sifg.php   registers examples/sifg as a file package
 tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, Turnstile test keys per mode, admin-only helper routes (docs/forms.md)
-tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, reset (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, registry automation read, reset (runs and overrides; e2e_ site automations) (docs/automation.md)
 tests/e2e/mu-plugins/pegwork-e2e-links.php  signed link helpers: Project create and read, link mint, link rate limit raised (docs/automation.md)
 tests/e2e/mu-plugins/pegwork-e2e-webhooks.php  webhook test package, in-process receiver for receiver.e2e.test, fixed test secret on reset, receiver down switch (docs/automation.md)
 tests/e2e/packages/                   file packages that only the browser tests register
