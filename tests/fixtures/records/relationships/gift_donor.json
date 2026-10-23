@@ -1,0 +1,1 @@
+{ "format": 1, "key": "gift_donor", "from": "rq_gift", "to": "rq_contact", "cardinality": "many_to_many", "label": "Donor" }

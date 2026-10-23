@@ -34,8 +34,8 @@ Emitted for registry content types only. Other post types, revisions, autosaves 
 | `record.deleted` | `pegwork_event_record_deleted` | `id, type, status, user_id, origin` |
 
 - `id` (int), `type` (content type key), `status` (post status after the save; for `deleted`, the status when deleted, usually `trash`), `user_id` (current user, 0 for none).
-- `changed`: registry field keys, then taxonomy keys, whose stored value differs, then `status` when the post status moved. A field named `status` would be indistinguishable here, so avoid that field key.
-- `old`: previous values of the `changed` keys. Fields are typed (bool, int or float or null for numbers, string otherwise); taxonomies are sorted term slug lists; `status` is the old post status. New values: read the record (`Records::get()`).
+- `changed`: registry field keys, then taxonomy keys, then relationship keys (relationships whose "from" end is the record's type; API 0.3.0), whose stored value differs, then `status` when the post status moved. A field named `status` would be indistinguishable here, so avoid that field key.
+- `old`: previous values of the `changed` keys. Fields are typed (bool, int or float or null for numbers, string otherwise); taxonomies are sorted term slug lists; relationships are sorted linked ID lists; `status` is the old post status. New values: read the record (`Records::get()`; links: `pegwork_related_ids()` or `Records::find()`).
 - `origin`: `{ source, automation?, run_id?, depth }`. `source` is `rest` (inside a REST request), `php` (any other `wp_insert_post`/`wp_update_post`/`wp_delete_post` caller, WP-CLI, cron) or `records_api`. `depth` is 0 for people; a save made while a record event is being dispatched (by its listeners) gets that event's depth plus 1. A Records API caller may pass a higher `depth`, plus `automation` and `run_id`, in its `$origin`.
 
 Ordering per logical save: one `record.created` or `record.updated`, then `record.status_changed` when the status moved. Creation reports `old_status` `new`. A save that changes nothing emits nothing.
@@ -85,14 +85,16 @@ array(
 |---|---|---|
 | REST create or update (block editor) | `rest_pre_insert_{type}`, after validation | `rest_after_insert_{type}` (post, meta and terms written) |
 | PHP `wp_insert_post`/`wp_update_post`, `wp_trash_post`, `wp_publish_post` | `pre_post_update` (or the status before, for `wp_publish_post`) | `wp_after_insert_post` |
-| `Records::create`/`update` | before writing | once, after post, meta and terms |
+| `Records::create`/`update` | before writing | once, after post, meta, terms and links |
+| `Records::relate`/`unrelate` | before writing the link | once, `record.updated` on the "from" record (nothing when the link already existed or was already absent) |
 | Permanent delete | `before_delete_post` | `deleted_post` |
 
 - Block editor "new post" inserts an auto-draft: nothing. Its first real save emits `record.created`.
 - Trash emits `record.updated` (`changed` = `status`) and `record.status_changed` to `trash`.
 - Autosaves (`/autosaves` routes, autosave revisions) emit nothing, including a draft autosave that updates the post itself.
 - A save rejected by validation emits nothing.
-- Limitation: a bare `update_post_meta()` or `wp_set_object_terms()` outside a save emits nothing. Use `Records::update()`.
+- A REST save that changes only the links of a "from" record (`meta._rel_{key}`) emits `record.updated` with the relationship key (before API 0.3.0 it emitted nothing).
+- Limitation: a bare `update_post_meta()` or `wp_set_object_terms()` outside a save emits nothing, and so do `wp pegwork relationship set` and the link cleanup when a "to" record is permanently deleted. Use `Records::update()` or `Records::relate()`.
 
 ## Form events
 

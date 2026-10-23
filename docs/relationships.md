@@ -49,7 +49,15 @@ Validation errors (PHP validator; the JSON Schema covers the per-file rules):
 
 `pegwork_validate_record( $type, $values, $post_id )` applies the same rules; pass linked IDs under the relationship key and the record's own ID so its existing links do not count against `one_to_many`. With a post ID and no value for a relationship key, the stored links are checked.
 
-`Pegwork\Api\Records` does not write links yet. `Records::update()` validates against the stored links; `Records::create()` of a record with a `required` relationship fails unless the status is a draft (link it afterwards through REST or WP-CLI).
+`Pegwork\Api\Records` (API 0.3.0) writes links with the same rules: relationship keys in `create()` and `update()` values replace a "from" record's links (one ID, comma-separated IDs or a list; empty clears), and `relate()` and `unrelate()` add or remove one link (`false` when nothing changed). Keys not given keep the stored links. Details: `docs/extension-api.md#link-writes`.
+
+## Events
+
+A change of links on a "from" record is part of its `record.updated`: the relationship key is in `changed` and `old.<key>` holds the previous sorted IDs. This holds for REST saves (`meta._rel_{key}`), `Records::create()`/`update()` and `relate()`/`unrelate()` (one event per changing write). `wp pegwork relationship set` and the cleanup when a "to" record is permanently deleted write rows directly and emit nothing. Payloads: `docs/events.md`.
+
+## Reads
+
+`Records::find( $type, array( 'related' => array( 'relationship' => $key, 'of' => $id ) ) )` reads the records at the other end of a link, in either direction, with filter, status (default private and publish), sort, limit and SQL `count` and `sum` over every match (`docs/extension-api.md#recordsfind-type-query-`). From a "to" record the "from" records are found through a derived table on `_rel_{key}` rows joined by ID (`Content\Relationships::sql()`, the SQL counterpart of `pegwork_related_query_args()`), so totals never build an ID list in PHP. Measured on 10,000 gifts and 3,000 contacts: a donor's count and sum in about 17 ms (`RecordQueryPerformanceTest`).
 
 ## REST
 

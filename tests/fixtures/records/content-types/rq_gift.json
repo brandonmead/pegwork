@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "key": "rq_gift",
+  "labels": { "singular": "Gift", "plural": "Gifts" },
+  "public": false,
+  "taxonomies": [
+    { "key": "rq_tag" },
+    { "key": "rq_fund", "select": "single" }
+  ],
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "wp": { "storage": "post_title" } },
+    { "key": "story", "type": "rich_text", "label": "Story", "wp": { "storage": "post_content" } },
+    { "key": "amount", "type": "number", "label": "Amount" },
+    { "key": "fee", "type": "number", "label": "Fee", "visibility": "private" },
+    { "key": "received_on", "type": "date", "label": "Received on" },
+    { "key": "method", "type": "select", "label": "Method",
+      "options": [ { "value": "card", "label": "Card" }, { "value": "check", "label": "Check" }, { "value": "cash", "label": "Cash" } ] },
+    { "key": "anonymous", "type": "boolean", "label": "Anonymous" },
+    { "key": "donor_email", "type": "email", "label": "Donor email", "visibility": "private" },
+    { "key": "code", "type": "text", "label": "Code" },
+    { "key": "website", "type": "url", "label": "Website" },
+    { "key": "note", "type": "textarea", "label": "Note" }
+  ]
+}

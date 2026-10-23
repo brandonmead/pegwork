@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()`, the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()`, the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive). 0.3.0 (Automation v3) adds `Records::find()`, `Records::relate()`, `Records::unrelate()` and relationship keys in `Records::create()` and `update()` values (before 0.3.0 they were rejected as unknown keys), and relationship keys in record event `changed` and `old`. Add-ons using them check `version_compare( Pegwork\Api\VERSION, '0.3.0', '>=' )`. The plugin version stays 0.2.0 until the next minor release.
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -252,9 +252,57 @@ Payloads may carry private field values: never output them as is.
 $record = Pegwork\Api\Records::get( 42 );            // { id, type, status, values, permalink } or null
 $id     = Pegwork\Api\Records::create( 'sifg_project', array( 'name' => 'Seed library' ) ); // int|WP_Error, draft
 $ok     = Pegwork\Api\Records::update( 42, array( 'last_verified' => '2026-10-18', 'sifg_project_status' => 'active' ), array( 'automation' => 'my_flow', 'run_id' => 7 ) );
+
+// API 0.3.0: relationship keys in values replace the record's links (one ID, "3,5" or a list; empty clears).
+$id     = Pegwork\Api\Records::create( 'barn_gift', array( 'name' => 'Spring gift', 'amount' => 300, 'gift_donor' => $contact_id ), 'private' );
+$added  = Pegwork\Api\Records::relate( 'task_gift', $task_id, $gift_id );   // true, false when already linked, or WP_Error
+$gone   = Pegwork\Api\Records::unrelate( 'task_gift', $task_id, $gift_id ); // true, false when not linked, or WP_Error
+
+// API 0.3.0: reads with SQL totals over every match.
+$giving = Pegwork\Api\Records::find(
+	'barn_gift',
+	array(
+		'related' => array( 'relationship' => 'gift_donor', 'of' => $contact_id ),
+		'sort'    => array( 'field' => 'received_on', 'order' => 'desc' ),
+		'limit'   => 0,
+		'count'   => true,
+		'sum'     => array( 'amount' ),
+	)
+); // { ids: [], count: 3, sums: { amount: 975.0 }, empty_operand: null } or WP_Error
 ```
 
 No capability check: the caller authorizes. Details: `docs/events.md`.
+
+### `Records::find( $type, $query )`
+
+| Key | Default | Rules |
+|---|---|---|
+| `related` | | `{ relationship, of }`. `relationship` must have `$type` at one end (`unknown_relationship`, `relationship_end`). `of` is a record ID at the other end. From a "to" record it reads the "from" records that link to it; from a "from" record, its linked records. An `of` that is missing, trashed or not at the other end matches nothing (not an error). |
+| `filter` | | `{ "all": [ leaf ] }` or `{ "any": [ leaf ] }`, one level, 1 to 10 leaves (`condition_too_complex`). Leaf `{ field, op, value }`: `field` is a field key, a taxonomy key or `id` (`unknown_field`); `rich_text`, `textarea` and `post_content` fields cannot be filtered (`filter_field`). `value` is a resolved literal, or a list for `in` and `not_in`. |
+| `status` | `[ "private", "publish" ]` | Any of `publish`, `future`, `draft`, `pending`, `private` (`invalid_value`). Trash and auto-drafts are never read. |
+| `sort` | `{ "field": "id", "order": "asc" }` | `id`, a title-storage field, or a `text`, `number`, `date`, `select` or `email` field (`filter_field`). Records with no value come last in both orders; ties go by ID in the same order. |
+| `limit` | 10 | Integer 0 to 50 (`invalid_value`). 0 returns no IDs, only totals. |
+| `count` | false | `count` is the number of every match (SQL `COUNT`), else null. |
+| `sum` | `[]` | Up to 5 meta-stored `number` field keys (`filter_field`, `invalid_value`). SQL `SUM( CAST( meta_value AS DECIMAL(20,4) ) )` over every match; 0 when nothing matches. |
+
+Operators (the automation condition operators, `changed` excluded):
+
+| Operator | Applies to | Matches |
+|---|---|---|
+| `eq`, `ne`, `in`, `not_in` | every type | `ne` and `not_in` also match records with no stored value. Taxonomy `eq` is set equality on slugs. Booleans: true is stored "1"; false includes no value. |
+| `lt`, `lte`, `gt`, `gte` | `number`, `date`, `id` | Numbers as decimals, dates as `Y-m-d`. A date-time operand is read in the site time zone; a date field is that day at midnight, so `lt 2027-03-01T09:00` includes 2027-03-01 and `eq` never matches a time after midnight. |
+| `empty`, `not_empty` | every type | No operand. A boolean and `id` are never empty. |
+| `contains` | multi-select taxonomies | The record has the term. |
+
+- Any other operand that is empty (null, `''` or an empty list) makes the whole query match nothing: the result has no IDs, a count of 0, sums of 0 and `empty_operand` set to the leaf's field. So a lookup by an email the payload lacks never matches every record with no email; to find empty values, use `empty`.
+- Text comparisons follow the database collation (case-insensitive by default).
+- Private fields can be filtered and summed: callers decide what is shown.
+- An invalid query returns `WP_Error` `pegwork_invalid_query` (status 400) with the reason in data `reason`: `unknown_content_type`, `unknown_property`, `unknown_relationship`, `relationship_end`, `unknown_field`, `filter_field`, `condition_too_complex`, `condition_type_mismatch` or `invalid_value` (the registry's codes for the same rules).
+- One WHERE clause drives the IDs, the count and the sums, so totals never come from a capped list. Timing on 10,000 gifts and 3,000 contacts: `RecordQueryPerformanceTest` and `architecture.md`.
+
+### Link writes
+
+`relate()` and `unrelate()` validate the "from" record's resulting links as a save would (`RecordValidator`): each "to" ID is a record of the "to" type, `one_to_many` holds, and a `required` relationship keeps at least one link when the "from" record is published, pending or future. Failures are `WP_Error` `pegwork_invalid_record` with the message in data `fields.<relationship key>`; an unknown key is `pegwork_unknown_relationship`. Each write that changes a link emits one `record.updated` on the "from" record, with the relationship key in `changed` and the previous IDs in `old`. Relationship keys in `create()` and `update()` values go through the same validation and are reported in the same event as the field changes. Only relationships whose "from" end is the record's type are keys; a "to" end key is an unknown field.
 
 ## Rate limits
 

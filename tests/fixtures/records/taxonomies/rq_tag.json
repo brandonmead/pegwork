@@ -1,0 +1,2 @@
+{ "format": 1, "key": "rq_tag", "labels": { "singular": "Tag", "plural": "Tags" },
+  "terms": [ { "slug": "monthly", "name": "Monthly" }, { "slug": "matched", "name": "Matched" }, { "slug": "event", "name": "Event" } ] }

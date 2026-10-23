@@ -1,0 +1,1 @@
+{ "format": 1, "key": "task_gift", "from": "rq_task", "to": "rq_gift", "cardinality": "one_to_many", "required": true }

@@ -12,6 +12,7 @@ namespace Pegwork\Events;
 use Pegwork\Api\Events;
 use Pegwork\Api\Registry;
 use Pegwork\Content\RecordValues;
+use Pegwork\Content\Relationships;
 use WP_Post;
 use WP_REST_Request;
 
@@ -307,8 +308,36 @@ final class RecordEvents {
 		}
 		self::$snapshots[ $post->ID ] = array(
 			'status' => $post->post_status,
-			'values' => RecordValues::read( self::$registry, $post ),
+			'values' => self::state( $post ),
 		);
+	}
+
+	/**
+	 * Values a diff compares: stored field values and term slugs, then the linked IDs of every relationship
+	 * whose "from" end is the post's type, by relationship key.
+	 *
+	 * @param WP_Post $post Post.
+	 * @return array<string, mixed>
+	 */
+	private static function state( WP_Post $post ): array {
+		$values = RecordValues::read( self::$registry, $post );
+		foreach ( array_keys( Relationships::from( self::$registry, $post->post_type ) ) as $key ) {
+			$values[ $key ] = Relationships::stored_ids( $post->ID, $key );
+		}
+
+		return $values;
+	}
+
+	/**
+	 * Emits the record.updated of a claimed post whose links changed without a post save (Records::relate()).
+	 *
+	 * @param int $id Post ID claimed with claim().
+	 */
+	public static function emit_claimed( int $id ): void {
+		$post = get_post( $id );
+		if ( $post instanceof WP_Post && self::tracked( $post ) ) {
+			self::flush( $post, false, $post->post_status );
+		}
 	}
 
 	/**
@@ -345,7 +374,7 @@ final class RecordEvents {
 			return;
 		}
 
-		$current = RecordValues::read( self::$registry, $post );
+		$current = self::state( $post );
 		$before  = $snapshot ?? array(
 			'status' => $status_before ?? $status,
 			'values' => $current,
