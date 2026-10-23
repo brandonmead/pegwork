@@ -10,6 +10,7 @@ import {
 	BRANCH,
 	DECISION,
 	STEP,
+	assignId,
 	compileBlocks,
 	errorOwners,
 	errorsAt,
@@ -257,6 +258,27 @@ describe( 'step ids', () => {
 		expect( needsId( list, 'x', 'mail' ) ).toBe( false );
 		expect( needsId( list, 'y', 'mail' ) ).toBe( true );
 		expect( needsId( list, 'x', '' ) ).toBe( true );
+	} );
+
+	it( 'gives a new block one id, even when its mount effect runs twice', () => {
+		const fresh = [ step( 'a', { id: 'decision' } ), step( 'b', {} ) ];
+		expect( assignId( fresh, 'b', undefined, 'decision' ) ).toBe(
+			'decision_2'
+		);
+		const once = [ step( 'x', {} ) ];
+		expect( assignId( once, 'x', undefined, 'decision' ) ).toBe(
+			'decision'
+		);
+		// StrictMode's second run still has the mount props (no id), but the store has the id.
+		const twice = [ step( 'x', { id: 'decision' } ) ];
+		expect( assignId( twice, 'x', undefined, 'decision' ) ).toBeNull();
+		// A pasted duplicate later in the document is renamed; the original keeps its id.
+		const pasted = [
+			step( 'x', { id: 'mail' } ),
+			step( 'y', { id: 'mail' } ),
+		];
+		expect( assignId( pasted, 'x', 'mail', 'send_email' ) ).toBeNull();
+		expect( assignId( pasted, 'y', 'mail', 'send_email' ) ).toBe( 'email' );
 	} );
 
 	it( 'slugifies labels into keys', () => {

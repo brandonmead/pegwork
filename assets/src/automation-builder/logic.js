@@ -372,6 +372,29 @@ export function needsId( blocks, clientId, id ) {
 }
 
 /**
+ * The id a mounting step or decision should take, or null to keep its own. Reads the block's id
+ * from `blocks` (the store), not from the props captured at mount: React's StrictMode runs a mount
+ * effect twice in development builds (SCRIPT_DEBUG), and the second run must see the id the first
+ * one gave, or a new block skips to `decision_2`.
+ *
+ * @param {Array}  blocks   Every block, in document order.
+ * @param {string} clientId Block.
+ * @param {string} id       Its id when it mounted (used when the block is not in `blocks`).
+ * @param {string} type     Step type (or `decision`).
+ * @return {?string} New id, or null.
+ */
+export function assignId( blocks, clientId, id, type ) {
+	const self = blocks.find( ( block ) => block.clientId === clientId );
+	if ( ! needsId( blocks, clientId, self ? self.attributes?.id : id ) ) {
+		return null;
+	}
+	const taken = new Set(
+		blocks.map( ( block ) => block.attributes?.id ).filter( Boolean )
+	);
+	return uniqueId( type, taken );
+}
+
+/**
  * Nesting level of a block's list: 1 at the top, 2 inside one decision's branch, and so on.
  *
  * @param {?string} pointer Pointer of a step or decision.

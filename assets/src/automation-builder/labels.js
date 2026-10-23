@@ -210,7 +210,11 @@ function valueText( value, field, fields ) {
 	const option = ( field?.options || [] ).find(
 		( item ) => item.value === value
 	);
-	return option ? option.label : `"${ value }"`;
+	if ( option ) {
+		return option.label;
+	}
+	// A number reads as itself ("Amount is at least 250"); only text is quoted.
+	return typeof value === 'number' ? String( value ) : `"${ value }"`;
 }
 
 /**

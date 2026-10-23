@@ -30,7 +30,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import ConditionBuilder from './condition-builder';
 import { DurationControl, Errors, TemplateControl, wire } from './controls';
 import { stepSummary, typeLabel } from './labels';
-import { flatten, needsId, toNumber, uniqueId } from './logic';
+import { assignId, flatten, toNumber } from './logic';
 import MoveToBranch from './move';
 import { PreviewPanel } from './preview';
 import { binding, conditionFields, mergeTags, typeFields } from './scope';
@@ -67,13 +67,10 @@ export function useStepId( clientId, id, type, setAttributes ) {
 		if ( config.readOnly ) {
 			return;
 		}
-		const all = flatten( getBlocks() );
-		if ( needsId( all, clientId, id ) ) {
-			const taken = new Set(
-				all.map( ( block ) => block.attributes?.id ).filter( Boolean )
-			);
+		const next = assignId( flatten( getBlocks() ), clientId, id, type );
+		if ( next ) {
 			notPersistent?.();
-			setAttributes( { id: uniqueId( type, taken ) } );
+			setAttributes( { id: next } );
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- Once per mount.
 	}, [] );

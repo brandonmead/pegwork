@@ -11,8 +11,9 @@ tests/e2e/mu-plugins/pegwork-e2e-forms.php  forms test package, mail log, Turnst
 tests/e2e/mu-plugins/pegwork-e2e-automation.php  automation test package, mail failure switch, module toggle, in-process cron, registry automation read, reset (runs and overrides; e2e_ site automations) (docs/automation.md)
 tests/e2e/mu-plugins/pegwork-e2e-links.php  signed link helpers: Project create and read, link mint, link rate limit raised (docs/automation.md)
 tests/e2e/mu-plugins/pegwork-e2e-webhooks.php  webhook test package, in-process receiver for receiver.e2e.test, fixed test secret on reset, receiver down switch (docs/automation.md)
+tests/e2e/mu-plugins/pegwork-e2e-barn.php  registers tests/e2e/packages/barn (BarnCRM types, form, options page), sample gift, saved automation vs fixture in canonical form, reset (BarnCRM site automations, runs, gifts, tasks) (docs/automation.md)
 tests/e2e/packages/                   file packages that only the browser tests register
-tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures
+tests/e2e/utils/                      env, auth, records, a11y, no-js, fixtures, builder (keyboard helpers for the automation editor)
 tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest would run)
 ```
 
@@ -44,7 +45,7 @@ bin/e2e-local-site.sh stop e2e
 bin/e2e-local-site.sh destroy e2e         # stop, drop database wpenv_e2e; delete ~/wp-envs/e2e yourself
 ```
 
-Subcommands: `create <name> <port>`, `start <name> <port>`, `stop <name>`, `destroy <name>`. All are idempotent. The script only touches database `wpenv_<name>` and folder `~/wp-envs/<name>`, and writes the random admin password only to `~/wp-envs/<name>/.e2e-env` (mode 600).
+Subcommands: `create <name> <port>`, `start <name> <port>`, `stop <name>`, `destroy <name>`. All are idempotent. A new site gets `WP_DEBUG` and `SCRIPT_DEBUG` like wp-env in CI: `SCRIPT_DEBUG` loads development React, whose StrictMode runs mount effects twice, so effect bugs that only CI showed reproduce locally (on an older site: `wp config set SCRIPT_DEBUG true --raw`). The script only touches database `wpenv_<name>` and folder `~/wp-envs/<name>`, and writes the random admin password only to `~/wp-envs/<name>/.e2e-env` (mode 600).
 
 What `create` does, step by step (the same by hand):
 
