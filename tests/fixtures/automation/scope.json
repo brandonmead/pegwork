@@ -1,0 +1,969 @@
+{
+	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the trigger condition (exactly those validate with \"sample\").",
+	"packages": {
+		"branching": {
+			"dir": "tests/fixtures/valid/branching",
+			"config": {
+				"types": [
+					{
+						"key": "help_request",
+						"label": "Help request",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "scenario",
+								"label": "Scenario",
+								"type": "text"
+							},
+							{
+								"key": "priority",
+								"label": "Priority",
+								"type": "select",
+								"options": [
+									{
+										"value": "low",
+										"label": "Low"
+									},
+									{
+										"value": "normal",
+										"label": "Normal"
+									},
+									{
+										"value": "high",
+										"label": "High"
+									}
+								]
+							},
+							{
+								"key": "amount",
+								"label": "Amount",
+								"type": "number"
+							},
+							{
+								"key": "stage",
+								"label": "Stage",
+								"type": "select",
+								"options": [
+									{
+										"value": "new",
+										"label": "New"
+									},
+									{
+										"value": "contacted",
+										"label": "Contacted"
+									}
+								]
+							},
+							{
+								"key": "coordinator",
+								"label": "Coordinator",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "notes",
+								"label": "Notes",
+								"type": "text"
+							}
+						],
+						"taxonomies": []
+					},
+					{
+						"key": "help_task",
+						"label": "Help task",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text"
+							},
+							{
+								"key": "related",
+								"label": "Related request",
+								"type": "number"
+							},
+							{
+								"key": "due_on",
+								"label": "Due on",
+								"type": "date"
+							}
+						],
+						"taxonomies": []
+					}
+				],
+				"forms": [
+					{
+						"key": "help_confirm",
+						"label": "Ask for help (confirm by email)",
+						"target": "help_request",
+						"confirm": true,
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"private": true
+							}
+						]
+					},
+					{
+						"key": "help_note",
+						"label": "Leave a note",
+						"target": "",
+						"confirm": false,
+						"fields": [
+							{
+								"key": "message",
+								"label": "Message"
+							}
+						]
+					},
+					{
+						"key": "help_signup",
+						"label": "Ask for help",
+						"target": "help_request",
+						"confirm": false,
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"private": true
+							},
+							{
+								"key": "priority",
+								"label": "Priority"
+							}
+						]
+					}
+				],
+				"optionsPages": []
+			}
+		},
+		"sections": {
+			"dir": "tests/fixtures/valid/sections",
+			"config": {
+				"types": [
+					{
+						"key": "talk",
+						"label": "Talk",
+						"fields": [
+							{
+								"key": "title",
+								"label": "Title",
+								"type": "text"
+							},
+							{
+								"key": "abstract",
+								"label": "Abstract",
+								"type": "rich_text"
+							},
+							{
+								"key": "speaker_email",
+								"label": "Speaker email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "recorded",
+								"label": "Recorded",
+								"type": "boolean"
+							},
+							{
+								"key": "recording_link",
+								"label": "Recording link",
+								"type": "url"
+							},
+							{
+								"key": "format",
+								"label": "Format",
+								"type": "select",
+								"options": [
+									{
+										"value": "lightning",
+										"label": "Lightning"
+									},
+									{
+										"value": "keynote",
+										"label": "Keynote"
+									},
+									{
+										"value": "workshop",
+										"label": "Workshop"
+									}
+								]
+							},
+							{
+								"key": "seats",
+								"label": "Seats",
+								"type": "number"
+							},
+							{
+								"key": "held_on",
+								"label": "Held on",
+								"type": "date"
+							},
+							{
+								"key": "notes",
+								"label": "Notes",
+								"type": "textarea",
+								"private": true
+							}
+						],
+						"taxonomies": [
+							{
+								"key": "talk_track",
+								"label": "Tracks",
+								"multiple": true,
+								"options": [
+									{
+										"value": "data",
+										"label": "Data"
+									},
+									{
+										"value": "design",
+										"label": "Design"
+									},
+									{
+										"value": "policy",
+										"label": "Policy"
+									}
+								]
+							},
+							{
+								"key": "talk_level",
+								"label": "Level",
+								"multiple": false,
+								"options": [
+									{
+										"value": "intro",
+										"label": "Intro"
+									},
+									{
+										"value": "advanced",
+										"label": "Advanced"
+									}
+								]
+							}
+						]
+					}
+				],
+				"forms": [
+					{
+						"key": "contact",
+						"label": "Contact us",
+						"target": "",
+						"confirm": false,
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name"
+							},
+							{
+								"key": "email",
+								"label": "Email"
+							},
+							{
+								"key": "topic",
+								"label": "Topic"
+							},
+							{
+								"key": "message",
+								"label": "Message"
+							}
+						]
+					},
+					{
+						"key": "submit_talk",
+						"label": "Submit a talk",
+						"target": "talk",
+						"confirm": true,
+						"fields": [
+							{
+								"key": "title",
+								"label": "Title"
+							},
+							{
+								"key": "abstract",
+								"label": "Abstract"
+							},
+							{
+								"key": "format",
+								"label": "Format"
+							},
+							{
+								"key": "talk_track",
+								"label": "talk_track"
+							},
+							{
+								"key": "talk_level",
+								"label": "Audience level"
+							},
+							{
+								"key": "recorded",
+								"label": "Recorded"
+							},
+							{
+								"key": "recording_link",
+								"label": "Recording link"
+							},
+							{
+								"key": "speaker_email",
+								"label": "Speaker email",
+								"private": true
+							},
+							{
+								"key": "consent",
+								"label": "I agree the talk can be listed publicly"
+							},
+							{
+								"key": "slides",
+								"label": "Slides"
+							},
+							{
+								"key": "size",
+								"label": "Expected audience"
+							},
+							{
+								"key": "comments",
+								"label": "Comments"
+							}
+						]
+					}
+				],
+				"optionsPages": [
+					{
+						"key": "talk_settings",
+						"label": "Talk settings",
+						"fields": [
+							{
+								"key": "featured_talk",
+								"label": "Featured talk",
+								"type": "post"
+							},
+							{
+								"key": "organizer_email",
+								"label": "Organizer email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "intro",
+								"label": "Intro",
+								"type": "rich_text"
+							},
+							{
+								"key": "seats_default",
+								"label": "Default seats",
+								"type": "number"
+							},
+							{
+								"key": "mode",
+								"label": "Mode",
+								"type": "select",
+								"options": [
+									{
+										"value": "open",
+										"label": "Open"
+									},
+									{
+										"value": "closed",
+										"label": "Closed"
+									}
+								]
+							},
+							{
+								"key": "accepting",
+								"label": "Accepting talks",
+								"type": "boolean"
+							},
+							{
+								"key": "deadline",
+								"label": "Deadline",
+								"type": "date"
+							}
+						]
+					}
+				]
+			}
+		}
+	},
+	"tags": [
+		{
+			"package": "branching",
+			"automation": "br_deep",
+			"at": "/steps/0/branches/0/steps/0/branches/0/steps/0/branches/0/steps/1/subject",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.email",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.coordinator",
+				"record.notes",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"steps.make_task.record_id",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id"
+			],
+			"refuse": []
+		},
+		{
+			"package": "branching",
+			"automation": "br_deep",
+			"at": "/steps/1/subject",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.email",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.coordinator",
+				"record.notes",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id"
+			],
+			"refuse": [
+				"steps.make_task.record_id"
+			]
+		},
+		{
+			"package": "branching",
+			"automation": "br_deep",
+			"at": "/steps/0/branches/0/steps/0/branches/0/steps/0/otherwise/0/values/notes",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.email",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.coordinator",
+				"record.notes",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id"
+			],
+			"refuse": [
+				"steps.make_task.record_id",
+				"steps.task_mail.record_id"
+			]
+		},
+		{
+			"package": "branching",
+			"automation": "br_hook",
+			"at": "/steps/0/branches/0/steps/0/url",
+			"template": "https://hooks.example.org/{{tag}}",
+			"context": "public",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.notes",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id"
+			],
+			"refuse": [
+				"record.email",
+				"record.coordinator"
+			]
+		},
+		{
+			"package": "branching",
+			"automation": "br_signup",
+			"at": "/steps/1/text",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.email",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.coordinator",
+				"record.notes",
+				"trigger.form",
+				"trigger.entry_id",
+				"trigger.post_id",
+				"trigger.record_id",
+				"trigger.values.name",
+				"trigger.values.email",
+				"trigger.values.priority",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id"
+			],
+			"refuse": [
+				"trigger.values.message",
+				"trigger.old.name"
+			]
+		},
+		{
+			"package": "branching",
+			"automation": "br_note",
+			"at": "/steps/0/text",
+			"context": "private",
+			"expect": [
+				"trigger.form",
+				"trigger.entry_id",
+				"trigger.post_id",
+				"trigger.record_id",
+				"trigger.values.message",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id"
+			],
+			"refuse": [
+				"record.name",
+				"record.id"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"at": "/steps/1/text",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.title",
+				"record.abstract",
+				"record.speaker_email",
+				"record.recorded",
+				"record.recording_link",
+				"record.format",
+				"record.seats",
+				"record.held_on",
+				"record.notes",
+				"record.talk_track",
+				"record.talk_level",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"trigger.old.title",
+				"trigger.old.abstract",
+				"trigger.old.speaker_email",
+				"trigger.old.recorded",
+				"trigger.old.recording_link",
+				"trigger.old.format",
+				"trigger.old.seats",
+				"trigger.old.held_on",
+				"trigger.old.notes",
+				"trigger.old.talk_track",
+				"trigger.old.talk_level",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:talk_settings.featured_talk",
+				"option:talk_settings.intro",
+				"option:talk_settings.seats_default",
+				"option:talk_settings.mode",
+				"option:talk_settings.accepting",
+				"option:talk_settings.deadline"
+			],
+			"refuse": [
+				"option:talk_settings.organizer_email",
+				"trigger.new_status"
+			]
+		}
+	],
+	"fields": [
+		{
+			"package": "branching",
+			"automation": "br_deep",
+			"at": "/steps/0/branches/0/steps/0/branches/0/when",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.name",
+				"record.email",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.coordinator",
+				"record.notes",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "branching",
+			"automation": "br_signup",
+			"at": "/steps/0/branches/0/when",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.name",
+				"record.email",
+				"record.scenario",
+				"record.priority",
+				"record.amount",
+				"record.stage",
+				"record.coordinator",
+				"record.notes",
+				"trigger.form",
+				"trigger.entry_id",
+				"trigger.post_id",
+				"trigger.record_id",
+				"trigger.values.name",
+				"trigger.values.email",
+				"trigger.values.priority",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"at": "/trigger/when",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.title",
+				"record.abstract",
+				"record.speaker_email",
+				"record.recorded",
+				"record.recording_link",
+				"record.format",
+				"record.seats",
+				"record.held_on",
+				"record.notes",
+				"record.talk_track",
+				"record.talk_level",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"trigger.old.title",
+				"trigger.old.abstract",
+				"trigger.old.speaker_email",
+				"trigger.old.recorded",
+				"trigger.old.recording_link",
+				"trigger.old.format",
+				"trigger.old.seats",
+				"trigger.old.held_on",
+				"trigger.old.notes",
+				"trigger.old.talk_track",
+				"trigger.old.talk_level",
+				"site.name",
+				"site.url"
+			]
+		}
+	],
+	"operators": [
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.seats",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.held_on",
+			"sample": "2027-01-01",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.title",
+			"sample": "x",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.format",
+			"sample": "keynote",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.talk_track",
+			"sample": "x",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty",
+				"contains",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.talk_level",
+			"sample": "x",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.recorded",
+			"sample": true,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.status",
+			"sample": "publish",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "record.id",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty",
+				"changed"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "trigger.old.seats",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "trigger.user_id",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty",
+				"contains"
+			]
+		},
+		{
+			"package": "sections",
+			"automation": "talk_updated",
+			"var": "site.name",
+			"sample": "x",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty",
+				"contains"
+			]
+		},
+		{
+			"package": "branching",
+			"automation": "br_paths",
+			"var": "record.amount",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		}
+	]
+}
