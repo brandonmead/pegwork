@@ -1,0 +1,23 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "webhook"
+    },
+    "steps": [
+        {
+            "id": "gift",
+            "type": "get_record",
+            "content_type": "barn_gift",
+            "record": "{{trigger.payload.gift_id}}"
+        },
+        {
+            "id": "link",
+            "type": "relate",
+            "relationship": "task_gift",
+            "from": "{{steps.gift.record_id}}",
+            "to": "{{trigger.payload.task_id}}"
+        }
+    ]
+}

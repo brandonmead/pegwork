@@ -1,0 +1,19 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "manual",
+        "content_type": "barn_gift",
+        "button": "Resend the thank-you email to the donor of this gift"
+    },
+    "steps": [
+        {
+            "id": "ping",
+            "type": "send_email",
+            "to": "{{option:barn_settings.development_email}}",
+            "subject": "Hi",
+            "text": "Hi"
+        }
+    ]
+}

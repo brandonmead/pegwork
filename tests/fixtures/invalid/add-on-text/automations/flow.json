@@ -1,0 +1,19 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "note",
+            "type": "send_email",
+            "to": "{{option:barn_settings.development_email}}",
+            "subject": "Hi",
+            "text": "Next: {{record.name | add:\"P1D\"}}"
+        }
+    ]
+}

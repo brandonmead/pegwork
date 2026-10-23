@@ -1,0 +1,16 @@
+{ "format": 1, "key": "barn_lifetime_milestone", "label": "Lifetime giving reaches 1,000: thank the donor",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "barn_gift" },
+  "steps": [
+    { "id": "donor", "type": "get_record", "content_type": "barn_contact",
+      "related": { "relationship": "gift_donor", "of": "{{record.id}}" } },
+    { "id": "has_donor", "type": "condition", "when": { "var": "steps.donor.found", "op": "eq", "value": true } },
+    { "id": "not_yet", "type": "condition", "when": { "var": "steps.donor.record.milestone_1000_on", "op": "empty" } },
+    { "id": "giving", "type": "find_records", "content_type": "barn_gift", "limit": 0, "sum": [ "amount" ],
+      "related": { "relationship": "gift_donor", "of": "{{steps.donor.record_id}}" } },
+    { "id": "reached", "type": "condition", "when": { "var": "steps.giving.sum.amount", "op": "gte", "value": 1000 } },
+    { "id": "stamp", "type": "update_record", "record": "{{steps.donor.record_id}}",
+      "values": { "milestone_1000_on": "{{today}}" } },
+    { "id": "celebrate", "type": "send_email", "to": "{{steps.donor.record.email}}",
+      "reply_to": "{{option:barn_settings.development_email}}",
+      "subject": "Thank you for {{steps.giving.count}} gifts to {{site.name}}",
+      "text": "Dear {{steps.donor.record.name}},\n\nYour gifts to {{site.name}} now total ${{steps.giving.sum.amount | number:2}}. Thank you for standing with us.\n\n{{site.name}}" } ] }

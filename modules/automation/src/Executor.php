@@ -76,6 +76,11 @@ final class Executor {
 			$runs->finish( $id, 'cancelled', 'automation_disabled: the automation is disabled.' );
 			return 'cancelled';
 		}
+		$unsupported = $this->engine->unsupported( $definition );
+		if ( null !== $unsupported ) {
+			$runs->finish( $id, 'failed', 'unsupported_step: ' . $unsupported ); // Before any step runs: nothing half-done.
+			return 'failed';
+		}
 
 		$steps = self::step_list( $definition, $run );
 		if ( null === $steps ) {

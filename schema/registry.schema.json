@@ -706,9 +706,13 @@
 			"type": "object",
 			"required": [ "type" ],
 			"properties": {
-				"type": { "enum": [ "event", "schedule", "webhook" ] }
+				"type": { "enum": [ "event", "schedule", "webhook", "manual" ] }
 			},
 			"allOf": [
+				{
+					"if": { "properties": { "type": { "const": "manual" } } },
+					"then": { "$ref": "#/$defs/trigger_manual" }
+				},
 				{
 					"if": { "properties": { "type": { "const": "event" } } },
 					"then": { "$ref": "#/$defs/trigger_event" }
@@ -768,6 +772,20 @@
 				}
 			}
 		},
+		"trigger_manual": {
+			"description": "A Run button: on the edit screen of content_type's records (the run binds the record), or Run now on the list without content_type.",
+			"required": [ "type", "button" ],
+			"additionalProperties": false,
+			"properties": {
+				"type": true,
+				"content_type": { "$ref": "#/$defs/key" },
+				"button": { "type": "string", "minLength": 1, "maxLength": 40 },
+				"allow": { "description": "admins: manage_options; editors: users who can edit the record.", "enum": [ "admins", "editors" ], "default": "admins" },
+				"when": { "$ref": "#/$defs/expression" }
+			},
+			"if": { "required": [ "allow" ], "properties": { "allow": { "const": "editors" } } },
+			"then": { "required": [ "content_type" ] }
+		},
 		"duration": {
 			"description": "ISO 8601 duration, such as P30D or PT1H. Waits and link expiry: PT1H to P2Y (PHP only).",
 			"type": "string",
@@ -792,12 +810,28 @@
 			"type": "object",
 			"required": [ "id", "type" ],
 			"properties": {
-				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition", "decision" ] }
+				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition", "decision", "get_record", "find_records", "loop", "relate" ] }
 			},
 			"allOf": [
 				{
 					"if": { "properties": { "type": { "const": "decision" } } },
 					"then": { "$ref": "#/$defs/decision" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "get_record" } } },
+					"then": { "$ref": "#/$defs/get_record" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "find_records" } } },
+					"then": { "$ref": "#/$defs/find_records" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "loop" } } },
+					"then": { "$ref": "#/$defs/loop" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "relate" } } },
+					"then": { "$ref": "#/$defs/relate" }
 				},
 				{
 					"if": { "properties": { "type": { "const": "update_record" } } },
@@ -808,6 +842,7 @@
 							"id": { "$ref": "#/$defs/key" },
 							"type": true,
 							"retry": { "$ref": "#/$defs/retry" },
+							"on_error": { "$ref": "#/$defs/on_error" },
 							"record": { "description": "Template for the record ID; default the bound record.", "$ref": "#/$defs/text" },
 							"values": { "$ref": "#/$defs/values" }
 						}
@@ -822,6 +857,7 @@
 							"id": { "$ref": "#/$defs/key" },
 							"type": true,
 							"retry": { "$ref": "#/$defs/retry" },
+							"on_error": { "$ref": "#/$defs/on_error" },
 							"content_type": { "$ref": "#/$defs/key" },
 							"status": { "enum": [ "draft", "pending", "publish", "private" ], "default": "draft" },
 							"values": { "$ref": "#/$defs/values" }
@@ -837,6 +873,7 @@
 							"id": { "$ref": "#/$defs/key" },
 							"type": true,
 							"retry": { "$ref": "#/$defs/retry" },
+							"on_error": { "$ref": "#/$defs/on_error" },
 							"to": { "$ref": "#/$defs/text" },
 							"subject": { "$ref": "#/$defs/text" },
 							"text": { "$ref": "#/$defs/text" },
@@ -854,10 +891,14 @@
 							"id": { "$ref": "#/$defs/key" },
 							"type": true,
 							"retry": { "$ref": "#/$defs/retry" },
+							"on_error": { "$ref": "#/$defs/on_error" },
 							"url": { "type": "string", "pattern": "^https?://\\S+$" },
-							"fields": { "description": "Public fields of the bound record to send.", "type": "array", "items": { "$ref": "#/$defs/key" } },
-							"timeout": { "type": "number", "exclusiveMinimum": 0, "maximum": 15 }
-						}
+							"fields": { "description": "Public fields of the record to send (the bound record, or \"record\").", "type": "array", "items": { "$ref": "#/$defs/key" } },
+							"timeout": { "type": "number", "exclusiveMinimum": 0, "maximum": 15 },
+							"record": { "description": "Template for the ID of a record to send instead of the bound record; needs content_type.", "$ref": "#/$defs/text" },
+							"content_type": { "$ref": "#/$defs/key" }
+						},
+						"dependentRequired": { "record": [ "content_type" ], "content_type": [ "record" ] }
 					}
 				},
 				{
@@ -940,8 +981,170 @@
 			"additionalProperties": {
 				"anyOf": [
 					{ "type": [ "string", "number", "boolean" ] },
-					{ "type": "array", "items": { "type": "string" } }
+					{ "description": "Taxonomy term slugs.", "type": "array", "items": { "type": "string" } },
+					{ "description": "Record IDs of a relationship whose \"from\" end is the written type (replaces its links).", "type": "array", "items": { "type": "integer" } }
 				]
+			}
+		},
+		"on_error": {
+			"description": "After the step's retries, a failure is logged, outputs failed and error are set, and the run continues.",
+			"const": "continue"
+		},
+		"read_query": {
+			"description": "Read query model shared by get_record and find_records. Field names, operator and literal types, relationship ends and sortable fields are checked against the registry in PHP only.",
+			"properties": {
+				"content_type": { "$ref": "#/$defs/key" },
+				"related": {
+					"type": "object",
+					"required": [ "relationship", "of" ],
+					"additionalProperties": false,
+					"properties": {
+						"relationship": { "$ref": "#/$defs/key" },
+						"of": { "description": "Template giving a record ID at the relationship's other end.", "$ref": "#/$defs/text" }
+					}
+				},
+				"filter": {
+					"type": "object",
+					"oneOf": [
+						{
+							"required": [ "all" ],
+							"additionalProperties": false,
+							"properties": { "all": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/read_leaf" } } }
+						},
+						{
+							"required": [ "any" ],
+							"additionalProperties": false,
+							"properties": { "any": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/read_leaf" } } }
+						}
+					]
+				},
+				"status": {
+					"type": "array",
+					"minItems": 1,
+					"uniqueItems": true,
+					"items": { "enum": [ "publish", "future", "draft", "pending", "private" ] },
+					"default": [ "private", "publish" ]
+				},
+				"sort": {
+					"type": "object",
+					"required": [ "field" ],
+					"additionalProperties": false,
+					"properties": {
+						"field": { "description": "id, or a text, number, date, select or email field, or a title-storage field.", "$ref": "#/$defs/key" },
+						"order": { "enum": [ "asc", "desc" ], "default": "asc" }
+					},
+					"default": { "field": "id", "order": "asc" }
+				}
+			}
+		},
+		"read_leaf": {
+			"type": "object",
+			"required": [ "field", "op" ],
+			"additionalProperties": false,
+			"properties": {
+				"field": { "description": "A field or taxonomy key of content_type, or id; not rich_text, textarea or post_content fields.", "$ref": "#/$defs/key" },
+				"op": { "enum": [ "eq", "ne", "in", "not_in", "lt", "lte", "gt", "gte", "empty", "not_empty", "contains" ] },
+				"value": true
+			},
+			"allOf": [
+				{
+					"if": { "required": [ "op" ], "properties": { "op": { "enum": [ "empty", "not_empty" ] } } },
+					"then": { "not": { "required": [ "value" ] } }
+				},
+				{
+					"if": { "required": [ "op" ], "properties": { "op": { "enum": [ "in", "not_in" ] } } },
+					"then": {
+						"required": [ "value" ],
+						"properties": { "value": { "type": "array", "minItems": 1, "items": { "type": [ "string", "number", "boolean" ] } } }
+					}
+				},
+				{
+					"if": { "required": [ "op" ], "properties": { "op": { "enum": [ "eq", "ne", "lt", "lte", "gt", "gte", "contains" ] } } },
+					"then": { "required": [ "value" ], "properties": { "value": { "$ref": "#/$defs/operand" } } }
+				}
+			]
+		},
+		"get_record": {
+			"description": "Reads one record (the first by sort): by \"record\" (an ID), or by \"related\" and/or \"filter\". Outputs found, record_id and record.<key>.",
+			"required": [ "id", "type", "content_type" ],
+			"additionalProperties": false,
+			"allOf": [ { "$ref": "#/$defs/read_query" } ],
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"retry": { "$ref": "#/$defs/retry" },
+				"on_error": { "$ref": "#/$defs/on_error" },
+				"content_type": true,
+				"record": { "description": "Template giving one record ID.", "$ref": "#/$defs/text" },
+				"related": true,
+				"filter": true,
+				"status": true,
+				"sort": true
+			},
+			"anyOf": [ { "required": [ "record" ] }, { "required": [ "related" ] }, { "required": [ "filter" ] } ],
+			"if": { "required": [ "record" ] },
+			"then": { "not": { "anyOf": [ { "required": [ "related" ] }, { "required": [ "filter" ] } ] } }
+		},
+		"find_records": {
+			"description": "Reads up to limit records, plus count and sums over every match. Outputs count, records (loop over and {{#each}} only) and sum.<field>.",
+			"required": [ "id", "type", "content_type" ],
+			"additionalProperties": false,
+			"allOf": [ { "$ref": "#/$defs/read_query" } ],
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"retry": { "$ref": "#/$defs/retry" },
+				"on_error": { "$ref": "#/$defs/on_error" },
+				"content_type": true,
+				"related": true,
+				"filter": true,
+				"status": true,
+				"sort": true,
+				"limit": { "description": "Records loaded; 0 loads none (totals only).", "type": "integer", "minimum": 0, "maximum": 50, "default": 10 },
+				"sum": { "description": "Number fields to total over every match.", "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/key" } }
+			},
+			"anyOf": [ { "required": [ "related" ] }, { "required": [ "filter" ] } ]
+		},
+		"loop": {
+			"description": "Runs its steps once per record of a find_records result (at most 50). Inside: steps.<loop>.item.<key> and steps.<loop>.index; after: steps.<loop>.count. Body outputs stay inside the body, at most 10 steps counting nested ones, and the 500-attempt bound are PHP only.",
+			"required": [ "id", "type", "over", "steps" ],
+			"additionalProperties": false,
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"over": { "type": "string", "pattern": "^steps\\.[a-z][a-z0-9_]*\\.records$" },
+				"steps": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/loop_step" } }
+			}
+		},
+		"loop_step": {
+			"description": "A step inside a loop body: no wait and no loop at any depth.",
+			"allOf": [
+				{ "$ref": "#/$defs/step" },
+				{ "properties": { "type": { "not": { "enum": [ "wait", "loop" ] } } } },
+				{
+					"if": { "properties": { "type": { "const": "decision" } } },
+					"then": {
+						"properties": {
+							"branches": { "items": { "properties": { "steps": { "items": { "$ref": "#/$defs/loop_step" } } } } },
+							"otherwise": { "items": { "$ref": "#/$defs/loop_step" } }
+						}
+					}
+				}
+			]
+		},
+		"relate": {
+			"description": "Adds or removes one link. from defaults to the bound record when it is of the relationship's from type (PHP only).",
+			"required": [ "id", "type", "relationship", "to" ],
+			"additionalProperties": false,
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"retry": { "$ref": "#/$defs/retry" },
+				"on_error": { "$ref": "#/$defs/on_error" },
+				"relationship": { "$ref": "#/$defs/key" },
+				"action": { "enum": [ "add", "remove" ], "default": "add" },
+				"from": { "$ref": "#/$defs/text" },
+				"to": { "$ref": "#/$defs/text" }
 			}
 		},
 		"link": {

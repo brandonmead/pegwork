@@ -1,0 +1,109 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "schedule",
+        "every": "week"
+    },
+    "steps": [
+        {
+            "id": "due",
+            "type": "find_records",
+            "content_type": "barn_task",
+            "filter": {
+                "all": [
+                    {
+                        "field": "done",
+                        "op": "ne",
+                        "value": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": "each_task",
+            "type": "loop",
+            "over": "steps.due.records",
+            "steps": [
+                {
+                    "id": "m1",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m2",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m3",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m4",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m5",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m6",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m7",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m8",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m9",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m10",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                },
+                {
+                    "id": "m11",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                }
+            ]
+        }
+    ]
+}

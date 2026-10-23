@@ -271,4 +271,83 @@ final class Engine {
 	public function step( string $type ): ?Step {
 		return $this->steps[ $type ] ?? null;
 	}
+
+	/**
+	 * Why this module version cannot run a definition, or null when it can. The registry accepts Automation
+	 * v3 shapes (docs/automation-v3-design.md) before the engine runs them, so the executor refuses such a run
+	 * before its first step instead of acting on part of it: a step type without a handler (get_record,
+	 * find_records, loop, relate), `on_error`, `call_webhook.record`, and the template filters `| add` and
+	 * `| number` and `{{#each}}` blocks.
+	 *
+	 * @param array<string, mixed> $definition Canonical automation.
+	 */
+	public function unsupported( array $definition ): ?string {
+		if ( is_string( $definition['idempotency'] ?? null ) && self::new_template( $definition['idempotency'] ) ) {
+			return '"idempotency" uses a template filter this version of the automation module cannot render.';
+		}
+		$lists = array( (array) ( $definition['steps'] ?? array() ) );
+		foreach ( (array) ( $definition['links'] ?? array() ) as $link ) {
+			$lists[] = (array) ( $link['steps'] ?? array() );
+		}
+		foreach ( $lists as $steps ) {
+			$reason = $this->unsupported_steps( $steps );
+			if ( null !== $reason ) {
+				return $reason;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Why a step list (with its branches and loop bodies) cannot run, or null.
+	 *
+	 * @param array<int, mixed> $steps Steps.
+	 */
+	private function unsupported_steps( array $steps ): ?string {
+		foreach ( $steps as $step ) {
+			$step = (array) $step;
+			$id   = (string) ( $step['id'] ?? '' );
+			$type = (string) ( $step['type'] ?? '' );
+			if ( null === $this->step( $type ) ) {
+				return sprintf( 'step "%1$s" has type "%2$s", which this version of the automation module cannot run.', $id, $type );
+			}
+			if ( isset( $step['on_error'] ) ) {
+				return sprintf( 'step "%s" sets "on_error", which this version of the automation module cannot honour.', $id );
+			}
+			if ( 'call_webhook' === $type && isset( $step['record'] ) ) {
+				return sprintf( 'step "%s" sends a read record ("record"), which this version of the automation module cannot do.', $id );
+			}
+			$own = array_diff_key( $step, array_flip( array( 'branches', 'otherwise', 'steps' ) ) );
+			$new = false;
+			array_walk_recursive(
+				$own,
+				function ( $value ) use ( &$new ) {
+					$new = $new || ( is_string( $value ) && self::new_template( $value ) );
+				}
+			);
+			if ( $new ) {
+				return sprintf( 'step "%s" uses a template filter or block (| add, | number, {{#each}}) this version of the automation module cannot render.', $id );
+			}
+			$children = array_merge(
+				array_map( fn( $branch ) => (array) ( ( (array) $branch )['steps'] ?? array() ), (array) ( $step['branches'] ?? array() ) ),
+				array( (array) ( $step['otherwise'] ?? array() ), (array) ( $step['steps'] ?? array() ) )
+			);
+			foreach ( $children as $list ) {
+				$reason = $this->unsupported_steps( $list );
+				if ( null !== $reason ) {
+					return $reason;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Whether a template uses the Automation v3 filters or blocks.
+	 *
+	 * @param string $template Template.
+	 */
+	private static function new_template( string $template ): bool {
+		return 1 === preg_match( '/\{\{\s*[#\/]each\b|\{\{[^}]*\|\s*(?:add|number)\b/', $template );
+	}
 }

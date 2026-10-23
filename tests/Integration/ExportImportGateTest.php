@@ -343,6 +343,66 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Automation v3 gate: the reads package (relationships, get_record, find_records, loop, relate, on_error,
+	 * a manual trigger, call_webhook.record, relationship values and the new template filters) exports,
+	 * re-imports into the DB source and re-exports byte-identically, with read, relate and manual defaults filled.
+	 */
+	public function test_reads_package_round_trip() {
+		$fixture       = dirname( __DIR__ ) . '/fixtures/valid/reads';
+		$this->package = fn( RegistryBuilder $builder ) => $builder->add_package( $fixture );
+		add_action( 'pegwork_register', $this->package );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		$sections = array( 'content_types', 'taxonomies', 'relationships', 'options_pages', 'automations' );
+		$before   = array_map( fn( $section ) => Plugin::registry()->$section(), array_combine( $sections, $sections ) );
+		$this->assertSame( array( 3, 1, 2, 1, 7 ), array_values( array_map( 'count', $before ) ) );
+
+		$a    = $this->export();
+		$tree = $this->tree( $a );
+		$this->assertSame(
+			array_map( fn( $file ) => substr( $file, strlen( $fixture ) + 1 ), glob( $fixture . '/*/*.json' ) ),
+			array_values( array_diff( array_keys( $tree ), array( 'manifest.json' ) ) ),
+			'One exported file per fixture object.'
+		);
+		$thanks = json_decode( $tree['automations/barn_gift_thanks.json'], true );
+		$this->assertSame(
+			array(
+				'sort'   => array(
+					'field' => 'id',
+					'order' => 'asc',
+				),
+				'status' => array( 'private', 'publish' ),
+			),
+			array_intersect_key( $thanks['steps'][0], array_flip( array( 'status', 'sort' ) ) ),
+			'get_record defaults.'
+		);
+		$this->assertSame( 0, $thanks['steps'][4]['limit'] );
+		$shapes = json_decode( $tree['automations/reads_shapes.json'], true );
+		$this->assertSame( array( 'draft', 'private', 'publish' ), $shapes['steps'][0]['status'], 'Statuses are sorted.' );
+		$this->assertSame( 10, $shapes['steps'][4]['limit'], 'find_records limit default.' );
+		$this->assertSame( 'add', $shapes['steps'][5]['action'], 'relate action default.' );
+		$this->assertSame( 'asc', $shapes['steps'][3]['sort']['order'], 'Sort order default.' );
+		$this->assertSame( 'admins', json_decode( $tree['automations/reads_manual_list.json'], true )['trigger']['allow'] );
+		$digest = json_decode( $tree['automations/barn_tasks_digest.json'], true );
+		$this->assertSame( array( 'publish' ), $digest['steps'][0]['status'] );
+		$this->assertSame( array( 'remind', 'stamp' ), array_column( $digest['steps'][1]['steps'], 'id' ), 'Loop bodies export in order.' );
+
+		remove_action( 'pegwork_register', $this->package );
+		delete_option( Loader::DB_OPTION );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::registry()->automations() );
+
+		$this->assertTrue( Importer::import( $a )->is_valid() );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		foreach ( $sections as $section ) {
+			$this->assertSame( $before[ $section ], Plugin::registry()->$section(), "$section unchanged." );
+		}
+		$this->assertSame( $tree, $this->tree( $this->export() ) );
+		$this->assertSame( 0, Importer::import( $a )->count() );
+	}
+
+	/**
 	 * Phase 6 gate: the BarnCRM proof package (four types, an options page, a form and three automations with
 	 * decisions, a templated update_record target and a form-bound trigger) exports, re-imports into the DB
 	 * source and re-exports byte-identically; the export holds one file per fixture object.

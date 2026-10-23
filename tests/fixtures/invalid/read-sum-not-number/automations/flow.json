@@ -1,0 +1,25 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "giving",
+            "type": "find_records",
+            "content_type": "barn_gift",
+            "limit": 0,
+            "sum": [
+                "received_on"
+            ],
+            "related": {
+                "relationship": "gift_donor",
+                "of": "{{record.id}}"
+            }
+        }
+    ]
+}

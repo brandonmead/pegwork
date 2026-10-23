@@ -1,0 +1,35 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "donor",
+            "type": "get_record",
+            "content_type": "barn_contact",
+            "related": {
+                "relationship": "gift_donor",
+                "of": "{{record.id}}"
+            }
+        },
+        {
+            "id": "each_task",
+            "type": "loop",
+            "over": "steps.donor.records",
+            "steps": [
+                {
+                    "id": "remind",
+                    "type": "send_email",
+                    "to": "{{option:barn_settings.development_email}}",
+                    "subject": "Hi",
+                    "text": "Hi"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,53 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "schedule",
+        "every": "week"
+    },
+    "steps": [
+        {
+            "id": "due",
+            "type": "find_records",
+            "content_type": "barn_task",
+            "filter": {
+                "all": [
+                    {
+                        "field": "done",
+                        "op": "ne",
+                        "value": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": "each_task",
+            "type": "loop",
+            "over": "steps.due.records",
+            "steps": [
+                {
+                    "id": "route",
+                    "type": "decision",
+                    "branches": [
+                        {
+                            "label": "Later",
+                            "when": {
+                                "var": "steps.each_task.index",
+                                "op": "gt",
+                                "value": 1
+                            },
+                            "steps": [
+                                {
+                                    "id": "pause",
+                                    "type": "wait",
+                                    "for": "P1D"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{ "format": 1, "key": "reads_manual_list", "label": "Run now: remind overdue tasks in branches",
+  "trigger": { "type": "manual", "button": "Remind overdue tasks" },
+  "steps": [
+    { "id": "overdue", "type": "find_records", "content_type": "barn_task",
+      "filter": { "all": [ { "field": "due_on", "op": "lt", "value": { "date": "today" } }, { "field": "done", "op": "ne", "value": true } ] } },
+    { "id": "any", "type": "condition", "when": { "var": "steps.overdue.count", "op": "gt", "value": 0 } },
+    { "id": "each", "type": "loop", "over": "steps.overdue.records",
+      "steps": [
+        { "id": "gift", "type": "get_record", "content_type": "barn_gift",
+          "related": { "relationship": "task_gift", "of": "{{steps.each.item.id}}" } },
+        { "id": "first_ten", "type": "condition", "when": { "var": "steps.each.index", "op": "lte", "value": 10 } },
+        { "id": "route", "type": "decision",
+          "branches": [
+            { "label": "Has a gift", "when": { "var": "steps.gift.found", "op": "eq", "value": true },
+              "steps": [ { "id": "nudge", "type": "send_email", "to": "{{steps.each.item.assignee_email}}",
+                "subject": "Overdue ({{steps.each.index}}): {{steps.each.item.name}}",
+                "text": "Gift {{steps.gift.record.name}} of {{steps.gift.record.amount | number}}. Asked by user {{trigger.user_id}} from {{trigger.source}}." } ] } ],
+          "otherwise": [ { "id": "close", "type": "update_record", "record": "{{steps.each.item.id}}", "values": { "done": true } } ] },
+        { "id": "stamp", "type": "update_record", "record": "{{steps.each.item.id}}", "values": { "reminded_on": "{{today}}" } } ] },
+    { "id": "done", "type": "send_email", "to": "{option:barn_settings.development_email}",
+      "subject": "Reminded {{steps.each.count}} of {{steps.overdue.count}} overdue tasks",
+      "text": "Done." } ] }

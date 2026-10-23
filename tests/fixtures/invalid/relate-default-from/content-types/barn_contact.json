@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "barn_contact",
+  "labels": { "singular": "Contact", "plural": "Contacts" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "visibility": "private" },
+    { "key": "last_gift_on", "type": "date", "label": "Last gift on", "visibility": "private" },
+    { "key": "milestone_1000_on", "type": "date", "label": "Lifetime 1,000 reached on", "visibility": "private" },
+    { "key": "notes", "type": "rich_text", "label": "Notes", "visibility": "private" }
+  ]
+}

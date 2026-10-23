@@ -1,0 +1,28 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "size",
+            "type": "decision",
+            "on_error": "continue",
+            "branches": [
+                {
+                    "label": "Major",
+                    "when": {
+                        "var": "record.amount",
+                        "op": "gte",
+                        "value": 250
+                    },
+                    "steps": []
+                }
+            ]
+        }
+    ]
+}
