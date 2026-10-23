@@ -34,6 +34,16 @@ class FormsTurnstileTest extends FormsTestCase {
 	private $siteverify = 'pass';
 
 	/**
+	 * Hostname and action a passing siteverify answer names.
+	 *
+	 * @var array{hostname: string, action: string}
+	 */
+	private $answer = array(
+		'hostname' => 'example.org',
+		'action'   => 'fr_turnstile',
+	);
+
+	/**
 	 * Siteverify requests made: list of [ url, args ].
 	 *
 	 * @var array<int, array{0: string, 1: array}>
@@ -92,7 +102,8 @@ class FormsTurnstileTest extends FormsTestCase {
 								'success'      => true,
 								'error-codes'  => array(),
 								'challenge_ts' => '2026-10-18T12:00:00.000Z',
-								'hostname'     => 'example.org',
+								'hostname'     => $this->answer['hostname'],
+								'action'       => $this->answer['action'],
 								'metadata'     => array( 'result_with_testing_key' => true ),
 							)
 						);
@@ -120,7 +131,7 @@ class FormsTurnstileTest extends FormsTestCase {
 	public function test_widget_on_last_step_with_noscript_notice() {
 		$html = do_blocks( '<!-- wp:pegwork/form {"form":"fr_turnstile"} /-->' );
 
-		$this->assertStringContainsString( '<div class="cf-turnstile" data-sitekey="' . self::TURNSTILE_SITE_KEY . '" data-response-field-name="pegwork_form[captcha]"', $html );
+		$this->assertStringContainsString( '<div class="cf-turnstile" data-sitekey="' . self::TURNSTILE_SITE_KEY . '" data-action="fr_turnstile" data-response-field-name="pegwork_form[captcha]"', $html );
 		$this->assertMatchesRegularExpression( '#<legend class="pegwork-form__step-title"><h2 class="pegwork-form__step-heading">Last</h2></legend>.*<div class="pegwork-form__captcha".*</fieldset><div class="pegwork-form__actions">#s', $html, 'Widget at the end of the last step.' );
 		$this->assertSame( 1, substr_count( $html, 'cf-turnstile' ) );
 		$this->assertStringContainsString( '<noscript><p class="pegwork-form__notice pegwork-form__notice--problem">This form needs JavaScript for its spam check.', $html );
@@ -153,6 +164,7 @@ class FormsTurnstileTest extends FormsTestCase {
 			array(
 				'secret'   => self::TURNSTILE_SECRET_KEY,
 				'response' => self::TOKEN,
+				'remoteip' => '203.0.113.7',
 			),
 			$args['body']
 		);
@@ -342,5 +354,31 @@ class FormsTurnstileTest extends FormsTestCase {
 	 */
 	private function form_events() {
 		return array_values( array_filter( $this->events, fn( $event ) => str_starts_with( $event[0], 'form.' ) ) );
+	}
+
+	/**
+	 * Security review L-10: with real (not test) keys, a passing answer must name this site's hostname and
+	 * the form's action; the filter adds hostnames. Cloudflare's test secrets skip both checks (above).
+	 */
+	public function test_live_keys_check_hostname_and_action() {
+		defined( 'PEGWORK_TESTS_LIVE_SITE_KEY' ) || define( 'PEGWORK_TESTS_LIVE_SITE_KEY', '0x4AAAAAAAlivesitekeyAA' );
+		defined( 'PEGWORK_TESTS_LIVE_SECRET_KEY' ) || define( 'PEGWORK_TESTS_LIVE_SECRET_KEY', '0x4AAAAAAAlivesecretkeyAAAAAAAAAAAA' );
+		self::turnstile_constants( 'PEGWORK_TESTS_LIVE_SITE_KEY', 'PEGWORK_TESTS_LIVE_SECRET_KEY' );
+
+		$this->assertSame( 'pass', Turnstile::verify( self::TOKEN, 'fr_turnstile' ) );
+		$this->assertSame( '203.0.113.7', $this->requests[0][1]['body']['remoteip'] );
+		$this->assertSame( 'fail', Turnstile::verify( self::TOKEN, 'fr_other' ), 'A token solved for another form.' );
+
+		$this->answer['hostname'] = 'other.example';
+		$this->assertSame( 'fail', Turnstile::verify( self::TOKEN, 'fr_turnstile' ), 'A token solved on another hostname.' );
+		add_filter( 'pegwork_forms_turnstile_hostnames', fn( $hosts ) => array_merge( $hosts, array( 'OTHER.example' ) ) );
+		$this->assertSame( 'pass', Turnstile::verify( self::TOKEN, 'fr_turnstile' ) );
+
+		$this->answer['hostname'] = 'example.org';
+		$result                   = $this->submit( $this->values(), 'fr_turnstile', array( 'captcha' => self::TOKEN ) );
+		$this->assertSame( 'sent', $result['outcome'] );
+		$this->answer['action'] = 'fr_contact';
+		$result                 = $this->submit( array_merge( $this->values(), array( 'note' => 'Again' ) ), 'fr_turnstile', array( 'captcha' => self::TOKEN ) );
+		$this->assertSame( 'captcha_failed', $result['outcome'] );
 	}
 }

@@ -297,6 +297,29 @@ class FormsSubmissionTest extends FormsTestCase {
 	}
 
 	/**
+	 * Security review I-05: the same values from another submitter (another IP) are not a repeat.
+	 */
+	public function test_identical_values_from_another_submitter_are_stored() {
+		$this->assertSame( 'sent', $this->submit( $this->contact_values() )['outcome'] );
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.9';
+		$this->assertSame( 'sent', $this->submit( $this->contact_values() )['outcome'] );
+		$this->assertSame( 2, $this->count_entries() );
+	}
+
+	/**
+	 * Security review I-07: form mail stays plain text when a site switches wp_mail_content_type to HTML,
+	 * so submitted values cannot carry markup.
+	 */
+	public function test_mail_stays_plain_text_under_a_global_html_filter() {
+		add_filter( 'wp_mail_content_type', fn() => 'text/html' );
+		$this->assertSame( 'sent', $this->submit( $this->contact_values( array( 'message' => '<a href="https://evil.example">Click</a>' ) ) )['outcome'] );
+		foreach ( $this->sent_mail() as $mail ) {
+			$this->assertStringContainsString( 'Content-Type: text/plain', $mail['header'] );
+		}
+		$this->assertSame( 'text/html', apply_filters( 'wp_mail_content_type', 'text/plain' ), 'The site filter is left in place.' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
+	}
+
+	/**
 	 * Merge tag rendering strips CR and LF from subjects and recipients.
 	 */
 	public function test_notifications_strip_header_injection() {

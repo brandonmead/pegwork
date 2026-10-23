@@ -580,6 +580,37 @@ class FormsRecordsTest extends FormsTestCase {
 	}
 
 	/**
+	 * Security review I-02: a link with a wrong token reveals nothing about the entry: the page content is
+	 * not swapped, and every form shows the same notice whether or not the entry exists or is that form's.
+	 */
+	public function test_wrong_confirm_token_reveals_nothing_about_the_entry() {
+		$this->submit( $this->project_values(), 'fx_project' );
+		[ $id ]  = explode( '.', $this->confirm_link() );
+		$page    = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph --><!-- wp:pegwork/form {"form":"fx_newsletter"} /-->',
+			)
+		);
+		$notices = array();
+		foreach ( array( $id, (string) ( (int) $id + 1000 ) ) as $entry_id ) {
+			$this->go_to( get_permalink( $page ) );
+			$_GET['pegwork_confirm'] = $entry_id . '.' . str_repeat( 'B', 43 );
+			Confirm::reset();
+			Renderer::reset();
+			$this->the_post_for( $page );
+			$content = get_post( $page )->post_content;
+			$this->assertSame( $content, Confirm::inject( $content ), 'No content swap for a wrong token.' );
+			$html = do_blocks( '<!-- wp:pegwork/form {"form":"fx_newsletter"} /-->' );
+			$this->assertStringContainsString( 'This link is not valid', $html, 'Another form shows the notice too.' );
+			$notices[] = preg_replace( '/pegwork-[a-z0-9_-]+/', 'ID', $html );
+		}
+		$this->assertSame( $notices[0], $notices[1], 'An existing and a missing entry look the same.' );
+		unset( $_GET['pegwork_confirm'] );
+	}
+
+	/**
 	 * Sets up the global post as the main loop does.
 	 *
 	 * @param int $post_id Post ID.

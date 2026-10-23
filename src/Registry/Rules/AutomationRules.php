@@ -1108,6 +1108,7 @@ trait AutomationRules {
 					'pointer' => $pointer,
 					'form'    => $scope['form'],
 					'key'     => $parts[2],
+					'context' => $context,
 				);
 			}
 		}
@@ -1277,7 +1278,8 @@ trait AutomationRules {
 	}
 
 	/**
-	 * Checks a `trigger.values.<key>` reference against the trigger's form.
+	 * Checks a `trigger.values.<key>` reference against the trigger's form: the item exists, and an item
+	 * bound to a private field of the form's target type is refused in public contexts, as `record.<key>` is.
 	 *
 	 * @param array<string, mixed>                $found  Use from automation_scan().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
@@ -1287,10 +1289,17 @@ trait AutomationRules {
 		if ( ! is_array( $form ) ) {
 			return;
 		}
-		$keys = array_column( $this->form_items( $form, '' ), 'key' );
-		if ( ! in_array( $found['key'], $keys, true ) ) {
+		$items = array_column( $this->form_items( $form, '' ), null, 'key' );
+		if ( ! isset( $items[ $found['key'] ] ) ) {
 			/* translators: 1: field key, 2: form key. */
 			$this->add( 'unknown_field', $found['pointer'], sprintf( __( 'Field "%1$s" is not a field of form "%2$s".', 'pegwork' ), $found['key'], $found['form'] ) );
+			return;
+		}
+		$type       = $form['target']['content_type'] ?? null;
+		$definition = 'field' === $items[ $found['key'] ]['bound'] && is_string( $type ) ? $this->record_key_definition( $type, $found['key'], $known ) : null;
+		if ( is_array( $definition ) && 'public' === ( $found['context'] ?? '' ) && 'private' === ( $definition['visibility'] ?? 'public' ) ) {
+			/* translators: %s: field key. */
+			$this->add( 'automation_private_field', $found['pointer'], sprintf( __( 'Field "%s" is private and cannot appear in webhook bodies or link pages.', 'pegwork' ), $found['key'] ) );
 		}
 	}
 

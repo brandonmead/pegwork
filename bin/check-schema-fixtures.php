@@ -13,6 +13,8 @@
  * @package Pegwork
  */
 
+'cli' === PHP_SAPI || exit;
+
 // phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI script that runs outside WordPress.
 
 require dirname( __DIR__ ) . '/vendor/autoload.php';

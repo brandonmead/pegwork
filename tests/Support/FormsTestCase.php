@@ -138,7 +138,7 @@ abstract class FormsTestCase extends WP_UnitTestCase {
 	 * @param string $site   Site key constant.
 	 * @param string $secret Secret key constant.
 	 */
-	private static function turnstile_constants( $site, $secret ) {
+	protected static function turnstile_constants( $site, $secret ) {
 		$property = new \ReflectionProperty( \PegworkForms\Turnstile::class, 'constants' );
 		$property->setValue(
 			null,

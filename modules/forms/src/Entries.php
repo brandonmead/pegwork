@@ -199,7 +199,8 @@ final class Entries {
 	}
 
 	/**
-	 * Entries whose `email` column matches an address (lowercased, exact), oldest first.
+	 * Entries whose `email` column matches an address (lowercased, exact), or that the user account with
+	 * that address submitted (forms without an email item), oldest first.
 	 *
 	 * @param string $email  Address.
 	 * @param int    $limit  Rows.
@@ -209,9 +210,11 @@ final class Entries {
 	public static function by_email( string $email, int $limit, int $offset = 0 ): array {
 		global $wpdb;
 
+		$email = strtolower( trim( $email ) );
+		$user  = '' === $email ? false : get_user_by( 'email', $email );
 		$table = Schema::table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s ORDER BY id ASC LIMIT %d OFFSET %d", strtolower( trim( $email ) ), $limit, $offset ), ARRAY_A );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s OR ( user_id > 0 AND user_id = %d ) ORDER BY id ASC LIMIT %d OFFSET %d", $email, $user ? (int) $user->ID : 0, $limit, $offset ), ARRAY_A );
 
 		return array_map( array( self::class, 'decode' ), is_array( $rows ) ? $rows : array() );
 	}

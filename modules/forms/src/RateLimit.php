@@ -9,9 +9,13 @@ declare( strict_types=1 );
 
 namespace PegworkForms;
 
+use Pegwork\Api\Throttle;
+
 /**
- * Sliding-window counts per form and subject (an HMAC of the client IP or of the email address), kept
- * in transients. Raw IPs and addresses are never stored.
+ * Sliding-window counts per form and subject (client IP or email address), kept by Pegwork\Api\Throttle:
+ * atomic under parallel submissions, stored as an HMAC, so raw IPs and addresses are never stored.
+ * exceeded() is the cheap early check; take() counts the entry right before it is stored and refuses it
+ * when parallel submissions used up the limit in the meantime.
  *
  * Defaults: 5 stored entries per IP per form in 10 minutes (spam included, so a bot cannot fill the
  * table), 3 accepted submissions per email address per form in an hour. Filter `pegwork_forms_rate_limits`.
@@ -70,7 +74,7 @@ final class RateLimit {
 			return false;
 		}
 
-		return count( self::hits( $kind, $form, $subject, $now, $limit['window'] ) ) >= $limit['max'];
+		return Throttle::wait( self::bucket( $kind, $form, $subject ), $limit['max'], $now ) > 0;
 	}
 
 	/**
@@ -88,7 +92,7 @@ final class RateLimit {
 			return 0;
 		}
 
-		return self::wait( self::hits( $kind, $form, $subject, $now, $limit['window'] ), $limit['max'], $limit['window'], $now );
+		return Throttle::wait( self::bucket( $kind, $form, $subject ), $limit['max'], $now );
 	}
 
 	/**
@@ -110,66 +114,47 @@ final class RateLimit {
 	}
 
 	/**
-	 * Records one submission.
+	 * Counts one submission, atomically, unless the limit is already used up.
 	 *
 	 * @param string $kind    `ip` or `email`.
 	 * @param string $form    Form key.
 	 * @param string $subject IP address or email address.
 	 * @param int    $now     Unix time.
+	 * @return int 0 when counted (store the entry), else seconds until the limit has room.
 	 */
-	public static function hit( string $kind, string $form, string $subject, int $now ): void {
+	public static function take( string $kind, string $form, string $subject, int $now ): int {
 		$limit = self::limits( $form )[ $kind ] ?? null;
 		if ( null === $limit || '' === $subject ) {
-			return;
+			return 0;
 		}
 
-		$hits   = self::hits( $kind, $form, $subject, $now, $limit['window'] );
-		$hits[] = $now;
-		set_transient( self::key( $kind, $form, $subject ), $hits, $limit['window'] );
+		return Throttle::take( self::bucket( $kind, $form, $subject ), $limit['max'], $limit['window'], $now );
 	}
 
 	/**
-	 * The client IP: `REMOTE_ADDR`, filtered by `pegwork_forms_client_ip` (for trusted proxies).
+	 * The client IP: Throttle::client_ip() (`REMOTE_ADDR`, filter `pegwork_client_ip`), then filtered by
+	 * `pegwork_forms_client_ip` (kept for sites that already use it).
 	 */
 	public static function client_ip(): string {
-		$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-
 		/**
-		 * Filters the client IP used for rate limits. Return a proxy header's value only when the
-		 * origin accepts traffic from that proxy alone.
+		 * Filters the client IP used for form rate limits. Return a proxy header's value only when the
+		 * origin accepts traffic from that proxy alone. `pegwork_client_ip` covers every Pegwork limit.
 		 *
-		 * @param string $ip `REMOTE_ADDR`.
+		 * @param string $ip Client IP from `pegwork_client_ip`.
 		 */
-		$ip = apply_filters( 'pegwork_forms_client_ip', $remote );
+		$ip = apply_filters( 'pegwork_forms_client_ip', Throttle::client_ip() );
 
 		return is_string( $ip ) && false !== filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 	}
 
 	/**
-	 * Hit times inside the window.
-	 *
-	 * @param string $kind    Kind.
-	 * @param string $form    Form key.
-	 * @param string $subject Subject.
-	 * @param int    $now     Unix time.
-	 * @param int    $window  Window in seconds.
-	 * @return int[]
-	 */
-	private static function hits( string $kind, string $form, string $subject, int $now, int $window ): array {
-		$hits = get_transient( self::key( $kind, $form, $subject ) );
-		$hits = is_array( $hits ) ? $hits : array();
-
-		return array_values( array_filter( array_map( 'intval', $hits ), fn( int $time ) => $time > $now - $window ) );
-	}
-
-	/**
-	 * Transient name: `pegwork_forms_rl_` plus an HMAC of kind, form and subject (lowercased).
+	 * Throttle bucket of a kind, form and subject (lowercased).
 	 *
 	 * @param string $kind    Kind.
 	 * @param string $form    Form key.
 	 * @param string $subject Subject.
 	 */
-	private static function key( string $kind, string $form, string $subject ): string {
-		return 'pegwork_forms_rl_' . substr( hash_hmac( 'sha256', $kind . '|' . $form . '|' . strtolower( $subject ), wp_salt( 'nonce' ) ), 0, 40 );
+	private static function bucket( string $kind, string $form, string $subject ): string {
+		return 'forms|' . $kind . '|' . $form . '|' . strtolower( $subject );
 	}
 }
