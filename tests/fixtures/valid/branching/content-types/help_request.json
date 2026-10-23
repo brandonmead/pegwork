@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "key": "help_request",
+  "labels": { "singular": "Help request", "plural": "Help requests" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "visibility": "private" },
+    { "key": "scenario", "type": "text", "label": "Scenario" },
+    { "key": "priority", "type": "select", "label": "Priority", "default": "normal",
+      "options": [ { "value": "low", "label": "Low" }, { "value": "normal", "label": "Normal" }, { "value": "high", "label": "High" } ] },
+    { "key": "amount", "type": "number", "label": "Amount" },
+    { "key": "stage", "type": "select", "label": "Stage", "default": "new",
+      "options": [ { "value": "new", "label": "New" }, { "value": "contacted", "label": "Contacted" } ] },
+    { "key": "coordinator", "type": "email", "label": "Coordinator", "visibility": "private" },
+    { "key": "notes", "type": "text", "label": "Notes" }
+  ]
+}

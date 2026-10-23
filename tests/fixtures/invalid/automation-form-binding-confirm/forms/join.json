@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "key": "join",
+  "label": "Join",
+  "target": { "content_type": "signup", "action": "create" },
+  "confirm": { "field": "email", "subject": "Confirm", "body": "{confirm_url}" },
+  "fields": [ { "bind": { "field": "name" } }, { "bind": { "field": "email" } } ]
+}

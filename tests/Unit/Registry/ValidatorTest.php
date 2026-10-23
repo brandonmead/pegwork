@@ -480,6 +480,129 @@ class ValidatorTest extends TestCase {
 	}
 
 	/**
+	 * An automation of the branching fixture.
+	 *
+	 * @param string $key Automation key.
+	 * @return array
+	 */
+	private function branching( $key ) {
+		return json_decode( file_get_contents( dirname( __DIR__, 2 ) . '/fixtures/valid/branching/automations/' . $key . '.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+	}
+
+	/**
+	 * Codes and pointers from per-file and reference checks against the branching fixture.
+	 *
+	 * @param array $data  Automation.
+	 * @param array $forms Forms to replace in the known objects, by key.
+	 * @return string[]
+	 */
+	private function branching_codes( array $data, array $forms = array() ) {
+		$registry = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/branching' ) )->registry;
+		$known    = array();
+		foreach ( Loader::SECTIONS as $kind => $section ) {
+			$known[ $kind ] = $registry->$section();
+		}
+		$known['form'] = array_merge( $known['form'], $forms );
+
+		$errors = Validator::validate( 'automation', $data, 'f' );
+		if ( ! $errors ) {
+			$errors = Validator::references( 'automation', $data, 'f', $known );
+		}
+		return array_map( fn( $e ) => $e->code . ' ' . $e->pointer, $errors );
+	}
+
+	/**
+	 * Decisions: step ids are unique across the tree; outputs are in scope only on paths that ran the step;
+	 * branches and otherwise may be empty; the automation's own list may not.
+	 */
+	public function test_decision_ids_and_output_scope() {
+		$deep = $this->branching( 'br_deep' );
+		$this->assertSame( array(), $this->branching_codes( $deep ) );
+
+		// An earlier sibling of an enclosing list is in scope inside the branch.
+		$outer = $deep;
+		array_unshift(
+			$outer['steps'],
+			array(
+				'id'           => 'first_task',
+				'type'         => 'create_record',
+				'content_type' => 'help_task',
+				'values'       => array( 'name' => 'First' ),
+			)
+		);
+		$outer['steps'][1]['branches'][0]['steps'][0]['branches'][0]['steps'][0]['otherwise'][0]['values']['notes'] = 'after {{steps.first_task.record_id}}';
+		$this->assertSame( array(), $this->branching_codes( $outer ) );
+
+		// The otherwise list cannot read an output of the branch beside it, nor can a later top-level step.
+		$sibling = $deep;
+		$sibling['steps'][0]['branches'][0]['steps'][0]['branches'][0]['steps'][0]['otherwise'][0]['values']['notes'] = '{{steps.make_task.record_id}}';
+		$sibling['steps'][1]['text'] = 'Task {{steps.make_task.record_id}} and {{steps.later.record_id}}';
+		$this->assertSame(
+			array(
+				'invalid_var /steps/0/branches/0/steps/0/branches/0/steps/0/otherwise/0/values/notes',
+				'invalid_var /steps/1/text',
+				'invalid_var /steps/1/text',
+			),
+			$this->branching_codes( $sibling )
+		);
+		$messages = array_map( fn( $e ) => $e->message, Validator::validate( 'automation', $sibling, 'f' ) );
+		$this->assertStringContainsString( 'step "make_task" runs only in another branch', $messages[1] );
+		$this->assertStringContainsString( 'no step "later" runs before this point', $messages[2] );
+
+		// Ids are unique across branches and otherwise; empty branch lists are fine, an empty automation is not.
+		$ids = $deep;
+		$ids['steps'][0]['branches'][0]['steps'][0]['branches'][0]['steps'][0]['otherwise'][0]['id'] = 'deep_done';
+		$this->assertSame( array( 'duplicate_key /steps/1/id' ), $this->branching_codes( $ids ) );
+
+		$empty                                     = $deep;
+		$empty['steps'][0]['branches'][0]['steps'] = array();
+		$empty['steps'][0]['otherwise']            = array();
+		$this->assertSame( array(), $this->branching_codes( $empty ) );
+		$empty['steps'] = array();
+		$this->assertSame( array( 'invalid_value' ), $this->codes( 'automation', $empty ) );
+
+		// Branch shape: label, when and steps are all required; when uses the condition grammar.
+		$shape = $this->branching( 'br_paths' );
+		unset( $shape['steps'][0]['branches'][1]['steps'] );
+		$shape['steps'][0]['branches'][0]['when']  = array( 'var' => 'record.priority' );
+		$shape['steps'][0]['branches'][0]['extra'] = true;
+		$this->assertSame(
+			array( 'missing_property /steps/0/branches/0/when', 'unknown_property /steps/0/branches/0/extra', 'missing_property /steps/0/branches/1' ),
+			$this->branching_codes( $shape )
+		);
+	}
+
+	/**
+	 * Form events bind the record a form with a target wrote: form.confirmed, or form.submitted without
+	 * confirm. Record paths then check against the target type; other form triggers bind nothing.
+	 */
+	public function test_form_binding() {
+		$signup = $this->branching( 'br_signup' );
+		$this->assertSame( array(), $this->branching_codes( $signup ) );
+		$this->assertSame( array(), $this->branching_codes( $this->branching( 'br_confirmed' ) ) );
+
+		// Record keys check against the form's target type.
+		$typo                   = $signup;
+		$typo['steps'][1]['to'] = '{{record.coordinater}}';
+		$this->assertSame( array( 'unknown_field /steps/1/to' ), $this->branching_codes( $typo ) );
+
+		// The same steps on a confirm form's form.submitted, or on an entry-only form, bind nothing.
+		$held                    = $signup;
+		$held['trigger']['form'] = 'help_confirm';
+		$this->assertContains( 'automation_no_record /steps/0/branches/0/when/var', $this->branching_codes( $held ) );
+		$this->assertContains( 'automation_no_record /steps/0/branches/0/steps/0', $this->branching_codes( $held ) );
+		$held['trigger']['event'] = 'form.confirmed';
+		$this->assertSame( array( 'unknown_field /steps/1/text' ), $this->branching_codes( $held ), 'Bound on confirmation; help_confirm has no priority item.' );
+
+		$note                    = $signup;
+		$note['trigger']['form'] = 'help_note';
+		$this->assertContains( 'automation_no_record /steps/1/to', $this->branching_codes( $note ) );
+
+		// Form contents unknown (only the key is known): record keys are not checked.
+		$this->assertSame( array(), $this->branching_codes( $typo, array( 'help_signup' => true ) ) );
+	}
+
+	/**
 	 * Every forms, automations and options pages object in the sections fixture passes both checks.
 	 */
 	public function test_sections_fixture_objects() {

@@ -787,9 +787,13 @@
 			"type": "object",
 			"required": [ "id", "type" ],
 			"properties": {
-				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition" ] }
+				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition", "decision" ] }
 			},
 			"allOf": [
+				{
+					"if": { "properties": { "type": { "const": "decision" } } },
+					"then": { "$ref": "#/$defs/decision" }
+				},
 				{
 					"if": { "properties": { "type": { "const": "update_record" } } },
 					"then": {
@@ -878,6 +882,36 @@
 					}
 				}
 			]
+		},
+		"decision": {
+			"description": "Runs the steps of the first branch whose \"when\" holds, else \"otherwise\", then continues after the decision. Unique branch labels, unique step ids across the tree, at most 3 nesting levels and the output scope rule are PHP only.",
+			"required": [ "id", "type", "branches" ],
+			"additionalProperties": false,
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"branches": {
+					"type": "array",
+					"minItems": 1,
+					"maxItems": 10,
+					"items": {
+						"type": "object",
+						"required": [ "label", "when", "steps" ],
+						"additionalProperties": false,
+						"properties": {
+							"label": { "$ref": "#/$defs/text" },
+							"when": { "$ref": "#/$defs/expression" },
+							"steps": { "$ref": "#/$defs/branch_steps" }
+						}
+					}
+				},
+				"otherwise": { "description": "Runs when no branch matches. An empty list is dropped by the normalizer.", "$ref": "#/$defs/branch_steps" }
+			}
+		},
+		"branch_steps": {
+			"description": "Steps of a branch; may be empty (the branch matches and does nothing).",
+			"type": "array",
+			"items": { "$ref": "#/$defs/step" }
 		},
 		"retry": {
 			"type": "object",

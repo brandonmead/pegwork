@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "br_flat",
+  "label": "New request: Phase 4 shaped flat list with a wait",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "help_request",
+    "when": { "var": "record.scenario", "op": "eq", "value": "flat" } },
+  "steps": [
+    { "id": "first", "type": "send_email", "to": "team@example.org", "subject": "First: {{record.name}}", "text": "First." },
+    { "id": "pause", "type": "wait", "for": "P1D" },
+    { "id": "second", "type": "send_email", "to": "team@example.org", "subject": "Second: {{record.name}}", "text": "Second." }
+  ]
+}

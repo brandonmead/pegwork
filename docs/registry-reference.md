@@ -295,10 +295,10 @@ A trigger, ordered steps, and optional signed links. Conditions are a JSON expre
 | `description` | no | | non-empty string |
 | `enabled` | no | `true` | boolean |
 | `trigger` | yes | | see below |
-| `steps` | yes | | non-empty list of steps; step `id`s unique within the list (`duplicate_key`) |
+| `steps` | yes | | non-empty list of steps; step `id`s unique across the automation, branches included (`duplicate_key`) |
 | `idempotency` | no | | template; runs with the same rendered value are skipped |
 | `links` | no | | map of link name to [link](#signed-links) |
-| `ui` | no | | free-form editor data (canvas positions); preserved, never read by the engine |
+| `ui` | no | | reserved free-form editor data; preserved, never read by the engine (the Phase 6 editor does not write it) |
 
 ### Triggers
 
@@ -308,11 +308,13 @@ A trigger, ordered steps, and optional signed links. Conditions are a JSON expre
 | `schedule` | `every` (required): `hour`, `day` or `week`; `at`: `HH:MM` site time; `for_each`: `{ content_type (required), status (default `["publish"]`; any of `publish`, `future`, `draft`, `pending`, `private`), where (condition), max_runs (default 200) }` |
 | `webhook` | none; the inbound request body is `trigger.payload` (endpoint, signature and limits: `docs/automation.md#webhooks`) |
 
-A run is bound to a record when the trigger is a `record.*` event or a schedule with `for_each`. Without one, `record.*` paths, `{{link.*}}` and `update_record` without `record` are `automation_no_record`.
+A run is bound to a record when the trigger is a `record.*` event, a schedule with `for_each`, or a form event that binds (below). Without one, `record.*` paths, `{{link.*}}`, `call_webhook` `fields` and `update_record` without `record` are `automation_no_record`.
+
+Form binding: an `event` trigger on `form.confirmed`, or on `form.submitted` of a form without `confirm`, whose `form` has a `target`, binds the record the form wrote (`trigger.record_id`). Record paths and `update_record` without `record` then check against the target's `content_type`. Any other form trigger binds nothing: `form.submitted` of a `confirm` form (the record is written only on confirmation), a form without `target`, or a trigger without `form`. This check needs the form, so it runs with the references (`wp pegwork schema validate` reports it like `unknown_form`).
 
 ### Steps
 
-Every step has `id` (key pattern) and `type`, plus optional `retry` (`{ max: integer >= 0, backoff: duration or list of durations }`; no stored default).
+Every step has `id` (key pattern) and `type`, plus optional `retry` (`{ max: integer >= 0, backoff: duration or list of durations }`; no stored default; not on `decision`).
 
 | `type` | Properties |
 |---|---|
@@ -322,10 +324,36 @@ Every step has `id` (key pattern) and `type`, plus optional `retry` (`{ max: int
 | `call_webhook` | `url` (required, template, public context), `fields` (record field or taxonomy keys sent in the body; private ones are `automation_private_field`), `timeout` (seconds, more than 0 and at most 15, default 10). Without `fields` every public field and taxonomy is sent. Body, headers and signature: `docs/automation.md#webhooks` |
 | `wait` | `for` (required): duration |
 | `condition` | `when` (required): condition; the run stops when it is false |
+| `decision` | `branches` (required), `otherwise`: see [Decisions](#decisions) |
 
 `values` maps record field or taxonomy keys (`unknown_field`) to literals or templates; a literal must fit the field type (`automation_value_type`). Templates are rendered in a private context.
 
 Durations are ISO 8601 (`P7D`, `PT6H`, `P1Y2M`; `invalid_duration`), from one hour to two years (`duration_out_of_range`).
+
+### Decisions
+
+A `decision` runs the steps of the first branch whose `when` holds, or `otherwise` when none does, then the run continues after the decision. With no match and no `otherwise`, it continues after the decision. One step type covers if/else and multi-way routing.
+
+```json
+{ "id": "size", "type": "decision",
+  "branches": [
+    { "label": "Major gift", "when": { "var": "record.amount", "op": "gte", "value": 250 },
+      "steps": [ { "id": "thank_major", "type": "send_email", "to": "{{record.donor_email}}", "subject": "Thank you", "text": "..." } ] } ],
+  "otherwise": [ { "id": "thank", "type": "send_email", "to": "{{record.donor_email}}", "subject": "Thank you", "text": "..." } ] }
+```
+
+| Property | Required | Default | Rules |
+|---|---|---|---|
+| `id`, `type` | yes | | as every step; no `retry` (`unknown_property`) |
+| `branches` | yes | | 1 to 10 items (`invalid_value`), each `{ label, when, steps }`, all required. `label`: non-empty text, unique within the decision (`duplicate_key`). `when`: a [condition](#conditions). `steps`: a step list, may be empty (the branch matches and does nothing) |
+| `otherwise` | no | | step list run when no branch matches; an empty list is dropped from the canonical form |
+
+- Step ids are unique across the automation's whole tree (`duplicate_key`, "already used in this automation"). Each link's steps are a tree of their own, so links may reuse ids.
+- A decision inside a branch is level 2; at most 3 levels (`decision_too_deep`, at the decision that is too deep).
+- `steps.<id>.<output>` must name a step that runs on every path before this point: an earlier sibling, or an earlier sibling of an enclosing list. An output created inside a branch is usable later in that branch only; elsewhere it is `invalid_var` ("step "x" runs only in another branch").
+- `automation_no_record`, private field and type rules apply inside branches as anywhere.
+- Not allowed in link steps (`automation_link_step`).
+- Decisions need a plugin with Phase 6 (an older one rejects the file with `invalid_value` on `type`); declare it in the manifest's informational `requires.pegwork`.
 
 ### Signed links
 
@@ -366,7 +394,7 @@ Paths are dot-separated (`invalid_var`). Templates are `{{ path }}`, optionally 
 |---|---|
 | `record` | `record.<field or taxonomy key>`, `record.id`, `record.status`, `record.type`; templates also `record.permalink`, `record.edit_url`. Keys must exist on the bound type (`unknown_field`) |
 | `trigger` | `record.created`, `record.deleted`: `id`, `type`, `status`, `user_id`, `origin`. `record.updated`: also `changed`, `old.<key>`. `record.status_changed`: `id`, `type`, `old_status`, `new_status`, `user_id`, `origin`. `form.*`: `form`, `entry_id`, `post_id`, `record_id`, `values.<item key>` (checked against the form when `form` is set). Webhook: `payload.*`. Schedules have no payload |
-| `steps` | `steps.<id>.<output>` of an earlier step (`create_record`: `record_id`) |
+| `steps` | `steps.<id>.<output>` of an earlier step that runs on every path to this point (`create_record`: `record_id`; [Decisions](#decisions)) |
 | `site` | `site.name`, `site.url` |
 | `today`, `now`, `run.id`, `link.<name>` | templates only |
 | `option` | `option:<options page>.<field>`, templates only. Page and field must exist (`unknown_options_page`, `unknown_field`); a private field is `automation_private_field` in any template |
@@ -396,4 +424,4 @@ $page    = pegwork_registry()->options_page( 'sifg_settings' );
 | `unknown_content_type`, `self_relationship`, `storage_not_supported`, `meta_key_conflict` | relationships |
 | `not_allowed_in_options_page` | options pages |
 | `form_fields_or_steps`, `form_bind_target`, `form_bind_without_target`, `form_unknown_bind`, `form_display`, `form_missing_required`, `form_condition_not_bound`, `form_access_required`, `form_confirm_field`, `form_confirm_url_missing`, `form_premature_mail`, `form_recipient_not_email`, `form_accept_denied`, `invalid_recipient`, `unknown_options_page` | forms |
-| `invalid_event`, `trigger_filter_mismatch`, `unknown_form`, `automation_no_record`, `automation_link_step`, `automation_unknown_link`, `automation_private_field`, `automation_value_type`, `invalid_duration`, `duration_out_of_range`, `invalid_condition`, `condition_operand`, `condition_type_mismatch`, `condition_too_complex`, `invalid_template`, `invalid_var` | automations |
+| `invalid_event`, `trigger_filter_mismatch`, `unknown_form`, `automation_no_record`, `automation_link_step`, `decision_too_deep`, `automation_unknown_link`, `automation_private_field`, `automation_value_type`, `invalid_duration`, `duration_out_of_range`, `invalid_condition`, `condition_operand`, `condition_type_mismatch`, `condition_too_complex`, `invalid_template`, `invalid_var` | automations |

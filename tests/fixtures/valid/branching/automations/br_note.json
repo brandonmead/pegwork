@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "br_note",
+  "label": "Note left: forward it (entry-only form, no record)",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "help_note" },
+  "steps": [
+    { "id": "forward", "type": "send_email", "to": "team@example.org", "subject": "Note {{trigger.entry_id}}", "text": "{{trigger.values.message}}" }
+  ]
+}

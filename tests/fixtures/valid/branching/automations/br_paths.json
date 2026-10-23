@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "key": "br_paths",
+  "label": "New request: route by priority (three-way, empty branch, otherwise)",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "help_request",
+    "when": { "var": "record.scenario", "op": "eq", "value": "paths" } },
+  "steps": [
+    { "id": "route", "type": "decision",
+      "branches": [
+        { "label": "High", "when": { "var": "record.priority", "op": "eq", "value": "high" },
+          "steps": [
+            { "id": "notify_high", "type": "send_email", "to": "urgent@example.org",
+              "subject": "Urgent: {{record.name}}", "text": "{{record.name}} needs help today." } ] },
+        { "label": "Low", "when": { "var": "record.priority", "op": "eq", "value": "low" }, "steps": [] } ],
+      "otherwise": [
+        { "id": "notify_team", "type": "send_email", "to": "team@example.org",
+          "subject": "New request: {{record.name}}", "text": "{{record.name}} asked for help." } ] },
+    { "id": "routed", "type": "update_record", "values": { "notes": "routed" } }
+  ]
+}
