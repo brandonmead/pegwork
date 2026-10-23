@@ -23,7 +23,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { SampleControl, sampleParams } from './controls';
 import { reportTree } from './logic';
 import { binding } from './scope';
-import { config, useSample, useSettings } from './store';
+import { config, useDefinition, useSample, useSettings } from './store';
 
 const ROUTE = '/pegwork/v1/automation-editor';
 
@@ -56,13 +56,15 @@ export function PreviewPanel( { templates } ) {
 	const trigger = settings.trigger || {};
 	const needs = sampleNeeds( trigger );
 	const [ sample ] = useSample();
+	// The edited steps tell the preview which type a read reads: "[from step donor: Email]".
+	const { steps } = useDefinition().definition;
 	const [ shown, setShown ] = useState( false );
 	const [ result, setResult ] = useState( {
 		busy: false,
 		error: '',
 		rendered: [],
 	} );
-	const key = JSON.stringify( [ templates, trigger, sample ] );
+	const key = JSON.stringify( [ templates, trigger, sample, steps ] );
 
 	useEffect( () => {
 		if ( ! shown ) {
@@ -99,6 +101,7 @@ export function PreviewPanel( { templates } ) {
 									template,
 									html: Boolean( html ),
 									trigger,
+									steps,
 									...params,
 								},
 							} ).then( ( response ) => response.rendered )

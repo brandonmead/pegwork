@@ -82,6 +82,15 @@ const DESCRIPTIONS = {
 	),
 	wait: __( 'Pauses the run, then continues.', 'pegwork' ),
 	condition: __( 'Stops the run unless a condition holds.', 'pegwork' ),
+	get_record: __(
+		'Reads one record: by ID, through a relationship, or by matching fields.',
+		'pegwork'
+	),
+	find_records: __(
+		'Counts and totals the matching records, and loads up to 50.',
+		'pegwork'
+	),
+	relate: __( 'Adds or removes one relationship link.', 'pegwork' ),
 };
 
 registerBlockType( stepMetadata, {

@@ -35,6 +35,9 @@ import { errorsAt, formatDuration, parseDuration, toNumber } from './logic';
 
 const OTHER = '__other';
 
+// A read filter holds 1 to 10 rows (condition_too_complex).
+const MAX_FILTER_ROWS = 10;
+
 const at = ( model, path ) =>
 	path.reduce(
 		( node, step ) => ( step === 'item' ? node.item : node.items[ step ] ),
@@ -87,14 +90,17 @@ function legendOf( match ) {
 /**
  * The value control of a leaf.
  *
- * @param {Object}   props          Props.
- * @param {Object}   props.leaf     Leaf model.
- * @param {?Object}  props.field    Field of the var.
- * @param {Array}    props.fields   Fields in scope.
- * @param {Function} props.onChange Called with the new leaf.
- * @param {string}   props.label    Row name, for control labels.
+ * @param {Object}   props            Props.
+ * @param {Object}   props.leaf       Leaf model.
+ * @param {?Object}  props.field      Field of the var.
+ * @param {Array}    props.fields     Fields in scope.
+ * @param {Function} props.onChange   Called with the new leaf.
+ * @param {string}   props.label      Row name, for control labels.
+ * @param {?Array}   [props.operands] Paths "Another value" may name (filter rows: run paths), else
+ *                                    the fields.
  */
-function ValueControl( { leaf, field, fields, onChange, label } ) {
+function ValueControl( { leaf, field, fields, onChange, label, operands } ) {
+	const others = operands || fields;
 	const kind = valueKind( leaf );
 	const type = field?.type ?? null;
 	const set = ( value ) => onChange( { ...leaf, value, has: true } );
@@ -170,7 +176,12 @@ function ValueControl( { leaf, field, fields, onChange, label } ) {
 			value={ kind }
 			options={ [
 				{ value: 'literal', label: __( 'A value', 'pegwork' ) },
-				{ value: 'var', label: __( 'Another field', 'pegwork' ) },
+				{
+					value: 'var',
+					label: operands
+						? __( 'Another value', 'pegwork' )
+						: __( 'Another field', 'pegwork' ),
+				},
 				...( type === 'date' || type === null
 					? [
 							{
@@ -187,7 +198,7 @@ function ValueControl( { leaf, field, fields, onChange, label } ) {
 				if ( next === 'var' ) {
 					set( {
 						var:
-							fields.find( ( item ) => item.path !== leaf.var )
+							others.find( ( item ) => item.path !== leaf.var )
 								?.path || '',
 					} );
 				} else if ( next === 'date' ) {
@@ -204,14 +215,18 @@ function ValueControl( { leaf, field, fields, onChange, label } ) {
 		control = (
 			<SelectControl
 				{ ...common }
-				label={ __( 'Other field', 'pegwork' ) }
+				label={
+					operands
+						? __( 'Other value', 'pegwork' )
+						: __( 'Other field', 'pegwork' )
+				}
 				value={ leaf.value.var }
 				options={ [
-					...fields.map( ( item ) => ( {
+					...others.map( ( item ) => ( {
 						value: item.path,
 						label: fieldName( item ),
 					} ) ),
-					...( fields.some( ( item ) => item.path === leaf.value.var )
+					...( others.some( ( item ) => item.path === leaf.value.var )
 						? []
 						: [
 								{
@@ -403,6 +418,7 @@ function ValueControl( { leaf, field, fields, onChange, label } ) {
  * @param {?string}  props.event    Trigger event.
  * @param {Function} props.onChange Called with the new leaf.
  * @param {Function} props.onRemove Removes the row.
+ * @param {?Array}   props.operands Paths "Another value" may name, or null for the fields.
  */
 function LeafRow( {
 	leaf,
@@ -413,6 +429,7 @@ function LeafRow( {
 	event,
 	onChange,
 	onRemove,
+	operands,
 } ) {
 	const known = fields.find( ( item ) => item.path === leaf.var ) || null;
 	const field = known?.type ? known : null;
@@ -425,7 +442,10 @@ function LeafRow( {
 		__( 'Condition %d', 'pegwork' ),
 		number
 	);
-	const words = conditionText( toJSON( leaf ), fields );
+	const words = conditionText(
+		toJSON( leaf ),
+		operands ? [ ...fields, ...operands ] : fields
+	);
 	const invalid = messages.length
 		? { 'aria-invalid': true, 'aria-describedby': `${ id }-errors` }
 		: {};
@@ -464,10 +484,18 @@ function LeafRow( {
 							value: item.path,
 							label: fieldName( item ),
 						} ) ),
-						{
-							value: OTHER,
-							label: __( 'Another path…', 'pegwork' ),
-						},
+						// Filter rows name a field of the read type, never a path.
+						...( operands
+							? []
+							: [
+									{
+										value: OTHER,
+										label: __(
+											'Another path…',
+											'pegwork'
+										),
+									},
+								] ),
 					] }
 					onChange={ ( path ) =>
 						path === OTHER ? setVar( '' ) : setVar( path )
@@ -516,6 +544,7 @@ function LeafRow( {
 					fields={ fields }
 					onChange={ onChange }
 					label={ name }
+					operands={ operands }
 				/>
 			</div>
 			<Errors messages={ messages } id={ `${ id }-errors` } />
@@ -549,6 +578,9 @@ function LeafRow( {
  * @param {string}   props.pointer  Pointer of the condition.
  * @param {Object}   props.errors   Errors by pointer.
  * @param {string}   [props.empty]  Text shown when there is no condition.
+ * @param {boolean}  [props.flat]   One All or Any group of rows, no nesting and no Not (read
+ *                                  filters).
+ * @param {?Array}   [props.operands] Paths "Another value" may name (read filters: run paths).
  */
 export default function ConditionBuilder( {
 	label,
@@ -559,6 +591,8 @@ export default function ConditionBuilder( {
 	pointer,
 	errors,
 	empty,
+	flat = false,
+	operands = null,
 } ) {
 	const model = toModel( value );
 	const { depth, nodes } = size( model );
@@ -613,6 +647,7 @@ export default function ConditionBuilder( {
 						set( replace( model, path, () => next ) )
 					}
 					onRemove={ remove }
+					operands={ operands }
 				/>
 			);
 		}
@@ -656,8 +691,11 @@ export default function ConditionBuilder( {
 					__nextHasNoMarginBottom
 					label={ __( 'Match', 'pegwork' ) }
 					value={ match }
-					options={ [ 'all', 'any', 'not_all', 'not_any' ].map(
-						( option ) => ( {
+					options={ (
+						flat
+							? [ 'all', 'any' ]
+							: [ 'all', 'any', 'not_all', 'not_any' ]
+					).map( ( option ) => ( {
 							value: option,
 							label: legendOf( option ),
 						} )
@@ -688,7 +726,12 @@ export default function ConditionBuilder( {
 				<div className="pegwork-automation__actions">
 					<Button
 						variant="secondary"
-						disabled={ full || groupLevel + 1 > MAX_DEPTH }
+						disabled={
+							full ||
+							groupLevel + 1 > MAX_DEPTH ||
+							( flat && group.items.length >= MAX_FILTER_ROWS )
+						}
+						accessibleWhenDisabled
 						onClick={ () =>
 							set(
 								replace( model, groupPath, ( g ) => ( {
@@ -698,11 +741,14 @@ export default function ConditionBuilder( {
 							)
 						}
 					>
-						{ __( 'Add condition', 'pegwork' ) }
+						{ flat
+							? __( 'Add filter', 'pegwork' )
+							: __( 'Add condition', 'pegwork' ) }
 					</Button>
-					<Button
-						variant="secondary"
-						disabled={ ! canNest }
+					{ ! flat && (
+						<Button
+							variant="secondary"
+							disabled={ ! canNest }
 						onClick={ () =>
 							set(
 								replace( model, groupPath, ( g ) => ( {
@@ -721,8 +767,9 @@ export default function ConditionBuilder( {
 							)
 						}
 					>
-						{ __( 'Add group', 'pegwork' ) }
-					</Button>
+							{ __( 'Add group', 'pegwork' ) }
+						</Button>
+					) }
 					{ path.length > 0 && (
 						<Button variant="link" isDestructive onClick={ remove }>
 							{

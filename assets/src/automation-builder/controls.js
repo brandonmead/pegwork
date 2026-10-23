@@ -18,14 +18,14 @@ import {
 	TextareaControl,
 } from '@wordpress/components';
 import { useEffect, useRef, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { addQueryArgs } from '@wordpress/url';
 
 /**
  * Internal dependencies
  */
 import { errorsAt, formatDuration, parseDuration } from './logic';
-import { fieldName } from './labels';
+import { fieldName, groupLabel } from './labels';
 import { formatTag } from './scope';
 import { config, useSample } from './store';
 
@@ -104,8 +104,24 @@ export function wire( errors, pointer, help = false ) {
 function MergeTagInserter( { tags, label, onInsert } ) {
 	const [ path, setPath ] = useState( '' );
 	const [ date, setDate ] = useState( false );
+	const [ move, setMove ] = useState( { sign: '', amount: 1, unit: 'days' } );
+	const [ number, setNumber ] = useState( '' );
 	const [ fallback, setFallback ] = useState( '' );
 	const chosen = tags.find( ( tag ) => tag.path === path ) || tags[ 0 ];
+	const groups = [];
+	for ( const tag of tags ) {
+		const heading = groupLabel( tag, config );
+		const last = groups[ groups.length - 1 ];
+		if ( last?.heading === heading ) {
+			last.tags.push( tag );
+		} else {
+			groups.push( { heading, tags: [ tag ] } );
+		}
+	}
+	const common = {
+		__next40pxDefaultSize: true,
+		__nextHasNoMarginBottom: true,
+	};
 
 	return (
 		<Dropdown
@@ -129,22 +145,114 @@ function MergeTagInserter( { tags, label, onInsert } ) {
 			renderContent={ ( { onClose } ) => (
 				<div className="pegwork-automation__tags-form">
 					<SelectControl
-						__next40pxDefaultSize
-						__nextHasNoMarginBottom
+						{ ...common }
 						label={ __( 'Merge tag', 'pegwork' ) }
 						value={ chosen?.path ?? '' }
-						options={ tags.map( ( tag ) => ( {
-							value: tag.path,
-							label: `${ fieldName( tag ) } {{${ tag.path }}}`,
-						} ) ) }
 						onChange={ setPath }
-					/>
+					>
+						{ groups.map( ( group ) => (
+							<optgroup
+								key={ group.heading }
+								label={ group.heading }
+							>
+								{ group.tags.map( ( tag ) => (
+									<option key={ tag.path } value={ tag.path }>
+										{ `${ fieldName( tag, false ) } {{${ tag.path }}}` }
+									</option>
+								) ) }
+							</optgroup>
+						) ) }
+					</SelectControl>
 					{ chosen?.date && (
-						<CheckboxControl
-							__nextHasNoMarginBottom
-							label={ __( 'Format as a date', 'pegwork' ) }
-							checked={ date }
-							onChange={ setDate }
+						<>
+							<CheckboxControl
+								__nextHasNoMarginBottom
+								label={ __( 'Format as a date', 'pegwork' ) }
+								checked={ date }
+								onChange={ setDate }
+							/>
+							<SelectControl
+								{ ...common }
+								label={ __(
+									'Plus or minus a duration',
+									'pegwork'
+								) }
+								value={ move.sign }
+								options={ [
+									{ value: '', label: __( 'No', 'pegwork' ) },
+									{
+										value: '+',
+										label: __( 'Plus', 'pegwork' ),
+									},
+									{
+										value: '-',
+										label: __( 'Minus', 'pegwork' ),
+									},
+								] }
+								onChange={ ( sign ) =>
+									setMove( { ...move, sign } )
+								}
+							/>
+							{ move.sign && (
+								<div className="pegwork-automation__row">
+									<TextControl
+										{ ...common }
+										type="number"
+										min={ 1 }
+										label={ __( 'Amount', 'pegwork' ) }
+										value={ String( move.amount ) }
+										onChange={ ( amount ) =>
+											setMove( {
+												...move,
+												amount: Number( amount ),
+											} )
+										}
+									/>
+									<SelectControl
+										{ ...common }
+										label={ __( 'Unit', 'pegwork' ) }
+										value={ move.unit }
+										options={ UNITS.map( ( unit ) => ( {
+											value: unit,
+											label: unitLabel( unit ),
+										} ) ) }
+										onChange={ ( unit ) =>
+											setMove( { ...move, unit } )
+										}
+									/>
+								</div>
+							) }
+						</>
+					) }
+					{ chosen?.number && (
+						<SelectControl
+							{ ...common }
+							label={ __( 'Format the number', 'pegwork' ) }
+							value={ number }
+							options={ [
+								{ value: '', label: __( 'No', 'pegwork' ) },
+								{
+									value: 'auto',
+									label: __(
+										'Formatted (1,250 or 1,250.50)',
+										'pegwork'
+									),
+								},
+								...[ 0, 1, 2, 3, 4 ].map( ( places ) => ( {
+									value: String( places ),
+									label: sprintf(
+										/* translators: %d: number of decimal places. */
+										_n(
+											'Formatted, %d decimal place',
+											'Formatted, %d decimal places',
+											places,
+											'pegwork'
+										),
+										places
+									),
+								} ) ),
+							] }
+							onChange={ setNumber }
 						/>
 					) }
 					<TextControl
@@ -158,9 +266,24 @@ function MergeTagInserter( { tags, label, onInsert } ) {
 						variant="primary"
 						disabled={ ! chosen }
 						onClick={ () => {
+							let numberFilter;
+							if ( chosen.number && number === 'auto' ) {
+								numberFilter = true;
+							} else if ( chosen.number && number !== '' ) {
+								numberFilter = Number( number );
+							}
 							onInsert(
 								formatTag( chosen.path, {
+									add:
+										chosen.date && move.sign
+											? formatDuration(
+													move.amount,
+													move.unit,
+													move.sign === '-' ? '-' : ''
+												)
+											: '',
 									date: date && chosen.date,
+									number: numberFilter,
 									fallback,
 								} )
 							);
@@ -266,6 +389,22 @@ export function TemplateControl( {
 const UNITS = [ 'hours', 'days', 'weeks', 'months', 'years' ];
 
 /**
+ * A duration unit's name.
+ *
+ * @param {string} unit hours, days, weeks, months or years.
+ * @return {string} Name.
+ */
+function unitLabel( unit ) {
+	return {
+		hours: __( 'Hours', 'pegwork' ),
+		days: __( 'Days', 'pegwork' ),
+		weeks: __( 'Weeks', 'pegwork' ),
+		months: __( 'Months', 'pegwork' ),
+		years: __( 'Years', 'pegwork' ),
+	}[ unit ];
+}
+
+/**
  * A duration as amount and unit, or as ISO 8601 text when it has several units.
  *
  * @param {Object}   props          Props.
@@ -287,13 +426,6 @@ export function DurationControl( {
 	const parts = parseDuration( value );
 	const [ raw, setRaw ] = useState( ! value || parts ? '' : value );
 	const { id, messages, props } = wire( errors, pointer );
-	const unitLabels = {
-		hours: __( 'Hours', 'pegwork' ),
-		days: __( 'Days', 'pegwork' ),
-		weeks: __( 'Weeks', 'pegwork' ),
-		months: __( 'Months', 'pegwork' ),
-		years: __( 'Years', 'pegwork' ),
-	};
 
 	return (
 		<fieldset
@@ -344,7 +476,7 @@ export function DurationControl( {
 						value={ parts?.unit || 'days' }
 						options={ UNITS.map( ( unit ) => ( {
 							value: unit,
-							label: unitLabels[ unit ],
+							label: unitLabel( unit ),
 						} ) ) }
 						onChange={ ( unit ) =>
 							onChange(
