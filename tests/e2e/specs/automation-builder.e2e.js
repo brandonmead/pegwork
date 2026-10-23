@@ -455,3 +455,55 @@ test( 'a file automation is read-only and duplicates as a site automation', asyn
 	expect( copy.definition.steps ).toEqual( original.steps );
 	expect( copy.definition.trigger ).toEqual( original.trigger );
 } );
+
+// Regression: the branch appender was a new component on every render, so focusing the appender of
+// an unselected branch and opening it re-rendered the branch, remounted the appender and closed the
+// quick inserter. On a slow machine (CI) the re-render lands after Enter; a 6x CPU slowdown makes
+// that certain here.
+test( "an unselected branch's quick inserter stays open on a slow machine", async ( {
+	page,
+} ) => {
+	await page.setViewportSize( { width: 1280, height: 900 } );
+	await page.goto( editUrl );
+	await openEditor( page, /post\.php/ );
+	const nestedId = ( await definition( KEY ) ).definition.steps[ 0 ]
+		.branches[ 1 ].steps[ 0 ].branches[ 0 ].steps[ 0 ].id;
+	await selectCard( page, nestedId );
+
+	const cdp = await page.context().newCDPSession( page );
+	await cdp.send( 'Emulation.setCPUThrottlingRate', { rate: 6 } );
+	try {
+		await focus(
+			canvas( page )
+				.getByRole( 'button', { name: 'Add step to Otherwise' } )
+				.last()
+		);
+		await page.keyboard.press( 'Enter' );
+		await expect( page.getByRole( 'searchbox' ).last() ).toBeFocused();
+		// Watch for 1.5 s: the quick inserter must not close by itself.
+		const closed = await page.evaluate(
+			() =>
+				new Promise( ( resolve ) => {
+					const start = window.performance.now();
+					let gone = false;
+					const tick = () => {
+						gone =
+							gone ||
+							! document.querySelector(
+								'.block-editor-inserter__quick-inserter'
+							);
+						if ( window.performance.now() - start > 1500 ) {
+							resolve( gone );
+						} else {
+							window.requestAnimationFrame( tick );
+						}
+					};
+					tick();
+				} )
+		);
+		expect( closed, 'quick inserter closed by itself' ).toBe( false );
+		await page.keyboard.press( 'Escape' );
+	} finally {
+		await cdp.send( 'Emulation.setCPUThrottlingRate', { rate: 1 } );
+	}
+} );
