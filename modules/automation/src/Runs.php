@@ -116,7 +116,7 @@ final class Runs {
 		$holders = implode( ', ', $holders );
 
 		// IGNORE: the unique (automation, idempotency_key) index decides duplicates atomically.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Column list and placeholders built above from fixed keys.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Column list and placeholders built above from fixed keys.
 		$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO %i ({$columns}) VALUES ({$holders})", $values ) );
 
 		return 1 === (int) $wpdb->rows_affected ? (int) $wpdb->insert_id : 0;
@@ -375,7 +375,7 @@ final class Runs {
 		$values[]           = max( 0, $offset );
 		array_unshift( $values, $this->runs );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders -- $where holds fixed columns with placeholders, one per value.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where holds fixed columns with placeholders, one per value.
 		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i{$where} ORDER BY id DESC LIMIT %d OFFSET %d", $values ), ARRAY_A );
 		return array_map( array( self::class, 'decode' ), $rows );
 	}
@@ -390,7 +390,7 @@ final class Runs {
 		global $wpdb;
 		[ $where, $values ] = self::filter( $automation, $status );
 		array_unshift( $values, $this->runs );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders -- $where holds fixed columns with placeholders, one per value.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where holds fixed columns with placeholders, one per value.
 		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i{$where}", $values ) );
 	}
 

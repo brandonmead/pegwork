@@ -243,7 +243,7 @@ final class Schedules {
 		$in     = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
 		$where  = null === $only ? '' : ' AND ID = %d';
 		$values = array_merge( array( $wpdb->posts, $type ), $statuses, array( $after ), null === $only ? array() : array( $only ), array( self::BATCH ) );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders -- Placeholder list built above, one per value.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Placeholder list built above, one per value.
 		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM %i WHERE post_type = %s AND post_status IN ({$in}) AND ID > %d{$where} ORDER BY ID LIMIT %d", $values ) );
 		return array_map( 'intval', $ids );
 	}

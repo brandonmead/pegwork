@@ -122,7 +122,7 @@ final class Entries {
 		$order    = 'asc' === ( $args['order'] ?? 'desc' ) ? 'ASC' : 'DESC';
 		$table    = Schema::table();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom table; $where[0] holds only placeholders and its values are prepared here; $order is one of two literals.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $where[0] holds only placeholders and its values are prepared here; $order is one of two literals.
 		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE {$where[0]}", ...array_merge( array( $table ), $where[1] ) ) );
 		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE {$where[0]} ORDER BY created_at {$order}, id {$order} LIMIT %d OFFSET %d", ...array_merge( array( $table ), $where[1], array( $per_page, $offset ) ) ), ARRAY_A );
 		// phpcs:enable
@@ -151,7 +151,7 @@ final class Entries {
 			)
 		);
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom table; $where[0] holds only placeholders, its values are prepared here.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $where[0] holds only placeholders, its values are prepared here.
 		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT status, COUNT(*) AS n FROM %i WHERE {$where[0]} GROUP BY status", ...array_merge( array( $table ), $where[1] ) ), ARRAY_A );
 
 		$counts = array_fill_keys( self::STATUSES, 0 );
@@ -241,7 +241,7 @@ final class Entries {
 		}
 		$params[] = $limit;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom table; $sql holds only placeholders.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $sql holds only placeholders.
 		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE {$sql} ORDER BY id ASC LIMIT %d", ...array_merge( array( $table ), $params ) ) );
 
 		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
