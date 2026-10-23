@@ -293,6 +293,11 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - PR 3 blocks are placeholders: no inserter appenders in decisions or branches, no settings panel. PR 5 adds the UI on the same block names and attributes. Block attributes must declare every step key (`Builder::STEP_ATTRIBUTES`), or the editor drops it on save.
 - Local runs: test DBs `pegwork_tests_p6s82`, `_p6s84`, `_p6s82_67`, `_p6s84_67`; site `~/wp-envs/p6save` (port 8227, DB `wpenv_p6save`). Last verified 2026-10-22.
 
+## BarnCRM proof (Phase 6 PR 6a, branch `phase6-barn`)
+- Fixture `tests/fixtures/valid/barn` (worked examples verbatim; `donor_*` fields are Phase 5 stand-ins), E2E copy without automations `tests/e2e/packages/barn` (not registered by any mu-plugin yet; `FixturesTest` keeps the copies identical). Gate `BarnFlowsGateTest` (site time America/New York; volunteers through `Submission::process()` as user 0). Runbook `docs/automation.md#trying-the-barncrm-example-flows` (`wp pegwork schema import` of the fixture; needs a dev checkout).
+- Gotcha: the options page `url` check is `wp_http_validate_url()`, which resolves the host, so an unresolvable domain (`barn.example`) is dropped on save, and a test that stores such a value must bypass `sanitize_option_<page>`. Content fields use the network-free `Meta::valid_url()`.
+- Local runs: test DBs `pegwork_tests_p6b82`, `_p6b84`, `_p6b82_67`, `_p6b84_67`; site `~/wp-envs/p6barn` (port 8229, DB `wpenv_p6barn`). Last verified 2026-10-22.
+
 ## Version
 - Plugin version 0.2.0 (header, `PEGWORK_VERSION`, readme Stable tag, package.json), equal to `Pegwork\Api\VERSION` for now (`PluginLoadsTest`). Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
 - Module manifest `label` and `description` are closures around `__()`, resolved after `init` (WordPress 6.7 just-in-time textdomain loading warns on earlier calls).
