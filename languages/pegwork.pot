@@ -9,13 +9,14 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T01:04:48+00:00\n"
+"POT-Creation-Date: 2026-10-23T01:21:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: pegwork\n"
 
 #. Plugin Name of the plugin
 #: pegwork.php
+#: modules/automation/src/Editor/BuilderEditor.php:79
 #: modules/automation/src/Health.php:236
 #: modules/forms/src/Module.php:97
 #: modules/listings/src/Module.php:70
@@ -95,110 +96,119 @@ msgstr ""
 msgid "Sorry, you are not allowed to manage Pegwork automations."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:32
-#: modules/automation/src/Admin/AutomationList.php:40
+#: modules/automation/src/Admin/AutomationList.php:36
+#: modules/automation/src/Admin/AutomationList.php:45
 #: modules/automation/src/Admin/Screen.php:71
+#: modules/automation/src/Editor/AutomationPost.php:106
+#: modules/automation/src/Editor/AutomationPost.php:116
 msgid "Automations"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:33
+#: modules/automation/src/Admin/AutomationList.php:37
+#: modules/automation/src/Editor/AutomationPost.php:108
+#: modules/automation/src/Editor/AutomationPost.php:109
+msgid "Add automation"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:38
 msgid "View run log"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:36
-msgid "Automations come from the schema registry and are edited as JSON. Here you can switch one on or off for this site, run a schedule now, and follow its runs."
+#: modules/automation/src/Admin/AutomationList.php:41
+msgid "Automations come from the schema registry. Site automations are edited here; automations from a schema package are read-only and can be duplicated as site automations. You can also switch one on or off for this site, run a schedule now, and follow its runs."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:42
+#: modules/automation/src/Admin/AutomationList.php:47
 #: modules/automation/src/Admin/RunLog.php:57
 #: modules/automation/src/Admin/RunLog.php:89
 #: modules/automation/src/Admin/RunLog.php:151
+#: modules/automation/src/Editor/AutomationPost.php:107
 #: src/Modules/manifest.php:33
 msgid "Automation"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:43
+#: modules/automation/src/Admin/AutomationList.php:48
 #: modules/automation/src/Admin/RunLog.php:90
 #: modules/automation/src/Admin/RunLog.php:162
 msgid "Trigger"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:44
-#: modules/automation/src/Admin/AutomationList.php:119
+#: modules/automation/src/Admin/AutomationList.php:49
+#: modules/automation/src/Admin/AutomationList.php:125
 #: src/Admin/Modules.php:85
 msgid "Enabled"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:45
+#: modules/automation/src/Admin/AutomationList.php:50
 msgid "Last run"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:46
+#: modules/automation/src/Admin/AutomationList.php:51
 msgid "Next run"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:47
+#: modules/automation/src/Admin/AutomationList.php:52
 #: modules/forms/src/EntriesAdmin.php:419
 msgid "Actions"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:51
+#: modules/automation/src/Admin/AutomationList.php:56
 msgid "No automations registered. Add an automations section to a schema package (see the registry reference) or import one with wp pegwork schema import."
 msgstr ""
 
 #. translators: %s: CLI command.
-#: modules/automation/src/Admin/AutomationList.php:79
+#: modules/automation/src/Admin/AutomationList.php:85
 #, php-format
 msgid "The same rules apply to %s. Times are in the site time zone."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:95
+#: modules/automation/src/Admin/AutomationList.php:101
 msgid "POST signed JSON to"
 msgstr ""
 
 #. translators: %s: CLI command.
-#: modules/automation/src/Admin/AutomationList.php:98
+#: modules/automation/src/Admin/AutomationList.php:104
 #, php-format
 msgid "Secret: %s"
 msgstr ""
 
 #. translators: 1: on or off (JSON default), 2: on or off (site override).
-#: modules/automation/src/Admin/AutomationList.php:111
 #: modules/automation/src/Admin/AutomationList.php:117
+#: modules/automation/src/Admin/AutomationList.php:123
 #: assets/build/listings-editor.js:9
 msgid "on"
 msgstr ""
 
 #. translators: 1: on or off (JSON default), 2: on or off (site override).
-#: modules/automation/src/Admin/AutomationList.php:111
 #: modules/automation/src/Admin/AutomationList.php:117
+#: modules/automation/src/Admin/AutomationList.php:123
 #: assets/build/listings-editor.js:9
 msgid "off"
 msgstr ""
 
 #. translators: %s: on or off.
-#: modules/automation/src/Admin/AutomationList.php:115
+#: modules/automation/src/Admin/AutomationList.php:121
 #, php-format
 msgid "JSON default %s, no site override"
 msgstr ""
 
 #. translators: 1: on or off (JSON default), 2: on or off (site override).
-#: modules/automation/src/Admin/AutomationList.php:117
+#: modules/automation/src/Admin/AutomationList.php:123
 #, php-format
 msgid "JSON default %1$s, site override %2$s"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:119
+#: modules/automation/src/Admin/AutomationList.php:125
 #: src/Admin/Modules.php:85
 msgid "Disabled"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:130
+#: modules/automation/src/Admin/AutomationList.php:136
 msgid "Never run"
 msgstr ""
 
 #. translators: %s: number of queued, running or waiting runs.
-#: modules/automation/src/Admin/AutomationList.php:139
+#: modules/automation/src/Admin/AutomationList.php:145
 #, php-format
 msgid "%s open run"
 msgid_plural "%s open runs"
@@ -206,54 +216,70 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of failed runs.
-#: modules/automation/src/Admin/AutomationList.php:143
+#: modules/automation/src/Admin/AutomationList.php:149
 #, php-format
 msgid "%s failed in the last 7 days"
 msgid_plural "%s failed in the last 7 days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/automation/src/Admin/AutomationList.php:159
+#: modules/automation/src/Admin/AutomationList.php:165
 msgid "When a signed request arrives"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:160
+#: modules/automation/src/Admin/AutomationList.php:166
 msgid "When its event fires"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:164
+#: modules/automation/src/Admin/AutomationList.php:170
 msgid "None while disabled"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:166
+#: modules/automation/src/Admin/AutomationList.php:172
 msgid "Scheduled on the next page load"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:185
+#: modules/automation/src/Admin/AutomationList.php:187
+#: modules/forms/src/EntriesTable.php:258
+#: modules/forms/src/FormsTable.php:122
+msgid "View"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:189
+#: assets/build/automation-builder.js:2
+msgid "Duplicate as site automation"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:191
+#: modules/forms/src/FormsTable.php:122
+msgid "Edit"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:212
 #: src/Admin/Modules.php:111
 msgid "Disable"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:185
+#: modules/automation/src/Admin/AutomationList.php:212
 #: src/Admin/Modules.php:111
 msgid "Enable"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:193
-#: modules/automation/src/Admin/AutomationList.php:197
+#: modules/automation/src/Admin/AutomationList.php:220
+#: modules/automation/src/Admin/AutomationList.php:224
 msgid "Run now"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:198
+#: modules/automation/src/Admin/AutomationList.php:225
 msgid "Enable it to run it now."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:209
+#: modules/automation/src/Admin/AutomationList.php:236
 msgid "View runs"
 msgstr ""
 
 #. translators: %s: automation label.
-#: modules/automation/src/Admin/AutomationList.php:211
+#: modules/automation/src/Admin/AutomationList.php:238
 #, php-format
 msgid "of %s"
 msgstr ""
@@ -343,7 +369,7 @@ msgid "%s (not supported yet)"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:142
-msgid "Database (imported)"
+msgid "Site automation (database)"
 msgstr ""
 
 #. translators: %s: schema package id.
@@ -591,6 +617,7 @@ msgid "Step attempts, oldest first"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:189
+#: assets/build/automation-builder.js:1
 msgid "Step"
 msgstr ""
 
@@ -660,7 +687,7 @@ msgstr ""
 msgid "Pegwork Automations"
 msgstr ""
 
-#: modules/automation/src/Admin/Screen.php:137
+#: modules/automation/src/Admin/Screen.php:139
 #: src/Admin/Modules.php:50
 #: src/Admin/Overview.php:26
 #: src/Options/Screen.php:141
@@ -811,6 +838,107 @@ msgstr ""
 
 #: modules/automation/src/DryRun.php:500
 msgid "The run would fail there."
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:110
+msgid "Edit automation"
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:111
+msgid "New automation"
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:112
+msgid "View automation"
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:113
+msgid "Search automations"
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:114
+msgid "No automations found."
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:115
+msgid "No automations found in Trash."
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:117
+#: modules/automation/src/Editor/AutomationPost.php:118
+#: modules/automation/src/Editor/AutomationPost.php:119
+#: modules/automation/src/Editor/AutomationPost.php:120
+msgid "Automation saved."
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:122
+msgid "Pegwork automation definitions, edited in the block editor. The registry is the source."
+msgstr ""
+
+#. translators: %s: automation key.
+#: modules/automation/src/Editor/AutomationPost.php:297
+#, php-format
+msgid "An automation with key \"%s\" already exists. Choose another key."
+msgstr ""
+
+#. translators: %s: validation messages.
+#: modules/automation/src/Editor/AutomationPost.php:685
+#: src/Registry/SiteDefinitions.php:221
+#, php-format
+msgid "This automation cannot be saved: %s"
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:101
+msgid "The automation settings could not be read. Reload the editor and try again."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:109
+msgid "Add an automation title. It is the automation label."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:117
+msgid "Add an automation key: lowercase letters, digits and underscores, starting with a letter."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:122
+#: src/Registry/Rules/AutomationRules.php:256
+msgid "Add at least one step."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:175
+#: modules/automation/src/Editor/Builder.php:184
+msgid "An automation can hold only steps and decisions. Remove other content."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:180
+msgid "A branch must be inside a decision."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:214
+msgid "A decision can hold only branches. Put steps inside a branch."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:220
+msgid "A decision can have only one Otherwise branch."
+msgstr ""
+
+#: modules/automation/src/Editor/Builder.php:227
+msgid "The Otherwise branch must come last."
+msgstr ""
+
+#: modules/automation/src/Editor/BuilderEditor.php:200
+#: modules/forms/src/BuilderEditor.php:240
+#: modules/forms/src/EntriesAdmin.php:107
+#: modules/forms/src/Files.php:96
+msgid "The link you followed has expired. Go back, reload the page and try again."
+msgstr ""
+
+#. translators: %s: automation label.
+#. translators: %s: form label.
+#: modules/automation/src/Editor/BuilderEditor.php:207
+#: modules/forms/src/BuilderEditor.php:250
+#, php-format
+msgid "%s (copy)"
 msgstr ""
 
 #: modules/automation/src/Editor/PreviewRoutes.php:142
@@ -1126,18 +1254,6 @@ msgstr ""
 
 #: modules/forms/src/Builder.php:218
 msgid "Add a label."
-msgstr ""
-
-#: modules/forms/src/BuilderEditor.php:240
-#: modules/forms/src/EntriesAdmin.php:107
-#: modules/forms/src/Files.php:96
-msgid "The link you followed has expired. Go back, reload the page and try again."
-msgstr ""
-
-#. translators: %s: form label.
-#: modules/forms/src/BuilderEditor.php:250
-#, php-format
-msgid "%s (copy)"
 msgstr ""
 
 #: modules/forms/src/Confirm.php:236
@@ -1547,11 +1663,6 @@ msgstr ""
 msgid "Select entry %d"
 msgstr ""
 
-#: modules/forms/src/EntriesTable.php:258
-#: modules/forms/src/FormsTable.php:122
-msgid "View"
-msgstr ""
-
 #. translators: %d: entry ID.
 #: modules/forms/src/EntriesTable.php:260
 #: modules/forms/src/EntriesTable.php:263
@@ -1742,7 +1853,7 @@ msgstr ""
 
 #. translators: %s: validation messages.
 #: modules/forms/src/FormPost.php:639
-#: src/Registry/Forms.php:167
+#: src/Registry/SiteDefinitions.php:219
 #, php-format
 msgid "This form cannot be saved: %s"
 msgstr ""
@@ -1802,10 +1913,6 @@ msgstr ""
 #: modules/forms/src/FormsTable.php:121
 #, php-format
 msgid "Edit \"%s\""
-msgstr ""
-
-#: modules/forms/src/FormsTable.php:122
-msgid "Edit"
 msgstr ""
 
 #. translators: %s: form label.
@@ -2981,22 +3088,6 @@ msgstr ""
 msgid "Pegwork Platform for WordPress"
 msgstr ""
 
-#: src/Registry/Forms.php:83
-msgid "The form was not accepted by the registry."
-msgstr ""
-
-#. translators: %s: form key.
-#: src/Registry/Forms.php:109
-#, php-format
-msgid "No site form with key \"%s\"."
-msgstr ""
-
-#. translators: %s: form key.
-#: src/Registry/Forms.php:145
-#, php-format
-msgid "Form \"%s\" is defined by a file package and is read-only here. Duplicate it under a new key instead."
-msgstr ""
-
 #: src/Registry/Loader.php:89
 msgid "Expected a list."
 msgstr ""
@@ -3058,10 +3149,6 @@ msgstr ""
 
 #: src/Registry/Rules/AutomationRules.php:241
 msgid "\"form\" narrows form.* events only."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:256
-msgid "Add at least one step."
 msgstr ""
 
 #. translators: %d: maximum number of branches.
@@ -3620,6 +3707,38 @@ msgstr ""
 msgid "Key is longer than %d characters."
 msgstr ""
 
+#: src/Registry/SiteDefinitions.php:98
+msgid "The form was not accepted by the registry."
+msgstr ""
+
+#: src/Registry/SiteDefinitions.php:99
+msgid "The automation was not accepted by the registry."
+msgstr ""
+
+#. translators: %s: form key.
+#: src/Registry/SiteDefinitions.php:128
+#, php-format
+msgid "No site form with key \"%s\"."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/SiteDefinitions.php:130
+#, php-format
+msgid "No site automation with key \"%s\"."
+msgstr ""
+
+#. translators: %s: form key.
+#: src/Registry/SiteDefinitions.php:193
+#, php-format
+msgid "Form \"%s\" is defined by a file package and is read-only here. Duplicate it under a new key instead."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/SiteDefinitions.php:195
+#, php-format
+msgid "Automation \"%s\" is defined by a file package and is read-only here. Duplicate it under a new key instead."
+msgstr ""
+
 #. translators: %s: taxonomy key.
 #: src/Registry/Validator.php:286
 #, php-format
@@ -3814,6 +3933,74 @@ msgstr ""
 #: src/Registry/Validator.php:1051
 #, php-format
 msgid "\"%s\" looks like a PHP callable; callables are not allowed in a schema."
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Send email"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Update record"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Create record"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Call webhook"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Wait"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Continue only if"
+msgstr ""
+
+#. translators: %s: package ID.
+#: assets/build/automation-builder.js:2
+#, js-format
+msgid "This automation comes from the file package \"%s\" and is read-only. Duplicate it to make a site automation you can change."
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Automation step"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "One step of the automation."
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Decision"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Runs the first branch whose condition holds, else Otherwise, then continues below."
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Then continue below"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Branch"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "One branch of a decision."
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Otherwise"
+msgstr ""
+
+#. translators: %s: branch label.
+#: assets/build/automation-builder.js:3
+#, js-format
+msgid "If %s"
 msgstr ""
 
 #: assets/build/editor-panel.js:1
@@ -4819,6 +5006,101 @@ msgstr ""
 msgid "Type to search published items (%s). Clear to choose none."
 msgstr ""
 
+#: modules/automation/blocks/automation-branch/block.json
+msgctxt "block title"
+msgid "Branch"
+msgstr ""
+
+#: modules/automation/blocks/automation-branch/block.json
+msgctxt "block description"
+msgid "One branch of a decision: a condition and its steps, or the Otherwise steps."
+msgstr ""
+
+#: modules/automation/blocks/automation-branch/block.json
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block keyword"
+msgid "branch"
+msgstr ""
+
+#: modules/automation/blocks/automation-branch/block.json
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block keyword"
+msgid "if"
+msgstr ""
+
+#: modules/automation/blocks/automation-branch/block.json
+msgctxt "block keyword"
+msgid "otherwise"
+msgstr ""
+
+#: modules/automation/blocks/automation-branch/block.json
+#: modules/automation/blocks/automation-decision/block.json
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block keyword"
+msgid "automation"
+msgstr ""
+
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block title"
+msgid "Decision"
+msgstr ""
+
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block description"
+msgid "Runs the steps of the first branch whose condition holds, else Otherwise, then continues below."
+msgstr ""
+
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block keyword"
+msgid "else"
+msgstr ""
+
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block keyword"
+msgid "choose"
+msgstr ""
+
+#: modules/automation/blocks/automation-decision/block.json
+msgctxt "block keyword"
+msgid "path"
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block title"
+msgid "Automation step"
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block description"
+msgid "One step of a Pegwork automation. Its attributes are the step."
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+#: modules/forms/blocks/form-step/block.json
+msgctxt "block keyword"
+msgid "step"
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block keyword"
+msgid "email"
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block keyword"
+msgid "record"
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block keyword"
+msgid "webhook"
+msgstr ""
+
+#: modules/automation/blocks/automation-step/block.json
+msgctxt "block keyword"
+msgid "wait"
+msgstr ""
+
 #: modules/filters/blocks/filters/block.json
 msgctxt "block title"
 msgid "Filters"
@@ -4901,11 +5183,6 @@ msgstr ""
 #: modules/forms/blocks/form-step/block.json
 msgctxt "block description"
 msgid "One step of a multi-step Pegwork form: a heading and its fields."
-msgstr ""
-
-#: modules/forms/blocks/form-step/block.json
-msgctxt "block keyword"
-msgid "step"
 msgstr ""
 
 #: modules/forms/blocks/form-step/block.json

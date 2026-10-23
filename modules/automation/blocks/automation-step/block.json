@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/automation-step",
+	"title": "Automation step",
+	"category": "pegwork",
+	"icon": "controls-play",
+	"description": "One step of a Pegwork automation. Its attributes are the step.",
+	"keywords": [ "step", "automation", "email", "record", "webhook", "wait" ],
+	"textdomain": "pegwork",
+	"attributes": {
+		"id": { "type": "string" },
+		"type": { "type": "string" },
+		"to": { "type": "string" },
+		"reply_to": { "type": "string" },
+		"subject": { "type": "string" },
+		"text": { "type": "string" },
+		"html": { "type": "string" },
+		"record": { "type": "string" },
+		"content_type": { "type": "string" },
+		"status": { "type": "string" },
+		"values": { "type": "object" },
+		"url": { "type": "string" },
+		"fields": { "type": "array" },
+		"timeout": { "type": "number" },
+		"for": { "type": "string" },
+		"when": { "type": "object" },
+		"retry": { "type": "object" }
+	},
+	"supports": {
+		"html": false,
+		"className": false,
+		"customClassName": false,
+		"reusable": false,
+		"renaming": false,
+		"lock": false
+	}
+}

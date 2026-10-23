@@ -11,6 +11,7 @@ use Pegwork\Api\Records;
 use Pegwork\Tests\Support\AutomationTestCase;
 use PegworkAutomation\Cli\AutomationCommand;
 use PegworkAutomation\DryRun;
+use PegworkAutomation\Editor\AutomationPost;
 use PegworkAutomation\Editor\PreviewRoutes;
 use PegworkAutomation\Links\Key;
 use PegworkAutomation\Schema;
@@ -407,6 +408,13 @@ class AutomationDryRunTest extends AutomationTestCase {
 		$this->assertSame( 401, $this->post( '/test', $body )->get_status() );
 
 		wp_set_current_user( $this->admin );
+		// The routes check the post type's meta capability, not manage_options directly.
+		$deny = fn( $caps, $cap ) => AutomationPost::CAP === $cap ? array( 'do_not_allow' ) : $caps;
+		add_filter( 'map_meta_cap', $deny, 20, 2 );
+		$this->assertTrue( current_user_can( 'manage_options' ) );
+		$this->assertSame( 403, $this->post( '/test', $body )->get_status() );
+		remove_filter( 'map_meta_cap', $deny, 20 );
+
 		$this->assertSame( 415, $this->post( '/test', $body, 'application/x-www-form-urlencoded' )->get_status() );
 		$this->assertSame( 415, $this->post( '/preview', $body, 'text/plain' )->get_status() );
 		$this->assertSame( 200, $this->post( '/preview', $body )->get_status() );

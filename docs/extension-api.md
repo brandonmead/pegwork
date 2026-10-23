@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()` and the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()`, the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive).
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -58,6 +58,15 @@ Form functions (API 0.2.0, `includes/functions.php`). None checks capabilities: 
 | `pegwork_delete_form( string $key )` | `true`, or `WP_Error` `pegwork_form_file_defined` (409) or `pegwork_form_not_found` (404). Removes the DB definition; entries stay. |
 
 The forms module runtime (block, pipeline, entries table, notifications, hooks): `docs/forms.md`.
+
+Automation functions (API 0.2.0, additive in Phase 6, `includes/functions.php`). They share one implementation with the form functions (`Pegwork\Registry\SiteDefinitions`, internal). Neither checks capabilities: the caller authorizes. Pegwork's own editor requires `manage_options`, because an automation can email any address, write any record and call webhooks.
+
+| Function | Returns |
+|---|---|
+| `pegwork_save_automation( array $definition )` | `true`, or `WP_Error`: `pegwork_invalid_automation` (400, messages by JSON pointer in `data.fields`, such as `/steps/0/branches/1/steps/0/subject`) or `pegwork_automation_file_defined` (409). Validates like a file automation (shape, limits, output scope, private fields out of public contexts), resolves references against the effective registry, upserts the canonical form into the `pegwork_schema` option (`automations`, by key, in place) and rebuilds the registry. `enabled` defaults to `true` here, as in a file; the editor saves new automations with `enabled: false`. |
+| `pegwork_delete_automation( string $key )` | `true`, or `WP_Error` `pegwork_automation_file_defined` (409) or `pegwork_automation_not_found` (404). Removes the DB definition; its runs stay in the run log, and its open runs end `cancelled` (`automation_removed`) when they wake. |
+
+Saved site automations round-trip through `wp pegwork schema export` and `import` like imported ones. A file package that later defines the same key wins, and the site copy shows as shadowed. The editing surface (post type `pegwork_automation`): `docs/automation.md#editing-surface`.
 
 Registry section accessors (API 0.2.0) return definitions only, in canonical form (defaults filled); the modules that render or run them read them here.
 
@@ -180,7 +189,7 @@ The `forms` module (`docs/forms.md`) renders registry forms, handles their submi
 
 REST: `POST /wp-json/pegwork/v1/automations/<key>/webhook` (inbound webhook trigger; signed with the automation's secret, see `docs/automation.md#webhooks`). Outbound `call_webhook` deliveries use `wp_safe_remote_post()`, so the core `http_request_host_is_external` and `http_allowed_safe_ports` filters apply to them.
 
-REST for the automation editor (`manage_options` with the cookie nonce, JSON bodies only, `Cache-Control: no-store`, no side effects): `POST /wp-json/pegwork/v1/automation-editor/preview` renders a template against a sample record, and `POST /wp-json/pegwork/v1/automation-editor/test` dry-runs a saved automation (`docs/automation.md#preview-and-test-run`). These are module routes for the editor, not a stable extension API.
+REST for the automation editor (`pegwork_manage_automations`, mapped to `manage_options`, with the cookie nonce, JSON bodies only, `Cache-Control: no-store`, no side effects): `POST /wp-json/pegwork/v1/automation-editor/preview` renders a template against a sample record, and `POST /wp-json/pegwork/v1/automation-editor/test` dry-runs a saved automation (`docs/automation.md#preview-and-test-run`). These are module routes for the editor, not a stable extension API.
 
 Records written by automation runs carry `origin.automation`, `origin.run_id` and `origin.depth` (run depth plus 1) in their record events.
 

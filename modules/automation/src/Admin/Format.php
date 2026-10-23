@@ -139,7 +139,7 @@ final class Format {
 			return '';
 		}
 		if ( 'db' === $source ) {
-			return __( 'Database (imported)', 'pegwork' );
+			return __( 'Site automation (database)', 'pegwork' );
 		}
 		/* translators: %s: schema package id. */
 		return sprintf( __( 'File package %s', 'pegwork' ), substr( $source, 5 ) );

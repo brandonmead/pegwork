@@ -9,7 +9,6 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Editor;
 
-use PegworkAutomation\Admin\Screen;
 use PegworkAutomation\DryRun;
 use PegworkAutomation\Webhooks\Inbound;
 use WP_Error;
@@ -21,7 +20,8 @@ use WP_REST_Server;
 /**
  * `POST pegwork/v1/automation-editor/preview` renders one template against a sample record, and
  * `POST pegwork/v1/automation-editor/test` dry-runs a saved automation (DryRun). Both need the
- * automation managers' capability (manage_options, with no filter to lower it) and the REST cookie
+ * automation managers' capability (`pegwork_manage_automations`, mapped to manage_options with no
+ * filter to lower it, as for the `pegwork_automation` post type) and the REST cookie
  * nonce, accept only JSON bodies (else 415), and send `Cache-Control: no-store`. Neither has a side
  * effect: no email, HTTP, record write, run row, signed link or secret. Previews are never logged.
  */
@@ -136,7 +136,7 @@ final class PreviewRoutes {
 	 * @return true|WP_Error
 	 */
 	public static function authorize( WP_REST_Request $request ): bool|WP_Error {
-		if ( ! current_user_can( Screen::CAPABILITY ) ) {
+		if ( ! current_user_can( AutomationPost::CAP ) ) {
 			return new WP_Error(
 				'rest_forbidden',
 				__( 'Sorry, you are not allowed to test automations.', 'pegwork' ),
