@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "dr_intake",
+  "label": "Open a case",
+  "target": { "content_type": "dr_case", "action": "create" },
+  "fields": [
+    { "bind": { "field": "name" } },
+    { "bind": { "field": "email" } },
+    { "bind": { "field": "priority" } }
+  ]
+}

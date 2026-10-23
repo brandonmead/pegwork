@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "key": "dr_case",
+  "labels": { "singular": "Case", "plural": "Cases" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "visibility": "private" },
+    { "key": "priority", "type": "select", "label": "Priority", "default": "normal",
+      "options": [ { "value": "normal", "label": "Normal" }, { "value": "high", "label": "High" } ] },
+    { "key": "amount", "type": "number", "label": "Amount" },
+    { "key": "marker", "type": "text", "label": "Marker" }
+  ]
+}

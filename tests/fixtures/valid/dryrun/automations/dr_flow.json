@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "key": "dr_flow",
+  "label": "Case updated: thank big cases, open a task for the rest",
+  "trigger": { "type": "event", "event": "record.updated", "content_type": "dr_case",
+    "when": { "var": "record.priority", "op": "eq", "value": "high" } },
+  "steps": [
+    { "id": "route", "type": "decision",
+      "branches": [
+        { "label": "Big", "when": { "var": "record.amount", "op": "gte", "value": 250 },
+          "steps": [
+            { "id": "thank", "type": "send_email", "to": "{{record.email}}", "subject": "Thanks, {{record.name}}",
+              "text": "Confirm: {{link.confirm}}", "html": "<p>{{record.name}}: <a href=\"{{link.confirm}}\">Confirm</a></p>" },
+            { "id": "ping", "type": "call_webhook", "url": "https://hooks.example.org/big", "fields": [ "name", "amount" ] } ] } ],
+      "otherwise": [
+        { "id": "task", "type": "create_record", "content_type": "dr_case", "status": "draft",
+          "values": { "name": "Follow up {{record.name}}" } },
+        { "id": "tell", "type": "send_email", "to": "team@example.org", "subject": "Task {{steps.task.record_id}}",
+          "text": "For {{record.name}}." } ] },
+    { "id": "later", "type": "wait", "for": "P30D" },
+    { "id": "mark", "type": "update_record", "values": { "marker": "checked {{today}}" } },
+    { "id": "still_high", "type": "condition", "when": { "var": "record.priority", "op": "eq", "value": "high" } },
+    { "id": "last", "type": "send_email", "to": "team@example.org", "subject": "Still high: {{record.name}}",
+      "text": "{{record.name}} is still high." }
+  ],
+  "links": {
+    "confirm": { "expires": "P7D", "steps": [ { "id": "ok", "type": "update_record", "values": { "marker": "confirmed" } } ] }
+  }
+}
