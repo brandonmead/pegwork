@@ -482,6 +482,30 @@ final class Runs {
 	}
 
 	/**
+	 * Open runs whose wake-up is overdue (Site Health): queued with no activity since a time, or waiting
+	 * with `resume_at` before it.
+	 *
+	 * @param string $due_before UTC time.
+	 * @return array{count: int, oldest: string|null} Count and the earliest due time (UTC).
+	 */
+	public function overdue( string $due_before ): array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS n, MIN( CASE WHEN status = 'waiting' THEN resume_at ELSE COALESCE(claimed_at, created_at) END ) AS oldest
+				FROM {$this->runs} WHERE ( status = 'queued' AND COALESCE(claimed_at, created_at) < %s ) OR ( status = 'waiting' AND resume_at < %s )",
+				$due_before,
+				$due_before
+			),
+			ARRAY_A
+		);
+		return array(
+			'count'  => (int) ( $row['n'] ?? 0 ),
+			'oldest' => isset( $row['oldest'] ) ? (string) $row['oldest'] : null,
+		);
+	}
+
+	/**
 	 * Runs marked running whose last claim is older than a time (the process died mid-run).
 	 *
 	 * @param string $claimed_before UTC time.
