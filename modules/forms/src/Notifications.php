@@ -59,7 +59,7 @@ final class Notifications {
 				$body = self::render( '{all_fields}', $form, $context );
 			}
 
-			$results[ $notification['key'] ] = wp_mail( $to, $subject, $body, $headers ) ? 'sent' : 'failed';
+			$results[ $notification['key'] ] = self::mail( $to, $subject, $body, $headers ) ? 'sent' : 'failed';
 		}
 
 		return $results;
@@ -85,7 +85,26 @@ final class Notifications {
 			$body .= "\n\n" . $context['confirm_url'];
 		}
 
-		return wp_mail( $to, $subject, $body ) ? 'sent' : 'failed';
+		return self::mail( $to, $subject, $body ) ? 'sent' : 'failed';
+	}
+
+	/**
+	 * Sends with wp_mail() as plain text, whatever a site sets with `wp_mail_content_type`: submitted values are not
+	 * escaped for HTML, so an HTML content type would let them carry markup.
+	 *
+	 * @param string   $to      Recipient(s).
+	 * @param string   $subject Subject.
+	 * @param string   $body    Plain text body.
+	 * @param string[] $headers Headers.
+	 */
+	private static function mail( string $to, string $subject, string $body, array $headers = array() ): bool {
+		$plain = static fn() => 'text/plain';
+		add_filter( 'wp_mail_content_type', $plain, PHP_INT_MAX );
+		try {
+			return wp_mail( $to, $subject, $body, $headers );
+		} finally {
+			remove_filter( 'wp_mail_content_type', $plain, PHP_INT_MAX );
+		}
 	}
 
 	/**
@@ -128,7 +147,7 @@ final class Notifications {
 		);
 		$to = (string) get_option( 'admin_email' );
 
-		return is_email( $to ) && wp_mail( $to, self::single_line( $subject ), implode( "\n", $lines ) ) ? 'sent' : 'failed';
+		return is_email( $to ) && self::mail( $to, self::single_line( $subject ), implode( "\n", $lines ) ) ? 'sent' : 'failed';
 	}
 
 	/**

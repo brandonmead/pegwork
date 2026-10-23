@@ -92,8 +92,11 @@ final class SendEmail implements Step {
 			return StepResult::fail( 'empty_body', 'The email body rendered empty.', $summary, false );
 		}
 
-		$headers[]       = 'Content-Type: ' . ( null === $html ? 'text/plain' : 'text/html' ) . '; charset=UTF-8';
+		$type            = null === $html ? 'text/plain' : 'text/html';
+		$headers[]       = 'Content-Type: ' . $type . '; charset=UTF-8';
 		$summary['html'] = null !== $html;
+		// The body was escaped for this type only, so a site-wide wp_mail_content_type filter cannot change it.
+		$keep = static fn() => $type;
 
 		$error = null;
 		$catch = static function ( $failure ) use ( &$error ): void {
@@ -106,6 +109,7 @@ final class SendEmail implements Step {
 		};
 
 		add_action( 'wp_mail_failed', $catch );
+		add_filter( 'wp_mail_content_type', $keep, PHP_INT_MAX );
 		if ( null !== $html ) {
 			add_action( 'phpmailer_init', $alt );
 		}
@@ -113,6 +117,7 @@ final class SendEmail implements Step {
 			$sent = wp_mail( $to, $subject, $html ?? $text, $headers );
 		} finally {
 			remove_action( 'wp_mail_failed', $catch );
+			remove_filter( 'wp_mail_content_type', $keep, PHP_INT_MAX );
 			remove_action( 'phpmailer_init', $alt );
 		}
 
@@ -147,7 +152,12 @@ final class SendEmail implements Step {
 				array_push( $addresses, ...$found );
 				continue;
 			}
-			array_push( $addresses, ...self::split( Templates::render( $part, $context, Templates::TEXT ) ) );
+			// One part, one recipient: a tag's value is never split, so a submitted text such as
+			// "a@example.org, b@example.org" is one invalid address, not two recipients.
+			$address = trim( Templates::render( $part, $context, Templates::TEXT ) );
+			if ( '' !== $address ) {
+				$addresses[] = $address;
+			}
 		}
 
 		$unique = array();

@@ -51,12 +51,32 @@ class AutomationWebhookTest extends AutomationTestCase {
 	private $receiver_secret = null;
 
 	/**
-	 * Installs the test receiver (no real HTTP leaves the test) and clears the rate buckets.
+	 * REMOTE_ADDR before the test.
+	 *
+	 * @var string|null
+	 */
+	private $remote_addr = null;
+
+	/**
+	 * Restores REMOTE_ADDR.
+	 */
+	public function tear_down() {
+		if ( null === $this->remote_addr ) {
+			unset( $_SERVER['REMOTE_ADDR'] );
+		} else {
+			$_SERVER['REMOTE_ADDR'] = $this->remote_addr;
+		}
+		parent::tear_down();
+	}
+
+	/**
+	 * Installs the test receiver (no real HTTP leaves the test) and a sender address. Rate counters live in
+	 * the throttle table, which each test's transaction rolls back.
 	 */
 	public function set_up() {
 		parent::set_up();
-		global $wpdb;
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_%pegwork\\_automation\\_hook\\_%'" );
+		$this->remote_addr      = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : null;
+		$_SERVER['REMOTE_ADDR'] = '192.0.2.10';
 		wp_cache_flush();
 		add_filter( 'pre_http_request', array( $this, 'receiver' ), 10, 3 );
 	}
@@ -150,11 +170,11 @@ class AutomationWebhookTest extends AutomationTestCase {
 	 * @param string               $key     Automation key.
 	 * @param string               $body    Raw body.
 	 * @param array<string, mixed> $options `secret` (default the stored one), `timestamp` (default now),
-	 *                                      `sign` (default true), `type` (Content-Type), `headers`.
+	 *                                      `sign` (default true), `type` (Content-Type), `headers`, `route`.
 	 * @return \WP_REST_Response
 	 */
 	private function inbound( $key, $body, array $options = array() ) {
-		$request = new WP_REST_Request( 'POST', '/pegwork/v1/automations/' . $key . '/webhook' );
+		$request = new WP_REST_Request( 'POST', $options['route'] ?? '/pegwork/v1/automations/' . $key . '/webhook' );
 		$request->set_body( $body );
 		$request->set_header( 'Content-Type', $options['type'] ?? 'application/json' );
 		if ( $options['sign'] ?? true ) {
@@ -386,10 +406,40 @@ class AutomationWebhookTest extends AutomationTestCase {
 			$this->assertStringNotContainsString( 'n8n.example.org', wp_json_encode( $answer->get_data() ), 'The payload is never echoed.' );
 		}
 
-		// Without a delivery ID each request is a new run.
+		// Without a delivery ID each freshly signed request is a new run (the clock moves, so the
+		// timestamp and signature change; an identical request is a replay, see the L-02 test).
+		$this->clock->advance( 'PT1S' );
 		$this->assertSame( 202, $this->inbound( 'job_inbound', $body )->get_status() );
+		$this->clock->advance( 'PT1S' );
 		$this->assertSame( 202, $this->inbound( 'job_inbound', $body )->get_status() );
 		$this->assertCount( 3, $this->runs( 'job_inbound' ) );
+	}
+
+	/**
+	 * Security review L-02: a captured signed request replayed within the window, with the same, a new or no
+	 * delivery ID, is a duplicate and starts no run; the sender's own re-signed retry still dedupes on its ID.
+	 */
+	public function test_inbound_replayed_signature_is_a_duplicate() {
+		$body  = wp_json_encode( array( 'title' => 'Once' ) );
+		$first = $this->inbound( 'job_inbound', $body, array( 'headers' => array( 'X-Pegwork-Delivery' => 'd1' ) ) );
+		$this->assertSame( 202, $first->get_status() );
+		$run_id = $first->get_data()['run_id'];
+
+		$same = $this->inbound( 'job_inbound', $body, array( 'headers' => array( 'X-Pegwork-Delivery' => 'd1' ) ) );
+		$this->assertSame( array( 200, $run_id ), array( $same->get_status(), $same->get_data()['run_id'] ) );
+		foreach ( array( array( 'X-Pegwork-Delivery' => 'd2' ), array() ) as $headers ) {
+			$replay = $this->inbound( 'job_inbound', $body, array( 'headers' => $headers ) );
+			$this->assertSame( 200, $replay->get_status(), wp_json_encode( $headers ) );
+			$this->assertTrue( $replay->get_data()['duplicate'] );
+		}
+		$this->clock->advance( 'PT200S' );
+		$this->assertSame( 200, $this->inbound( 'job_inbound', $body, array( 'timestamp' => $this->clock->now()->getTimestamp() - 200 ) )->get_status(), 'Still a replay later in the window.' );
+		$this->assertCount( 1, $this->runs( 'job_inbound' ) );
+
+		// The sender re-signs a retry (new timestamp) with the same delivery ID: still one run.
+		$retry = $this->inbound( 'job_inbound', $body, array( 'headers' => array( 'X-Pegwork-Delivery' => 'd1' ) ) );
+		$this->assertSame( array( 200, $run_id ), array( $retry->get_status(), $retry->get_data()['run_id'] ) );
+		$this->assertCount( 1, $this->runs( 'job_inbound' ) );
 	}
 
 	/**
@@ -484,24 +534,96 @@ class AutomationWebhookTest extends AutomationTestCase {
 	}
 
 	/**
-	 * Acceptance: 30 requests per minute per automation, then 429 with Retry-After; other keys share a
-	 * separate bucket; the next minute is open again.
+	 * Acceptance: 30 signed requests per minute per automation, then 429 with Retry-After; failed requests
+	 * do not use the automation's quota; the next minute is open again.
 	 */
 	public function test_inbound_429_after_30_a_minute() {
-		$body = wp_json_encode( array( 'title' => 'Burst' ) );
 		for ( $i = 0; $i < Inbound::RATE; $i++ ) {
-			$this->assertSame( 202, $this->inbound( 'job_inbound', $body )->get_status(), "Request $i" );
+			$this->assertSame( 202, $this->inbound( 'job_inbound', wp_json_encode( array( 'title' => "Burst $i" ) ) )->get_status(), "Request $i" );
 		}
+		$body    = wp_json_encode( array( 'title' => 'Burst over' ) );
 		$limited = $this->inbound( 'job_inbound', $body );
 		$this->assertSame( 429, $limited->get_status() );
 		$this->assertSame( '60', $limited->get_headers()['Retry-After'] );
-		$this->assertSame( 429, $this->inbound( 'job_inbound', $body, array( 'secret' => 'wrong' ) )->get_status(), 'Bad requests count too.' );
+		$this->assertSame( 401, $this->inbound( 'job_inbound', $body, array( 'secret' => 'wrong' ) )->get_status(), 'A bad signature is a 401, whatever the quota.' );
 		$this->assertCount( Inbound::RATE, $this->runs( 'job_inbound' ) );
-
-		$this->assertSame( 401, $this->inbound( 'job_nothing', $body, array( 'secret' => 'x' ) )->get_status(), 'Unknown keys have their own bucket.' );
 
 		$this->clock->advance( 'PT1M' );
 		$this->assertSame( 202, $this->inbound( 'job_inbound', $body )->get_status() );
+	}
+
+	/**
+	 * Security review SR-01: the pre-dispatch limits hold whatever the letter case of the route (WordPress
+	 * matches routes case-insensitively), and the permission callback repeats them for a request that
+	 * rest_pre_dispatch never screened.
+	 */
+	public function test_inbound_limits_hold_for_any_route_case() {
+		$route = '/Pegwork/v1/automations/job_inbound/WEBHOOK';
+		$big   = wp_json_encode( array( 'title' => str_repeat( 'a', 200 * 1024 ) ) );
+		// Unsigned, so only the size gate (before decoding, before the signature) can answer 413.
+		$unsigned_big = array(
+			'route' => $route,
+			'sign'  => false,
+		);
+		$this->assertSame( 413, $this->inbound( 'job_inbound', $big, $unsigned_big )->get_status() );
+		$unsigned_big['route'] = '/pegwork/V1/Automations/job_inbound/webhook';
+		$this->assertSame( 413, $this->inbound( 'job_inbound', $big, $unsigned_big )->get_status() );
+		$plain = array(
+			'route' => $route,
+			'type'  => 'text/plain',
+		);
+		$this->assertSame( 415, $this->inbound( 'job_inbound', '{}', $plain )->get_status() );
+
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.66';
+		$unsigned               = array(
+			'route' => $route,
+			'sign'  => false,
+		);
+		$answers                = array();
+		for ( $i = 0; $i < 35; $i++ ) {
+			$answers[] = $this->inbound( 'job_inbound', '{}', $unsigned )->get_status();
+		}
+		$this->assertSame( array_merge( array_fill( 0, Inbound::RATE, 401 ), array_fill( 0, 5, 429 ) ), $answers );
+
+		$_SERVER['REMOTE_ADDR'] = '192.0.2.10';
+		$this->assertSame( 202, $this->inbound( 'job_inbound', wp_json_encode( array( 'title' => 'Mixed case' ) ), array( 'route' => $route ) )->get_status(), 'A signed request still works.' );
+
+		// The permission callback alone (a spelling rest_pre_dispatch would miss) applies the same checks.
+		$request = new WP_REST_Request( 'POST', '/pegwork/v1/automations/job_inbound/webhook' );
+		$request->set_url_params( array( 'key' => 'job_inbound' ) );
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( $big );
+		$this->assertSame( 413, Inbound::authorize( $request )->get_error_data()['status'] );
+		$request->set_body( '{}' );
+		$request->set_header( 'Content-Type', 'text/plain' );
+		$this->assertSame( 415, Inbound::authorize( clone $request )->get_error_data()['status'] );
+	}
+
+	/**
+	 * Security review SR-02: unsigned requests count against their client IP, not the automation, so junk
+	 * traffic cannot lock out the real sender, and known and unknown keys answer alike (no existence oracle).
+	 */
+	public function test_inbound_junk_cannot_lock_out_the_sender_or_reveal_keys() {
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.66';
+		for ( $i = 0; $i < Inbound::RATE; $i++ ) {
+			$this->assertSame( 401, $this->inbound( 'job_inbound', '{}', array( 'sign' => false ) )->get_status() );
+		}
+		$this->assertSame( 429, $this->inbound( 'job_inbound', '{}', array( 'sign' => false ) )->get_status(), 'The junk sender is limited.' );
+
+		$_SERVER['REMOTE_ADDR'] = '192.0.2.10';
+		$this->assertSame( 202, $this->inbound( 'job_inbound', wp_json_encode( array( 'title' => 'Real' ) ) )->get_status(), 'The real sender is not locked out.' );
+
+		// Unknown and live keys share the same per-client bucket, so they answer alike.
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.77';
+		for ( $i = 0; $i < Inbound::RATE; $i++ ) {
+			$this->inbound( 'does_not_exist', '{}', array( 'secret' => 'x' ) );
+		}
+		$this->assertSame( 429, $this->inbound( 'another_missing', '{}', array( 'secret' => 'x' ) )->get_status() );
+		$this->assertSame( 429, $this->inbound( 'job_inbound', '{}', array( 'secret' => 'x' ) )->get_status() );
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.78';
+		$this->assertSame( 401, $this->inbound( 'another_missing', '{}', array( 'secret' => 'x' ) )->get_status() );
+		$this->assertSame( 401, $this->inbound( 'job_inbound', '{}', array( 'secret' => 'x' ) )->get_status() );
+		$this->assertCount( 1, $this->runs( 'job_inbound' ) );
 	}
 
 	/**

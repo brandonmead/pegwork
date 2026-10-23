@@ -33,9 +33,13 @@ This is an early development release (pre-1.0). The public PHP API may change be
 
 Pegwork connects to an outside service only when a site owner sets one up.
 
-**Cloudflare Turnstile** (spam protection for forms). Used only by forms that turn Turnstile on, and only when the site defines the `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY` constants. On pages with such a form, the visitor's browser loads Cloudflare's widget script from challenges.cloudflare.com, and Cloudflare receives information about the browser and visit. On submit, the site sends the widget's token and the site's secret key to Cloudflare's siteverify endpoint to check it. See Cloudflare's [website terms](https://www.cloudflare.com/website-terms/) and [privacy policy](https://www.cloudflare.com/privacypolicy/).
+**Cloudflare Turnstile** (spam protection for forms). Used only by forms that turn Turnstile on, and only when the site defines the `PEGWORK_TURNSTILE_SITE_KEY` and `PEGWORK_TURNSTILE_SECRET_KEY` constants. On pages with such a form, the visitor's browser loads Cloudflare's widget script from challenges.cloudflare.com, and Cloudflare receives information about the browser and visit. On submit, the site sends the widget's token, the site's secret key and the visitor's IP address to Cloudflare's siteverify endpoint to check it. See Cloudflare's [website terms](https://www.cloudflare.com/website-terms/) and [privacy policy](https://www.cloudflare.com/privacypolicy/).
 
 **Webhooks** (automation). An automation step can send record data to a URL that a site owner enters. Nothing is sent unless an owner builds an automation with that step.
+
+== Uninstall ==
+
+Deleting Pegwork from the Plugins screen removes, on every site of a multisite network, its settings and secrets (every `pegwork_` option), its transients, its scheduled events, the automation run log tables and the rate limit table. Content (posts, fields, terms) is never deleted. Form entries (the `pegwork_entries` table) and files uploaded through forms (`wp-content/uploads/pegwork-forms/`) are also kept on purpose, so submissions are not lost by removing the plugin; delete them under Pegwork > Entries before uninstalling, or remove the table and folder afterwards.
 
 == Frequently Asked Questions ==
 
@@ -47,6 +51,7 @@ WP-Cron only runs when someone visits the site. On a production site set `define
 
 = 0.2.0 =
 * Registry sections for listings, options pages, forms and automations; modules Listings, Filters, Forms and Automation; public API 0.2.0.
+* Security hardening from the October 2026 review: inbound webhook checks hold for any route spelling, failed requests count per client, and each signature is accepted once; rate limits are atomic; private fields cannot be stored in the title or content or decide whether a public field shows; form values bound to private fields stay private in automations; webhook URLs encode values; filtered listings leave out password-protected records; uninstall covers multisite and transients; Turnstile checks hostname and action; Site Health warns when development dependencies are installed.
 
 = 0.1.0 =
 * Initial scaffold: plugin bootstrap and PHP and WordPress version guard.

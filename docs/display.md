@@ -209,7 +209,7 @@ The main query of a post type archive (`/projects/`) whose type has a `listing` 
 
 ### Constraint pipeline
 
-One translator, `PegworkListings\Constraints::to_query_args()`, serves both paths. Constraints start from `where` (custom loops) or empty (archives), pass through the `pegwork_listing_constraints` filter (`docs/extension-api.md`), are re-checked against the registry, and are merged into the loop's own query: tax and meta queries AND, searches join, `post__in` intersects.
+One translator, `PegworkListings\Constraints::to_query_args()`, serves both paths. Constraints start from `where` (custom loops) or empty (archives), pass through the `pegwork_listing_constraints` filter (`docs/extension-api.md`), are re-checked against the registry, and are merged into the loop's own query: tax and meta queries AND, searches join, `post__in` intersects. When any field or taxonomy constraint applies, password-protected records are left out (`has_password => false`): their values are hidden everywhere else, and a filter that matched them would tell a visitor which value they hold.
 
 | Constraint | Becomes |
 |---|---|

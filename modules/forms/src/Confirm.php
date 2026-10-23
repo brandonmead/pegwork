@@ -375,12 +375,16 @@ final class Confirm {
 
 		$parsed = self::parse( isset( $_GET[ self::QUERY ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::QUERY ] ) ) : null );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-		$entry = null === $parsed ? null : Entries::get( $parsed['id'] );
-		if ( null === $entry || $entry['form_key'] !== $key ) {
+		if ( null === $parsed ) {
 			return null;
 		}
-
+		$entry = Entries::get( $parsed['id'] );
 		$state = null !== self::$state && (int) self::$state['entry_id'] === $parsed['id'] ? (string) self::$state['outcome'] : self::state( $entry, $parsed['token'], time() );
+		// Until the token matches, nothing about the entry shows (neither its form nor whether it exists):
+		// any form on the page shows the same "not valid" notice.
+		if ( 'invalid' !== $state && ( null === $entry || $entry['form_key'] !== $key ) ) {
+			return null;
+		}
 
 		return match ( $state ) {
 			'pending' => array(
@@ -438,7 +442,9 @@ final class Confirm {
 		} else {
 			$parsed = self::parse( isset( $_GET[ self::QUERY ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::QUERY ] ) ) : null );
 			$entry  = null === $parsed ? null : Entries::get( $parsed['id'] );
-			$key    = null === $entry ? '' : (string) $entry['form_key'];
+			// Only a matching token swaps the page content, so a made-up link reveals no entry's form.
+			$valid = null !== $entry && is_string( $entry['token_hash'] ?? null ) && hash_equals( $entry['token_hash'], hash( 'sha256', $parsed['token'] ) );
+			$key   = $valid ? (string) $entry['form_key'] : '';
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 

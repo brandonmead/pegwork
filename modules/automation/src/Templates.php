@@ -27,6 +27,9 @@ use WP_Term;
  *   else with esc_html. The authored template itself is trusted (committed config, imported by CLI only).
  * - `log` (what the run log may show, such as the subject): as `text`, but private fields render as
  *   `[private]`, so a private value never reaches anything but the email to its recipient.
+ * - `url` (render_url(), the `call_webhook` URL): as `raw`, then each value is rawurlencode()d, so a value
+ *   cannot add query parameters, a fragment or a space. A tag at the very start of the template (a
+ *   whole URL, or the site URL a path follows) renders as `raw`.
  */
 final class Templates {
 
@@ -49,6 +52,11 @@ final class Templates {
 	 * Run log: private fields hidden.
 	 */
 	public const LOG = 'log';
+
+	/**
+	 * URL: values encoded (see render_url()).
+	 */
+	public const URL = 'url';
 
 	/**
 	 * What a private value renders as in `log` mode.
@@ -86,6 +94,31 @@ final class Templates {
 	}
 
 	/**
+	 * Renders a URL template: a tag at offset 0 as `raw`, every other tag's value rawurlencode()d.
+	 *
+	 * @param string  $template URL template (trimmed first).
+	 * @param Context $context  Run context.
+	 */
+	public static function render_url( string $template, Context $context ): string {
+		return (string) preg_replace_callback(
+			self::TAG,
+			function ( array $m ) use ( $context ): string {
+				$groups = array();
+				foreach ( $m as $index => $group ) {
+					if ( -1 !== $group[1] ) {
+						$groups[ $index ] = $group[0];
+					}
+				}
+				return self::tag( $groups, $context, 0 === $m[0][1] ? self::RAW : self::URL );
+			},
+			trim( $template ),
+			-1,
+			$count,
+			PREG_OFFSET_CAPTURE
+		);
+	}
+
+	/**
 	 * A `values` entry: a non-string literal is kept; a string that is exactly one merge tag gives the raw
 	 * value (a list stays a list, a boolean a boolean); any other string is rendered.
 	 *
@@ -113,6 +146,9 @@ final class Templates {
 	private static function tag( array $m, Context $context, string $mode ): string {
 		if ( self::RAW === $mode ) {
 			return self::text( self::lookup( $m, $context ) );
+		}
+		if ( self::URL === $mode ) {
+			return rawurlencode( self::text( self::lookup( $m, $context ) ) );
 		}
 
 		$path = $m[1];

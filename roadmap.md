@@ -40,9 +40,10 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 - Left: 40 Plugin Check `UnescapedDBParameter` warnings (prepared queries; switching table names to `%i` is a runtime change for the security review). Dependabot alerts are all npm dev tooling; most need majors (`@wordpress/env` 12, `@wordpress/scripts` 37).
 - Owner settings to consider (not changed): branch ruleset on `main` (PR required, required checks, no force-push or deletion), Dependabot security updates, secret scanning and push protection, "Require actions pinned to a full SHA", delete branch on merge, a WordPress.org username for `Contributors:` in readme.txt.
 
-## Security fixes (from `docs/security-review-2026-10.md`)
-- Fix SR-01 to SR-03 (medium, withheld until fixed) first, then publish their details in the review doc.
-- Then the low findings L-01 to L-10; informational items I-01 to I-11 as time allows. Item I-11 (pin actions by commit SHA) is done in the open-source readiness PR.
+## Security fixes PR (in review, branch `security-fixes`)
+- SR-01 to SR-03, L-01 to L-10 and I-01 to I-10 fixed or documented (`changelog.md` 2026-10-22; status column in `docs/security-review-2026-10.md`). I-11 done in the open-source readiness PR.
+- Left, by decision: I-08 (`update_record.record` from a webhook payload may name any Pegwork record; a declared `content_type` check belongs with the Phase 6 registry work on steps), I-09 (relationship validation existence oracle for contributors; `read_post` on linked IDs would break anonymous form and automation writes). Optional later: a setting to store form uploads outside the web root (I-03; the nginx rule is documented).
+- SI for Good: deploy from the release zip (Site Health now warns when a checkout with dev dependencies runs on a production or staging site); set `pegwork_client_ip` if Cloudways does not restore the visitor IP behind Cloudflare, and add the nginx deny rule for `uploads/pegwork-forms/`.
 
 ## UX polish PR (in review, branch `ux-polish`)
 - Clears the UX backlog and bumps the plugin to 0.2.0 (`changelog.md` 2026-10-20). Also holds the SI for Good final QA fixes (confirm panel, corrected submits, conditional required, step heading, URLs, rate-limit wording, `| date` and `{{option:...}}` templates).

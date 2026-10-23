@@ -6,6 +6,8 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
+
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test helper reading the module's own table.
 
 add_action(
@@ -96,7 +98,7 @@ add_action(
 			)
 		);
 
-		// Clears the mail log, rate-limit transients and the e2e forms' entries (which also resets the confirmation email cap),
+		// Clears the mail log, the rate limit counters and the e2e forms' entries (which also resets the confirmation email cap),
 		// including e2e_built, the form forms-builder.e2e.js builds.
 		register_rest_route(
 			'pegwork-e2e/v1',
@@ -107,7 +109,7 @@ add_action(
 				'callback'            => static function () {
 					global $wpdb;
 					delete_option( 'pegwork_e2e_mail' );
-					$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", '_transient_pegwork_forms_rl_%', '_transient_timeout_pegwork_forms_rl_%' ) );
+					$wpdb->query( "DELETE FROM {$wpdb->prefix}pegwork_throttle" );
 					wp_cache_flush();
 					$table = $wpdb->prefix . 'pegwork_entries';
 					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {

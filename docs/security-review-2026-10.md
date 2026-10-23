@@ -2,7 +2,7 @@
 
 Adversarial review of Pegwork at commit `c908502` (plugin 0.2.0), finished 2026-10-22. Code was read in full for every place untrusted input enters or privileged output leaves; suspected issues were then tried on a throwaway WordPress site (`bin/e2e-local-site.sh`, PHP 8.2, WordPress latest, the e2e mu-plugins and packages) with curl and small scripts. No plugin code was changed.
 
-The repository is public, so findings rated medium or higher are listed by ID only and described once they are fixed.
+The repository is public, so findings rated medium or higher were listed by ID only until they were fixed. They were fixed in #49 (with the release zip from #41 for SR-03) and are described below.
 
 ## Summary
 
@@ -14,13 +14,77 @@ The repository is public, so findings rated medium or higher are listed by ID on
 | Low | 10 | L-01 to L-10 |
 | Informational | 11 | I-01 to I-11 |
 
-## Withheld until fixed
+## Status
 
-| ID | Severity | Status |
-|---|---|---|
-| SR-01 | Medium | Withheld until fixed. |
-| SR-02 | Medium | Withheld until fixed. |
-| SR-03 | Medium | Withheld until fixed. |
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| SR-01 | Medium | Webhook pre-checks skipped by the letter case of the route | Fixed in #49 |
+| SR-02 | Medium | Anyone can lock out a webhook sender and probe which keys exist | Fixed in #49 |
+| SR-03 | Medium | A development checkout ships test-only files to the web | Fixed in #41 (release zip) and #49 (Site Health warning) |
+| L-01 | Low | Rate limit counters are not atomic | Fixed in #49 |
+| L-02 | Low | A captured signed webhook can be replayed | Fixed in #49 (single-use signatures) |
+| L-03 | Low | A private field stored in `post_title` or `post_content` is public | Fixed in #49 |
+| L-04 | Low | Form values bound to a private field are not private in automations | Fixed in #49 |
+| L-05 | Low | Template values not encoded for URLs or confined in recipient lists | Fixed in #49 |
+| L-06 | Low | Listing filters act as an oracle on password-protected records | Fixed in #49 |
+| L-07 | Low | `show_when` may target a private field | Fixed in #49 |
+| L-08 | Low | Uninstall ignores multisite and leaves transients | Fixed in #49 |
+| L-09 | Low | A third party can use up a person's email limits | Documented in `docs/forms.md`: the limits protect inboxes from floods, and counting only confirmed entries would let a bot send unlimited confirmation emails |
+| L-10 | Low | Turnstile answers not checked for hostname or action | Fixed in #49 |
+| I-01 | Info | The time token can be reused for 7 days | Documented: by design, so cached pages keep working |
+| I-02 | Info | A made-up confirm link reveals an entry's form | Fixed in #49 |
+| I-03 | Info | Uploads on nginx rely on the random folder name | Documented: nginx deny rule in `docs/forms.md` |
+| I-04 | Info | Rate limits behind a proxy share one address | Documented: `pegwork_client_ip` filter with a Cloudflare example in `docs/forms.md` |
+| I-05 | Info | The duplicate check spans all submitters | Fixed in #49 |
+| I-06 | Info | A submitter copy can mail any address | Documented in `docs/forms.md` |
+| I-07 | Info | Notifications unescaped if mail is switched to HTML | Fixed in #49 |
+| I-08 | Info | `update_record.record` from a webhook payload can name any record | Won't fix here: a declared `content_type` check on the step belongs with the Phase 6 registry changes to steps (`docs/phase-6-design.md`); the sender must hold the automation's secret |
+| I-09 | Info | Relationship validation reveals which IDs exist | Won't fix: requiring `read_post` on each linked ID would break anonymous form writes and automation writes, which link records the writer cannot read; titles stay hidden and only contributors can probe |
+| I-10 | Info | Privacy tools miss logged-in users' entries without an email item | Fixed in #49 |
+| I-11 | Info | CI actions pinned by tag; `http://` in the test installer | Fixed in #41 |
+
+## Medium
+
+### SR-01 Webhook pre-checks skipped by changing the letter case of the route
+
+- Files: `modules/automation/src/Webhooks/Inbound.php` (`key()`, used by the `rest_pre_dispatch` screen).
+- Cause: `key()` matched the REST route with a case-sensitive regex. WordPress matches routes case-insensitively (`WP_REST_Server::match_request_to_handler()` uses `@i`), so `/Pegwork/v1/...` or `/.../WEBHOOK` reached the permission callback and the handler, while the screen got no key and let the request through unchecked.
+- Skipped: the 30 per minute limit (429), the 64 KB raw body cap (413, which must run before WordPress decodes the JSON in `has_valid_params()`) and the `application/json` check (415). The signature check still ran, so no unauthorized run was created.
+- Who: anyone, no secret needed.
+- Impact: unbounded unauthenticated requests, each of which made WordPress parse the full JSON body and compute an HMAC over it, with bodies up to PHP `post_max_size`: a CPU and memory denial of service that the 413 and 429 answers exist to prevent. A secret holder could also exceed 30 per minute.
+- Proof (throwaway site, after the e2e webhook reset): a 200 KB body to `?rest_route=/pegwork/v1/automations/e2e_hook/webhook` got 413, the same body to `?rest_route=/Pegwork/v1/automations/e2e_hook/webhook` got 401 (past the size gate); `text/plain` to `/Pegwork/v1/automations/e2e_hook/WEBHOOK` got 401, not 415; 35 unsigned POSTs to the mixed-case route got 35 answers of 401 and never 429; a correctly signed POST to it got 202.
+- Fix (#49): `key()` matches case-insensitively, and the permission callback, which runs for this handler whatever the spelling, re-runs every pre-check for a request the screen did not mark, so no future route spelling skips them. Regression test `test_inbound_limits_hold_for_any_route_case` (413, 415 and 429 on upper-case namespace and segment) fails on `c908502` and passes now.
+
+### SR-02 Anyone can lock out a webhook sender (and probe which webhook automations exist)
+
+- File: `modules/automation/src/Webhooks/Inbound.php` (the rate count, before any signature check).
+- Cause: every request counted against one bucket per automation key, unsigned ones included. Automation keys are not secret: they are in the URL, on the Automations list and in public packages such as `examples/sifg`.
+- Who: anyone.
+- Impact:
+  - Lockout: 31 junk POSTs a minute kept the real sender (n8n or similar) on 429 for as long as the attacker continued. Senders retry a bounded number of times, so events were delayed or lost.
+  - Existence oracle: unknown, disabled and non-webhook keys shared one bucket while each live key had its own, so after filling the shared bucket a live key still answered 401 and an unknown one 429, contrary to the promise that the endpoint does not reveal which keys exist.
+- Proof: 31 unsigned POSTs to `/pegwork/v1/automations/e2e_hook/webhook` got 30 answers of 401, then 429; a correctly signed POST right after got 429. After 31 POSTs to `/automations/does_not_exist/webhook`, `/automations/another_missing/webhook` got 429 and `/automations/e2e_hook/webhook` got 401.
+- Fix (#49): requests that fail the signature count against their client address (`Pegwork\Api\Throttle::client_ip()`: `REMOTE_ADDR`, filter `pegwork_client_ip`), and only signed requests count against the automation's quota. Every key, known or not, now answers alike. The limits use the atomic counter from L-01. Regression test `test_inbound_junk_cannot_lock_out_the_sender_or_reveal_keys` fails on `c908502` (429 for the signed sender) and passes now. Behind a proxy that the server does not resolve to the client address, all clients share one address until `pegwork_client_ip` is set (I-04).
+
+### SR-03 A development checkout ships test-only files to the web
+
+- Cause: there was no release build. Pegwork loads `vendor/autoload.php`, `vendor/` is not in git, and the README said `composer install`, which also installs the development dependencies. Installing Pegwork from a git checkout, or symlinking a development checkout into a site, put those packages (the WordPress PHPUnit test suite among them) under `wp-content/plugins/pegwork/vendor/`, where the web server serves their PHP files directly.
+- Impact (depends on deployment): one of the test suite's helper scripts reflects a request parameter into an HTML page without escaping. A logged-in administrator who opened a crafted link would run script on the site's own origin, which can read nonces from wp-admin and act as that administrator. Other development files (`tests/`, `bin/`, `node_modules/`) were also reachable, and a few PHP files there had no direct-access guard.
+- Who: anyone who can get an administrator of such a site to open a link.
+- Proof: on the throwaway site, which mounts a development checkout, a GET to the helper script with a script tag in the parameter returned it unescaped as `text/html` (HTTP 200).
+- Fix: #41 added `bin/build-zip.sh` and the release zip (`composer install --no-dev`, an export allowlist, and a check that fails when a development package or file would ship) and tells production installs to use it. #49 adds defence in depth: a Site Health test (`pegwork_dev_dependencies`, Security) that is critical when development dependencies are installed (`vendor/composer/installed.php`) on a site whose environment type is not `local` or `development`, plus direct-access guards on the e2e mu-plugins and `bin/check-schema-fixtures.php`. A site already installed from a checkout should be reinstalled from the release zip, or run `composer install --no-dev` in the plugin folder.
+
+![The Site Health warning on a site running a development checkout](screenshots/security-site-health.png)
+
+## Proofs after the fixes
+
+Rerun on a throwaway site (`bin/e2e-local-site.sh`, 8 PHP workers) at the head of #49:
+
+- SR-01: a 200 KB body gets 413 on the lower-case and the mixed-case route; `text/plain` to the mixed-case route gets 415; 35 unsigned POSTs to it get 30 answers of 401, then 429.
+- SR-02 (two client addresses through `pegwork_client_ip`): after the attacker's 31 junk POSTs (30 answers of 401, then 429), the sender's signed POST gets 202; after junk to an unknown key, another unknown key and the real key both answer 401.
+- L-01: 24 parallel honeypot posts from one IP stored 5 entries (the limit); 19 got "Too many submissions".
+- L-02: one signed body and timestamp sent with delivery `d1` gave 202 (a run), then `d1` again, `d2` and no header twice all gave 200 duplicate with no new run.
+- Signed links (unchanged behaviour): tampered token "This link does not work", POST without nonce 403, first POST acts, second "Already done".
 
 ## Low
 
@@ -142,7 +206,7 @@ So the fixer does not re-review these.
 - `v1.<payload>.<sig>` at most 512 bytes, HMAC-SHA256 checked with `hash_equals()` before decoding, strict base64url, typed payload fields; the token binds automation, link and record; expiry on the engine clock.
 - A tampered record ID gives "This link does not work"; a POST without the page nonce gives 403; the first POST acts and the second shows "Already done" (single use through the unique idempotency index); HEAD never acts. Redirect targets go through `wp_validate_redirect()` and `wp_safe_redirect()`. Pages escape output, use log mode, and send no-referrer, a strict CSP and `noindex`. Link steps are limited to `update_record` and `condition` on the link's own record.
 
-### Webhooks, other than the withheld items
+### Webhooks, other than SR-01, SR-02 and L-02
 
 - HMAC-SHA256 over `timestamp.body` with `hash_equals()`; timestamp within 300 s; unknown, disabled and non-webhook automations get the same 401 with an equal-cost throwaway secret; a missing secret fails closed; the payload is never echoed and reaches records only through author-fixed `values`; the decoded payload is capped at 15 KB and stored contexts at 16 KB.
 - Outbound `call_webhook` uses `wp_safe_remote_post()` with `redirection => 0` (a 3xx is a failure, so no redirect to a private address); the URL is author configuration with an `http(s)://` rule; only public fields are sent; the secret is stripped from transport errors. DNS rebinding between validation and connect is the usual WordPress gap.

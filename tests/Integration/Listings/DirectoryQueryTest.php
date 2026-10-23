@@ -269,6 +269,23 @@ class DirectoryQueryTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Security review L-06: a password-protected record never appears in a listing filtered on field or
+	 * taxonomy values (either branch would reveal its hidden value); an unfiltered listing still lists it.
+	 */
+	public function test_filtered_listings_leave_out_password_protected_records() {
+		$this->project( 'Open', array( 'needs_volunteers' => '1' ) );
+		$this->project( 'Protected', array( 'needs_volunteers' => '1' ), array(), array( 'post_password' => 'secret' ) );
+
+		foreach ( array( true, false ) as $value ) {
+			$markup = $this->markup( 'directory', array(), array( 'pegwork' => array( 'where' => array( 'needs_volunteers' => $value ) ) ) );
+			$this->assertNotContains( 'Protected', self::titles( do_blocks( $markup ) ), $value ? 'yes branch' : 'no branch' );
+		}
+		$args = Constraints::to_query_args( 'sifg_project', array( 'taxonomies' => array( 'sifg_project_type' => array( 'nonprofit' ) ) ) );
+		$this->assertFalse( $args['has_password'] );
+		$this->assertCount( 2, self::titles( do_blocks( Patterns::directory( 'sifg_project' ) ) ), 'Unfiltered, both are listed.' );
+	}
+
+	/**
 	 * `where` presets: public boolean fields constrain; private and unknown keys are ignored.
 	 */
 	public function test_where_presets() {

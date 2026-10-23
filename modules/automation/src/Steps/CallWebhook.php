@@ -46,7 +46,7 @@ final class CallWebhook implements Step {
 	 */
 	public function run( array $step, Context $context, array $run ): StepResult {
 		$delivery = (int) $run['id'] . '-' . (string) $step['id'];
-		$url      = trim( Templates::render( (string) ( $step['url'] ?? '' ), $context ) );
+		$url      = trim( Templates::render_url( (string) ( $step['url'] ?? '' ), $context ) );
 		$host     = (string) wp_parse_url( $url, PHP_URL_HOST );
 		$summary  = array(
 			'host'     => $host,

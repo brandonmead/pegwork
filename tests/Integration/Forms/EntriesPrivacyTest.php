@@ -66,6 +66,31 @@ class EntriesPrivacyTest extends EntriesTestCase {
 	}
 
 	/**
+	 * Security review I-10: entries a logged-in user sent on a form without an email item are found by the
+	 * account's address, for export and erasure.
+	 */
+	public function test_export_and_erase_find_a_users_entries_without_email() {
+		$user = self::factory()->user->create( array( 'user_email' => 'member@example.org' ) );
+		$id   = $this->entry(
+			array(
+				'email'   => '',
+				'user_id' => $user,
+			)
+		);
+		$this->entry(
+			array(
+				'email'   => '',
+				'user_id' => 0,
+			)
+		);
+
+		$this->assertSame( array( 'pegwork-entry-' . $id ), array_column( Privacy::export( 'Member@example.org' )['data'], 'item_id' ) );
+		$this->assertTrue( Privacy::erase( 'member@example.org' )['items_removed'] );
+		$this->assertNull( \PegworkForms\Entries::get( $id ) );
+		$this->assertSame( array(), Privacy::export( 'nobody@example.org' )['data'], 'Anonymous entries never match.' );
+	}
+
+	/**
 	 * The exporter pages by PAGE_SIZE.
 	 */
 	public function test_export_pages() {

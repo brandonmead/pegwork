@@ -410,6 +410,7 @@ final class Validator {
 		$this->unique( $fields, $pointer . '/fields', 'key' );
 
 		$field_keys = array_column( array_filter( $fields, 'is_array' ), 'key' );
+		$private    = array_column( array_filter( $fields, fn( $f ) => is_array( $f ) && 'private' === ( $f['visibility'] ?? null ) ), 'key' );
 		foreach ( $fields as $index => $field ) {
 			foreach ( array( 'required_when', 'show_when' ) as $condition ) {
 				$target = is_array( $field ) && is_array( $field[ $condition ] ?? null ) ? ( $field[ $condition ]['field'] ?? null ) : null;
@@ -419,6 +420,14 @@ final class Validator {
 						$pointer . '/fields/' . $index . '/' . $condition . '/field',
 						/* translators: %s: field key. */
 						sprintf( __( 'Field "%s" is not defined on this content type.', 'pegwork' ), $target )
+					);
+				} elseif ( is_string( $target ) && in_array( $target, $private, true ) && 'private' !== ( $field['visibility'] ?? 'public' ) ) {
+					// Whether a public field shows (or is required) would reveal the private value.
+					$this->add(
+						'private_condition_field',
+						$pointer . '/fields/' . $index . '/' . $condition . '/field',
+						/* translators: %s: field key. */
+						sprintf( __( 'Field "%s" is private, so a public field cannot depend on it: whether the field shows would reveal the private value.', 'pegwork' ), $target )
 					);
 				}
 			}
@@ -539,6 +548,9 @@ final class Validator {
 		}
 		if ( is_string( $wp['meta_key'] ?? null ) && 'private' === ( $field['visibility'] ?? null ) && ! str_starts_with( $wp['meta_key'], '_' ) ) {
 			$this->add( 'invalid_meta_key', $pointer . '/wp/meta_key', __( 'Private fields need a protected meta key (starting with "_").', 'pegwork' ) );
+		}
+		if ( isset( $wp['storage'] ) && 'private' === ( $field['visibility'] ?? null ) ) {
+			$this->add( 'private_storage', $pointer . '/wp/storage', __( 'Private fields cannot be stored in post_title or post_content: those columns are public (REST, feeds, search, the theme). Use meta storage.', 'pegwork' ) );
 		}
 
 		if ( 'select' === $type && ! array_key_exists( 'options', $field ) ) {

@@ -195,12 +195,13 @@ final class Submission {
 			return $fail( 'expired' );
 		}
 
-		$ip = RateLimit::client_ip();
+		$limited = fn( string $limit, int $wait ) => $fail( 'rate_limited' ) + array(
+			'limit'       => $limit,
+			'retry_after' => $wait,
+		);
+		$ip      = RateLimit::client_ip();
 		if ( RateLimit::exceeded( 'ip', $key, $ip, $now ) ) {
-			return $fail( 'rate_limited' ) + array(
-				'limit'       => 'ip',
-				'retry_after' => RateLimit::retry_after( 'ip', $key, $ip, $now ),
-			);
+			return $limited( 'ip', RateLimit::retry_after( 'ip', $key, $ip, $now ) );
 		}
 
 		[ $values, $format_errors ]         = self::collect( $form, $raw );
@@ -225,7 +226,9 @@ final class Submission {
 		$reasons = apply_filters( 'pegwork_forms_spam_check', $reasons, $form, $values );
 		$reasons = is_array( $reasons ) ? array_values( array_unique( array_filter( $reasons, 'is_string' ) ) ) : array();
 
-		$fingerprint = hash( 'sha256', $key . "\n" . wp_json_encode( self::canonical( $values ) ) );
+		// The submitter (user ID and client IP) is part of it, so two people sending the same values are
+		// not mistaken for one repeat. Keyed with a salt, so the stored hash does not reveal the IP.
+		$fingerprint = hash_hmac( 'sha256', $key . "\n" . get_current_user_id() . "\n" . $ip . "\n" . wp_json_encode( self::canonical( $values ) ), wp_salt( 'nonce' ) );
 		$email_key   = Definition::email_key( $form );
 		$email       = null !== $email_key && is_string( $values[ $email_key ] ?? null ) ? strtolower( $values[ $email_key ] ) : '';
 		$base        = array(
@@ -241,9 +244,14 @@ final class Submission {
 			'definition_hash' => Definition::hash( $form ),
 		);
 
+		// Each store below first counts the entry against the IP limit (atomic: parallel submissions
+		// cannot all pass the early check above and store more than the limit).
 		if ( $reasons ) {
+			$wait = RateLimit::take( 'ip', $key, $ip, $now );
+			if ( $wait > 0 ) {
+				return $limited( 'ip', $wait );
+			}
 			$entry_id = Entries::insert( $base + array( 'status' => 'spam' ) + array( 'meta' => $meta + array( 'spam' => $reasons ) ) );
-			RateLimit::hit( 'ip', $key, $ip, $now );
 			return array(
 				'outcome'  => 'spam',
 				'entry_id' => $entry_id,
@@ -277,13 +285,26 @@ final class Submission {
 
 		// Turnstile last, after the cheap checks, so a valid token is spent only on a submission that
 		// can be stored (a double click hits the duplicate check above, not a reused-token failure).
-		$verdict = Turnstile::enabled( $form ) ? Turnstile::verify( $control[ Turnstile::FIELD ] ?? null ) : 'pass';
+		$verdict = Turnstile::enabled( $form ) ? Turnstile::verify( $control[ Turnstile::FIELD ] ?? null, Turnstile::action( $form ) ) : 'pass';
 		if ( 'fail' === $verdict ) {
 			// No token field at all: the widget never ran, so the browser has no JavaScript.
-			$reason   = array_key_exists( Turnstile::FIELD, $control ) ? 'captcha_failed' : 'captcha_missing';
+			$reason = array_key_exists( Turnstile::FIELD, $control ) ? 'captcha_failed' : 'captcha_missing';
+			$wait   = RateLimit::take( 'ip', $key, $ip, $now );
+			if ( $wait > 0 ) {
+				return $limited( 'ip', $wait );
+			}
 			$entry_id = Entries::insert( $base + array( 'status' => 'spam' ) + array( 'meta' => $meta + array( 'spam' => array( $reason ) ) ) );
-			RateLimit::hit( 'ip', $key, $ip, $now );
 			return $fail( $reason ) + array( 'entry_id' => $entry_id );
+		}
+
+		$kind = 'ip';
+		$wait = RateLimit::take( 'ip', $key, $ip, $now );
+		if ( 0 === $wait && 'unverified' !== $verdict ) {
+			$kind = 'email';
+			$wait = RateLimit::take( 'email', $key, $email, $now );
+		}
+		if ( $wait > 0 ) {
+			return $limited( $kind, $wait );
 		}
 
 		$values = self::store_files( $form, $values, $uploads );
@@ -300,7 +321,6 @@ final class Submission {
 				Uploads::delete( $values );
 				return $fail( 'failed' );
 			}
-			RateLimit::hit( 'ip', $key, $ip, $now );
 			return array(
 				'outcome'  => 'held',
 				'entry_id' => $entry_id,
@@ -316,8 +336,6 @@ final class Submission {
 			Uploads::delete( $values );
 			return $fail( 'failed' );
 		}
-		RateLimit::hit( 'ip', $key, $ip, $now );
-		RateLimit::hit( 'email', $key, $email, $now );
 
 		$context = array(
 			'entry_id' => $entry_id,

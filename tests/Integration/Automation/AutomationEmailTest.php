@@ -434,4 +434,51 @@ class AutomationEmailTest extends AutomationTestCase {
 		$this->assertSame( 'o***@example.org', SendEmail::mask( 'owner@example.org' ) );
 		$this->assertSame( '***', SendEmail::mask( 'no-at-sign' ) );
 	}
+
+	/**
+	 * Security review L-05: a tag's value in `to` is one recipient (a submitted list is an invalid address,
+	 * not several recipients), and values in a `call_webhook` URL are encoded, except a leading tag.
+	 */
+	public function test_template_values_are_confined_in_recipients_and_urls() {
+		$id      = $this->record(
+			array(
+				'contact_email' => 'owner@example.org',
+				'marker'        => 'a@example.org, b@example.org; c@example.org',
+				'website'       => 'https://receiver.example.org/base',
+			)
+		);
+		$context = new Context( $this->clock, Records::get( $id ) );
+		$step    = new SendEmail( fn() => '' );
+		$this->assertSame( 'invalid_recipient', $step->recipients( '{{record.marker}}', $context )->get_error_code() );
+		$this->assertSame( array( 'owner@example.org' ), $step->recipients( '{{record.contact_email}}', $context ) );
+
+		$this->assertSame(
+			'https://hooks.example.org/n?m=a%40example.org%2C%20b%40example.org%3B%20c%40example.org&id=' . $id,
+			Templates::render_url( ' https://hooks.example.org/n?m={{record.marker}}&id={{record.id}} ', $context )
+		);
+		$this->assertSame( 'https://receiver.example.org/base/' . $id, Templates::render_url( '{{record.website}}/{{record.id}}', $context ), 'A leading tag is the base URL.' );
+		$this->assertSame( 'https://h.example.org/?q=x%26y%3D1%23z', Templates::render_url( 'https://h.example.org/?q={{record.missing | default:"x&y=1#z"}}', $context ), 'Defaults are encoded too.' );
+	}
+
+	/**
+	 * Security review L-04: a form value bound to a private field is masked in log mode, like `record.<key>`.
+	 */
+	public function test_form_values_bound_to_private_fields_are_masked_in_the_log() {
+		add_action( 'pegwork_register', fn( $b ) => $b->add_package( dirname( __DIR__, 2 ) . '/fixtures/valid/forms-entries' ) );
+		\Pegwork\Plugin::init();
+		$context = new Context(
+			$this->clock,
+			null,
+			array(
+				'event'  => 'form.submitted',
+				'form'   => 'fe_project',
+				'values' => array(
+					'contact_email' => 'person@example.org',
+					'title'         => 'A project',
+				),
+			)
+		);
+		$this->assertSame( '[private] / A project', Templates::render( '{{trigger.values.contact_email}} / {{trigger.values.title}}', $context, Templates::LOG ) );
+		$this->assertSame( 'person@example.org', Templates::render( '{{trigger.values.contact_email}}', $context, Templates::TEXT ), 'The email itself still gets the value.' );
+	}
 }
