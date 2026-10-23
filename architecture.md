@@ -1,6 +1,6 @@
 # Pegwork architecture
 
-Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-22.
+Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-23.
 
 ## Product
 - Pegwork (full name "Pegwork Platform for WordPress"): one WordPress plugin, an application builder: content builder (JetEngine-like CPTs, fields, taxonomies, relationships), listings/templates, filters (JetSmartFilters-like), form builder (Gravity Forms-like), automation builder (Salesforce Flow-like), all on one schema registry.
@@ -167,11 +167,20 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Browser checks: harness site `~/wp-envs/options` (DB `wpenv_options`, port 8181). PHPUnit DB `pegwork_tests_options` against `~/wp-envs/core-latest` (WP 7.1.3); the bundled wp-phpunit does not run against `~/wp-envs/core-6.7` (missing `class-wp-phpmailer.php`), so 6.7 is CI only.
 
 ## Events and Records API (Phase 4 PR 1)
-- Contract and payloads: `docs/events.md`. `Pegwork\Api\VERSION` 0.2.0 for the whole build cycle (Phase 4 decision 7); never bump past it in this cycle.
+- Contract and payloads: `docs/events.md`. `Pegwork\Api\VERSION` was frozen at 0.2.0 for the Phase 4 to 6 cycle (Phase 4 decision 7); Automation v3 moved it to 0.3.0 (`docs/automation-v3-design.md` section 3.6) while the plugin stays 0.2.0 until the next minor release.
 - `Events\RecordEvents` hooks: `rest_pre_insert_{type}` at priority 1000 (after RecordValidator, so rejected saves take no snapshot), `rest_after_insert_{type}`, `pre_post_update`, `wp_after_insert_post`, `before_delete_post`, `deleted_post`, plus `rest_request_before|after_callbacks` to track REST routes (source `rest`, autosave detection).
 - Snapshot first-wins per post, consumed on emit; REST marks the post flushed after its listeners run, so the controller's own `wp_after_insert_post` does not emit twice. `wp_publish_post` takes no `pre_post_update` snapshot: the status before comes from `$post_before`.
 - Records writes: `wp_insert_post`/`wp_update_post` with `fire_after_hooks` false, `meta_input`, then `wp_set_object_terms` by term ID (no `tax_input`: it checks `assign_terms` for the current user), then `wp_after_insert_post()` called directly; `RecordEvents::claim()` carries the origin.
 - Gotcha: the REST autosaves controller defines `DOING_AUTOSAVE` (unless `WP_RUN_CORE_TESTS`), which then stays defined for the rest of a PHPUnit process; autosave detection therefore uses the route stack, never the constant.
+
+## Records reads and link writes (Automation v3 PR 1, branch `v3-records`)
+- `Records::find()` is `Content\RecordQuery`: hand-built SQL, not WP_Query, so `all`/`any` groups can mix `post_title`/`ID` comparisons, meta and terms, and no posts_* filter of another plugin changes a read. One WHERE drives the IDs, `COUNT(*)` and `SUM( CAST( meta_value AS DECIMAL(20,4) ) )`; every value goes through one `$wpdb->prepare()` per query.
+- Filter leaves are `EXISTS` subqueries (meta, terms); negative operators (`ne`, `not_in`, `empty`) are `NOT EXISTS`, so records with no row match them. Sort values are per-row subqueries on the first meta row, empty last.
+- Relationship SQL lives in `Relationships::sql()` beside `query_args()` (Phase 5 `table` storage changes both). "To" to "from" is a `SELECT DISTINCT` derived table on `_rel_{key}` rows joined by ID: the first version (`ID IN ( subquery )` over `WP_Meta_Query` SQL with `CAST( ... AS SIGNED )`) let MySQL run the subquery per row in the sum query, 71 s on 10,000 gifts.
+- Gotcha: with stale index statistics (right after a bulk SQL insert) MySQL 8.4 picked the `meta_key` index for the per-row sort subqueries (73 s for a 50-item digest; 130 ms after `ANALYZE TABLE`). `RecordQueryPerformanceTest` runs `ANALYZE TABLE` after seeding; after a large import on a site, run `wp db query "ANALYZE TABLE wp_posts, wp_postmeta"` (InnoDB also recalculates on its own after 10% of a table changes).
+- Perf (local MySQL 8.4, `RecordQueryPerformanceTest`, 10,000 gifts across 3,000 contacts): a donor's related count and sum median 16 ms (budget 200), the 10 newest of a donor 24 ms, a type-wide filtered count and sum over 7,466 gifts 44 ms, the reads of a 50-item digest (find 50 plus 50 cold `Records::get()`) 130 ms (budget 5 s for the whole wake-up, PR 4).
+- Record event snapshots and diffs include the linked IDs of relationships whose "from" end is the type (`RecordEvents::state()`); `Records::relate()` claims, writes rows and flushes with `RecordEvents::emit_claimed()` (no post save, `post_modified` unchanged). `Records::get()` values stay fields and taxonomies only.
+- Local runs: test DBs `pegwork_tests_v3rec82`, `_v3rec84`, `_v3rec82_67`, `_v3rec84_67`; site `~/wp-envs/v3rec` (port 8232, DB `wpenv_v3rec`). Last verified 2026-10-23.
 
 ## Automation engine (Phase 4 PR 3)
 - `docs/automation.md`. Module `automation` (`modules/automation`, `PegworkAutomation\`, `PEGWORK_AUTOMATION_DIR`). Tables `{prefix}pegwork_runs`, `{prefix}pegwork_run_steps` (dbDelta on boot when option `pegwork_automation_db_version` != `Schema::VERSION`); dropped by `modules/automation/uninstall.php`, which core `uninstall.php` includes (it includes every `modules/*/uninstall.php`).
@@ -301,7 +310,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Local runs: test DBs `pegwork_tests_p6b82`, `_p6b84`, `_p6b82_67`, `_p6b84_67`; site `~/wp-envs/p6barn` (port 8229, DB `wpenv_p6barn`). Last verified 2026-10-22.
 
 ## Version
-- Plugin version 0.2.0 (header, `PEGWORK_VERSION`, readme Stable tag, package.json), equal to `Pegwork\Api\VERSION` for now (`PluginLoadsTest`). Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
+- Plugin version 0.2.0 (header, `PEGWORK_VERSION`, readme Stable tag, package.json); `Pegwork\Api\VERSION` is 0.3.0 since Automation v3 PR 1 (`PluginLoadsTest` checks both). The plugin takes the next minor at Automation v3 sign-off. Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
 - Module manifest `label` and `description` are closures around `__()`, resolved after `init` (WordPress 6.7 just-in-time textdomain loading warns on earlier calls).
 - Schema error paths in admin screens go through `Registry\Status::display_path()` (relative to `wp-content/` or the package); `wp pegwork schema` keeps absolute paths.
 

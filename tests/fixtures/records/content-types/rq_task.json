@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "rq_task",
+  "labels": { "singular": "Task", "plural": "Tasks" },
+  "public": false,
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "wp": { "storage": "post_title" } },
+    { "key": "due_on", "type": "date", "label": "Due on" }
+  ]
+}

@@ -18,6 +18,16 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 5. Editor UI (merged, #55).
 6. BarnCRM proof: 6a (fixture package `tests/fixtures/valid/barn`, E2E package `tests/e2e/packages/barn`, `BarnFlowsGateTest` for both section 11 timelines, Local runbook) merged (#54); 6b (keyboard-only editor E2E `automation-barn-flows.e2e.js` that builds all three BarnCRM automations and compares them with the fixtures, Test run, screenshots) done, in review (branch `phase6-barn-e2e`).
 
+## Automation v3 PRs (`docs/automation-v3-design.md` section 11)
+1. Core: `Records::find()`, `relate()`, `unrelate()`, relationship keys in `create()`/`update()` and in record events, `Content\RecordQuery`, API 0.3.0: done, in review (branch `v3-records`).
+2. Registry: new steps, outputs and triggers. Planned.
+3. Engine: reads, relate, on_error, templates. Planned.
+4. Engine: loops. Planned.
+5. Manual trigger. Planned.
+6. Editor: reads, relate, on_error, manual trigger. Planned.
+7. Editor: loops and lists. Planned.
+8. BarnCRM proof with reads. Planned.
+
 ## Phase 1 PRs
 1. Scaffold (merged)
 2. Registry (merged)

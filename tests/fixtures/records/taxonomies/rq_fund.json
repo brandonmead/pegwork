@@ -1,0 +1,2 @@
+{ "format": 1, "key": "rq_fund", "labels": { "singular": "Fund", "plural": "Funds" },
+  "terms": [ { "slug": "general", "name": "General" }, { "slug": "barn", "name": "Barn repair" } ] }

@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Semver of the public `Pegwork\Api` surface. Everything outside `Pegwork\Api` is internal.
  */
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 /**
  * Slug of the top-level Pegwork admin menu. Add screens with `add_submenu_page( Pegwork\Api\ADMIN_MENU, ... )`.

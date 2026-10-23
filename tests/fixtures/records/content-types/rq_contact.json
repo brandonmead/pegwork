@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "rq_contact",
+  "labels": { "singular": "Contact", "plural": "Contacts" },
+  "public": false,
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "visibility": "private" }
+  ]
+}

@@ -255,6 +255,58 @@ final class Relationships {
 	}
 
 	/**
+	 * SQL restricting `{$alias}.ID` (a posts table alias) to the records at the other end of a relationship,
+	 * for set queries that must not build an ID list in PHP (Records::find() counts and sums). The SQL
+	 * counterpart of query_args(): storage changes (Phase 5 `table`) change both. All statuses; callers add status.
+	 *
+	 * From a "to" post the "from" records linking to it come from a derived table, materialized once and joined
+	 * by primary key, so the optimizer never re-scans the links per row. From a "from" post its stored IDs
+	 * are an `IN` list (one record's links).
+	 *
+	 * @param Registry $registry Effective registry.
+	 * @param WP_Post  $post     Post at one end.
+	 * @param string   $key      Relationship key.
+	 * @param string   $alias    Posts table alias in the caller's query.
+	 * @return array{type: string, join: string, join_args: array<int, mixed>, where: string, where_args: array<int, mixed>}|null
+	 *         Type of the records at the other end and the SQL; null when nothing can match.
+	 */
+	public static function sql( Registry $registry, WP_Post $post, string $key, string $alias ): ?array {
+		global $wpdb;
+
+		$relationship = $registry->relationships()[ $key ] ?? null;
+		if ( null === $relationship ) {
+			return null;
+		}
+
+		if ( $relationship['to'] === $post->post_type ) {
+			return array(
+				'type'       => $relationship['from'],
+				'join'       => "INNER JOIN ( SELECT DISTINCT rel_m.post_id AS id FROM {$wpdb->postmeta} rel_m WHERE rel_m.meta_key = %s AND rel_m.meta_value = %s ) rel ON rel.id = {$alias}.ID",
+				'join_args'  => array( self::meta_key( $key ), (string) $post->ID ),
+				'where'      => '1=1',
+				'where_args' => array(),
+			);
+		}
+
+		if ( $relationship['from'] === $post->post_type ) {
+			$ids = self::stored_ids( $post->ID, $key );
+			if ( array() === $ids ) {
+				return null;
+			}
+
+			return array(
+				'type'       => $relationship['to'],
+				'join'       => '',
+				'join_args'  => array(),
+				'where'      => "{$alias}.ID IN ( " . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ' )',
+				'where_args' => $ids,
+			);
+		}
+
+		return null;
+	}
+
+	/**
 	 * Relationships whose "from" end is the given type.
 	 *
 	 * @param Registry $registry Effective registry.
@@ -274,6 +326,30 @@ final class Relationships {
 	 */
 	public static function stored_ids( int $post_id, string $key ): array {
 		return self::ids( get_post_meta( $post_id, self::meta_key( $key ), false ) );
+	}
+
+	/**
+	 * Replaces the links stored on a "from" record. Callers validate first; this writes rows only.
+	 *
+	 * @param int    $post_id "From" post ID.
+	 * @param string $key     Relationship key.
+	 * @param int[]  $ids     Linked IDs wanted.
+	 * @return bool Whether any row changed.
+	 */
+	public static function write_ids( int $post_id, string $key, array $ids ): bool {
+		$ids      = self::ids( $ids );
+		$current  = self::stored_ids( $post_id, $key );
+		$meta_key = self::meta_key( $key );
+		$gone     = array_diff( $current, $ids );
+		$added    = array_diff( $ids, $current );
+		foreach ( $gone as $id ) {
+			delete_post_meta( $post_id, $meta_key, $id );
+		}
+		foreach ( $added as $id ) {
+			add_post_meta( $post_id, $meta_key, $id );
+		}
+
+		return array() !== $gone || array() !== $added;
 	}
 
 	/**
