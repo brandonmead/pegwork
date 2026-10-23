@@ -198,6 +198,25 @@ export function PreviewPanel( { templates } ) {
  * @param {Array}  props.items Tree items.
  */
 function ReportList( { items } ) {
+	const headingText = ( heading ) => {
+		if ( heading?.index ) {
+			return sprintf(
+				/* translators: 1: item number, 2: number of items, 3: content type label, 4: record ID, 5: record title. */
+				__( 'Item %1$d of %2$d: %3$s %4$d "%5$s"', 'pegwork' ),
+				heading.index,
+				heading.count,
+				heading.label,
+				heading.id,
+				heading.title
+			);
+		}
+		return heading === 'otherwise'
+			? __( 'Otherwise', 'pegwork' )
+			: /* translators: %s: branch label. */ sprintf(
+					__( 'If %s', 'pegwork' ),
+					heading
+				);
+	};
 	return (
 		<ul className="pegwork-automation__report-list">
 			{ items.map( ( item, index ) =>
@@ -212,12 +231,7 @@ function ReportList( { items } ) {
 					>
 						{ item.heading !== null && (
 							<p className="pegwork-automation__report-heading">
-								{ item.heading === 'otherwise'
-									? __( 'Otherwise', 'pegwork' )
-									: /* translators: %s: branch label. */ sprintf(
-											__( 'If %s', 'pegwork' ),
-											item.heading
-										) }
+								{ headingText( item.heading ) }
 							</p>
 						) }
 						<ReportList items={ item.children } />

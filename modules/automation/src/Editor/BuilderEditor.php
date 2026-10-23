@@ -49,6 +49,7 @@ final class BuilderEditor {
 			Builder::STEP     => 'automation-step',
 			Builder::DECISION => 'automation-decision',
 			Builder::BRANCH   => 'automation-branch',
+			Builder::LOOP     => 'automation-loop',
 		);
 		foreach ( $blocks as $name => $dir ) {
 			if ( ! $registry->is_registered( $name ) ) {

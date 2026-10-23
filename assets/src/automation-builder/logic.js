@@ -6,6 +6,12 @@
 export const STEP = 'pegwork/automation-step';
 export const DECISION = 'pegwork/automation-decision';
 export const BRANCH = 'pegwork/automation-branch';
+export const LOOP = 'pegwork/automation-loop';
+
+/**
+ * A loop body holds at most this many steps, counting the steps inside decisions.
+ */
+export const MAX_BODY = 10;
 
 /**
  * Step types offered as variations, in inserter order.
@@ -46,6 +52,7 @@ const ID_BASE = {
 	wait: 'wait',
 	condition: 'check',
 	decision: 'decision',
+	loop: 'each',
 	get_record: 'get',
 	find_records: 'find',
 	relate: 'link',
@@ -201,6 +208,14 @@ export function compileBlocks( blocks ) {
 	for ( const block of list( blocks ) ) {
 		if ( block.name === STEP ) {
 			steps.push( own( block.attributes ) );
+		} else if ( block.name === LOOP ) {
+			const { id, ...rest } = own( block.attributes );
+			steps.push( {
+				id,
+				type: 'loop',
+				...rest,
+				steps: compileBlocks( block.innerBlocks ),
+			} );
 		} else if ( block.name === DECISION ) {
 			const { id, ...rest } = own( block.attributes );
 			const decision = { id, type: 'decision', ...rest, branches: [] };
@@ -228,8 +243,8 @@ export function compileBlocks( blocks ) {
 
 /**
  * JSON pointer of every step, decision and branch block, as `Builder::compile()` numbers them: step
- * lists count only steps and decisions; branches count without the otherwise branch, which is
- * `<decision>/otherwise`.
+ * lists count only steps, decisions and loops; branches count without the otherwise branch, which
+ * is `<decision>/otherwise`; a loop's body is `<loop>/steps`.
  *
  * @param {Array}  blocks    Blocks.
  * @param {string} [pointer] Pointer of the list.
@@ -239,11 +254,14 @@ export function compileBlocks( blocks ) {
 export function pointerMap( blocks, pointer = '/steps', map = {} ) {
 	let index = 0;
 	for ( const block of list( blocks ) ) {
-		if ( block.name !== STEP && block.name !== DECISION ) {
+		if ( ! [ STEP, DECISION, LOOP ].includes( block.name ) ) {
 			continue;
 		}
 		const at = `${ pointer }/${ index++ }`;
 		map[ block.clientId ] = at;
+		if ( block.name === LOOP ) {
+			pointerMap( block.innerBlocks, `${ at }/steps`, map );
+		}
 		if ( block.name !== DECISION ) {
 			continue;
 		}
@@ -418,18 +436,100 @@ export function assignId( blocks, clientId, id, type ) {
 }
 
 /**
- * Nesting level of a block's list: 1 at the top, 2 inside one decision's branch, and so on.
+ * Nesting level of a block's list: 1 at the top, 2 inside one decision's branch or a loop's body,
+ * and so on.
  *
- * @param {?string} pointer Pointer of a step or decision.
+ * @param {?string} pointer Pointer of a step, decision or loop.
  * @return {number} Level.
  */
 export function levelOf( pointer ) {
-	return (
+	return Math.max(
+		1,
 		(
 			String( pointer || '' ).match(
-				/\/(branches\/\d+\/steps|otherwise)\//g
+				/\/(branches\/\d+\/)?(steps|otherwise)\/\d+/g
 			) || []
-		).length + 1
+		).length
+	);
+}
+
+/**
+ * The blocks one level inside a decision (its branches' steps) or a loop (its body).
+ *
+ * @param {Object} block Block.
+ * @return {Array} Blocks.
+ */
+const children = ( block ) =>
+	block?.name === DECISION
+		? list( block.innerBlocks ).flatMap( ( branch ) =>
+				list( branch.innerBlocks )
+			)
+		: list( block?.innerBlocks );
+
+/**
+ * Nesting levels in a block: 0 for a step, 1 plus the deepest inner one for a decision or a loop.
+ *
+ * @param {Object} block Block.
+ * @return {number} Height.
+ */
+export function heightOf( block ) {
+	if ( block?.name !== DECISION && block?.name !== LOOP ) {
+		return 0;
+	}
+	return 1 + Math.max( 0, ...children( block ).map( heightOf ) );
+}
+
+/**
+ * Every step list a block can move to ("Move to"): the top level, each branch and each loop body
+ * outside the block itself. Omits lists that would break the nesting limit, and loop bodies for a
+ * block that is or holds a wait or a loop (`loop_wait`, `loop_nested`).
+ *
+ * @param {Array}  blocks Top-level blocks.
+ * @param {Object} block  The block being moved.
+ * @return {Array<Object>} Targets: `rootClientId`, `count` (its blocks), `level`, and `loop` (a loop
+ *                         body's loop id), or `decision` and `branch` (the branch's attributes).
+ */
+export function moveTargets( blocks, block ) {
+	const targets = [ { rootClientId: '', count: blocks.length, level: 1 } ];
+	const walk = ( items, level, inLoop ) => {
+		for ( const item of items ) {
+			if ( item.clientId === block.clientId ) {
+				continue;
+			}
+			if ( item.name === LOOP ) {
+				targets.push( {
+					rootClientId: item.clientId,
+					count: item.innerBlocks.length,
+					level: level + 1,
+					inLoop: true,
+					loop: item.attributes.id,
+				} );
+				walk( item.innerBlocks, level + 1, true );
+			}
+			for ( const branch of item.name === DECISION
+				? item.innerBlocks
+				: [] ) {
+				targets.push( {
+					rootClientId: branch.clientId,
+					count: branch.innerBlocks.length,
+					level: level + 1,
+					inLoop,
+					decision: item.attributes.id,
+					branch: branch.attributes,
+				} );
+				walk( branch.innerBlocks, level + 1, inLoop );
+			}
+		}
+	};
+	walk( blocks, 1, false );
+	const height = heightOf( block );
+	const loopless = ! flatten( [ block ] ).some(
+		( item ) => item.name === LOOP || item.attributes?.type === 'wait'
+	);
+	return targets.filter(
+		( target ) =>
+			target.level + height - 1 <= MAX_LEVELS &&
+			( loopless || ! target.inLoop )
 	);
 }
 
@@ -478,9 +578,10 @@ export function formatDuration( amount, unit, sign = '' ) {
 
 /**
  * Test run report steps as nested lists: a new level opens at each branch heading ("If High",
- * "Otherwise").
+ * "Otherwise") and at each loop item (`heading` is then the entry's `item`). A loop's own lines
+ * inside its body (a skipped item, "and 3 more items") close the item before them.
  *
- * @param {Array} steps Report steps (`depth`, `branch`, `message`, `result`).
+ * @param {Array} steps Report steps (`depth`, `branch`, `item`, `type`, `message`, `result`).
  * @return {Array} Tree of `{ entry }` and `{ heading, children }`.
  */
 export function reportTree( steps ) {
@@ -491,15 +592,20 @@ export function reportTree( steps ) {
 		while ( stack.length - 1 > depth ) {
 			stack.pop();
 		}
+		const heading = entry.item || entry.branch;
 		if (
-			entry.branch !== null &&
-			entry.branch !== undefined &&
-			depth > 0
+			entry.type === 'loop' &&
+			( entry.detail?.more || entry.detail?.skipped_item )
 		) {
 			while ( stack.length > depth ) {
 				stack.pop();
 			}
-			const node = { heading: entry.branch, children: [] };
+		}
+		if ( heading !== null && heading !== undefined && depth > 0 ) {
+			while ( stack.length > depth ) {
+				stack.pop();
+			}
+			const node = { heading, children: [] };
 			stack[ stack.length - 1 ].children.push( node );
 			stack.push( node );
 		}

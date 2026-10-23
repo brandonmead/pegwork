@@ -9,7 +9,7 @@
 	"keywords": [ "branch", "if", "otherwise", "automation" ],
 	"textdomain": "pegwork",
 	"parent": [ "pegwork/automation-decision" ],
-	"allowedBlocks": [ "pegwork/automation-step", "pegwork/automation-decision" ],
+	"allowedBlocks": [ "pegwork/automation-step", "pegwork/automation-decision", "pegwork/automation-loop" ],
 	"attributes": {
 		"label": { "type": "string" },
 		"when": { "type": "object" },

@@ -1044,6 +1044,136 @@
 				"trigger.id",
 				"trigger.payload"
 			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_tasks_digest",
+			"at": "/steps/1/steps/0/text",
+			"context": "private",
+			"expect": [
+				"steps.due.count",
+				"steps.each_task.item.id",
+				"steps.each_task.item.status",
+				"steps.each_task.item.type",
+				"steps.each_task.item.permalink",
+				"steps.each_task.item.edit_url",
+				"steps.each_task.item.name",
+				"steps.each_task.item.due_on",
+				"steps.each_task.item.assignee_email",
+				"steps.each_task.item.done",
+				"steps.each_task.item.reminded_on",
+				"steps.each_task.index",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.due.records",
+				"steps.each_task.count",
+				"steps.remind.failed",
+				"item.name"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_tasks_digest",
+			"at": "/steps/2/text",
+			"context": "private",
+			"expect": [
+				"steps.due.count",
+				"steps.each_task.count",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.each_task.item.name",
+				"steps.each_task.index",
+				"steps.remind.failed"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_tasks_digest",
+			"at": "/steps/2/text",
+			"context": "private",
+			"template": "{{#each steps.due.records}}- {{tag}}\n{{/each}}",
+			"expect": [
+				"steps.due.count",
+				"steps.each_task.count",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.each_task.item.name"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_manual_list",
+			"at": "/steps/2/steps/2/branches/0/steps/0/text",
+			"context": "private",
+			"expect": [
+				"trigger.user_id",
+				"trigger.source",
+				"steps.overdue.count",
+				"steps.gift.found",
+				"steps.gift.record_id",
+				"steps.gift.record.id",
+				"steps.gift.record.status",
+				"steps.gift.record.type",
+				"steps.gift.record.permalink",
+				"steps.gift.record.edit_url",
+				"steps.gift.record.name",
+				"steps.gift.record.amount",
+				"steps.gift.record.received_on",
+				"steps.gift.record.method",
+				"steps.gift.record.barn_fund",
+				"steps.each.item.id",
+				"steps.each.item.status",
+				"steps.each.item.type",
+				"steps.each.item.permalink",
+				"steps.each.item.edit_url",
+				"steps.each.item.name",
+				"steps.each.item.due_on",
+				"steps.each.item.assignee_email",
+				"steps.each.item.done",
+				"steps.each.item.reminded_on",
+				"steps.each.index",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.each.count",
+				"steps.stamp.record_id",
+				"steps.close.failed"
+			]
 		}
 	],
 	"fields": [
@@ -1205,6 +1335,37 @@
 				"record.barn_fund",
 				"trigger.user_id",
 				"trigger.source",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_manual_list",
+			"at": "/steps/2/steps/1/when",
+			"expect": [
+				"trigger.user_id",
+				"trigger.source",
+				"steps.overdue.count",
+				"steps.gift.found",
+				"steps.gift.record_id",
+				"steps.gift.record.id",
+				"steps.gift.record.status",
+				"steps.gift.record.type",
+				"steps.gift.record.name",
+				"steps.gift.record.amount",
+				"steps.gift.record.received_on",
+				"steps.gift.record.method",
+				"steps.gift.record.barn_fund",
+				"steps.each.item.id",
+				"steps.each.item.status",
+				"steps.each.item.type",
+				"steps.each.item.name",
+				"steps.each.item.due_on",
+				"steps.each.item.assignee_email",
+				"steps.each.item.done",
+				"steps.each.item.reminded_on",
+				"steps.each.index",
 				"site.name",
 				"site.url"
 			]
@@ -1561,6 +1722,59 @@
 			"at": "/steps/1/when",
 			"var": "steps.gift.error",
 			"sample": "read_limit",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_manual_list",
+			"at": "/steps/2/steps/1/when",
+			"var": "steps.each.index",
+			"sample": 3,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_manual_list",
+			"at": "/steps/2/steps/1/when",
+			"var": "steps.each.item.due_on",
+			"sample": "2027-01-01",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_manual_list",
+			"at": "/steps/2/steps/1/when",
+			"var": "steps.each.item.done",
+			"sample": true,
 			"expect": [
 				"eq",
 				"ne",

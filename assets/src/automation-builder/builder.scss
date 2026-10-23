@@ -126,8 +126,15 @@ $error: #cc1818;
 	overflow-wrap: anywhere;
 }
 
+// A loop body: indented under its card with a double left rule (a branch has a single one).
+.pegwork-automation-loop__steps {
+	margin: 8px 0 0;
+	border-left: 6px double $muted;
+}
+
 // Core floats a nested block's appender over its last child; ours sit below the list instead.
 .pegwork-automation-branch__steps > .block-list-appender,
+.pegwork-automation-loop__steps > .block-list-appender,
 .pegwork-automation-decision__branches > .block-list-appender {
 	position: static;
 	width: auto;

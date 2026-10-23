@@ -2,7 +2,7 @@
  * The automation builder (Phase 6 PR 5), by keyboard only (no mouse calls): a scheduled automation
  * with a three-way decision and a nested If built from the inserters, conditions set in the branch
  * inspector, saved, reloaded and read back through the admin e2e route; a bad merge tag refused at
- * its step and reached with "Go to first error"; a step moved with "Move to branch"; the Test run
+ * its step and reached with "Go to first error"; a step moved with "Move to"; the Test run
  * report; a file automation read-only and duplicated. Axe on the Pegwork parts (canvas cards,
  * sidebar panels, block inspector) at 1280 and 782 px, no horizontal page scroll. Saves screenshots
  * to docs/screenshots/.
@@ -312,14 +312,14 @@ test( 'a bad merge tag is refused at its step, reached with Go to first error', 
 	await expect( frame.locator( '.has-error' ) ).toHaveCount( 0 );
 } );
 
-test( 'Move to branch moves a step into a branch', async ( { page } ) => {
+test( 'Move to moves a step into a branch', async ( { page } ) => {
 	await page.setViewportSize( { width: 1280, height: 900 } );
 	await page.goto( editUrl );
 	await openEditor( page, /post\.php/ );
 
 	const doneId = ( await definition( KEY ) ).definition.steps[ 1 ].id;
 	await selectCard( page, doneId );
-	await press( page.getByRole( 'button', { name: 'Move to branch' } ) );
+	await press( page.getByRole( 'button', { name: 'Move to', exact: true } ) );
 	await expect(
 		page.getByRole( 'menuitem', { name: 'Main steps' } )
 	).toBeDisabled();

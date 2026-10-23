@@ -25,8 +25,8 @@ import { addQueryArgs } from '@wordpress/url';
  * Internal dependencies
  */
 import { errorsAt, formatDuration, parseDuration } from './logic';
-import { fieldName, groupLabel } from './labels';
-import { formatTag } from './scope';
+import { fieldName, groupLabel, listName } from './labels';
+import { eachBlock, formatTag } from './scope';
 import { config, useSample } from './store';
 
 /**
@@ -62,6 +62,34 @@ export function Errors( { messages, id } ) {
 				</p>
 			) ) }
 		</div>
+	);
+}
+
+/**
+ * A block a loop cannot hold (a pasted wait or loop): the message at its card, an alert that takes
+ * focus while the block is selected (after core has focused the block itself).
+ *
+ * @param {Object}  props         Props.
+ * @param {string}  props.message Message.
+ * @param {boolean} props.focus   Whether to take focus.
+ */
+export function Refused( { message, focus } ) {
+	const ref = useRef();
+	useEffect( () => {
+		const timer = focus
+			? window.setTimeout( () => ref.current?.focus(), 100 )
+			: 0;
+		return () => window.clearTimeout( timer );
+	}, [ focus ] );
+	return (
+		<p
+			ref={ ref }
+			tabIndex={ -1 }
+			role="alert"
+			className="pegwork-automation__error"
+		>
+			{ message }
+		</p>
 	);
 }
 
@@ -311,6 +339,8 @@ function MergeTagInserter( { tags, label, onInsert } ) {
  * @param {boolean}  [props.multiline] Textarea.
  * @param {string}   [props.help]      Help text.
  * @param {boolean}  [props.disabled]  Read-only.
+ * @param {Array}    [props.lists]     Lists of records in scope (find steps): "Insert list of records".
+ * @param {boolean}  [props.html]      An HTML template (the list is inserted as `<ul>`).
  */
 export function TemplateControl( {
 	label,
@@ -322,6 +352,8 @@ export function TemplateControl( {
 	multiline,
 	help,
 	disabled,
+	lists,
+	html,
 } ) {
 	const ref = useRef();
 	const { id, messages, props } = wire( errors, pointer, Boolean( help ) );
@@ -381,8 +413,80 @@ export function TemplateControl( {
 					onInsert={ insert }
 				/>
 			) }
+			{ ! disabled && lists?.length > 0 && (
+				<ListInserter
+					lists={ lists }
+					label={ label }
+					onInsert={ ( find ) =>
+						insert( eachBlock( find, config, html ) )
+					}
+				/>
+			) }
 			<Errors messages={ messages } id={ `${ id }-errors` } />
 		</div>
+	);
+}
+
+/**
+ * "Insert list of records": picks a list in scope and inserts an `{{#each}}` block with its first
+ * field (eachBlock()).
+ *
+ * @param {Object}   props          Props.
+ * @param {Array}    props.lists    Find steps in scope.
+ * @param {string}   props.label    Name of the field it inserts into.
+ * @param {Function} props.onInsert Called with the chosen find step.
+ */
+function ListInserter( { lists, label, onInsert } ) {
+	const [ chosen, setChosen ] = useState( '' );
+	const find = lists.find( ( item ) => item.id === chosen ) || lists[ 0 ];
+	return (
+		<Dropdown
+			className="pegwork-automation__tags"
+			contentClassName="pegwork-automation__tags-popover"
+			focusOnMount="firstElement"
+			renderToggle={ ( { isOpen, onToggle } ) => (
+				<Button
+					variant="link"
+					onClick={ onToggle }
+					aria-expanded={ isOpen }
+					aria-label={ sprintf(
+						/* translators: %s: field label. */
+						__( 'Insert list of records into %s', 'pegwork' ),
+						label
+					) }
+				>
+					{ __( 'Insert list of records', 'pegwork' ) }
+				</Button>
+			) }
+			renderContent={ ( { onClose } ) => (
+				<div className="pegwork-automation__tags-form">
+					<SelectControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
+						label={ __( 'List', 'pegwork' ) }
+						help={ __(
+							'One line per record, with its first field. Inside the block, item tags read that record; text after {{else}} shows when the list is empty.',
+							'pegwork'
+						) }
+						value={ find.id }
+						options={ lists.map( ( item ) => ( {
+							value: item.id,
+							label: listName( item, config ),
+						} ) ) }
+						onChange={ setChosen }
+					/>
+					<Button
+						variant="primary"
+						onClick={ () => {
+							onInsert( find );
+							onClose();
+						} }
+					>
+						{ __( 'Insert list', 'pegwork' ) }
+					</Button>
+				</div>
+			) }
+		/>
 	);
 }
 

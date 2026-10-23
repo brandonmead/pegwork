@@ -603,7 +603,7 @@ final class AutomationPost {
 	}
 
 	/**
-	 * Only automation steps, decisions and branches in an automation post's editor.
+	 * Only automation steps, decisions, branches and loops in an automation post's editor.
 	 *
 	 * @param bool|string[]           $allowed Allowed block types.
 	 * @param WP_Block_Editor_Context $context Editor context.
@@ -611,7 +611,7 @@ final class AutomationPost {
 	 */
 	public static function allowed_block_types( $allowed, $context ) {
 		if ( $context instanceof WP_Block_Editor_Context && $context->post instanceof WP_Post && self::TYPE === $context->post->post_type ) {
-			return array( Builder::STEP, Builder::DECISION, Builder::BRANCH );
+			return array( Builder::STEP, Builder::DECISION, Builder::BRANCH, Builder::LOOP );
 		}
 		return $allowed;
 	}

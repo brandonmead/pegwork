@@ -79,16 +79,17 @@ export function binding( trigger, config ) {
 }
 
 /**
- * Steps that ran on every path before a pointer: earlier siblings in its list and in every
- * enclosing list.
+ * Steps that ran on every path before a pointer (earlier siblings in its list and in every
+ * enclosing list), and the loops whose body holds it.
  *
  * @param {Array}  steps   The automation's steps.
  * @param {string} pointer Pointer of a step, a branch, or a property inside one.
- * @return {Array<Object>} Steps (the step objects), in document order.
+ * @return {{before: Array<Object>, loops: Array<Object>}} Step objects, in document order.
  */
-export function stepsBefore( steps, pointer ) {
+function around( steps, pointer ) {
 	const parts = String( pointer ).split( '/' ).slice( 1 );
-	const found = [];
+	const before = [];
+	const loops = [];
 	let current = Array.isArray( steps ) ? steps : [];
 	let at = parts[ 0 ] === 'steps' ? 1 : parts.length;
 	while ( at < parts.length ) {
@@ -96,7 +97,7 @@ export function stepsBefore( steps, pointer ) {
 		if ( ! Number.isInteger( index ) ) {
 			break;
 		}
-		found.push( ...current.slice( 0, index ) );
+		before.push( ...current.slice( 0, index ) );
 		const step = current[ index ];
 		if ( parts[ at + 1 ] === 'branches' && parts[ at + 3 ] === 'steps' ) {
 			current =
@@ -105,11 +106,55 @@ export function stepsBefore( steps, pointer ) {
 		} else if ( parts[ at + 1 ] === 'otherwise' ) {
 			current = step?.otherwise || [];
 			at += 2;
+		} else if ( parts[ at + 1 ] === 'steps' && step?.type === 'loop' ) {
+			loops.push( step );
+			current = step.steps || [];
+			at += 2;
 		} else {
 			break;
 		}
 	}
-	return found;
+	return { before, loops };
+}
+
+/**
+ * Steps that ran on every path before a pointer: earlier siblings in its list and in every
+ * enclosing list (a loop body's steps only inside that body).
+ *
+ * @param {Array}  steps   The automation's steps.
+ * @param {string} pointer Pointer of a step, a branch, or a property inside one.
+ * @return {Array<Object>} Steps (the step objects), in document order.
+ */
+export function stepsBefore( steps, pointer ) {
+	return around( steps, pointer ).before;
+}
+
+/**
+ * The loops around a pointer, each with the content type of the records it repeats over.
+ *
+ * @param {Array}  steps   The automation's steps.
+ * @param {string} pointer Pointer.
+ * @return {Array<Object>} Loop steps with `content_type` (null when its find is not known).
+ */
+export function loopsAround( steps, pointer ) {
+	const { before, loops } = around( steps, pointer );
+	return loops.map( ( loop ) => ( {
+		...loop,
+		content_type:
+			collections( before ).find(
+				( find ) => `steps.${ find.id }.records` === loop.over
+			)?.content_type ?? null,
+	} ) );
+}
+
+/**
+ * The lists of records in scope: find_records steps among steps that ran before.
+ *
+ * @param {Array<Object>} before Steps before the pointer (stepsBefore()).
+ * @return {Array<Object>} Find steps.
+ */
+export function collections( before ) {
+	return before.filter( ( step ) => step.type === 'find_records' );
 }
 
 /**
@@ -303,6 +348,26 @@ export function conditionFields( definition, pointer, config ) {
 	for ( const step of stepsBefore( definition?.steps, pointer ) ) {
 		fields.push( ...stepPaths( step, config ) );
 	}
+	// Inside a loop body: the current item (a record of the list's type) and its number.
+	for ( const loop of loopsAround( definition?.steps, pointer ) ) {
+		const base = `steps.${ loop.id }.`;
+		const source = {
+			type: 'loop',
+			content_type: loop.content_type,
+			item: true,
+		};
+		fields.push(
+			...[
+				...recordFields( config, loop.content_type, `${ base }item.` ),
+				{ path: `${ base }index`, type: 'number' },
+			].map( ( field ) => ( {
+				...field,
+				group: 'steps',
+				step: loop.id,
+				source,
+			} ) )
+		);
+	}
 	fields.push(
 		{ path: 'site.name', type: null, group: 'site' },
 		{ path: 'site.url', type: null, group: 'site' }
@@ -341,7 +406,10 @@ export function mergeTags( definition, pointer, config, context ) {
 			continue;
 		}
 		tags.push( tag( field ) );
-		if ( field.key === 'type' && field.path.endsWith( 'record.type' ) ) {
+		if (
+			field.key === 'type' &&
+			/(record|item)\.type$/.test( field.path )
+		) {
 			const prefix = field.path.slice( 0, -'type'.length );
 			tags.push(
 				tag( { ...field, path: `${ prefix }permalink`, type: null } ),
@@ -378,7 +446,8 @@ export function mergeTags( definition, pointer, config, context ) {
 /**
  * The content type of a template that is exactly a typed record reference, as
  * AutomationRules::typed_reference() reads it: `{{record.id}}` of a bound record, or
- * `{{steps.<id>.record_id}}` of a get_record or create_record step that ran before.
+ * `{{steps.<id>.record_id}}` of a get_record or create_record step that ran before, or
+ * `{{steps.<loop>.item.id}}` inside that loop.
  *
  * @param {string} template   Template.
  * @param {Object} definition Automation (trigger and steps).
@@ -409,6 +478,10 @@ export function typedReference( template, definition, pointer, config ) {
 		type = [ 'get_record', 'create_record' ].includes( step?.type )
 			? step.content_type
 			: null;
+	} else if ( match[ 1 ] === `steps.${ parts[ 1 ] }.item.id` ) {
+		type = loopsAround( definition?.steps, pointer ).find(
+			( loop ) => loop.id === parts[ 1 ]
+		)?.content_type;
 	}
 	return typeof type === 'string' && type !== '' ? type : null;
 }
@@ -437,4 +510,23 @@ export function formatTag( path, filters = {} ) {
 		tag += ` | default:"${ String( filters.fallback ).replace( /"/g, '' ) }"`;
 	}
 	return `{{${ tag }}}`;
+}
+
+/**
+ * An `{{#each}}` block over a find step's records with the type's first field: one line per record
+ * in text, a list in HTML.
+ *
+ * @param {Object}  find   find_records step.
+ * @param {Object}  config Parsed config.
+ * @param {boolean} [html] HTML template.
+ * @return {string} Block such as `{{#each steps.due.records}}- {{item.name}}\n{{/each}}`.
+ */
+export function eachBlock( find, config, html ) {
+	const tag = `{{item.${
+		typeFields( config, find.content_type, '' )[ 0 ]?.key || 'id'
+	}}}`;
+	const open = `{{#each steps.${ find.id }.records}}`;
+	return html
+		? `<ul>${ open }<li>${ tag }</li>{{/each}}</ul>`
+		: `${ open }- ${ tag }\n{{/each}}`;
 }

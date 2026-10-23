@@ -461,7 +461,7 @@ class AutomationBuilderTest extends AutomationTestCase {
 		$settings = AutomationPost::editor_settings( array(), $context );
 		$this->assertSame( 'all', $settings['templateLock'] );
 		$this->assertArrayNotHasKey( 'templateLock', AutomationPost::editor_settings( array(), new WP_Block_Editor_Context( array( 'post' => get_post( $site_id ) ) ) ) );
-		$this->assertSame( array( Builder::STEP, Builder::DECISION, Builder::BRANCH ), AutomationPost::allowed_block_types( true, $context ) );
+		$this->assertSame( array( Builder::STEP, Builder::DECISION, Builder::BRANCH, Builder::LOOP ), AutomationPost::allowed_block_types( true, $context ) );
 		$this->assertTrue( AutomationPost::allowed_block_types( true, new WP_Block_Editor_Context( array( 'post' => self::factory()->post->create_and_get() ) ) ) );
 
 		set_current_screen( AutomationPost::TYPE );

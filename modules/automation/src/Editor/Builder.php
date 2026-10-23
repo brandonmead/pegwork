@@ -14,7 +14,8 @@ namespace PegworkAutomation\Editor;
  * `pegwork/automation-step` block's attributes are one step, each `pegwork/automation-decision` block
  * is a decision (attribute `id`) whose inner blocks are its branches, and each
  * `pegwork/automation-branch` block is a branch (`label`, `when`) or, with the editor-only attribute
- * `otherwise`, the decision's otherwise list; a branch's inner blocks are its steps. The post title is
+ * `otherwise`, the decision's otherwise list; a branch's inner blocks are its steps. Each
+ * `pegwork/automation-loop` block is a loop (`id`, `over`) whose inner blocks are its body. The post title is
  * the label. Everything else (key, description, enabled, trigger, idempotency, links, ui) is the
  * settings object, stored as JSON in post meta and preserved as it is.
  *
@@ -38,6 +39,16 @@ final class Builder {
 	 * Branch block name.
 	 */
 	public const BRANCH = 'pegwork/automation-branch';
+
+	/**
+	 * Loop block name.
+	 */
+	public const LOOP = 'pegwork/automation-loop';
+
+	/**
+	 * Loop keys other than `type` and `steps` (`blocks/automation-loop/block.json`).
+	 */
+	public const LOOP_ATTRIBUTES = array( 'id', 'over' );
 
 	/**
 	 * Step keys, in block attribute order (`blocks/automation-step/block.json`).
@@ -192,14 +203,17 @@ final class Builder {
 				$errors[ $pointer ] = __( 'A branch must be inside a decision.', 'pegwork' );
 				continue;
 			}
-			if ( self::STEP !== $name && self::DECISION !== $name ) {
+			$at = $pointer . '/' . count( $steps );
+			if ( self::STEP === $name ) {
+				$steps[] = self::attributes( $block, self::STEP_ATTRIBUTES );
+			} elseif ( self::DECISION === $name ) {
+				$steps[] = self::decision( $block, $at, $errors );
+			} elseif ( self::LOOP === $name ) {
+				$loop    = self::attributes( $block, self::LOOP_ATTRIBUTES );
+				$steps[] = array_intersect_key( $loop, array( 'id' => true ) ) + array( 'type' => 'loop' ) + $loop + array( 'steps' => self::steps( $block['innerBlocks'] ?? array(), $at . '/steps', $errors ) );
+			} else {
 				$errors[ $pointer ] = __( 'An automation can hold only steps and decisions. Remove other content.', 'pegwork' );
-				continue;
 			}
-			$at      = $pointer . '/' . count( $steps );
-			$steps[] = self::STEP === $name
-				? self::attributes( $block, self::STEP_ATTRIBUTES )
-				: self::decision( $block, $at, $errors );
 		}
 		return $steps;
 	}
@@ -276,7 +290,16 @@ final class Builder {
 		$blocks = array();
 		foreach ( $steps as $step ) {
 			$step     = is_array( $step ) ? $step : array();
-			$blocks[] = 'decision' === ( $step['type'] ?? null ) ? self::decision_block( $step ) : self::block( self::STEP, self::ordered( $step, self::STEP_ATTRIBUTES ) );
+			$type     = $step['type'] ?? null;
+			$blocks[] = match ( true ) {
+				'decision' === $type => self::decision_block( $step ),
+				'loop' === $type     => self::block(
+					self::LOOP,
+					self::ordered( array_diff_key( $step, array_flip( array( 'type', 'steps' ) ) ), self::LOOP_ATTRIBUTES ),
+					self::step_blocks( is_array( $step['steps'] ?? null ) ? $step['steps'] : array() )
+				),
+				default              => self::block( self::STEP, self::ordered( $step, self::STEP_ATTRIBUTES ) ),
+			};
 		}
 		return $blocks;
 	}
