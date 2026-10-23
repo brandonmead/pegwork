@@ -154,6 +154,8 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - `ComboboxControl` (WP 6.7 to 7.1) calls `onChange` before it `speak()`s `messages.selected`, so "Linked {title}" is spoken from an effect after the next render and `messages.selected` is blanked.
 - Core `TokenInput` (the combobox input) sets `aria-owns`, not `aria-controls`, while expanded: axe `aria-required-attr` (critical) only with the list open. `expandOnFocus` is off so programmatic focus after a removal does not open it; the E2E axe check runs with the list closed.
 - `getEntityRecords` for postType defaults to `context: 'edit'`, which 403s for users without `edit_posts` on the "to" type; the picker passes `context: 'view'` and decodes `title.rendered`.
+- Details panel slot `pegwork-editor-panel-after` (Slot in `panel.js`): modules fill it from their own `registerPlugin()` (the automation module's "Run an automation", Automation v3 PR 5).
+- Gotchas (manual trigger E2E): core `ConfirmDialog` (`__experimentalConfirmDialog`, still experimental in WP 6.7 to 7.1) closes when the window loses focus, and `@axe-core/playwright` opens a helper page, so an axe run closes an open dialog; the spec cancels and reopens it after axe. The modal fades in, so axe right after opening reports color contrast on its buttons; wait for the overlay's animations to finish first.
 - Browser checks: throwaway sites `~/wp-envs/picker` (WP 7.1.3, DB `wpenv_picker`, port 8141) and `~/wp-envs/picker67` (WP 6.7, DB `wpenv_picker67`, port 8142), mu-plugin `pegwork-demo.php` registers `examples/sifg`; harness site `~/wp-envs/picker_e2e` (port 8143). PHPUnit core copy `~/wp-envs/picker-core`, DB `pegwork_tests_picker`.
 
 ## Options pages (content builder PRs 4 and 5)

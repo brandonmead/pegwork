@@ -1,0 +1,1 @@
+{ "format": 1, "id": "e2e_manual", "version": "1.0.0", "label": "E2E manual trigger: staff start a flow from a gift or from the list", "requires": { "pegwork": ">=0.3.0" } }

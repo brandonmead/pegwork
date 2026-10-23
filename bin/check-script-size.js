@@ -3,8 +3,9 @@
  * Fails when a built file is larger than a gzipped byte budget.
  *
  * Usage: node bin/check-script-size.js <file> <max gzipped bytes>
- * (npm run check:size: the filters view module, at most 10 KB gzipped, and the automation builder
- * script, at most 25 KB gzipped; WordPress packages are external and not counted.)
+ * (npm run check:size: the filters view module, at most 10 KB gzipped, the automation builder
+ * script, at most 25 KB gzipped, and the record editor's automation actions script, at most 3 KB
+ * gzipped; WordPress packages are external and not counted.)
  */
 const { readFileSync } = require( 'fs' );
 const { gzipSync } = require( 'zlib' );

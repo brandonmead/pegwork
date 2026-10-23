@@ -38,7 +38,7 @@ final class AutomationList {
 		echo '<a class="page-title-action" href="' . esc_url( Screen::url( array( 'view' => 'log' ) ) ) . '">' . esc_html__( 'View run log', 'pegwork' ) . '</a>';
 		echo '<hr class="wp-header-end">';
 		Screen::notice();
-		echo '<p>' . esc_html__( 'Automations come from the schema registry. Site automations are edited here; automations from a schema package are read-only and can be duplicated as site automations. You can also switch one on or off for this site, run a schedule now, and follow its runs.', 'pegwork' ) . '</p>';
+		echo '<p>' . esc_html__( 'Automations come from the schema registry. Site automations are edited here; automations from a schema package are read-only and can be duplicated as site automations. You can also switch one on or off for this site, run a schedule or a staff automation now, and follow its runs.', 'pegwork' ) . '</p>';
 
 		// Not wp-list-table: its small-screen CSS stacks cells without their headers.
 		echo '<table class="widefat striped pegwork-table">';
@@ -60,6 +60,7 @@ final class AutomationList {
 			$key        = (string) $key;
 			$is_enabled = Overrides::enabled( $definition );
 			$schedule   = 'schedule' === $definition['trigger']['type'];
+			$runnable   = $schedule || ( 'manual' === $definition['trigger']['type'] && ! isset( $definition['trigger']['content_type'] ) );
 
 			echo '<tr>';
 			echo '<th scope="row"><strong>' . esc_html( $definition['label'] ) . '</strong><br><code>' . esc_html( $key ) . '</code>';
@@ -74,7 +75,7 @@ final class AutomationList {
 			echo '<td>' . self::next_run( $key, $schedule, $is_enabled, $engine ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in next_run().
 			echo '<td class="pegwork-actions">';
 			self::edit_links( $key, (string) $definition['label'], $posts[ $key ] ?? 0 );
-			self::actions( $key, (string) $definition['label'], $schedule, $is_enabled );
+			self::actions( $key, (string) $definition['label'], $runnable, $is_enabled, 'manual' === $definition['trigger']['type'] );
 			echo '</td></tr>';
 		}
 
@@ -90,11 +91,17 @@ final class AutomationList {
 
 	/**
 	 * For a webhook trigger: the inbound URL and where its signing secret comes from (never the secret).
+	 * For a manual trigger: who can run it.
 	 *
 	 * @param string               $key        Automation key.
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */
 	private static function endpoint( string $key, array $definition ): string {
+		if ( 'manual' === $definition['trigger']['type'] ) {
+			return 'editors' === ( $definition['trigger']['allow'] ?? 'admins' )
+				? '<span class="pegwork-meta">' . esc_html__( 'Editors can run', 'pegwork' ) . '</span>'
+				: '<span class="pegwork-meta">' . esc_html__( 'Administrators can run', 'pegwork' ) . '</span>';
+		}
 		if ( 'webhook' !== $definition['trigger']['type'] ) {
 			return '';
 		}
@@ -161,9 +168,14 @@ final class AutomationList {
 	 */
 	private static function next_run( string $key, bool $schedule, bool $is_enabled, Engine $engine ): string {
 		if ( ! $schedule ) {
-			return 'webhook' === pegwork_registry()->automation( $key )['trigger']['type']
-				? esc_html__( 'When a signed request arrives', 'pegwork' )
-				: esc_html__( 'When its event fires', 'pegwork' );
+			switch ( pegwork_registry()->automation( $key )['trigger']['type'] ) {
+				case 'webhook':
+					return esc_html__( 'When a signed request arrives', 'pegwork' );
+				case 'manual':
+					return esc_html__( 'When staff start it', 'pegwork' );
+				default:
+					return esc_html__( 'When its event fires', 'pegwork' );
+			}
 		}
 		$next = $engine->scheduler()->next( Engine::SCHEDULE_HOOK, array( $key ) );
 		if ( ! $is_enabled ) {
@@ -194,14 +206,17 @@ final class AutomationList {
 	}
 
 	/**
-	 * The actions cell: Enable/Disable, Run now (schedules only), and a link to the automation's runs.
+	 * The actions cell: Enable/Disable, Run now (schedules, and manual triggers without a content type), and
+	 * a link to the automation's runs. A manual Run now carries a request ID per page view, so a double
+	 * submit starts one run.
 	 *
 	 * @param string $key        Automation key.
 	 * @param string $label      Automation label.
-	 * @param bool   $schedule   Whether it has a schedule trigger.
+	 * @param bool   $runnable   Whether it has Run now.
 	 * @param bool   $is_enabled Effective state.
+	 * @param bool   $manual     Whether it has a manual trigger.
 	 */
-	private static function actions( string $key, string $label, bool $schedule, bool $is_enabled ): void {
+	private static function actions( string $key, string $label, bool $runnable, bool $is_enabled, bool $manual = false ): void {
 		$name = '<span class="screen-reader-text"> ' . esc_html( $label ) . '</span>';
 		$post = esc_url( admin_url( 'admin-post.php' ) );
 
@@ -212,11 +227,14 @@ final class AutomationList {
 		echo '<button type="submit" class="' . esc_attr( $is_enabled ? 'button' : 'button button-primary' ) . '">' . esc_html( $is_enabled ? __( 'Disable', 'pegwork' ) : __( 'Enable', 'pegwork' ) ) . $name . '</button>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $name is escaped above.
 		echo '</form>';
 
-		if ( $schedule ) {
+		if ( $runnable ) {
 			if ( $is_enabled ) {
 				echo '<form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
 				Screen::form_fields( Actions::RUN, Actions::RUN . '_' . $key );
 				echo '<input type="hidden" name="automation" value="' . esc_attr( $key ) . '">';
+				if ( $manual ) {
+					echo '<input type="hidden" name="request" value="' . esc_attr( wp_generate_uuid4() ) . '">';
+				}
 				echo '<button type="submit" class="button">' . esc_html__( 'Run now', 'pegwork' ) . $name . '</button>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $name is escaped above.
 				echo '</form>';
 			} else {

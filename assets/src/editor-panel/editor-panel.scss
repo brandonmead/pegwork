@@ -28,6 +28,19 @@
 			margin-top: 8px;
 		}
 	}
+
+	// "Run an automation" (automation module, slot pegwork-editor-panel-after).
+	.pegwork-editor-panel__actions {
+		align-items: flex-start;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 16px;
+
+		.pegwork-editor-panel__heading {
+			margin: 0;
+		}
+	}
 }
 
 // Match BaseControl labels for the labels this panel renders itself.

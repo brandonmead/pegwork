@@ -1,0 +1,4 @@
+{ "format": 1, "key": "man_receipt", "label": "Mark a gift receipted (administrators)",
+  "trigger": { "type": "manual", "content_type": "man_gift", "button": "Mark receipted" },
+  "steps": [
+    { "id": "stamp", "type": "update_record", "record": "{{record.id}}", "values": { "amount": "{{record.amount}}" } } ] }
