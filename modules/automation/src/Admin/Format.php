@@ -126,6 +126,13 @@ final class Format {
 
 			case 'webhook':
 				return __( 'Inbound webhook', 'pegwork' );
+
+			case 'manual':
+				return isset( $trigger['content_type'] )
+					/* translators: 1: button text, 2: content type key. */
+					? sprintf( __( 'Started by staff: "%1$s" on each %2$s', 'pegwork' ), $trigger['button'], $trigger['content_type'] )
+					/* translators: %s: button text. */
+					: sprintf( __( 'Started by staff: "%s" (Run now)', 'pegwork' ), $trigger['button'] );
 		}
 		/* translators: %s: trigger type. */
 		return sprintf( __( '%s (not supported yet)', 'pegwork' ), $trigger['type'] );

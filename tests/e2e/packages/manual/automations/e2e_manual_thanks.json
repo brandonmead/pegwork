@@ -1,0 +1,8 @@
+{ "format": 1, "key": "e2e_manual_thanks", "label": "E2E resend the thank-you for a gift",
+  "description": "Browser tests of the manual trigger: the record editor button on a BarnCRM gift (tests/e2e/packages/barn).",
+  "trigger": { "type": "manual", "content_type": "barn_gift", "button": "Resend thank-you", "allow": "editors",
+    "when": { "var": "record.amount", "op": "gt", "value": 0 } },
+  "steps": [
+    { "id": "thank", "type": "send_email", "to": "{{record.donor_email}}",
+      "subject": "Thank you for your gift of {{record.amount | number}}",
+      "text": "Sent again by user {{trigger.user_id}} from {{trigger.source}}." } ] }

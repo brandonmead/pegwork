@@ -71,7 +71,8 @@ final class Actions {
 	/**
 	 * Fires a schedule automation once now, as `wp pegwork automation run <key>` does: its records are
 	 * swept (filters applied, idempotency keys respected) and the runs queued for WP-Cron; its regular
-	 * schedule does not move. Hooked to admin_post_pegwork_automation_run.
+	 * schedule does not move. A manual automation without a content type starts one run (source `list`),
+	 * deduplicated by the form's request ID. Hooked to admin_post_pegwork_automation_run.
 	 */
 	public static function run(): void {
 		self::authorize();
@@ -79,8 +80,11 @@ final class Actions {
 		check_admin_referer( self::RUN . '_' . $key );
 
 		$definition = pegwork_registry()->automation( $key );
+		if ( null !== $definition && 'manual' === $definition['trigger']['type'] ) {
+			self::start( $key );
+		}
 		if ( null !== $definition && 'schedule' !== $definition['trigger']['type'] ) {
-			Screen::set_notice( 'error', __( 'Run now is for schedule automations. Event automations run when their event fires.', 'pegwork' ) );
+			Screen::set_notice( 'error', __( 'Run now is for schedule automations and staff automations without a record. Event automations run when their event fires.', 'pegwork' ) );
 			self::redirect( Screen::url() );
 		}
 
@@ -118,6 +122,39 @@ final class Actions {
 				array(
 					'view'       => 'log',
 					'automation' => $key,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Run now of a manual automation: one run with no record, then the run (or the run log on a refusal).
+	 *
+	 * @param string $key Automation key.
+	 */
+	private static function start( string $key ): never {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by the caller.
+		$request = isset( $_POST['request'] ) ? sanitize_text_field( wp_unslash( $_POST['request'] ) ) : '';
+		$request = 1 === preg_match( '/^[A-Za-z0-9-]{8,64}$/', $request ) ? $request : wp_generate_uuid4();
+
+		$result = ( new Manual() )->start( $key, null, get_current_user_id(), 'list', $request );
+		if ( $result instanceof WP_Error ) {
+			Screen::set_notice( 'error', $result->get_error_message() );
+			self::redirect( Screen::url() );
+		}
+		Screen::set_notice(
+			'success',
+			$result['duplicate']
+				/* translators: %s: automation label. */
+				? sprintf( __( '%s was already started from this page; no second run was created.', 'pegwork' ), self::label( $key ) )
+				/* translators: %s: automation label. */
+				: sprintf( __( '%s started. It runs in the background; reload this page to follow it.', 'pegwork' ), self::label( $key ) )
+		);
+		self::redirect(
+			Screen::url(
+				array(
+					'view' => 'run',
+					'run'  => $result['run'],
 				)
 			)
 		);

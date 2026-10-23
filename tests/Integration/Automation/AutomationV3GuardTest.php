@@ -11,15 +11,14 @@ use Pegwork\Api\Records;
 use Pegwork\Registry\Normalizer;
 use Pegwork\Tests\Support\AutomationTestCase;
 use PegworkAutomation\Engine;
-use PegworkAutomation\Manual;
 
 require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
 
 /**
  * Reads, relate, `on_error`, `call_webhook.record` and the new template filters run (Automation v3 PR 3).
- * Until the loop and manual-trigger PRs land (docs/automation-v3-design.md section 11, PRs 4 and 5), a run
- * of an automation that holds a `loop` fails with `unsupported_step` before its first step, and a manual
- * trigger never starts a run.
+ * Until the loop PR lands (docs/automation-v3-design.md section 11, PR 4), a run of an automation that
+ * holds a `loop` fails with `unsupported_step` before its first step. Manual triggers (PR 5) are covered
+ * by AutomationManualTest.
  */
 class AutomationV3GuardTest extends AutomationTestCase {
 
@@ -91,19 +90,5 @@ class AutomationV3GuardTest extends AutomationTestCase {
 		$this->assertSame( array(), $this->steps( $run['id'] ) );
 		$this->assertCount( 0, tests_retrieve_phpmailer_instance()->mock_sent );
 		$this->assertSame( '', (string) Records::get( $task )['values']['reminded_on'] );
-	}
-
-	/**
-	 * A manual trigger starts no run: no event matches it, and `wp pegwork automation run` refuses it.
-	 */
-	public function test_manual_trigger_is_inert() {
-		$gift = Records::create( 'barn_gift', array( 'name' => 'Gift' ), 'private' );
-		$this->assertIsInt( $gift );
-
-		$result = ( new Manual( $this->clock ) )->run( 'barn_resend_thanks', $gift );
-		$this->assertWPError( $result );
-		$this->assertSame( 'pegwork_unsupported_trigger', $result->get_error_code() );
-		$this->assertSame( array(), $this->runs( 'barn_resend_thanks' ) );
-		$this->assertSame( array(), $this->runs( 'reads_manual_list' ) );
 	}
 }

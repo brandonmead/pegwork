@@ -1,0 +1,7 @@
+{ "format": 1, "key": "man_thanks", "label": "Resend the thank-you for a gift",
+  "trigger": { "type": "manual", "content_type": "man_gift", "button": "Resend thank-you", "allow": "editors",
+    "when": { "var": "record.amount", "op": "gt", "value": 0 } },
+  "steps": [
+    { "id": "thank", "type": "send_email", "to": "{{record.donor_email}}",
+      "subject": "Thank you for your gift of {{record.amount | number}}",
+      "text": "Sent again by user {{trigger.user_id}} from {{trigger.source}}." } ] }

@@ -1,0 +1,6 @@
+{ "format": 1, "key": "e2e_manual_report", "label": "E2E send the giving report now",
+  "description": "Browser tests of the manual trigger: Run now on Pegwork > Automations (no record).",
+  "trigger": { "type": "manual", "button": "Send giving report" },
+  "steps": [
+    { "id": "report", "type": "send_email", "to": "e2e-report@example.org",
+      "subject": "Giving report", "text": "Asked by user {{trigger.user_id}} from {{trigger.source}}." } ] }

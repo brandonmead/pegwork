@@ -1,0 +1,8 @@
+{ "format": 1, "key": "man_report", "label": "Send the giving report now",
+  "trigger": { "type": "manual", "button": "Send giving report" },
+  "steps": [
+    { "id": "giving", "type": "find_records", "content_type": "man_gift", "limit": 0, "sum": [ "amount" ],
+      "filter": { "all": [ { "field": "amount", "op": "gt", "value": 0 } ] } },
+    { "id": "report", "type": "send_email", "to": "report@example.org",
+      "subject": "{{steps.giving.count}} gifts",
+      "text": "Asked by user {{trigger.user_id}} from {{trigger.source}}." } ] }
