@@ -16,6 +16,7 @@ use PegworkAutomation\Scheduler\WpCronScheduler;
 use PegworkAutomation\Steps\CallWebhook;
 use PegworkAutomation\Steps\Condition;
 use PegworkAutomation\Steps\CreateRecord;
+use PegworkAutomation\Steps\Decision;
 use PegworkAutomation\Steps\SendEmail;
 use PegworkAutomation\Steps\Step;
 use PegworkAutomation\Steps\UpdateRecord;
@@ -100,6 +101,7 @@ final class Engine {
 			'send_email'    => new SendEmail(),
 			'call_webhook'  => new CallWebhook(),
 			'wait'          => new Wait(),
+			'decision'      => new Decision(),
 		);
 	}
 

@@ -15,6 +15,9 @@ use Pegwork\Api\Records;
  * Listens on the core event bus. For each enabled automation whose event trigger matches, it evaluates
  * `when` synchronously (the payload's old values exist only now), applies the loop depth cap and the
  * idempotency key, inserts a `queued` run and schedules its wake-up. The saving request never runs steps.
+ *
+ * A `record.*` event binds the record in its payload; a form event binds `record_id` when the trigger
+ * binds its form's record (binds_form()); a binding form event without a record inserts a `skipped` run.
  */
 final class Triggers {
 
@@ -82,10 +85,14 @@ final class Triggers {
 	 * @return int Run ID, or 0 when none was created.
 	 */
 	private function start( string $key, array $definition, string $name, array $payload ): int {
-		$binds     = str_starts_with( $name, 'record.' );
-		$record_id = $binds && isset( $payload['id'] ) ? (int) $payload['id'] : null;
-		$record    = null === $record_id ? null : Records::get( $record_id );
-		$context   = new Context( $this->engine->clock(), $record, $payload );
+		$form = self::binds_form( $definition['trigger'] );
+		if ( $form ) {
+			$record_id = is_numeric( $payload['record_id'] ?? null ) && (int) $payload['record_id'] > 0 ? (int) $payload['record_id'] : null;
+		} else {
+			$record_id = str_starts_with( $name, 'record.' ) && isset( $payload['id'] ) ? (int) $payload['id'] : null;
+		}
+		$record  = null === $record_id ? null : Records::get( $record_id );
+		$context = new Context( $this->engine->clock(), $record, $payload );
 
 		if ( isset( $definition['trigger']['when'] ) && ! Conditions::evaluate( $definition['trigger']['when'], $context ) ) {
 			return 0;
@@ -118,8 +125,32 @@ final class Triggers {
 				)
 			);
 		}
+		if ( $form && null === $record_id ) {
+			return $this->engine->runs()->insert(
+				$run + array(
+					'status' => 'skipped',
+					'error'  => sprintf( 'no_record: the %s event names no record, but the automation binds the record its form wrote.', $name ),
+				)
+			);
+		}
 
 		return $this->enqueue( $run, $definition, $context );
+	}
+
+	/**
+	 * Whether a trigger binds the record a form wrote: an event trigger on `form.confirmed`, or on
+	 * `form.submitted` of a form without `confirm`, whose form has a `target` (the registry rule, read
+	 * against the current form definition).
+	 *
+	 * @param array<string, mixed> $trigger Canonical trigger.
+	 */
+	public static function binds_form( array $trigger ): bool {
+		$event = (string) ( $trigger['event'] ?? '' );
+		if ( 'event' !== ( $trigger['type'] ?? '' ) || ! in_array( $event, array( 'form.submitted', 'form.confirmed' ), true ) || ! isset( $trigger['form'] ) ) {
+			return false;
+		}
+		$form = pegwork_registry()->form( (string) $trigger['form'] );
+		return null !== $form && isset( $form['target'] ) && ( 'form.confirmed' === $event || ! isset( $form['confirm'] ) );
 	}
 
 	/**

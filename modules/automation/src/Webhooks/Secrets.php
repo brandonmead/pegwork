@@ -69,7 +69,7 @@ final class Secrets {
 		if ( 'webhook' === ( $definition['trigger']['type'] ?? '' ) ) {
 			return true;
 		}
-		return in_array( 'call_webhook', array_column( (array) ( $definition['steps'] ?? array() ), 'type' ), true );
+		return in_array( 'call_webhook', \PegworkAutomation\Plan::types( (array) ( $definition['steps'] ?? array() ) ), true );
 	}
 
 	/**

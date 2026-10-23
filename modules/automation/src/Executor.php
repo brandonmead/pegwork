@@ -17,6 +17,11 @@ use Throwable;
  * Executes one run per wake-up: claims it atomically, re-reads the record, runs steps from `current_step`,
  * writes one run-step row per attempt, and stops after the time budget, re-queueing the rest.
  *
+ * Steps form a tree (decisions hold branches of steps). A Plan built per wake-up gives each step id its
+ * position, so `current_step` is still just a step id: the cursor continues with Plan::next(), or, after a
+ * decision, with the first step of the branch it took. A step id that is no longer in the tree fails the run
+ * (`definition_changed`); one that moved continues at its new position.
+ *
  * Waits and retries share one mechanism: the run becomes `waiting` with `resume_at` and the step to run
  * next (the step after a wait, the same step for a retry), and a wake-up is scheduled for `resume_at`. The
  * claim takes a waiting run only once `resume_at` has passed.
@@ -77,13 +82,11 @@ final class Executor {
 			$runs->finish( $id, 'failed', sprintf( 'definition_changed: link "%s" is no longer in the automation.', (string) ( $run['context']['link'] ?? '' ) ) );
 			return 'failed';
 		}
-		$start = 0;
-		if ( '' !== $run['current_step'] ) {
-			$start = array_search( $run['current_step'], array_column( $steps, 'id' ), true );
-			if ( false === $start ) {
-				$runs->finish( $id, 'failed', sprintf( 'definition_changed: step "%s" is no longer in the automation.', $run['current_step'] ) );
-				return 'failed';
-			}
+		$plan    = new Plan( $steps );
+		$step_id = '' === $run['current_step'] ? $plan->first() : (string) $run['current_step'];
+		if ( null !== $step_id && ! $plan->has( $step_id ) ) {
+			$runs->finish( $id, 'failed', sprintf( 'definition_changed: step "%s" is no longer in the automation.', $step_id ) );
+			return 'failed';
 		}
 
 		$stored  = $run['context'];
@@ -98,13 +101,13 @@ final class Executor {
 		 */
 		$deadline = microtime( true ) + (float) apply_filters( 'pegwork_automation_time_budget', self::TIME_BUDGET );
 		$attempts = $runs->step_count( $id );
-		$count    = count( $steps );
+		$first    = true;
 
-		for ( $i = $start; $i < $count; $i++ ) {
-			$step    = $steps[ $i ];
-			$step_id = (string) $step['id'];
+		// The cursor walks the tree: each step names the next one (Plan), a decision picks its branch.
+		while ( null !== $step_id ) {
+			$step = (array) $plan->step( $step_id );
 
-			if ( $i > $start && microtime( true ) >= $deadline ) {
+			if ( ! $first && microtime( true ) >= $deadline ) {
 				$runs->requeue( $id, $step_id, self::store( $stored, $context ) );
 				$this->wake( $id, $this->engine->clock()->now()->getTimestamp() );
 				return 'queued';
@@ -150,14 +153,17 @@ final class Executor {
 				$runs->finish( $id, 'completed', null, self::store( $stored, $context ) );
 				return 'completed';
 			}
-			if ( null !== $result->resume_at && $i + 1 < $count ) {
-				$runs->wait( $id, (string) $steps[ $i + 1 ]['id'], $result->resume_at, self::store( $stored, $context ) );
+			$next = 'decision' === ( $step['type'] ?? null ) ? $plan->after_branch( $step_id, $result->branch ) : $plan->next( $step_id );
+			if ( null !== $result->resume_at && null !== $next ) {
+				$runs->wait( $id, $next, $result->resume_at, self::store( $stored, $context ) );
 				$this->wake( $id, $result->resume_at->getTimestamp() );
 				return 'waiting';
 			}
+			$step_id = $next;
+			$first   = false;
 		}
 
-		// A trailing wait has nothing left to wait for: the run completes now.
+		// A wait at the end of the tree has nothing left to wait for: the run completes now.
 		$runs->finish( $id, 'completed', null, self::store( $stored, $context ) );
 		return 'completed';
 	}

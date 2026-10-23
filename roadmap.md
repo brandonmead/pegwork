@@ -12,8 +12,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## Phase 6 PRs (`docs/phase-6-design.md` section 12)
 1. Registry: `decision` step and form binding (merged, #42).
-2. Engine: branches, `Plan`, form binding in triggers, run log path (in review, #50).
-3. Save API and editing surface (in review, branch `phase6-save`).
+2. Engine: branches, `Plan`, form binding in triggers, run log path (merged, #50).
+3. Save API and editing surface (in review, #52).
 4. Preview and dry run (planned).
 5. Editor UI (planned).
 6. BarnCRM proof (planned).

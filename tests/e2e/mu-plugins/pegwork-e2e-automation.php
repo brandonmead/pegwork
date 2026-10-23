@@ -185,16 +185,18 @@ add_action(
 					delete_option( 'pegwork_e2e_mail_fail' );
 					$overrides = get_option( 'pegwork_automation_overrides', array() );
 					if ( is_array( $overrides ) ) {
-						unset( $overrides['e2e_digest'] );
+						unset( $overrides['e2e_digest'], $overrides['e2e_branch'] );
 						update_option( 'pegwork_automation_overrides', $overrides );
 					}
 					$runs  = $wpdb->prefix . 'pegwork_runs';
 					$steps = $wpdb->prefix . 'pegwork_run_steps';
-					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $runs ) ) === $runs ) {
-						$wpdb->query( $wpdb->prepare( "DELETE s FROM {$steps} s JOIN {$runs} r ON r.id = s.run_id WHERE r.automation = %s", 'e2e_digest' ) );
-						$wpdb->query( $wpdb->prepare( "DELETE FROM {$runs} WHERE automation = %s", 'e2e_digest' ) );
+					foreach ( array( 'e2e_digest', 'e2e_branch' ) as $key ) {
+						if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $runs ) ) === $runs ) {
+							$wpdb->query( $wpdb->prepare( "DELETE s FROM {$steps} s JOIN {$runs} r ON r.id = s.run_id WHERE r.automation = %s", $key ) );
+							$wpdb->query( $wpdb->prepare( "DELETE FROM {$runs} WHERE automation = %s", $key ) );
+						}
+						wp_clear_scheduled_hook( 'pegwork_automation_schedule', array( $key ) );
 					}
-					wp_clear_scheduled_hook( 'pegwork_automation_schedule', array( 'e2e_digest' ) );
 					return rest_ensure_response( true );
 				},
 			)

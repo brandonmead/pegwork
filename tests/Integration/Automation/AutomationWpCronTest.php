@@ -7,8 +7,11 @@
 
 namespace Pegwork\Tests\Integration\Automation;
 
+use Pegwork\Api\RegistryBuilder;
+use Pegwork\Plugin;
 use Pegwork\Tests\Support\AutomationTestCase;
 use PegworkAutomation\Engine;
+use PegworkAutomation\Schema;
 use PegworkAutomation\Scheduler\WpCronScheduler;
 
 require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
@@ -129,6 +132,53 @@ class AutomationWpCronTest extends AutomationTestCase {
 		$resume = wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) );
 		$this->assertSame( strtotime( $run['resume_at'] . ' UTC' ), $resume );
 		$this->assertEqualsWithDelta( time() + 30 * DAY_IN_SECONDS, $resume, HOUR_IN_SECONDS + 60, 'About 30 days (DST may shift it by an hour).' );
+	}
+
+	/**
+	 * A wait inside a decision's branch on real WP-Cron: the resume event continues inside the branch, a wait
+	 * last in the branch continues after the decision, and the decision runs once.
+	 */
+	public function test_wait_inside_a_branch_resumes_on_wp_cron() {
+		global $wpdb;
+		add_action( 'pegwork_register', fn( RegistryBuilder $b ) => $b->add_package( dirname( __DIR__, 2 ) . '/fixtures/valid/branching' ) );
+		Plugin::init();
+		$this->assertNotNull( pegwork_registry()->automation( 'br_wait' ) );
+
+		// Makes the run's wait due now, as if its time had come, and runs cron as wp-cron.php would.
+		$resume = function ( $id ) use ( $wpdb ) {
+			$wpdb->update( Schema::runs(), array( 'resume_at' => gmdate( 'Y-m-d H:i:s', time() - 60 ) ), array( 'id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Test moves the clock of one run.
+			( new WpCronScheduler() )->schedule( Engine::RUN_HOOK, array( $id ), time() - 1 );
+			$this->assertGreaterThanOrEqual( 1, $this->run_due_cron( Engine::RUN_HOOK ) );
+			return $this->run_row( $id );
+		};
+
+		\Pegwork\Api\Records::create(
+			'help_request',
+			array(
+				'name'     => 'Ada',
+				'email'    => 'ada@example.org',
+				'scenario' => 'wait',
+			),
+			'publish'
+		);
+		$this->run_due_cron( Engine::RUN_HOOK );
+		$run = $this->only_run( 'br_wait' );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'check', $run['current_step'] );
+		$this->assertSame( strtotime( $run['resume_at'] . ' UTC' ), wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) ) );
+
+		$run = $resume( $run['id'] );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'still_new', $run['current_step'], 'Resumes inside the branch.' );
+		$this->assertSame( strtotime( $run['resume_at'] . ' UTC' ), wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) ) );
+
+		$run = $resume( $run['id'] );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'wrap', $run['current_step'], 'The wait last in the branch resumes after the decision.' );
+
+		$run = $resume( $run['id'] );
+		$this->assertSame( 'completed', $run['status'] );
+		$this->assertSame( array( 'hold', 'check', 'remind', 'hold_2', 'still_new', 'escalate', 'hold_3', 'wrap' ), array_column( $this->steps( $run['id'] ), 'step_id' ) );
 	}
 
 	/**

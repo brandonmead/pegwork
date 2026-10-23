@@ -16,6 +16,7 @@ use PegworkAutomation\Links\Key;
 use PegworkAutomation\Links\Links;
 use PegworkAutomation\Manual;
 use PegworkAutomation\Overrides;
+use PegworkAutomation\Plan;
 use PegworkAutomation\Runs;
 use PegworkAutomation\Webhooks\Secrets;
 use WP_CLI;
@@ -110,19 +111,7 @@ final class AutomationCommand {
 			}
 			WP_CLI\Utils\format_items( $format, array( self::row( $run ) ), $fields );
 
-			$steps = array_map(
-				fn( array $step ) => array(
-					'step'        => $step['step_id'],
-					'type'        => $step['step_type'],
-					'attempt'     => (int) $step['attempt'],
-					'status'      => $step['status'],
-					'started_at'  => $step['started_at'],
-					'duration_ms' => (int) $step['duration_ms'],
-					'summary'     => array() === $step['summary'] ? '' : (string) wp_json_encode( $step['summary'] ),
-					'error'       => (string) $step['error'],
-				),
-				$runs->steps( $run['id'] )
-			);
+			$steps = self::step_rows( $run, $runs->steps( $run['id'] ), 'table' === $format );
 			if ( 'table' === $format ) {
 				WP_CLI::log( '' );
 			}
@@ -489,6 +478,39 @@ final class AutomationCommand {
 			WP_CLI::log( 'Queued for WP-Cron (add --sync to run them now).' );
 		}
 		WP_CLI::success( 'Done.' );
+	}
+
+	/**
+	 * A run's step attempts as log rows. With `$indent` (table output) each step id is indented two spaces per
+	 * branch level of the current definition, and an id no longer in it is marked; other formats keep plain ids.
+	 *
+	 * @param array<string, mixed>             $run    Run.
+	 * @param array<int, array<string, mixed>> $steps  Run-step rows, oldest first.
+	 * @param bool                             $indent Whether to indent step ids.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function step_rows( array $run, array $steps, bool $indent ): array {
+		$plan = $indent ? Plan::for_run( $run, pegwork_registry()->automation( (string) $run['automation'] ) ) : null;
+		return array_map(
+			function ( array $step ) use ( $plan ): array {
+				$id = (string) $step['step_id'];
+				if ( null !== $plan ) {
+					$depth = $plan->depth( $id );
+					$id    = null === $depth ? $id . ' (no longer in this automation)' : str_repeat( '  ', $depth ) . $id;
+				}
+				return array(
+					'step'        => $id,
+					'type'        => $step['step_type'],
+					'attempt'     => (int) $step['attempt'],
+					'status'      => $step['status'],
+					'started_at'  => $step['started_at'],
+					'duration_ms' => (int) $step['duration_ms'],
+					'summary'     => array() === $step['summary'] ? '' : (string) wp_json_encode( $step['summary'] ),
+					'error'       => (string) $step['error'],
+				);
+			},
+			$steps
+		);
 	}
 
 	/**

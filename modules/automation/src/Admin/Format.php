@@ -221,4 +221,21 @@ final class Format {
 		}
 		return '<ul class="pegwork-summary">' . $items . '</ul>';
 	}
+
+	/**
+	 * A decision attempt's summary (`branch`: label, "otherwise" or null; `index`) as one line.
+	 *
+	 * @param array<string, mixed> $summary Decoded summary.
+	 */
+	public static function decision( array $summary ): string {
+		$index = $summary['index'] ?? null;
+		if ( -1 === $index ) {
+			return esc_html__( 'Took Otherwise', 'pegwork' );
+		}
+		if ( ! is_int( $index ) ) {
+			return esc_html__( 'No branch matched', 'pegwork' );
+		}
+		/* translators: %s: branch label. */
+		return sprintf( esc_html__( 'Took branch %s', 'pegwork' ), '<strong>' . esc_html( (string) ( $summary['branch'] ?? '' ) ) . '</strong>' );
+	}
 }
