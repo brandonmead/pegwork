@@ -297,7 +297,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 
 ## BarnCRM proof (Phase 6 PR 6a, branch `phase6-barn`)
 - Fixture `tests/fixtures/valid/barn` (worked examples verbatim; `donor_*` fields are Phase 5 stand-ins), E2E copy without automations `tests/e2e/packages/barn` (not registered by any mu-plugin yet; `FixturesTest` keeps the copies identical). Gate `BarnFlowsGateTest` (site time America/New York; volunteers through `Submission::process()` as user 0). Runbook `docs/automation.md#trying-the-barncrm-example-flows` (`wp pegwork schema import` of the fixture; needs a dev checkout).
-- Gotcha: the options page `url` check is `wp_http_validate_url()`, which resolves the host, so an unresolvable domain (`barn.example`) is dropped on save, and a test that stores such a value must bypass `sanitize_option_<page>`. Content fields use the network-free `Meta::valid_url()`.
+- Gotcha: options page and content `url` fields share the network-free `Meta::valid_url()` (http/https, `esc_url_raw`), so an unresolvable domain such as `barn.example` is kept on save and saving needs no network. Never use `wp_http_validate_url()` (DNS lookup).
 - Local runs: test DBs `pegwork_tests_p6b82`, `_p6b84`, `_p6b82_67`, `_p6b84_67`; site `~/wp-envs/p6barn` (port 8229, DB `wpenv_p6barn`). Last verified 2026-10-22.
 
 ## Version
@@ -315,7 +315,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 
 ## Tooling
 - PHPUnit 9.6 (WP 6.7 test suite rejects PHPUnit 10+), yoast/phpunit-polyfills 3, WPCS 3, PHPCompatibilityWP 2.1 (PHPCompatibility 9.3.5; 10.x still alpha). `composer.lock` resolved for platform PHP 8.2.
-- CI matrix PHP 8.2/8.4 x WP 6.7/latest plus PHP 8.5 x WP latest (WP 6.7 core raises PHP 8.5 deprecations itself), MySQL 8.0 service; runner needs `subversion` for the install script. Actions pinned to commit SHAs (Dependabot bumps them); Node from `.nvmrc`. `codeql.yml`: javascript-typescript and actions (no PHP in CodeQL).
+- CI matrix PHP 8.2/8.4 x WP 6.7/latest plus PHP 8.5 x WP latest (WP 6.7 core raises PHP 8.5 deprecations itself, as test errors; a test that dies mid-save leaves `RecordEvents` statics set, so `RecordEventsTest` resets them in set_up and tear_down), MySQL 8.0 service; runner needs `subversion` for the install script. Actions pinned to commit SHAs (Dependabot bumps them); Node from `.nvmrc`. `codeql.yml`: javascript-typescript and actions (no PHP in CodeQL).
 - Release zip: `bin/build-zip.sh` from `git archive HEAD` (so commit first), `.gitattributes` `export-ignore` is the ship list, `composer install --no-dev`, keeps `composer.json` (Plugin Check wants it next to `vendor/`). Production installs use the zip, never a dev checkout.
 - Plugin Check: `wp plugin install plugin-check --activate` on a throwaway site, point `wp-content/plugins/pegwork` at the unzipped zip, `wp plugin check pegwork`. It honors `phpcs:ignore` codes. Its direct-access check reads only top-level statements, so a namespaced file needs `defined( 'ABSPATH' ) || exit;` within the first 50 lines, and `const`-only files count as code.
 - `languages/pegwork.pot`: `npm run make-pot` (builds, then WP-CLI scans `assets/build`, not `assets/src`). JS translator comments must sit directly before `__()` or the minifier drops them. `wp_set_script_translations()` passes no path, which is right for WordPress.org language packs.

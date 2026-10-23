@@ -37,8 +37,8 @@ final class EntryState {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = %s WHERE id = %d AND status = %s", $to, $id, $from ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$changed = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET status = %s WHERE id = %d AND status = %s', $table, $to, $id, $from ) );
 
 		return 1 === $changed;
 	}
@@ -62,8 +62,8 @@ final class EntryState {
 		$table = Schema::table();
 		$sql   = 'id IN (' . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ') AND status IN (' . implode( ', ', array_fill( 0, count( $from ), '%s' ) ) . ')';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $sql holds only placeholders.
-		$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = %s WHERE {$sql}", ...array_merge( array( $to ), $ids, array_values( $from ) ) ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $sql holds only placeholders.
+		$changed = $wpdb->query( $wpdb->prepare( "UPDATE %i SET status = %s WHERE {$sql}", ...array_merge( array( $table, $to ), $ids, array_values( $from ) ) ) );
 
 		return (int) $changed;
 	}
@@ -100,8 +100,8 @@ final class EntryState {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE email = %s AND token_hash IS NOT NULL AND created_at >= %s", $email, gmdate( 'Y-m-d H:i:s', $since ) ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$count = $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE email = %s AND token_hash IS NOT NULL AND created_at >= %s', $table, $email, gmdate( 'Y-m-d H:i:s', $since ) ) );
 
 		return (int) $count;
 	}
@@ -117,8 +117,8 @@ final class EntryState {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$times = $wpdb->get_col( $wpdb->prepare( "SELECT created_at FROM {$table} WHERE email = %s AND token_hash IS NOT NULL AND created_at >= %s ORDER BY created_at ASC", $email, gmdate( 'Y-m-d H:i:s', $since ) ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$times = $wpdb->get_col( $wpdb->prepare( 'SELECT created_at FROM %i WHERE email = %s AND token_hash IS NOT NULL AND created_at >= %s ORDER BY created_at ASC', $table, $email, gmdate( 'Y-m-d H:i:s', $since ) ) );
 
 		return array_map( fn( $time ) => (int) strtotime( (string) $time . ' UTC' ), (array) $times );
 	}

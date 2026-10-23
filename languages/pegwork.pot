@@ -9,14 +9,14 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T01:21:08+00:00\n"
+"POT-Creation-Date: 2026-10-23T03:26:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: pegwork\n"
 
 #. Plugin Name of the plugin
 #: pegwork.php
-#: modules/automation/src/Editor/BuilderEditor.php:79
+#: modules/automation/src/Editor/BuilderEditor.php:83
 #: modules/automation/src/Health.php:236
 #: modules/forms/src/Module.php:97
 #: modules/listings/src/Module.php:70
@@ -124,12 +124,14 @@ msgstr ""
 #: modules/automation/src/Admin/RunLog.php:151
 #: modules/automation/src/Editor/AutomationPost.php:107
 #: src/Modules/manifest.php:33
+#: assets/build/automation-builder.js:21
 msgid "Automation"
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:48
 #: modules/automation/src/Admin/RunLog.php:90
 #: modules/automation/src/Admin/RunLog.php:162
+#: assets/build/automation-builder.js:23
 msgid "Trigger"
 msgstr ""
 
@@ -246,7 +248,8 @@ msgid "View"
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:189
-#: assets/build/automation-builder.js:2
+#: assets/build/automation-builder.js:22
+#: assets/build/automation-builder.js:25
 msgid "Duplicate as site automation"
 msgstr ""
 
@@ -383,6 +386,7 @@ msgid "Event"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:156
+#: assets/build/automation-builder.js:23
 msgid "Schedule"
 msgstr ""
 
@@ -391,6 +395,8 @@ msgid "Manual"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:158
+#: assets/build/automation-builder.js:23
+#: assets/build/automation-builder.js:24
 msgid "Webhook"
 msgstr ""
 
@@ -427,6 +433,7 @@ msgstr ""
 
 #: modules/automation/src/Admin/Format.php:182
 #: modules/forms/src/EntriesAdmin.php:213
+#: assets/build/automation-builder.js:17
 #: assets/build/editor-panel.js:2
 msgid "(no title)"
 msgstr ""
@@ -480,6 +487,7 @@ msgstr ""
 #: modules/forms/src/Export.php:137
 #: modules/forms/src/Privacy.php:147
 #: src/Admin/Modules.php:68
+#: assets/build/automation-builder.js:20
 msgid "Status"
 msgstr ""
 
@@ -520,6 +528,7 @@ msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:94
 #: modules/automation/src/Admin/RunLog.php:170
+#: assets/build/automation-builder.js:23
 msgid "Created"
 msgstr ""
 
@@ -618,6 +627,7 @@ msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:189
 #: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:24
 msgid "Step"
 msgstr ""
 
@@ -888,45 +898,45 @@ msgstr ""
 msgid "This automation cannot be saved: %s"
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:101
+#: modules/automation/src/Editor/Builder.php:113
 msgid "The automation settings could not be read. Reload the editor and try again."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:109
+#: modules/automation/src/Editor/Builder.php:121
 msgid "Add an automation title. It is the automation label."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:117
+#: modules/automation/src/Editor/Builder.php:129
 msgid "Add an automation key: lowercase letters, digits and underscores, starting with a letter."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:122
+#: modules/automation/src/Editor/Builder.php:134
 #: src/Registry/Rules/AutomationRules.php:256
 msgid "Add at least one step."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:175
-#: modules/automation/src/Editor/Builder.php:184
+#: modules/automation/src/Editor/Builder.php:187
+#: modules/automation/src/Editor/Builder.php:196
 msgid "An automation can hold only steps and decisions. Remove other content."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:180
+#: modules/automation/src/Editor/Builder.php:192
 msgid "A branch must be inside a decision."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:214
+#: modules/automation/src/Editor/Builder.php:226
 msgid "A decision can hold only branches. Put steps inside a branch."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:220
+#: modules/automation/src/Editor/Builder.php:232
 msgid "A decision can have only one Otherwise branch."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:227
+#: modules/automation/src/Editor/Builder.php:239
 msgid "The Otherwise branch must come last."
 msgstr ""
 
-#: modules/automation/src/Editor/BuilderEditor.php:200
+#: modules/automation/src/Editor/BuilderEditor.php:327
 #: modules/forms/src/BuilderEditor.php:240
 #: modules/forms/src/EntriesAdmin.php:107
 #: modules/forms/src/Files.php:96
@@ -935,7 +945,7 @@ msgstr ""
 
 #. translators: %s: automation label.
 #. translators: %s: form label.
-#: modules/automation/src/Editor/BuilderEditor.php:207
+#: modules/automation/src/Editor/BuilderEditor.php:334
 #: modules/forms/src/BuilderEditor.php:250
 #, php-format
 msgid "%s (copy)"
@@ -1459,6 +1469,7 @@ msgstr ""
 #: modules/forms/src/FormPost.php:104
 #: modules/forms/src/FormsTable.php:45
 #: modules/forms/src/Privacy.php:135
+#: assets/build/automation-builder.js:23
 #: assets/build/forms-editor.js:5
 msgid "Form"
 msgstr ""
@@ -1466,6 +1477,7 @@ msgstr ""
 #: modules/forms/src/EntriesAdmin.php:351
 #: modules/forms/src/EntriesTable.php:73
 #: modules/forms/src/Export.php:138
+#: assets/build/automation-builder.js:24
 #: assets/build/forms-builder.js:5
 msgid "Email"
 msgstr ""
@@ -1473,6 +1485,7 @@ msgstr ""
 #: modules/forms/src/EntriesAdmin.php:352
 #: modules/forms/src/EntriesTable.php:72
 #: modules/forms/src/Privacy.php:143
+#: assets/build/automation-builder.js:23
 #: assets/build/forms-builder.js:10
 msgid "Submitted"
 msgstr ""
@@ -1880,6 +1893,7 @@ msgstr ""
 #: src/Admin/Overview.php:107
 #: src/Admin/Overview.php:159
 #: src/Admin/Overview.php:194
+#: assets/build/automation-builder.js:23
 #: assets/build/forms-builder.js:5
 #: assets/build/forms-builder.js:10
 #: assets/build/forms-builder.js:23
@@ -2096,6 +2110,7 @@ msgstr ""
 
 #: modules/forms/src/Renderer.php:240
 #: modules/forms/src/Renderer.php:329
+#: assets/build/automation-builder.js:16
 #: assets/build/forms-builder.js:1
 #: assets/build/forms-view.js:17
 msgid "Error:"
@@ -2482,6 +2497,7 @@ msgstr ""
 #: src/Admin/Overview.php:43
 #: src/Admin/Overview.php:160
 #: src/Admin/Overview.php:196
+#: assets/build/automation-builder.js:23
 msgid "Label"
 msgstr ""
 
@@ -2498,10 +2514,13 @@ msgid "Relationships"
 msgstr ""
 
 #: src/Admin/Overview.php:63
+#: assets/build/automation-builder.js:17
 msgid "From"
 msgstr ""
 
 #: src/Admin/Overview.php:64
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:24
 #: assets/build/forms-builder.js:10
 msgid "To"
 msgstr ""
@@ -2636,6 +2655,7 @@ msgstr ""
 
 #: src/Admin/Overview.php:204
 #: src/Options/Screen.php:231
+#: assets/build/automation-builder.js:20
 #: assets/build/editor-panel.js:1
 #: assets/build/editor-panel.js:2
 msgid "Private"
@@ -2653,24 +2673,32 @@ msgstr ""
 msgid "Pegwork development dependencies"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:84
+#: src/Admin/SiteHealth.php:83
 msgid "Pegwork is installed with its development dependencies"
 msgstr ""
 
 #: src/Admin/SiteHealth.php:85
+msgid "Pegwork development dependencies are allowed on local sites"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:87
 msgid "Pegwork is installed without development dependencies"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:88
+#: src/Admin/SiteHealth.php:93
 msgid "Security"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:93
+#: src/Admin/SiteHealth.php:98
 msgid "The plugin folder holds packages that are only for developing and testing Pegwork, and they should not be reachable on a live site. Install Pegwork from its release zip instead of a development checkout, or run \"composer install --no-dev\" in the plugin folder. Sites whose environment type is local or development are not warned."
 msgstr ""
 
-#: src/Admin/SiteHealth.php:94
-msgid "The plugin folder holds no development-only packages, or this is a local or development site."
+#: src/Admin/SiteHealth.php:100
+msgid "The plugin folder holds development-only packages, which is fine because this site is local or development. Do not publish this folder to a live site."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:101
+msgid "The plugin folder holds no development-only packages."
 msgstr ""
 
 #. translators: %s: event name.
@@ -3952,55 +3980,1169 @@ msgid "Call webhook"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:24
 msgid "Wait"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:20
 msgid "Continue only if"
 msgstr ""
 
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:27
+msgid "Decision"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/listings-editor.js:2
+msgid "is"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/listings-editor.js:2
+msgid "is not"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is one of"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/listings-editor.js:2
+msgid "is none of"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is before"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is less than"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is on or before"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is at most"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is after"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is more than"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is on or after"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "is at least"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/listings-editor.js:2
+msgid "is empty"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/listings-editor.js:2
+msgid "is not empty"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "contains"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "changed"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Record ID"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Record status"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Record type"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Record link"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Record edit link"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Site name"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Site address"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:17
+msgid "Today"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:17
+msgid "Now"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Run ID"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:3
+#, js-format
+msgid "%s (before the change)"
+msgstr ""
+
+#. translators: %s: form field label.
+#: assets/build/automation-builder.js:5
+#, js-format
+msgid "%s (as submitted)"
+msgstr ""
+
+#. translators: %s: field name.
+#: assets/build/automation-builder.js:5
+#, js-format
+msgid "%s (private)"
+msgstr ""
+
+#. translators: %d: number of years.
+#: assets/build/automation-builder.js:7
+#, js-format
+msgid "%d year"
+msgid_plural "%d years"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of months.
+#: assets/build/automation-builder.js:9
+#, js-format
+msgid "%d month"
+msgid_plural "%d months"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of weeks.
+#: assets/build/automation-builder.js:11
+#, js-format
+msgid "%d week"
+msgid_plural "%d weeks"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of hours.
+#: assets/build/automation-builder.js:13
+#, js-format
+msgid "%d hour"
+msgid_plural "%d hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of days.
+#: assets/build/automation-builder.js:15
+#, js-format
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:15
+msgid "now"
+msgstr ""
+
+#: assets/build/automation-builder.js:15
+msgid "today"
+msgstr ""
+
+#. translators: 1: today or now, 2: duration such as "12 months".
+#: assets/build/automation-builder.js:15
+#, js-format
+msgid "%1$s minus %2$s"
+msgstr ""
+
+#. translators: 1: today or now, 2: duration such as "12 months".
+#: assets/build/automation-builder.js:15
+#, js-format
+msgid "%1$s plus %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:15
+msgid "true"
+msgstr ""
+
+#: assets/build/automation-builder.js:15
+msgid "false"
+msgstr ""
+
+#: assets/build/automation-builder.js:15
+msgid "and"
+msgstr ""
+
+#: assets/build/automation-builder.js:15
+msgid "or"
+msgstr ""
+
+#. translators: %s: a condition in words.
+#: assets/build/automation-builder.js:16
+#, js-format
+msgid "not (%s)"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:17
+#, js-format
+msgid "Insert merge tag into %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Insert merge tag"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Merge tag"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Format as a date"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Text when empty (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Insert"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Hours"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Days"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Weeks"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Months"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Years"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "ISO 8601 duration"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Amount"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Unit"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Sample record"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Type to search records by title."
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Sample record ID"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Sample payload (JSON)"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Such as {\"kind\": \"a\"}. Read as trigger.payload.* (webhooks) or trigger.* (other events)."
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "The sample payload is not a JSON object."
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "All of these are true"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Any of these is true"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Not all of these are true"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "None of these are true"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "This is not true"
+msgstr ""
+
+#. translators: %s: condition name.
+#: assets/build/automation-builder.js:17
+#, js-format
+msgid "Values of %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Values, separated by commas"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Compare with"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "A value"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Another field"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Today or now, plus or minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Other field"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Offset (ISO 8601)"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "Plus or minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "plus"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+msgid "minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+#: assets/build/listings-editor.js:2
+msgid "Value"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+#: assets/build/automation-builder.js:20
+msgid "true (checked)"
+msgstr ""
+
+#: assets/build/automation-builder.js:17
+#: assets/build/automation-builder.js:20
+msgid "false (not checked)"
+msgstr ""
+
+#. translators: %d: condition number.
+#. translators: %d: condition number
+#: assets/build/automation-builder.js:18
+#: assets/build/listings-editor.js:3
+#, js-format
+msgid "Condition %d"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Field"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Another path…"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Path"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Such as trigger.payload.kind."
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+#: assets/build/listings-editor.js:3
+msgid "Operator"
+msgstr ""
+
+#. translators: 1: condition number, 2: condition in words.
+#: assets/build/automation-builder.js:18
+#, js-format
+msgid "Remove condition %1$d: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Remove Not"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Match"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+#: assets/build/listings-editor.js:7
+msgid "Add condition"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Add group"
+msgstr ""
+
+#. translators: 1: group number, 2: group legend.
+#: assets/build/automation-builder.js:18
+#, js-format
+msgid "Remove group %1$d: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "No condition yet."
+msgstr ""
+
+#. translators: 1: maximum depth, 2: maximum conditions.
+#: assets/build/automation-builder.js:18
+#, js-format
+msgid "Conditions nest at most %1$d levels deep, with at most %2$d parts."
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+msgid "Main steps"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:27
+msgid "Otherwise"
+msgstr ""
+
+#: assets/build/automation-builder.js:18
+#: assets/build/automation-builder.js:27
+msgid "(unnamed branch)"
+msgstr ""
+
+#. translators: 1: decision id, 2: branch label.
+#. translators: 1: content type label, 2: field or taxonomy label.
+#. translators: 1: content type label, 2: field label.
+#: assets/build/automation-builder.js:19
+#: assets/build/forms-builder.js:12
+#: assets/build/forms-builder.js:23
+#, js-format
+msgid "%1$s: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:19
+#: assets/build/automation-builder.js:27
+msgid "decision"
+msgstr ""
+
+#: assets/build/automation-builder.js:19
+msgid "Move to branch"
+msgstr ""
+
+#. translators: %s: branch name.
+#: assets/build/automation-builder.js:20
+#, js-format
+msgid "Moved to %s."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Choose a sample record to see the preview."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "The preview could not be shown."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Hide preview"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Show preview"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:24
+msgid "Preview"
+msgstr ""
+
+#. translators: %s: branch label.
+#. translators: %s: condition in words.
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:27
+#, js-format
+msgid "If %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Test run"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Walks the saved automation with a sample and shows what each step would do. Nothing is sent, written or logged."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "The test runs the saved version. Save to test your latest changes."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "The test run failed."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Run test"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Save the automation first."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Test run result"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Values"
+msgstr ""
+
+#. translators: %s: field name.
+#: assets/build/automation-builder.js:20
+#, js-format
+msgid "Value of %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "(clear the field)"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Term slugs, separated by commas."
+msgstr ""
+
+#. translators: %d: row number.
+#: assets/build/automation-builder.js:20
+#, js-format
+msgid "Field %d"
+msgstr ""
+
+#. translators: %d: row number.
+#: assets/build/automation-builder.js:20
+#, js-format
+msgid "Field key %d"
+msgstr ""
+
+#. translators: 1: row number, 2: field key.
+#: assets/build/automation-builder.js:20
+#, js-format
+msgid "Remove value %1$d: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Add value"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Addresses separated by commas, a merge tag such as {{record.email}}, or {option:page.field} for a private options field."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Reply-To (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:24
+#: assets/build/forms-builder.js:9
+#: assets/build/forms-builder.js:10
+msgid "Subject"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:24
+msgid "Text body"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "HTML body (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Sent beside the text body. Without the unfiltered HTML capability, unsafe markup is removed on save."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Record (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Empty updates the record the trigger is about. Or a record ID, such as {{steps.make_task.record_id}}."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:23
+#: assets/build/filters-editor.js:1
+#: assets/build/listings-editor.js:7
+msgid "Content type"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Choose a content type"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/editor-panel.js:2
+msgid "Draft"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/forms-builder.js:7
+msgid "Pending review"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/forms-builder.js:7
+msgid "Published"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+#: assets/build/forms-builder.js:5
+msgid "URL"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "http:// or https://. Private fields cannot appear here."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Record fields to send"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Timeout (seconds, optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Wait for"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "From 1 hour to 2 years."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Add the condition the run needs to go on. When it is false, the run stops here."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Advanced"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Step ID"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Runs waiting at this step fail if you change its ID."
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Retry when the step fails"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Retries (empty for the default)"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "Wait between tries"
+msgstr ""
+
+#: assets/build/automation-builder.js:20
+msgid "ISO 8601 durations separated by commas, such as PT1M, PT10M, PT1H."
+msgstr ""
+
+#. translators: %d: branch number.
+#: assets/build/automation-builder.js:21
+#, js-format
+msgid "Path %d"
+msgstr ""
+
+#: assets/build/automation-builder.js:21
+msgid "Remove otherwise"
+msgstr ""
+
+#: assets/build/automation-builder.js:21
+msgid "Add otherwise"
+msgstr ""
+
+#. translators: %s: branch name.
+#: assets/build/automation-builder.js:21
+#, js-format
+msgid "Add step to %s"
+msgstr ""
+
 #. translators: %s: package ID.
-#: assets/build/automation-builder.js:2
+#: assets/build/automation-builder.js:22
+#, js-format
+msgid "This automation comes from the file package \"%s\" and is read-only here."
+msgstr ""
+
+#. translators: %d: number of runs.
+#: assets/build/automation-builder.js:23
+#, js-format
+msgid "%d run is in progress. It continues from its current step; a run at a step you removed will fail."
+msgid_plural "%d runs are in progress. They continue from their current step; runs at a step you removed will fail."
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:23
+msgid "Locked: runs and the log use this key."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Lowercase letters, digits and underscores. Empty uses the label. It cannot change after the first save."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Description (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Active"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Runs when its trigger fires."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Off: nothing starts a run. New automations start off."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "This site turns it on in the Automations list, whatever this setting says."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "This site turns it off in the Automations list, whatever this setting says."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Open the Automations list"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Any content type"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "When a record is"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Updated"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Changed status"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Deleted"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+#: assets/build/forms-editor.js:1
+msgid "Choose a form"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "When an entry is"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+#: assets/build/forms-builder.js:10
+msgid "Confirmed by email"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Every"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Hour"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Day"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Week"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "At (site time, optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Once for each record of a type"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Records of"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "With status"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "At most this many runs per firing (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Only records where"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Every record with those statuses."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Senders post signed JSON to:"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Show or rotate the signing secret with WP-CLI:"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "The inbound URL appears here after the first save."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Event name"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Dot-separated, such as shop.order_paid. Its payload is trigger.*."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Starts on"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Choose a trigger"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Record event"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Form event"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Other event"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Only when"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Every event starts a run."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Run once per (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "A run starts only once for each value, such as {{record.id}}."
+msgstr ""
+
+#: assets/build/automation-builder.js:23
+msgid "Signed links (edit them in the JSON file)"
+msgstr ""
+
+#. translators: 1: duration, 2: number of steps.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "expires after %1$s, %2$d step"
+msgid_plural "expires after %1$s, %2$d steps"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:24
+#: assets/build/forms-builder.js:11
+msgid "Save"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Ready to save this automation?"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Saving checks the automation and adds it to this site. New automations start off."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Sends an email built from merge tags."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Writes fields of the record, or of a record by ID."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Creates a record of a content type."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Posts public record fields to a URL, signed."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Pauses the run, then continues."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Stops the run unless a condition holds."
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Automation step"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "One step of the automation."
+msgstr ""
+
+#. translators: 1: recipient, 2: subject.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Email to %1$s: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "(no recipient)"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "(no subject)"
+msgstr ""
+
+#. translators: 1: record ID template, 2: field keys.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Update record %1$s: %2$s"
+msgstr ""
+
+#. translators: %s: field keys.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Update this record: %s"
+msgstr ""
+
+#. translators: 1: content type label, 2: field keys.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Create %1$s: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "(no values)"
+msgstr ""
+
+#. translators: %s: host name.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Send to %s"
+msgstr ""
+
+#. translators: %s: duration such as "30 days".
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Wait %s, then continue"
+msgstr ""
+
+#. translators: %s: condition in words.
+#: assets/build/automation-builder.js:24
+#, js-format
+msgid "Continue only if %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "HTML body"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Update"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Create"
+msgstr ""
+
+#: assets/build/automation-builder.js:24
+msgid "Check"
+msgstr ""
+
+#. translators: %s: package ID.
+#: assets/build/automation-builder.js:25
 #, js-format
 msgid "This automation comes from the file package \"%s\" and is read-only. Duplicate it to make a site automation you can change."
 msgstr ""
 
-#: assets/build/automation-builder.js:2
-msgid "Automation step"
+#. translators: %d: number of problems.
+#: assets/build/automation-builder.js:26
+#, js-format
+msgid "%d problem stops this automation from saving. Each is shown at its step or setting."
+msgid_plural "%d problems stop this automation from saving. Each is shown at its step or setting."
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:26
+msgid "Go to first error"
 msgstr ""
 
-#: assets/build/automation-builder.js:2
-msgid "One step of the automation."
+#. translators: %d: number of runs.
+#: assets/build/automation-builder.js:27
+#, js-format
+msgid "%d run is in progress. It continues from its current step when you save; a run at a step you removed will fail."
+msgid_plural "%d runs are in progress. They continue from their current step when you save; runs at a step you removed will fail."
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:27
+msgid "Runs the steps of the first branch whose condition holds, else Otherwise, then continues below."
 msgstr ""
 
-#: assets/build/automation-builder.js:2
-msgid "Decision"
+#. translators: %s: decision id.
+#: assets/build/automation-builder.js:27
+#, js-format
+msgid "Add branch to %s"
 msgstr ""
 
-#: assets/build/automation-builder.js:2
-msgid "Runs the first branch whose condition holds, else Otherwise, then continues below."
+#: assets/build/automation-builder.js:27
+msgid "Runs the first branch whose condition holds."
 msgstr ""
 
-#: assets/build/automation-builder.js:2
+#: assets/build/automation-builder.js:27
 msgid "Then continue below"
 msgstr ""
 
-#: assets/build/automation-builder.js:2
+#. translators: %s: decision id.
+#: assets/build/automation-builder.js:27
+#, js-format
+msgid "Decision %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "If / Otherwise"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "One condition: its steps, or the Otherwise steps."
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Path 1"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Choose a path"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Several conditions, checked in order; the first that holds runs."
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Path 2"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
 msgid "Branch"
 msgstr ""
 
-#: assets/build/automation-builder.js:2
+#: assets/build/automation-builder.js:27
 msgid "One branch of a decision."
 msgstr ""
 
-#: assets/build/automation-builder.js:2
-msgid "Otherwise"
+#: assets/build/automation-builder.js:27
+msgid "(no condition yet)"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Runs when no branch above matches. Remove it from the decision toolbar."
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Branch name"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Shown in the run log. Unique within the decision."
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Run this branch when"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Every branch needs a condition."
+msgstr ""
+
+#. translators: %s: branch name.
+#: assets/build/automation-builder.js:27
+#, js-format
+msgid "Name: %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:27
+msgid "Name:"
 msgstr ""
 
 #. translators: %s: branch label.
-#: assets/build/automation-builder.js:3
+#: assets/build/automation-builder.js:27
 #, js-format
-msgid "If %s"
+msgid "Branch %s"
 msgstr ""
 
 #: assets/build/editor-panel.js:1
@@ -4017,10 +5159,6 @@ msgstr ""
 
 #: assets/build/editor-panel.js:2
 msgid "Not shown on the public site."
-msgstr ""
-
-#: assets/build/editor-panel.js:2
-msgid "Draft"
 msgstr ""
 
 #: assets/build/editor-panel.js:2
@@ -4139,11 +5277,6 @@ msgid "Edit this in the main content area."
 msgstr ""
 
 #: assets/build/filters-editor.js:1
-#: assets/build/listings-editor.js:7
-msgid "Content type"
-msgstr ""
-
-#: assets/build/filters-editor.js:1
 msgid "The archive being viewed"
 msgstr ""
 
@@ -4222,10 +5355,6 @@ msgstr ""
 
 #: assets/build/forms-builder.js:5
 msgid "Paragraph text"
-msgstr ""
-
-#: assets/build/forms-builder.js:5
-msgid "URL"
 msgstr ""
 
 #: assets/build/forms-builder.js:5
@@ -4451,15 +5580,7 @@ msgid "New records are"
 msgstr ""
 
 #: assets/build/forms-builder.js:7
-msgid "Pending review"
-msgstr ""
-
-#: assets/build/forms-builder.js:7
 msgid "Drafts"
-msgstr ""
-
-#: assets/build/forms-builder.js:7
-msgid "Published"
 msgstr ""
 
 #. translators: %s: content type label.
@@ -4538,11 +5659,6 @@ msgstr ""
 
 #: assets/build/forms-builder.js:9
 #: assets/build/forms-builder.js:10
-msgid "Subject"
-msgstr ""
-
-#: assets/build/forms-builder.js:9
-#: assets/build/forms-builder.js:10
 msgid "Message"
 msgstr ""
 
@@ -4566,10 +5682,6 @@ msgstr ""
 
 #: assets/build/forms-builder.js:10
 msgid "Send when"
-msgstr ""
-
-#: assets/build/forms-builder.js:10
-msgid "Confirmed by email"
 msgstr ""
 
 #: assets/build/forms-builder.js:10
@@ -4639,23 +5751,11 @@ msgid "Received and failed entries older than this are deleted daily. Empty keep
 msgstr ""
 
 #: assets/build/forms-builder.js:11
-msgid "Save"
-msgstr ""
-
-#: assets/build/forms-builder.js:11
 msgid "Ready to save this form?"
 msgstr ""
 
 #: assets/build/forms-builder.js:11
 msgid "Forms are always private. Saving makes the form available to the Form block."
-msgstr ""
-
-#. translators: 1: content type label, 2: field or taxonomy label.
-#. translators: 1: content type label, 2: field label.
-#: assets/build/forms-builder.js:12
-#: assets/build/forms-builder.js:23
-#, js-format
-msgid "%1$s: %2$s"
 msgstr ""
 
 #. translators: %s: content type label.
@@ -4806,10 +5906,6 @@ msgstr ""
 msgid "Step description"
 msgstr ""
 
-#: assets/build/forms-editor.js:1
-msgid "Choose a form"
-msgstr ""
-
 #. translators: %s: form label and key.
 #: assets/build/forms-editor.js:3
 #, js-format
@@ -4861,27 +5957,7 @@ msgid "Sending"
 msgstr ""
 
 #: assets/build/listings-editor.js:2
-msgid "is"
-msgstr ""
-
-#: assets/build/listings-editor.js:2
-msgid "is not"
-msgstr ""
-
-#: assets/build/listings-editor.js:2
-msgid "is empty"
-msgstr ""
-
-#: assets/build/listings-editor.js:2
-msgid "is not empty"
-msgstr ""
-
-#: assets/build/listings-editor.js:2
 msgid "is any of"
-msgstr ""
-
-#: assets/build/listings-editor.js:2
-msgid "is none of"
 msgstr ""
 
 #: assets/build/listings-editor.js:2
@@ -4893,21 +5969,7 @@ msgid "On"
 msgstr ""
 
 #: assets/build/listings-editor.js:2
-msgid "Value"
-msgstr ""
-
-#: assets/build/listings-editor.js:2
 msgid "(unavailable field)"
-msgstr ""
-
-#. translators: %d: condition number
-#: assets/build/listings-editor.js:3
-#, js-format
-msgid "Condition %d"
-msgstr ""
-
-#: assets/build/listings-editor.js:3
-msgid "Operator"
 msgstr ""
 
 #: assets/build/listings-editor.js:3
@@ -4978,10 +6040,6 @@ msgstr ""
 
 #: assets/build/listings-editor.js:7
 msgid "Used only to list fields here; conditions apply to the record being shown."
-msgstr ""
-
-#: assets/build/listings-editor.js:7
-msgid "Add condition"
 msgstr ""
 
 #: assets/build/listings-editor.js:7
