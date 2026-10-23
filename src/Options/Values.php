@@ -197,7 +197,7 @@ final class Values {
 					: sprintf( __( '%s must be a valid email address.', 'pegwork' ), $label );
 			case 'url':
 				$url = esc_url_raw( $text, array( 'http', 'https' ) );
-				return '' !== $url && wp_http_validate_url( $url ) ? array( $url )
+				return '' !== $url && Meta::valid_url( $url ) ? array( $url )
 					/* translators: %s: field label. */
 					: sprintf( __( '%s must be a web address starting with http:// or https://.', 'pegwork' ), $label );
 			case 'number':

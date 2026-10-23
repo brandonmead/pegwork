@@ -47,7 +47,7 @@ final class Throttle {
 		$hash  = self::hash( $bucket );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Counters must bypass caches to be atomic; table name from $wpdb->prefix.
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE expires_at < %d LIMIT %d", $now - DAY_IN_SECONDS, self::SWEEP ) );
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE expires_at < %d LIMIT %d', $table, $now - DAY_IN_SECONDS, self::SWEEP ) );
 		$inserted = $wpdb->insert(
 			$table,
 			array(
@@ -61,7 +61,7 @@ final class Throttle {
 			return 0;
 		}
 		$id     = (int) $wpdb->insert_id;
-		$others = array_map( 'intval', $wpdb->get_col( $wpdb->prepare( "SELECT expires_at FROM {$table} WHERE bucket = %s AND expires_at > %d AND id <> %d ORDER BY expires_at ASC", $hash, $now, $id ) ) );
+		$others = array_map( 'intval', $wpdb->get_col( $wpdb->prepare( 'SELECT expires_at FROM %i WHERE bucket = %s AND expires_at > %d AND id <> %d ORDER BY expires_at ASC', $table, $hash, $now, $id ) ) );
 		if ( count( $others ) < $max ) {
 			return 0;
 		}
@@ -93,7 +93,7 @@ final class Throttle {
 		global $wpdb;
 		$table = Schema::table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Counters must bypass caches; table name from $wpdb->prefix.
-		$times = $wpdb->get_col( $wpdb->prepare( "SELECT expires_at FROM {$table} WHERE bucket = %s AND expires_at > %d ORDER BY expires_at ASC", self::hash( $bucket ), $now ) );
+		$times = $wpdb->get_col( $wpdb->prepare( 'SELECT expires_at FROM %i WHERE bucket = %s AND expires_at > %d ORDER BY expires_at ASC', $table, self::hash( $bucket ), $now ) );
 		return array_map( 'intval', is_array( $times ) ? $times : array() );
 	}
 

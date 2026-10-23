@@ -83,9 +83,6 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		parent::set_up();
 		update_option( 'timezone_string', 'America/New_York' );
 		update_option( 'gmt_offset', '' );
-		// Stored as the settings screen would store them, minus its URL check, which resolves the host
-		// (wp_http_validate_url()); barn.example does not resolve, and a test needs no network.
-		remove_all_filters( 'sanitize_option_barn_settings' );
 		update_option( 'barn_settings', self::SETTINGS );
 		( require dirname( __DIR__, 3 ) . '/modules/forms/module.php' )->boot();
 		Submission::reset();

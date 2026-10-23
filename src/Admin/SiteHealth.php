@@ -79,10 +79,15 @@ final class SiteHealth {
 	 */
 	public static function result( bool $dev, string $environment ): array {
 		$warn = $dev && ! in_array( $environment, array( 'local', 'development' ), true );
+		if ( $warn ) {
+			$label = __( 'Pegwork is installed with its development dependencies', 'pegwork' );
+		} elseif ( $dev ) {
+			$label = __( 'Pegwork development dependencies are allowed on local sites', 'pegwork' );
+		} else {
+			$label = __( 'Pegwork is installed without development dependencies', 'pegwork' );
+		}
 		return array(
-			'label'       => $warn
-				? __( 'Pegwork is installed with its development dependencies', 'pegwork' )
-				: __( 'Pegwork is installed without development dependencies', 'pegwork' ),
+			'label'       => $label,
 			'status'      => $warn ? 'critical' : 'good',
 			'badge'       => array(
 				'label' => __( 'Security', 'pegwork' ),
@@ -91,7 +96,9 @@ final class SiteHealth {
 			'description' => '<p>' . esc_html(
 				$warn
 					? __( 'The plugin folder holds packages that are only for developing and testing Pegwork, and they should not be reachable on a live site. Install Pegwork from its release zip instead of a development checkout, or run "composer install --no-dev" in the plugin folder. Sites whose environment type is local or development are not warned.', 'pegwork' )
-					: __( 'The plugin folder holds no development-only packages, or this is a local or development site.', 'pegwork' )
+					: ( $dev
+						? __( 'The plugin folder holds development-only packages, which is fine because this site is local or development. Do not publish this folder to a live site.', 'pegwork' )
+						: __( 'The plugin folder holds no development-only packages.', 'pegwork' ) )
 			) . '</p>',
 			'actions'     => '',
 			'test'        => self::TEST,
