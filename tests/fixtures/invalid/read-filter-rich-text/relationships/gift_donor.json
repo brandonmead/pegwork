@@ -1,0 +1,1 @@
+{ "format": 1, "key": "gift_donor", "from": "barn_gift", "to": "barn_contact", "cardinality": "many_to_many", "label": "Donor" }

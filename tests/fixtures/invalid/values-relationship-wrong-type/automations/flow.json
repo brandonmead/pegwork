@@ -1,0 +1,21 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "add",
+            "type": "create_record",
+            "content_type": "barn_contact",
+            "values": {
+                "name": "New",
+                "gift_donor": "{{record.id}}"
+            }
+        }
+    ]
+}

@@ -1,0 +1,1 @@
+{ "format": 1, "key": "task_gift", "from": "barn_task", "to": "barn_gift", "cardinality": "many_to_many", "label": "Gift" }

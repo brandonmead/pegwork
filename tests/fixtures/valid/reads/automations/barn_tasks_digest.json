@@ -1,0 +1,20 @@
+{ "format": 1, "key": "barn_tasks_digest", "label": "Monday: remind assignees and summarize tasks due this week",
+  "trigger": { "type": "schedule", "every": "week", "at": "08:00" },
+  "idempotency": "tasks:{{today}}",
+  "steps": [
+    { "id": "due", "type": "find_records", "content_type": "barn_task", "status": [ "publish" ],
+      "filter": { "all": [
+        { "field": "done", "op": "ne", "value": true },
+        { "field": "due_on", "op": "lte", "value": { "date": "today", "offset": "P7D" } } ] },
+      "sort": { "field": "due_on", "order": "asc" }, "limit": 50 },
+    { "id": "each_task", "type": "loop", "over": "steps.due.records",
+      "steps": [
+        { "id": "remind", "type": "send_email", "on_error": "continue",
+          "to": "{{steps.each_task.item.assignee_email}}",
+          "subject": "Due {{steps.each_task.item.due_on | date}}: {{steps.each_task.item.name}}",
+          "text": "{{steps.each_task.item.name}} is due {{steps.each_task.item.due_on | date}}. Mark it done when finished: {{steps.each_task.item.edit_url}}" },
+        { "id": "stamp", "type": "update_record", "record": "{{steps.each_task.item.id}}",
+          "values": { "reminded_on": "{{today}}" } } ] },
+    { "id": "summary", "type": "send_email", "to": "{{option:barn_settings.development_email}}",
+      "subject": "{{steps.due.count}} tasks due by {{today | add:\"P7D\" | date}}",
+      "text": "Open tasks due by {{today | add:\"P7D\" | date}} (the first 50 by due date):\n\n{{#each steps.due.records}}- {{item.name}}, due {{item.due_on | date}}, {{item.assignee_email | default:\"no assignee\"}}\n{{else}}Nothing is due this week.\n{{/each}}" } ] }

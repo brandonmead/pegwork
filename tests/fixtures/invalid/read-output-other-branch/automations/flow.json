@@ -1,0 +1,46 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "size",
+            "type": "decision",
+            "branches": [
+                {
+                    "label": "Major",
+                    "when": {
+                        "var": "record.amount",
+                        "op": "gte",
+                        "value": 250
+                    },
+                    "steps": [
+                        {
+                            "id": "donor",
+                            "type": "get_record",
+                            "content_type": "barn_contact",
+                            "related": {
+                                "relationship": "gift_donor",
+                                "of": "{{record.id}}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "has_donor",
+            "type": "condition",
+            "when": {
+                "var": "steps.donor.found",
+                "op": "eq",
+                "value": true
+            }
+        }
+    ]
+}

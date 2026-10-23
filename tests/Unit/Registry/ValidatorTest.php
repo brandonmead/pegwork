@@ -512,6 +512,114 @@ class ValidatorTest extends TestCase {
 	}
 
 	/**
+	 * Codes and pointers from per-file and reference checks of an automation of the reads fixture.
+	 *
+	 * @param array $data Automation.
+	 * @return string[]
+	 */
+	private function reads_codes( array $data ) {
+		$registry = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/reads' ) )->registry;
+		$known    = array();
+		foreach ( Loader::SECTIONS as $kind => $section ) {
+			$known[ $kind ] = $registry->$section();
+		}
+		$errors = Validator::validate( 'automation', $data, 'f' );
+		if ( ! $errors ) {
+			$errors = Validator::references( 'automation', $data, 'f', $known );
+		}
+		return array_map( fn( $e ) => $e->code . ' ' . $e->pointer, $errors );
+	}
+
+	/**
+	 * An automation of the reads fixture.
+	 *
+	 * @param string $key Automation key.
+	 * @return array
+	 */
+	private function reads( $key ) {
+		return json_decode( file_get_contents( dirname( __DIR__, 2 ) . '/fixtures/valid/reads/automations/' . $key . '.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+	}
+
+	/**
+	 * Automation v3: typed outputs in conditions and filters, loop scope, typed write targets, relationship
+	 * values, and the static bound of 500 attempts.
+	 */
+	public function test_reads_types_scope_and_bound() {
+		$digest = $this->reads( 'barn_tasks_digest' );
+		$this->assertSame( array(), $this->reads_codes( $digest ) );
+
+		// Outputs are typed: a count is a number, found is a boolean; filters type their literals.
+		$filters                        = $digest;
+		$filters['steps'][2]['subject'] = '{{steps.due.count | date}} {{today | number}} {{steps.due.count | number:2}}';
+		$this->assertSame( array( 'invalid_template /steps/2/subject', 'invalid_template /steps/2/subject' ), $this->reads_codes( $filters ) );
+
+		$typed = $digest;
+
+		$typed['steps'][0]['filter']['all'][0]['value'] = 'yes';
+		array_splice(
+			$typed['steps'],
+			1,
+			0,
+			array(
+				array(
+					'id'   => 'some',
+					'type' => 'condition',
+					'when' => array(
+						'var'   => 'steps.due.count',
+						'op'    => 'eq',
+						'value' => 'many',
+					),
+				),
+			)
+		);
+		$this->assertSame(
+			array(
+				'condition_type_mismatch /steps/0/filter/all/0',
+				'condition_type_mismatch /steps/1/when',
+			),
+			$this->reads_codes( $typed )
+		);
+
+		// Body outputs stay in the body; failed and error exist only with on_error; sums only for listed fields.
+		$scope                     = $digest;
+		$scope['steps'][2]['text'] = '{{steps.remind.failed}} {{steps.stamp.failed}} {{steps.due.sum.amount}} {{steps.each_task.count}}';
+		$this->assertSame( array( 'invalid_var /steps/2/text', 'invalid_var /steps/2/text', 'invalid_var /steps/2/text' ), $this->reads_codes( $scope ) );
+		$messages = array_map( fn( $e ) => $e->message, Validator::validate( 'automation', $scope, 'f' ) );
+		$this->assertStringContainsString( 'step "remind" runs inside loop "each_task"', $messages[0] );
+
+		// Inside the body, earlier body outputs and the item are in scope, and a typed target checks its keys.
+		$body = $digest;
+		$body['steps'][1]['steps'][1]['values']['note'] = '{{steps.remind.error}} {{steps.each_task.index | number}}';
+		$this->assertSame( array( 'unknown_field /steps/1/steps/1/values/note' ), $this->reads_codes( $body ) );
+
+		// Relationship values: IDs as a template, comma-separated literals or a list of integers.
+		$values = $this->reads( 'barn_donation_inbound' );
+		foreach ( array( '12, 15', array( 3 ), '' ) as $ok ) {
+			$values['steps'][4]['values']['gift_donor'] = $ok;
+			$this->assertSame( array(), $this->reads_codes( $values ), wp_json_encode( $ok ) );
+		}
+		foreach ( array( 'Ada', array( 'a' ), 4 ) as $bad ) {
+			$values['steps'][4]['values']['gift_donor'] = $bad;
+			$this->assertSame( array( 'automation_value_type /steps/4/values/gift_donor' ), $this->reads_codes( $values ), wp_json_encode( $bad ) );
+		}
+
+		// The bound: find (1) + loop (1) + 9 body steps x 50 + 48 more steps is 500; one more is too large.
+		$mail                       = array(
+			'id'      => 'm',
+			'type'    => 'send_email',
+			'to'      => '{{option:barn_settings.development_email}}',
+			'subject' => 'Hi',
+			'text'    => 'Hi',
+		);
+		$bound                      = $digest;
+		$bound['steps'][1]['steps'] = array_map( fn( $i ) => array( 'id' => 'b' . $i ) + $mail, range( 1, 9 ) );
+		$bound['steps']             = array_merge( array_slice( $bound['steps'], 0, 2 ), array_map( fn( $i ) => array( 'id' => 't' . $i ) + $mail, range( 1, 48 ) ) );
+		$this->assertSame( array(), $this->reads_codes( $bound ) );
+		$bound['steps'][] = array( 'id' => 'one_more' ) + $mail;
+		$this->assertSame( array( 'automation_too_large /steps' ), $this->reads_codes( $bound ) );
+	}
+
+	/**
 	 * Decisions: step ids are unique across the tree; outputs are in scope only on paths that ran the step;
 	 * branches and otherwise may be empty; the automation's own list may not.
 	 */

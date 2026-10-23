@@ -204,8 +204,8 @@ class AutomationEngineTest extends AutomationTestCase {
 	}
 
 	/**
-	 * A step type the engine has no handler for (a definition newer than the module) fails the run after
-	 * the earlier steps. Every registry step type has a handler now, so the test removes one.
+	 * A step type the engine has no handler for (a definition newer than the module) fails the run before
+	 * its first step, so no earlier step acts on part of the flow. The test removes a handler.
 	 */
 	public function test_unsupported_step_fails_the_run() {
 		$handlers = new \ReflectionProperty( Engine::class, 'steps' );
@@ -224,9 +224,10 @@ class AutomationEngineTest extends AutomationTestCase {
 
 		$run = $this->only_run( 'job_private' );
 		$this->assertSame( 'failed', $run['status'] );
-		$this->assertStringStartsWith( 'unsupported_step:', $run['error'] );
-		$this->assertSame( array( 'ok', 'failed' ), array_column( $this->steps( $run['id'] ), 'status' ) );
-		$this->assertSame( array( 'closed' ), $this->value( $id, 'job_stage' ) );
+		$this->assertStringStartsWith( 'unsupported_step: step "', $run['error'] );
+		$this->assertStringContainsString( '"call_webhook"', $run['error'] );
+		$this->assertSame( array(), $this->steps( $run['id'] ), 'No step ran.' );
+		$this->assertNotSame( array( 'closed' ), $this->value( $id, 'job_stage' ), 'The first step did not close the job.' );
 	}
 
 	/**

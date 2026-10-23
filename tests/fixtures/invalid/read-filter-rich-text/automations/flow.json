@@ -1,0 +1,25 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "noted",
+            "type": "find_records",
+            "content_type": "barn_contact",
+            "filter": {
+                "all": [
+                    {
+                        "field": "notes",
+                        "op": "not_empty"
+                    }
+                ]
+            }
+        }
+    ]
+}

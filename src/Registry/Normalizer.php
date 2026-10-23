@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace Pegwork\Registry;
 
+use Pegwork\Content\RecordQuery;
+
 /**
  * Fills defaults, drops empty optional objects and sorts object keys. List order is kept.
  *
@@ -148,7 +150,7 @@ final class Normalizer {
 	}
 
 	/**
-	 * Fills automation defaults: enabled, sweep status and run cap, create_record status, link confirmation.
+	 * Fills automation defaults: enabled, manual `allow`, sweep status and run cap, step defaults, link confirmation.
 	 *
 	 * Retry defaults are the engine's policy and are not written into the definition.
 	 *
@@ -158,6 +160,9 @@ final class Normalizer {
 	private static function automation( array $data ): array {
 		$data += array( 'enabled' => true );
 
+		if ( 'manual' === ( $data['trigger']['type'] ?? null ) ) {
+			$data['trigger'] += array( 'allow' => 'admins' );
+		}
 		if ( isset( $data['trigger']['for_each'] ) ) {
 			$data['trigger']['for_each'] += array(
 				'max_runs' => 200,
@@ -176,8 +181,9 @@ final class Normalizer {
 	}
 
 	/**
-	 * Fills step defaults in a step list and, recursively, in its decisions' branches; drops an empty
-	 * `otherwise`. List order is kept.
+	 * Fills step defaults in a step list and, recursively, in its decisions' branches and loop bodies; drops
+	 * an empty `otherwise`. Reads get `status` (sorted) and `sort`, find_records `limit`, relate `action`.
+	 * List order is kept, except a read's `status`, which is a set.
 	 *
 	 * @param list<array<string, mixed>> $steps Valid steps.
 	 * @return list<array<string, mixed>>
@@ -187,6 +193,23 @@ final class Normalizer {
 			function ( array $step ): array {
 				if ( 'create_record' === $step['type'] ) {
 					return $step + array( 'status' => 'draft' );
+				}
+				if ( in_array( $step['type'], array( 'get_record', 'find_records' ), true ) ) {
+					$status = $step['status'] ?? RecordQuery::DEFAULT_STATUS;
+					sort( $status, SORT_STRING );
+					$step['status'] = $status;
+					$step['sort']   = isset( $step['sort'] ) ? $step['sort'] + array( 'order' => 'asc' ) : array(
+						'field' => 'id',
+						'order' => 'asc',
+					);
+					return 'find_records' === $step['type'] ? $step + array( 'limit' => RecordQuery::DEFAULT_LIMIT ) : $step;
+				}
+				if ( 'relate' === $step['type'] ) {
+					return $step + array( 'action' => 'add' );
+				}
+				if ( 'loop' === $step['type'] ) {
+					$step['steps'] = self::steps( $step['steps'] );
+					return $step;
 				}
 				if ( 'decision' === $step['type'] ) {
 					foreach ( $step['branches'] as $index => $branch ) {

@@ -1,0 +1,26 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "schedule",
+        "every": "week"
+    },
+    "steps": [
+        {
+            "limit": 51,
+            "id": "due",
+            "type": "find_records",
+            "content_type": "barn_task",
+            "filter": {
+                "all": [
+                    {
+                        "field": "done",
+                        "op": "ne",
+                        "value": true
+                    }
+                ]
+            }
+        }
+    ]
+}

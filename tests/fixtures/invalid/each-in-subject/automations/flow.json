@@ -1,0 +1,32 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "schedule",
+        "every": "week"
+    },
+    "steps": [
+        {
+            "id": "due",
+            "type": "find_records",
+            "content_type": "barn_task",
+            "filter": {
+                "all": [
+                    {
+                        "field": "done",
+                        "op": "ne",
+                        "value": true
+                    }
+                ]
+            }
+        },
+        {
+            "subject": "Due: {{#each steps.due.records}}{{item.name}} {{/each}}",
+            "id": "summary",
+            "type": "send_email",
+            "to": "{{option:barn_settings.development_email}}",
+            "text": "Hi"
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+{
+    "format": 1,
+    "key": "flow",
+    "label": "Flow",
+    "trigger": {
+        "type": "event",
+        "event": "record.created",
+        "content_type": "barn_gift"
+    },
+    "steps": [
+        {
+            "id": "thank",
+            "type": "send_email",
+            "to": "{{option:barn_settings.development_email}}",
+            "subject": "Hi",
+            "text": "Hi",
+            "on_error": "stop"
+        }
+    ]
+}

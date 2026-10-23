@@ -11,6 +11,7 @@ namespace Pegwork\Registry\Rules;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Pegwork\Content\RecordQuery;
 
 /**
  * An automation: a trigger, ordered steps, optional signed links. Conditions are a JSON expression tree and
@@ -51,9 +52,22 @@ trait AutomationRules {
 	public const VAR_PATTERN = '/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/';
 
 	/**
-	 * One merge tag body: a path or `option:<page>.<field>` (1), an optional `date` filter (2), an optional default filter.
+	 * One merge tag body: a path or `option:<page>.<field>` (1), an optional `add:"<signed duration>"` filter (2,
+	 * duration 3), an optional `date` or `number[:<0-4>]` filter (4), an optional default filter.
 	 */
-	public const TEMPLATE_TAG_PATTERN = '/^\s*((?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(\|\s*date\s*)?(?:\|\s*default:"[^"]*"\s*)?$/';
+	public const TEMPLATE_TAG_PATTERN = '/^\s*((?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(\|\s*add:"([^"]*)"\s*)?(\|\s*(?:date|number(?::[0-4])?)\s*)?(?:\|\s*default:"[^"]*"\s*)?$/';
+
+	/**
+	 * Block tags of `{{#each steps.<id>.records}} ... {{else}} ... {{/each}}`.
+	 */
+	public const EACH_OPEN_PATTERN  = '/^\s*#each\s+([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*$/';
+	public const EACH_ELSE_PATTERN  = '/^\s*else\s*$/';
+	public const EACH_CLOSE_PATTERN = '/^\s*\/each\s*$/';
+
+	/**
+	 * A loop's `over`: the records of a find_records step.
+	 */
+	public const COLLECTION_PATTERN = '/^steps\.[a-z][a-z0-9_]*\.records$/';
 
 	/**
 	 * Condition operators.
@@ -76,14 +90,41 @@ trait AutomationRules {
 	/**
 	 * Step types, and the subset allowed in signed links (they must finish within the click).
 	 */
-	public const STEP_TYPES      = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'wait', 'condition', 'decision' );
+	public const STEP_TYPES      = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'wait', 'condition', 'decision', 'get_record', 'find_records', 'loop', 'relate' );
 	public const LINK_STEP_TYPES = array( 'update_record', 'condition' );
 
 	/**
-	 * Decision limits: branches per decision, and nesting levels (a decision inside a branch is level 2).
+	 * Step types that may set `"on_error": "continue"`, and the read steps.
+	 */
+	public const ON_ERROR_TYPES = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'relate', 'get_record', 'find_records' );
+	public const READ_TYPES     = array( 'get_record', 'find_records' );
+
+	/**
+	 * Trigger types.
+	 */
+	public const TRIGGER_TYPES = array( 'event', 'schedule', 'webhook', 'manual' );
+
+	/**
+	 * Manual trigger button text limit, characters.
+	 */
+	public const MANUAL_BUTTON_MAX = 40;
+
+	/**
+	 * Decision limits: branches per decision, and nesting levels (a decision or loop inside a branch is level 2).
 	 */
 	public const DECISION_MAX_BRANCHES = 10;
 	public const DECISION_MAX_LEVELS   = 3;
+
+	/**
+	 * Loop limits: steps in a body (nested ones included), and items (a find_records result holds at most 50).
+	 */
+	public const LOOP_MAX_STEPS = 10;
+	public const LOOP_MAX_ITEMS = RecordQuery::MAX_LIMIT;
+
+	/**
+	 * Static bound on step attempts without retries (docs/automation-v3-design.md section 4.3).
+	 */
+	public const MAX_ATTEMPTS = 500;
 
 	/**
 	 * Form events that can bind the record the form wrote (section "Form binding" in docs/registry-reference.md).
@@ -91,9 +132,36 @@ trait AutomationRules {
 	public const FORM_BINDING_EVENTS = array( 'form.submitted', 'form.confirmed' );
 
 	/**
-	 * Outputs a step exposes as `steps.<id>.<output>`.
+	 * Outputs a step exposes as `steps.<id>.<output>`, with their types: `number`, `boolean` and `text` are
+	 * values; `record` takes one more key (`steps.<id>.record.<key>`), `sum` one number field; `records` is a
+	 * collection, only for a loop's `over` and `{{#each}}`.
 	 */
-	public const STEP_OUTPUTS = array( 'create_record' => array( 'record_id' ) );
+	public const STEP_OUTPUTS = array(
+		'create_record' => array( 'record_id' => 'number' ),
+		'get_record'    => array(
+			'found'     => 'boolean',
+			'record_id' => 'number',
+			'record'    => 'record',
+		),
+		'find_records'  => array(
+			'count'   => 'number',
+			'records' => 'records',
+			'sum'     => 'sum',
+		),
+		'loop'          => array( 'count' => 'number' ),
+	);
+
+	/**
+	 * Outputs of a loop inside its body, and of a step with `on_error`.
+	 */
+	public const LOOP_BODY_OUTPUTS = array(
+		'item'  => 'record',
+		'index' => 'number',
+	);
+	public const ON_ERROR_OUTPUTS  = array(
+		'failed' => 'boolean',
+		'error'  => 'text',
+	);
 
 	/**
 	 * Payload keys of the core record events, and of the forms module's events.
@@ -129,6 +197,13 @@ trait AutomationRules {
 	 * @var array<string, true>
 	 */
 	private array $step_ids = array();
+
+	/**
+	 * Steps seen so far inside loop bodies: step id => loop id.
+	 *
+	 * @var array<string, string>
+	 */
+	private array $loop_members = array();
 
 	/**
 	 * Validates an automation.
@@ -167,7 +242,63 @@ trait AutomationRules {
 
 		if ( $is_object && count( $this->errors ) === $before ) {
 			$this->automation_scan( $data, $pointer );
+
+			$attempts = self::attempts( $data['steps'], 1 );
+			if ( $attempts > self::MAX_ATTEMPTS ) {
+				$this->add(
+					'automation_too_large',
+					$pointer . '/steps',
+					/* translators: 1: worst-case step attempts, 2: limit, 3: items per loop. */
+					sprintf( __( 'This automation can take %1$d step attempts in one run (a loop body counts %3$d times); the limit is %2$d. Move steps out of loops or split the automation.', 'pegwork' ), $attempts, self::MAX_ATTEMPTS, self::LOOP_MAX_ITEMS )
+				);
+			}
 		}
+	}
+
+	/**
+	 * Worst-case step attempts of a valid step list without retries: one per step, a loop's body steps
+	 * LOOP_MAX_ITEMS times each, and a decision's longest branch.
+	 *
+	 * @param list<array<string, mixed>> $steps Valid steps.
+	 * @param int                        $times How often the list runs.
+	 */
+	private static function attempts( array $steps, int $times ): int {
+		$total = 0;
+		foreach ( $steps as $step ) {
+			$total += $times;
+			if ( 'decision' === $step['type'] ) {
+				$longest = self::attempts( $step['otherwise'] ?? array(), $times );
+				foreach ( $step['branches'] as $branch ) {
+					$longest = max( $longest, self::attempts( $branch['steps'], $times ) );
+				}
+				$total += $longest;
+			}
+			if ( 'loop' === $step['type'] ) {
+				$total += self::attempts( $step['steps'], $times * self::LOOP_MAX_ITEMS );
+			}
+		}
+		return $total;
+	}
+
+	/**
+	 * Number of steps in a step list, counting the steps inside decisions.
+	 *
+	 * @param mixed $steps Decoded list.
+	 */
+	private static function step_count( mixed $steps ): int {
+		$count = 0;
+		foreach ( is_array( $steps ) ? $steps : array() as $step ) {
+			++$count;
+			if ( ! is_array( $step ) ) {
+				continue;
+			}
+			foreach ( is_array( $step['branches'] ?? null ) ? $step['branches'] : array() as $branch ) {
+				$count += self::step_count( is_array( $branch ) ? ( $branch['steps'] ?? array() ) : array() );
+			}
+			$count += self::step_count( $step['otherwise'] ?? array() );
+			$count += self::step_count( $step['steps'] ?? array() );
+		}
+		return $count;
 	}
 
 	/**
@@ -181,11 +312,11 @@ trait AutomationRules {
 			return;
 		}
 		$type = $trigger['type'] ?? null;
-		if ( ! in_array( $type, array( 'event', 'schedule', 'webhook' ), true ) ) {
+		if ( ! in_array( $type, self::TRIGGER_TYPES, true ) ) {
 			if ( null === $type ) {
 				$this->add( 'missing_property', $pointer, __( 'Missing required property "type".', 'pegwork' ) );
 			} else {
-				$this->enum( $type, $pointer . '/type', array( 'event', 'schedule', 'webhook' ) );
+				$this->enum( $type, $pointer . '/type', self::TRIGGER_TYPES );
 			}
 			return;
 		}
@@ -229,8 +360,26 @@ trait AutomationRules {
 
 			$needed[] = 'every';
 		}
+		if ( 'manual' === $type ) {
+			$checks += array(
+				'content_type' => fn( $v, $p ) => $this->key( $v, $p ),
+				'button'       => function ( $v, $p ) {
+					if ( $this->type( $v, $p, 'string' ) && mb_strlen( $v ) > self::MANUAL_BUTTON_MAX ) {
+						/* translators: %d: maximum characters. */
+						$this->add( 'invalid_value', $p, sprintf( __( 'Button text is at most %d characters.', 'pegwork' ), self::MANUAL_BUTTON_MAX ) );
+					}
+				},
+				'allow'        => fn( $v, $p ) => $this->enum( $v, $p, array( 'admins', 'editors' ) ),
+				'when'         => fn( $v, $p ) => $this->automation_condition( $v, $p ),
+			);
+
+			$needed[] = 'button';
+		}
 
 		$is_object = $this->props( $trigger, $pointer, $checks, $needed );
+		if ( $is_object && 'manual' === $type && 'editors' === ( $trigger['allow'] ?? null ) && ! isset( $trigger['content_type'] ) ) {
+			$this->add( 'invalid_value', $pointer . '/allow', __( '"allow": "editors" lets users who can edit the record run it, so it needs a "content_type".', 'pegwork' ) );
+		}
 		if ( ! $is_object || 'event' !== $type || ! is_string( $trigger['event'] ?? null ) ) {
 			return;
 		}
@@ -248,10 +397,11 @@ trait AutomationRules {
 	 * @param mixed  $steps   Decoded list.
 	 * @param string $pointer JSON pointer of the list.
 	 * @param bool   $link    Whether the list belongs to a signed link.
-	 * @param int    $level   Nesting level of the list: 1 for the automation's own steps, 2 inside a decision.
+	 * @param int    $level   Nesting level of the list: 1 for the automation's own steps, 2 inside a decision or loop.
+	 * @param bool   $in_loop Whether the list is inside a loop body.
 	 */
-	private function automation_steps( mixed $steps, string $pointer, bool $link, int $level = 1 ): void {
-		$this->list_of( $steps, $pointer, fn( $step, $p ) => $this->automation_step( $step, $p, $link, $level ) );
+	private function automation_steps( mixed $steps, string $pointer, bool $link, int $level = 1, bool $in_loop = false ): void {
+		$this->list_of( $steps, $pointer, fn( $step, $p ) => $this->automation_step( $step, $p, $link, $level, $in_loop ) );
 		if ( array() === $steps && 1 === $level ) {
 			$this->add( 'invalid_value', $pointer, __( 'Add at least one step.', 'pegwork' ) );
 		}
@@ -263,8 +413,9 @@ trait AutomationRules {
 	 * @param mixed  $branches Decoded list.
 	 * @param string $pointer  JSON pointer of the list.
 	 * @param int    $level    Nesting level of the decision.
+	 * @param bool   $in_loop  Whether the decision is inside a loop body.
 	 */
-	private function automation_branches( mixed $branches, string $pointer, int $level ): void {
+	private function automation_branches( mixed $branches, string $pointer, int $level, bool $in_loop ): void {
 		$this->list_of(
 			$branches,
 			$pointer,
@@ -274,7 +425,7 @@ trait AutomationRules {
 				array(
 					'label' => fn( $v, $q ) => $this->type( $v, $q, 'string' ),
 					'when'  => fn( $v, $q ) => $this->automation_condition( $v, $q ),
-					'steps' => fn( $v, $q ) => $this->automation_steps( $v, $q, false, $level + 1 ),
+					'steps' => fn( $v, $q ) => $this->automation_steps( $v, $q, false, $level + 1, $in_loop ),
 				),
 				array( 'label', 'when', 'steps' )
 			)
@@ -296,8 +447,9 @@ trait AutomationRules {
 	 * @param string $pointer JSON pointer of the step.
 	 * @param bool   $link    Whether the step belongs to a signed link.
 	 * @param int    $level   Nesting level of the step's list.
+	 * @param bool   $in_loop Whether the step is inside a loop body.
 	 */
-	private function automation_step( mixed $step, string $pointer, bool $link, int $level = 1 ): void {
+	private function automation_step( mixed $step, string $pointer, bool $link, int $level = 1, bool $in_loop = false ): void {
 		if ( ! $this->type( $step, $pointer, 'object' ) ) {
 			return;
 		}
@@ -315,9 +467,17 @@ trait AutomationRules {
 			$this->add( 'automation_link_step', $pointer . '/type', sprintf( __( 'Link steps run within the click, so only update_record and condition are allowed, not "%s".', 'pegwork' ), $type ) );
 			return;
 		}
-		if ( 'decision' === $type && $level > self::DECISION_MAX_LEVELS ) {
+		if ( $in_loop && 'wait' === $type ) {
+			$this->add( 'loop_wait', $pointer . '/type', __( 'A loop cannot hold a wait, at any depth: per-record timing belongs in per-record runs (a record event or a schedule with "for_each").', 'pegwork' ) );
+			return;
+		}
+		if ( $in_loop && 'loop' === $type ) {
+			$this->add( 'loop_nested', $pointer . '/type', __( 'A loop cannot hold another loop.', 'pegwork' ) );
+			return;
+		}
+		if ( in_array( $type, array( 'decision', 'loop' ), true ) && $level > self::DECISION_MAX_LEVELS ) {
 			/* translators: %d: maximum nesting levels. */
-			$this->add( 'decision_too_deep', $pointer, sprintf( __( 'Decisions nest at most %d levels deep.', 'pegwork' ), self::DECISION_MAX_LEVELS ) );
+			$this->add( 'decision_too_deep', $pointer, sprintf( __( 'Decisions and loops nest at most %d levels deep.', 'pegwork' ), self::DECISION_MAX_LEVELS ) );
 			return;
 		}
 
@@ -372,18 +532,20 @@ trait AutomationRules {
 			),
 			'call_webhook'  => array(
 				array(
-					'url'     => function ( $v, $p ) {
+					'url'          => function ( $v, $p ) {
 						if ( $this->type( $v, $p, 'string' ) && ! preg_match( '#^https?://\S+$#', $v ) ) {
 							$this->add( 'invalid_value', $p, __( 'Webhook URLs start with http:// or https://.', 'pegwork' ) );
 						}
 					},
-					'fields'  => fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->key( $item, $q ) ),
-					'timeout' => function ( $v, $p ) {
+					'fields'       => fn( $v, $p ) => $this->list_of( $v, $p, fn( $item, $q ) => $this->key( $item, $q ) ),
+					'timeout'      => function ( $v, $p ) {
 						if ( $this->type( $v, $p, 'number' ) && ( $v <= 0 || $v > self::WEBHOOK_MAX_TIMEOUT ) ) {
 							/* translators: %d: maximum seconds. */
 							$this->add( 'invalid_value', $p, sprintf( __( '"timeout" is more than 0 and at most %d seconds.', 'pegwork' ), self::WEBHOOK_MAX_TIMEOUT ) );
 						}
 					},
+					'record'       => $string,
+					'content_type' => fn( $v, $p ) => $this->key( $v, $p ),
 				),
 				array( 'url' ),
 			),
@@ -391,21 +553,187 @@ trait AutomationRules {
 			'condition'     => array( array( 'when' => fn( $v, $p ) => $this->automation_condition( $v, $p ) ), array( 'when' ) ),
 			'decision'      => array(
 				array(
-					'branches'  => fn( $v, $p ) => $this->automation_branches( $v, $p, $level ),
-					'otherwise' => fn( $v, $p ) => $this->automation_steps( $v, $p, false, $level + 1 ),
+					'branches'  => fn( $v, $p ) => $this->automation_branches( $v, $p, $level, $in_loop ),
+					'otherwise' => fn( $v, $p ) => $this->automation_steps( $v, $p, false, $level + 1, $in_loop ),
 				),
 				array( 'branches' ),
 			),
+			'get_record'    => array( $this->read_checks() + array( 'record' => $string ), array( 'content_type' ) ),
+			'find_records'  => array(
+				$this->read_checks() + array(
+					'limit' => function ( $v, $p ) {
+						if ( $this->type( $v, $p, 'count' ) && $v > RecordQuery::MAX_LIMIT ) {
+							/* translators: %d: maximum records. */
+							$this->add( 'invalid_value', $p, sprintf( __( '"limit" is an integer from 0 to %d.', 'pegwork' ), RecordQuery::MAX_LIMIT ) );
+						}
+					},
+					'sum'   => function ( $v, $p ) {
+						$this->list_of( $v, $p, fn( $item, $q ) => $this->key( $item, $q ) );
+						if ( is_array( $v ) && count( $v ) > RecordQuery::MAX_SUMS ) {
+							/* translators: %d: maximum fields. */
+							$this->add( 'invalid_value', $p, sprintf( __( '"sum" lists at most %d number fields.', 'pegwork' ), RecordQuery::MAX_SUMS ) );
+						}
+					},
+				),
+				array( 'content_type' ),
+			),
+			'loop'          => array(
+				array(
+					'over'  => function ( $v, $p ) {
+						if ( $this->type( $v, $p, 'string' ) && ! preg_match( self::COLLECTION_PATTERN, $v ) ) {
+							$this->add( 'invalid_var', $p, __( '"over" is the records of a find_records step: "steps.<id>.records".', 'pegwork' ) );
+						}
+					},
+					'steps' => function ( $v, $p ) use ( $level ) {
+						$this->automation_steps( $v, $p, false, $level + 1, true );
+						$count = self::step_count( $v );
+						if ( is_array( $v ) && array_is_list( $v ) && ( 0 === $count || $count > self::LOOP_MAX_STEPS ) ) {
+							/* translators: %d: maximum steps. */
+							$this->add( 'invalid_value', $p, sprintf( __( 'A loop body has from 1 to %d steps, counting the steps inside decisions.', 'pegwork' ), self::LOOP_MAX_STEPS ) );
+						}
+					},
+				),
+				array( 'over', 'steps' ),
+			),
+			'relate'        => array(
+				array(
+					'relationship' => fn( $v, $p ) => $this->key( $v, $p ),
+					'action'       => fn( $v, $p ) => $this->enum( $v, $p, array( 'add', 'remove' ) ),
+					'from'         => $string,
+					'to'           => $string,
+				),
+				array( 'relationship', 'to' ),
+			),
 		};
-		if ( 'decision' === $type ) {
-			unset( $checks['retry'] ); // A decision only evaluates conditions; there is nothing to retry.
+		if ( in_array( $type, array( 'decision', 'loop' ), true ) ) {
+			unset( $checks['retry'] ); // A decision only evaluates conditions, and a loop retries its body steps; there is nothing to retry.
+		}
+		if ( in_array( $type, self::ON_ERROR_TYPES, true ) ) {
+			$checks['on_error'] = fn( $v, $p ) => $this->enum( $v, $p, array( 'continue' ) );
 		}
 
-		$this->props( $step, $pointer, $checks + $own[0], array_merge( array( 'id', 'type' ), $own[1] ) );
+		$is_object = $this->props( $step, $pointer, $checks + $own[0], array_merge( array( 'id', 'type' ), $own[1] ) );
+		if ( ! $is_object ) {
+			return;
+		}
+
+		if ( 'call_webhook' === $type && isset( $step['record'] ) !== isset( $step['content_type'] ) ) {
+			$this->add( 'missing_property', $pointer, __( 'A webhook that sends a read record names both "record" and its "content_type".', 'pegwork' ) );
+		}
+		$query = isset( $step['related'] ) || isset( $step['filter'] );
+		if ( 'get_record' === $type && isset( $step['record'] ) && $query ) {
+			$this->add( 'read_source', $pointer . '/record', __( '"record" reads one record by ID, so it cannot be combined with "related" or "filter".', 'pegwork' ) );
+		}
+		if ( in_array( $type, self::READ_TYPES, true ) && ! $query && ! isset( $step['record'] ) ) {
+			$this->add(
+				'read_source',
+				$pointer,
+				'get_record' === $type
+					? __( 'Say which record to read: "record" (an ID), "related" or "filter".', 'pegwork' )
+					: __( 'Say which records to read: "related", "filter" or both (reading a whole content type is never implicit).', 'pegwork' )
+			);
+		}
 	}
 
 	/**
-	 * Validates a `values` map: at least one key, each a template string, number, boolean or list of strings.
+	 * Property checks of the read query model shared by get_record and find_records (section 3.1 of
+	 * docs/automation-v3-design.md). Field-level rules need the registry and run in references().
+	 *
+	 * @return array<string, callable>
+	 */
+	private function read_checks(): array {
+		return array(
+			'content_type' => fn( $v, $p ) => $this->key( $v, $p ),
+			'related'      => fn( $v, $p ) => $this->props(
+				$v,
+				$p,
+				array(
+					'relationship' => fn( $w, $q ) => $this->key( $w, $q ),
+					'of'           => fn( $w, $q ) => $this->type( $w, $q, 'string' ),
+				),
+				array( 'relationship', 'of' )
+			),
+			'filter'       => fn( $v, $p ) => $this->read_filter( $v, $p ),
+			'status'       => function ( $v, $p ) {
+				$this->list_of( $v, $p, fn( $s, $q ) => $this->enum( $s, $q, RecordQuery::STATUSES ) );
+				if ( is_array( $v ) && array_is_list( $v ) && ( array() === $v || count( array_unique( array_filter( $v, 'is_string' ) ) ) !== count( $v ) ) ) {
+					$this->add( 'invalid_value', $p, __( '"status" lists one or more statuses, each once.', 'pegwork' ) );
+				}
+			},
+			'sort'         => fn( $v, $p ) => $this->props(
+				$v,
+				$p,
+				array(
+					'field' => fn( $w, $q ) => $this->key( $w, $q ),
+					'order' => fn( $w, $q ) => $this->enum( $w, $q, array( 'asc', 'desc' ) ),
+				),
+				array( 'field' )
+			),
+		);
+	}
+
+	/**
+	 * Validates a read filter: `{ "all": [leaf...] }` or `{ "any": [leaf...] }`, one level, 1 to
+	 * RecordQuery::MAX_LEAVES leaves of `{ field, op, value }`.
+	 *
+	 * @param mixed  $filter  Decoded filter.
+	 * @param string $pointer JSON pointer of the filter.
+	 */
+	private function read_filter( mixed $filter, string $pointer ): void {
+		if ( ! $this->type( $filter, $pointer, 'object' ) ) {
+			return;
+		}
+		$groups = array_values( array_intersect( array( 'all', 'any' ), array_keys( $filter ) ) );
+		if ( 1 !== count( $groups ) ) {
+			$this->add( 'invalid_condition', $pointer, __( 'A filter is exactly one of { "all": [...] } or { "any": [...] }.', 'pegwork' ) );
+			return;
+		}
+		$group = $groups[0];
+		$this->props(
+			$filter,
+			$pointer,
+			array(
+				$group => function ( $leaves, $p ) {
+					$this->list_of( $leaves, $p, fn( $leaf, $q ) => $this->read_leaf( $leaf, $q ) );
+					if ( is_array( $leaves ) && array_is_list( $leaves ) && ( array() === $leaves || count( $leaves ) > RecordQuery::MAX_LEAVES ) ) {
+						/* translators: %d: maximum conditions. */
+						$this->add( 'condition_too_complex', $p, sprintf( __( 'A filter has from 1 to %d conditions, one level deep.', 'pegwork' ), RecordQuery::MAX_LEAVES ) );
+					}
+				},
+			)
+		);
+	}
+
+	/**
+	 * Validates one read filter leaf `{ field, op, value }`: operators and operands as in conditions, without
+	 * `changed`.
+	 *
+	 * @param mixed  $leaf    Decoded leaf.
+	 * @param string $pointer JSON pointer of the leaf.
+	 */
+	private function read_leaf( mixed $leaf, string $pointer ): void {
+		if ( is_array( $leaf ) && array_intersect( array( 'all', 'any', 'not' ), array_keys( $leaf ) ) ) {
+			$this->add( 'condition_too_complex', $pointer, __( 'Filters are one level deep: { "field", "op", "value" } leaves only.', 'pegwork' ) );
+			return;
+		}
+		$is_object = $this->props(
+			$leaf,
+			$pointer,
+			array(
+				'field' => fn( $v, $p ) => $this->key( $v, $p ),
+				'op'    => fn( $v, $p ) => $this->enum( $v, $p, RecordQuery::OPS ),
+				'value' => fn() => null, // Checked below against the operator.
+			),
+			array( 'field', 'op' )
+		);
+		if ( $is_object && in_array( $leaf['op'] ?? null, RecordQuery::OPS, true ) ) {
+			$this->condition_value( $leaf, $pointer, (string) $leaf['op'] );
+		}
+	}
+
+	/**
+	 * Validates a `values` map: at least one key, each a template string, number, boolean, list of strings
+	 * (taxonomy terms) or list of integers (relationship record IDs).
 	 *
 	 * @param mixed  $values  Decoded values.
 	 * @param string $pointer JSON pointer of the values.
@@ -418,10 +746,12 @@ trait AutomationRules {
 			$this->add( 'invalid_value', $pointer, __( '"values" needs at least one field.', 'pegwork' ) );
 		}
 		foreach ( $values as $name => $value ) {
-			$ok = is_string( $value ) || is_int( $value ) || is_float( $value ) || is_bool( $value )
-				|| ( is_array( $value ) && array_is_list( $value ) && count( array_filter( $value, 'is_string' ) ) === count( $value ) );
+			$list = is_array( $value ) && array_is_list( $value );
+			$ok   = is_string( $value ) || is_int( $value ) || is_float( $value ) || is_bool( $value )
+				|| ( $list && count( array_filter( $value, 'is_string' ) ) === count( $value ) )
+				|| ( $list && count( array_filter( $value, 'is_int' ) ) === count( $value ) );
 			if ( ! $ok ) {
-				$this->add( 'invalid_type', self::pointer( $pointer, $name ), __( 'Expected a string, number, boolean or list of strings.', 'pegwork' ) );
+				$this->add( 'invalid_type', self::pointer( $pointer, $name ), __( 'Expected a string, number, boolean, list of strings or list of integers.', 'pegwork' ) );
 			}
 		}
 	}
@@ -503,7 +833,17 @@ trait AutomationRules {
 		if ( ! $is_object || ! in_array( $op, self::CONDITION_OPS, true ) ) {
 			return;
 		}
+		$this->condition_value( $node, $pointer, $op );
+	}
 
+	/**
+	 * Checks a condition or filter leaf's `value` against its operator.
+	 *
+	 * @param array<string, mixed> $node    Leaf.
+	 * @param string               $pointer JSON pointer of the leaf.
+	 * @param string               $op      Known operator.
+	 */
+	private function condition_value( array $node, string $pointer, string $op ): void {
 		$has = array_key_exists( 'value', $node );
 		$at  = $pointer . ( $has ? '/value' : '' );
 		if ( in_array( $op, self::UNARY_OPS, true ) ) {
@@ -628,12 +968,17 @@ trait AutomationRules {
 			'trigger' => $trigger['type'],
 			'event'   => $trigger['event'] ?? null,
 			'form'    => $trigger['form'] ?? null,
-			'binds'   => ( 'event' === $trigger['type'] && str_starts_with( $trigger['event'], 'record.' ) ) || isset( $trigger['for_each'] ),
+			'binds'   => ( 'event' === $trigger['type'] && str_starts_with( $trigger['event'], 'record.' ) ) || isset( $trigger['for_each'] )
+				|| ( 'manual' === $trigger['type'] && isset( $trigger['content_type'] ) ),
 			'type'    => $trigger['content_type'] ?? ( $trigger['for_each']['content_type'] ?? null ),
 			'links'   => array_keys( $data['links'] ?? array() ),
-			'steps'   => array(),
+			'steps'   => array(), // Steps whose outputs are in scope: id => step.
+			'loops'   => array(), // Loops whose body encloses this point: id => content type of the items ('' when unknown).
+			'each'    => null,    // Content type of `item.*` inside an {{#each}} block ('' when unknown), else null.
 		);
 		$uses    = array();
+
+		$this->loop_members = array();
 
 		// Form binding needs the form, so it is decided in the references pass; the shape pass assumes it binds.
 		if ( 'event' === $trigger['type'] && in_array( $trigger['event'], self::FORM_BINDING_EVENTS, true ) && isset( $trigger['form'] ) ) {
@@ -680,27 +1025,34 @@ trait AutomationRules {
 	 * scope, templates, values and webhook fields.
 	 *
 	 * Output scope: `scope.steps` holds the steps that ran on every path before this point (earlier siblings and
-	 * earlier siblings of enclosing lists). A branch adds its own steps for the rest of that branch only.
+	 * earlier siblings of enclosing lists). A branch adds its own steps for the rest of that branch only. A loop
+	 * body sees the loop's `item` and `index` (`scope.loops`), and its steps' outputs stay inside the body.
 	 *
 	 * @param list<array<string, mixed>> $steps   Steps.
 	 * @param string                     $pointer JSON pointer of the list.
 	 * @param array<string, mixed>       $scope   Scan scope; `steps` are the outputs in scope where the list starts.
 	 * @param list<array<string, mixed>> $uses    Uses, appended to.
+	 * @param string|null                $loop    Id of the loop whose body holds the list.
 	 */
-	private function scan_steps( array $steps, string $pointer, array $scope, array &$uses ): void {
+	private function scan_steps( array $steps, string $pointer, array $scope, array &$uses, ?string $loop = null ): void {
 		foreach ( $steps as $index => $step ) {
 			$at = $pointer . '/' . $index;
 			if ( isset( $this->step_ids[ $step['id'] ] ) ) {
 				/* translators: %s: step id. */
 				$this->add( 'duplicate_key', $at . '/id', sprintf( __( 'Step id "%s" is already used in this automation.', 'pegwork' ), $step['id'] ) );
 			}
+			if ( null !== $loop ) {
+				$this->loop_members[ $step['id'] ] = $loop;
+			}
 
 			switch ( $step['type'] ) {
 				case 'update_record':
 				case 'create_record':
-					$own = 'update_record' === $step['type'];
+					$own    = 'update_record' === $step['type'];
+					$target = null;
 					if ( $own && isset( $step['record'] ) ) {
 						$this->scan_template( $step['record'], $at . '/record', 'private', $scope, $uses );
+						$target = $this->typed_reference( $step['record'], $scope );
 					} elseif ( $own && ! $scope['binds'] ) {
 						$this->add( 'automation_no_record', $at, __( 'This trigger binds no record; give update_record a "record".', 'pegwork' ) );
 					}
@@ -712,8 +1064,8 @@ trait AutomationRules {
 						$uses[] = array(
 							'use'     => 'write',
 							'pointer' => $value_at,
-							'type'    => $own ? ( isset( $step['record'] ) ? null : $scope['type'] ) : $step['content_type'],
-							'known'   => ! $own || ! isset( $step['record'] ),
+							'type'    => $own ? ( isset( $step['record'] ) ? $target : $scope['type'] ) : $step['content_type'],
+							'known'   => ! $own || ! isset( $step['record'] ) || null !== $target,
 							'key'     => (string) $name,
 							'value'   => $value,
 						);
@@ -722,22 +1074,25 @@ trait AutomationRules {
 				case 'send_email':
 					foreach ( array( 'to', 'subject', 'text', 'html', 'reply_to' ) as $name ) {
 						if ( isset( $step[ $name ] ) ) {
-							$this->scan_template( $step[ $name ], $at . '/' . $name, 'private', $scope, $uses );
+							$this->scan_template( $step[ $name ], $at . '/' . $name, 'private', $scope, $uses, in_array( $name, array( 'text', 'html' ), true ) );
 						}
 					}
 					break;
 				case 'call_webhook':
 					$this->scan_template( $step['url'], $at . '/url', 'public', $scope, $uses );
-					if ( ! empty( $step['fields'] ) && ! $scope['binds'] ) {
-						$this->add( 'automation_no_record', $at . '/fields', __( 'This trigger binds no record, so the webhook has no record fields to send.', 'pegwork' ) );
+					$sends = isset( $step['record'] ) || $scope['binds'];
+					if ( isset( $step['record'] ) ) {
+						$this->scan_template( $step['record'], $at . '/record', 'private', $scope, $uses );
+					} elseif ( ! empty( $step['fields'] ) && ! $scope['binds'] ) {
+						$this->add( 'automation_no_record', $at . '/fields', __( 'This trigger binds no record, so the webhook has no record fields to send (send a read record with "record" and "content_type").', 'pegwork' ) );
 					}
-					foreach ( $scope['binds'] ? ( $step['fields'] ?? array() ) : array() as $field_index => $name ) {
+					foreach ( $sends ? ( $step['fields'] ?? array() ) : array() as $field_index => $name ) {
 						$uses[] = array(
 							'use'     => 'record_key',
 							'pointer' => $at . '/fields/' . $field_index,
 							'key'     => $name,
 							'context' => 'public',
-							'type'    => $scope['type'],
+							'type'    => $step['content_type'] ?? $scope['type'],
 						);
 					}
 					break;
@@ -749,21 +1104,185 @@ trait AutomationRules {
 					foreach ( $step['branches'] as $branch_index => $branch ) {
 						$branch_at = $at . '/branches/' . $branch_index;
 						$this->scan_condition( $branch['when'], $branch_at . '/when', $scope, $uses );
-						$this->scan_steps( $branch['steps'], $branch_at . '/steps', $scope, $uses );
+						$this->scan_steps( $branch['steps'], $branch_at . '/steps', $scope, $uses, $loop );
 					}
 					if ( isset( $step['otherwise'] ) ) {
-						$this->scan_steps( $step['otherwise'], $at . '/otherwise', $scope, $uses );
+						$this->scan_steps( $step['otherwise'], $at . '/otherwise', $scope, $uses, $loop );
 					}
+					break;
+				case 'get_record':
+				case 'find_records':
+					$this->scan_read( $step, $at, $scope, $uses );
+					break;
+				case 'loop':
+					$body                          = $scope;
+					$body['loops'][ $step['id'] ]  = (string) $this->scan_collection( $step['over'], $at . '/over', $scope );
+					$this->step_ids[ $step['id'] ] = true;
+					$this->scan_steps( $step['steps'], $at . '/steps', $body, $uses, $step['id'] );
+					$step['content_type'] = $body['loops'][ $step['id'] ];
+					break;
+				case 'relate':
+					foreach ( array( 'from', 'to' ) as $end ) {
+						if ( isset( $step[ $end ] ) ) {
+							$this->scan_template( $step[ $end ], $at . '/' . $end, 'private', $scope, $uses );
+						}
+					}
+					$uses[] = array(
+						'use'          => 'relate',
+						'pointer'      => $at,
+						'relationship' => $step['relationship'],
+						'from'         => isset( $step['from'] ) ? $this->typed_reference( $step['from'], $scope ) : null,
+						'to'           => $this->typed_reference( $step['to'], $scope ),
+						'default_from' => isset( $step['from'] ) ? false : ( $scope['binds'] ? (string) $scope['type'] : null ),
+					);
 					break;
 			}
 
 			$this->step_ids[ $step['id'] ] = true;
-			$scope['steps'][ $step['id'] ] = $step['type'];
+			$scope['steps'][ $step['id'] ] = $step;
 		}
 	}
 
 	/**
-	 * Every step of a step list and of its decisions' branches, in document order, by JSON pointer.
+	 * Walks a get_record or find_records step: templates and operand paths in scope, and the registry uses
+	 * of its query (relationship, filter fields and operators, sums, sort).
+	 *
+	 * @param array<string, mixed>       $step    Valid read step.
+	 * @param string                     $at      JSON pointer of the step.
+	 * @param array<string, mixed>       $scope   Scan scope.
+	 * @param list<array<string, mixed>> $uses    Uses, appended to.
+	 */
+	private function scan_read( array $step, string $at, array $scope, array &$uses ): void {
+		$type = $step['content_type'];
+		if ( isset( $step['record'] ) ) {
+			$this->scan_template( $step['record'], $at . '/record', 'private', $scope, $uses );
+		}
+		if ( isset( $step['related'] ) ) {
+			$this->scan_template( $step['related']['of'], $at . '/related/of', 'private', $scope, $uses );
+			$uses[] = array(
+				'use'          => 'related',
+				'pointer'      => $at . '/related',
+				'type'         => $type,
+				'relationship' => $step['related']['relationship'],
+				'of'           => $this->typed_reference( $step['related']['of'], $scope ),
+			);
+		}
+		foreach ( $step['filter'] ?? array() as $group => $leaves ) {
+			foreach ( $leaves as $index => $leaf ) {
+				$leaf_at = $at . '/filter/' . $group . '/' . $index;
+				if ( is_array( $leaf['value'] ?? null ) && isset( $leaf['value']['var'] ) ) {
+					$this->scan_path( $leaf['value']['var'], $leaf_at . '/value/var', 'condition', false, $scope, $uses );
+				}
+				$uses[] = array(
+					'use'     => 'read_leaf',
+					'pointer' => $leaf_at,
+					'leaf'    => $leaf,
+					'type'    => $type,
+				);
+			}
+		}
+		foreach ( $step['sum'] ?? array() as $index => $key ) {
+			$uses[] = array(
+				'use'     => 'read_field',
+				'role'    => 'sum',
+				'pointer' => $at . '/sum/' . $index,
+				'key'     => $key,
+				'type'    => $type,
+			);
+		}
+		if ( isset( $step['sort'] ) ) {
+			$uses[] = array(
+				'use'     => 'read_field',
+				'role'    => 'sort',
+				'pointer' => $at . '/sort/field',
+				'key'     => $step['sort']['field'],
+				'type'    => $type,
+			);
+		}
+	}
+
+	/**
+	 * Resolves a collection path (a loop's `over`, an `{{#each}}` path): the records of a find_records step in
+	 * scope. Reports `invalid_var` otherwise.
+	 *
+	 * @param string               $path    Path such as steps.due.records.
+	 * @param string               $pointer JSON pointer of the path (or of its template).
+	 * @param array<string, mixed> $scope   Scan scope.
+	 * @return string|null Content type of the records, or null after an error.
+	 */
+	private function scan_collection( string $path, string $pointer, array $scope ): ?string {
+		$parts = explode( '.', $path );
+		$step  = 'steps' === $parts[0] && 3 === count( $parts ) ? $this->step_in_scope( $parts[1], $scope ) : null;
+		$error = null;
+		if ( ! preg_match( self::COLLECTION_PATTERN, $path ) ) {
+			$error = __( 'a list of records is "steps.<id>.records" of a find_records step.', 'pegwork' );
+		} elseif ( is_string( $step ) ) {
+			$error = $step;
+		} elseif ( 'find_records' !== $step['type'] ) {
+			/* translators: 1: step id, 2: step type. */
+			$error = sprintf( __( 'step "%1$s" is a %2$s step; only find_records steps have "records".', 'pegwork' ), $parts[1], $step['type'] );
+		}
+		if ( null !== $error ) {
+			/* translators: 1: path, 2: reason. */
+			$this->add( 'invalid_var', $pointer, sprintf( __( 'Path "%1$s": %2$s', 'pegwork' ), $path, $error ) );
+			return null;
+		}
+
+		return (string) $step['content_type'];
+	}
+
+	/**
+	 * The step whose outputs are in scope under an id, or why it is not.
+	 *
+	 * @param string               $id    Step id.
+	 * @param array<string, mixed> $scope Scan scope.
+	 * @return array<string, mixed>|string The step, or the reason as text.
+	 */
+	private function step_in_scope( string $id, array $scope ): array|string {
+		if ( isset( $scope['steps'][ $id ] ) ) {
+			return $scope['steps'][ $id ];
+		}
+		$loop = $this->loop_members[ $id ] ?? null;
+		if ( null !== $loop && ! isset( $scope['loops'][ $loop ] ) ) {
+			/* translators: 1: step id, 2: loop step id. */
+			return sprintf( __( 'step "%1$s" runs inside loop "%2$s", so its outputs exist only later in the same item.', 'pegwork' ), $id, $loop );
+		}
+		if ( isset( $this->step_ids[ $id ] ) ) {
+			/* translators: %s: step id. */
+			return sprintf( __( 'step "%s" runs only in another branch.', 'pegwork' ), $id );
+		}
+		/* translators: %s: step id. */
+		return sprintf( __( 'no step "%s" runs before this point.', 'pegwork' ), $id );
+	}
+
+	/**
+	 * The content type of a template that is exactly a typed record reference: `{{record.id}}` of a bound
+	 * record, `{{steps.<id>.record_id}}` of a get_record or create_record step, or `{{steps.<loop>.item.id}}`.
+	 *
+	 * @param string               $template Template.
+	 * @param array<string, mixed> $scope    Scan scope.
+	 * @return string|null Content type key, or null when the template is anything else (its type is known only at run time).
+	 */
+	private function typed_reference( string $template, array $scope ): ?string {
+		if ( ! preg_match( '/^\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*\}\}$/', $template, $match ) ) {
+			return null;
+		}
+		$parts = explode( '.', $match[1] );
+		$type  = null;
+		if ( array( 'record', 'id' ) === $parts && $scope['binds'] ) {
+			$type = $scope['type'];
+		} elseif ( 3 === count( $parts ) && 'steps' === $parts[0] && 'record_id' === $parts[2] ) {
+			$step = $scope['steps'][ $parts[1] ] ?? null;
+			$type = is_array( $step ) && in_array( $step['type'], array( 'get_record', 'create_record' ), true ) ? $step['content_type'] : null;
+		} elseif ( 4 === count( $parts ) && 'steps' === $parts[0] && 'item' === $parts[2] && 'id' === $parts[3] ) {
+			$type = $scope['loops'][ $parts[1] ] ?? null;
+		}
+
+		return is_string( $type ) && '' !== $type ? $type : null;
+	}
+
+	/**
+	 * Every step of a step list, of its decisions' branches and of its loop bodies, in document order, by JSON pointer.
 	 *
 	 * @param list<array<string, mixed>> $steps   Valid steps.
 	 * @param string                     $pointer JSON pointer of the list.
@@ -779,6 +1298,9 @@ trait AutomationRules {
 					$found += self::step_tree( $branch['steps'], $at . '/branches/' . $branch_index . '/steps' );
 				}
 				$found += self::step_tree( $step['otherwise'] ?? array(), $at . '/otherwise' );
+			}
+			if ( 'loop' === $step['type'] ) {
+				$found += self::step_tree( $step['steps'], $at . '/steps' );
 			}
 		}
 		return $found;
@@ -846,7 +1368,7 @@ trait AutomationRules {
 			return;
 		}
 
-		$this->scan_path( $node['var'], $pointer . '/var', 'condition', false, $scope, $uses );
+		$ref = $this->scan_path( $node['var'], $pointer . '/var', 'condition', false, $scope, $uses );
 		if ( is_array( $node['value'] ?? null ) && isset( $node['value']['var'] ) ) {
 			$this->scan_path( $node['value']['var'], $pointer . '/value/var', 'condition', false, $scope, $uses );
 		}
@@ -858,7 +1380,8 @@ trait AutomationRules {
 			'use'     => 'leaf',
 			'pointer' => $pointer,
 			'leaf'    => $node,
-			'type'    => $scope['type'],
+			'ref'     => $ref,
+			'type'    => $ref['ctype'] ?? null,
 		);
 	}
 
@@ -870,77 +1393,149 @@ trait AutomationRules {
 	 * @param string                     $context  `private` (email, values) or `public` (webhook, link pages).
 	 * @param array<string, mixed>       $scope    Scan scope.
 	 * @param list<array<string, mixed>> $uses     Uses, appended to.
+	 * @param bool                       $blocks   Whether `{{#each}}` blocks are allowed (send_email text and html).
 	 */
-	private function scan_template( string $template, string $pointer, string $context, array $scope, array &$uses ): void {
+	private function scan_template( string $template, string $pointer, string $context, array $scope, array &$uses, bool $blocks = false ): void {
 		preg_match_all( '/\{\{(.*?)\}\}/s', $template, $tags );
 		$rest = (string) preg_replace( '/\{\{.*?\}\}/s', '', $template );
 		if ( str_contains( $rest, '{{' ) || str_contains( $rest, '}}' ) ) {
 			$this->add( 'invalid_template', $pointer, __( 'Unbalanced "{{" or "}}" in template.', 'pegwork' ) );
 		}
 
+		$open = false; // Inside {{#each}}: false, or the block's state.
 		foreach ( $tags[1] as $tag ) {
-			if ( ! preg_match( self::TEMPLATE_TAG_PATTERN, $tag, $match ) ) {
-				/* translators: %s: merge tag. */
-				$this->add( 'invalid_template', $pointer, sprintf( __( 'Merge tag "{{%s}}" is not "{{ path }}", "{{ path | date }}" or "{{ path | default:"text" }}" (date before default).', 'pegwork' ), $tag ) );
-				continue;
+			$is_open  = (bool) preg_match( self::EACH_OPEN_PATTERN, $tag, $each );
+			$is_else  = (bool) preg_match( self::EACH_ELSE_PATTERN, $tag );
+			$is_close = (bool) preg_match( self::EACH_CLOSE_PATTERN, $tag );
+			if ( ( $is_open || $is_else || $is_close ) && ! $blocks ) {
+				$this->add( 'invalid_template', $pointer, __( '{{#each}} blocks are allowed only in send_email "text" and "html".', 'pegwork' ) );
+				return;
 			}
-			$path = $match[1];
-			$date = '' !== trim( $match[2] ?? '' );
-			if ( str_starts_with( $path, 'option:' ) ) {
-				$parts = explode( '.', substr( $path, 7 ) );
-				if ( 2 !== count( $parts ) ) {
-					/* translators: %s: path. */
-					$this->add( 'invalid_var', $pointer, sprintf( __( 'Path "%s": use "option:<page>.<field>".', 'pegwork' ), $path ) );
-					continue;
+			if ( $is_open ) {
+				if ( false !== $open ) {
+					$this->add( 'invalid_template', $pointer, __( '{{#each}} blocks cannot be nested.', 'pegwork' ) );
+					return;
 				}
-				$uses[] = array(
-					'use'     => 'option',
-					'pointer' => $pointer,
-					'page'    => $parts[0],
-					'key'     => $parts[1],
-					'date'    => $date,
+				$open = array(
+					'type' => (string) $this->scan_collection( $each[1], $pointer, $scope ),
+					'else' => false,
 				);
 				continue;
 			}
-			$this->scan_path( $path, $pointer, $context, true, $scope, $uses );
-			if ( $date ) {
-				$this->scan_date_filter( $path, $pointer, $scope, $uses );
+			if ( $is_else || $is_close ) {
+				if ( false === $open || ( $is_else && $open['else'] ) ) {
+					$this->add( 'invalid_template', $pointer, __( '{{else}} and {{/each}} belong to an open {{#each}}, with at most one {{else}}.', 'pegwork' ) );
+					return;
+				}
+				$open = $is_else ? array( 'else' => true ) + $open : false;
+				continue;
 			}
+
+			$inner = $scope;
+			if ( false !== $open && ! $open['else'] ) {
+				$inner['each'] = $open['type'];
+			}
+			$this->scan_tag( $tag, $pointer, $context, $inner, $uses );
+		}
+		if ( false !== $open ) {
+			$this->add( 'invalid_template', $pointer, __( '{{#each}} needs a closing {{/each}}.', 'pegwork' ) );
 		}
 	}
 
 	/**
-	 * Checks a `| date` filter's path: `today`, `now`, a record (or `trigger.old`) field that must be a date
-	 * field (checked in references()), or a path whose type is not known here (payloads, step outputs).
+	 * Checks one merge tag: its grammar, its path and its filters.
 	 *
-	 * @param string                     $path    Path.
+	 * @param string                     $tag     Tag body, without the braces.
 	 * @param string                     $pointer JSON pointer of the template.
+	 * @param string                     $context `private` or `public`.
 	 * @param array<string, mixed>       $scope   Scan scope.
 	 * @param list<array<string, mixed>> $uses    Uses, appended to.
 	 */
-	private function scan_date_filter( string $path, string $pointer, array $scope, array &$uses ): void {
-		$parts = explode( '.', $path );
-		$key   = null;
-		if ( 2 === count( $parts ) && 'record' === $parts[0] ) {
-			$key = $parts[1];
-		} elseif ( 3 === count( $parts ) && 'trigger' === $parts[0] && 'old' === $parts[1] ) {
-			$key = $parts[2];
-		} elseif ( ! in_array( $parts[0], array( 'site', 'run', 'link' ), true ) ) {
+	private function scan_tag( string $tag, string $pointer, string $context, array $scope, array &$uses ): void {
+		if ( ! preg_match( self::TEMPLATE_TAG_PATTERN, $tag, $match ) ) {
+			/* translators: %s: merge tag. */
+			$this->add( 'invalid_template', $pointer, sprintf( __( 'Merge tag "{{%s}}" is not "{{ path }}" with optional filters in this order: | add:"P3D", then | date or | number (or | number:2), then | default:"text".', 'pegwork' ), $tag ) );
+			return;
+		}
+		$path    = $match[1];
+		$add     = $match[3] ?? '';
+		$format  = trim( ltrim( trim( $match[4] ?? '' ), '|' ) );
+		$filters = array_filter(
+			array(
+				'add'    => '' !== ( $match[2] ?? '' ),
+				'date'   => 'date' === $format,
+				'number' => str_starts_with( $format, 'number' ),
+			)
+		);
+		if ( isset( $filters['add'] ) && ! preg_match( self::OFFSET_PATTERN, $add ) ) {
+			/* translators: %s: duration. */
+			$this->add( 'invalid_template', $pointer, sprintf( __( '"| add" takes an ISO 8601 duration with an optional sign, such as "P3D" or "-PT6H", not "%s".', 'pegwork' ), $add ) );
+			return;
+		}
+		if ( isset( $filters['add'], $filters['number'] ) ) {
+			$this->add( 'invalid_template', $pointer, __( '"| add" gives a date, so it cannot take "| number".', 'pegwork' ) );
 			return;
 		}
 
-		if ( null === $key || in_array( $key, array( 'id', 'status', 'type', 'permalink', 'edit_url' ), true ) ) {
-			/* translators: %s: path. */
-			$this->add( 'invalid_template', $pointer, sprintf( __( 'Path "%s" is not a date, so it cannot take "| date".', 'pegwork' ), $path ) );
+		if ( str_starts_with( $path, 'option:' ) ) {
+			$parts = explode( '.', substr( $path, 7 ) );
+			if ( 2 !== count( $parts ) ) {
+				/* translators: %s: path. */
+				$this->add( 'invalid_var', $pointer, sprintf( __( 'Path "%s": use "option:<page>.<field>".', 'pegwork' ), $path ) );
+				return;
+			}
+			$uses[] = array(
+				'use'     => 'option',
+				'pointer' => $pointer,
+				'page'    => $parts[0],
+				'key'     => $parts[1],
+				'filters' => array_keys( $filters ),
+			);
 			return;
 		}
-		if ( $scope['binds'] || 'trigger' === $parts[0] ) {
+
+		$ref = $this->scan_path( $path, $pointer, $context, true, $scope, $uses );
+		foreach ( array_keys( $filters ) as $filter ) {
+			$this->scan_filter( $filter, $path, $ref, $pointer, $uses );
+		}
+	}
+
+	/**
+	 * Checks a `| date`, `| add` or `| number` filter against its path's type. `| date` and `| add` take
+	 * `today`, `now` and date fields; `| number` takes number fields and number outputs. Field types are
+	 * checked in references(). `| date` also passes on paths whose type is not known here (payloads, form
+	 * values); `| add` and `| number` do not.
+	 *
+	 * @param string                     $filter  `date`, `add` or `number`.
+	 * @param string                     $path    Path.
+	 * @param array<string, mixed>|null  $ref     The path's type from scan_path(), null when not known.
+	 * @param string                     $pointer JSON pointer of the template.
+	 * @param list<array<string, mixed>> $uses    Uses, appended to.
+	 */
+	private function scan_filter( string $filter, string $path, ?array $ref, string $pointer, array &$uses ): void {
+		if ( isset( $ref['ctype'] ) || ( is_array( $ref ) && array_key_exists( 'ctype', $ref ) ) ) {
 			$uses[] = array(
-				'use'     => 'date_filter',
+				'use'     => 'filter',
+				'filter'  => $filter,
 				'pointer' => $pointer,
-				'key'     => $key,
-				'type'    => $scope['type'],
+				'key'     => $ref['key'],
+				'type'    => $ref['ctype'],
 				'path'    => $path,
+			);
+			return;
+		}
+
+		$type = null === $ref ? null : ( $ref['def']['type'] ?? null );
+		$ok   = 'number' === $filter ? 'number' === $type : ( 'date' === $type || ( 'date' === $filter && null === $ref ) );
+		if ( ! $ok ) {
+			$this->add(
+				'invalid_template',
+				$pointer,
+				'number' === $filter
+					/* translators: %s: path. */
+					? sprintf( __( 'Path "%s" is not a number, so it cannot take "| number".', 'pegwork' ), $path )
+					/* translators: 1: path, 2: filter. */
+					: sprintf( __( 'Path "%1$s" is not a date, so it cannot take "| %2$s".', 'pegwork' ), $path, $filter )
 			);
 		}
 	}
@@ -954,8 +1549,11 @@ trait AutomationRules {
 	 * @param bool                       $template Whether the path is in a template (allows today, now, run, link).
 	 * @param array<string, mixed>       $scope    Scan scope.
 	 * @param list<array<string, mixed>> $uses     Uses, appended to.
+	 * @return array<string, mixed>|null The path's type when known: `{ def: { type } }` for a value of a known
+	 *                                   type (`date`, `number`, `boolean`, `text`), `{ ctype, key }` for a record
+	 *                                   field or taxonomy of a content type; null when not known or invalid.
 	 */
-	private function scan_path( string $path, string $pointer, string $context, bool $template, array $scope, array &$uses ): void {
+	private function scan_path( string $path, string $pointer, string $context, bool $template, array $scope, array &$uses ): ?array {
 		$parts = explode( '.', $path );
 		$count = count( $parts );
 		$root  = $parts[0];
@@ -963,70 +1561,59 @@ trait AutomationRules {
 			/* translators: 1: path, 2: reason. */
 			$this->add( 'invalid_var', $pointer, sprintf( __( 'Path "%1$s": %2$s', 'pegwork' ), $path, $message ) );
 		};
+		$text  = array( 'def' => array( 'type' => 'text' ) );
 
 		if ( 'record' === $root ) {
 			if ( ! $scope['binds'] ) {
 				/* translators: %s: path. */
-				$this->add( 'automation_no_record', $pointer, sprintf( __( 'Path "%s" needs a record, but this trigger binds none (use a record.* event, a schedule with "for_each", or a form event that binds: form.confirmed, or form.submitted of a form without "confirm", of a form with a "target").', 'pegwork' ), $path ) );
-				return;
+				$this->add( 'automation_no_record', $pointer, sprintf( __( 'Path "%s" needs a record, but this trigger binds none (use a record.* event, a schedule with "for_each", a manual trigger with "content_type", or a form event that binds: form.confirmed, or form.submitted of a form without "confirm", of a form with a "target").', 'pegwork' ), $path ) );
+				return null;
 			}
 			if ( 2 !== $count ) {
 				$bad( __( 'use "record.<key>".', 'pegwork' ) );
-				return;
+				return null;
 			}
-			if ( in_array( $parts[1], array( 'id', 'status', 'type' ), true ) || ( $template && in_array( $parts[1], array( 'permalink', 'edit_url' ), true ) ) ) {
-				return;
+			return $this->record_path( $scope['type'], $parts[1], $pointer, $context, $template, $uses );
+		}
+
+		if ( 'item' === $root ) {
+			if ( null === $scope['each'] ) {
+				$bad( __( '"item.<key>" exists only inside {{#each}} ... {{/each}}; in a loop, use "steps.<loop>.item.<key>".', 'pegwork' ) );
+				return null;
 			}
-			$uses[] = array(
-				'use'     => 'record_key',
-				'pointer' => $pointer,
-				'key'     => $parts[1],
-				'context' => $context,
-				'type'    => $scope['type'],
-			);
-			return;
+			if ( 2 !== $count ) {
+				$bad( __( 'use "item.<key>".', 'pegwork' ) );
+				return null;
+			}
+			return $this->record_path( $scope['each'], $parts[1], $pointer, $context, $template, $uses );
 		}
 
 		if ( 'trigger' === $root ) {
-			$this->scan_trigger_path( $parts, $pointer, $context, $scope, $uses, $bad );
-			return;
+			return $this->scan_trigger_path( $parts, $pointer, $context, $scope, $uses, $bad );
 		}
 
 		if ( 'steps' === $root ) {
-			$type = 3 === $count ? ( $scope['steps'][ $parts[1] ] ?? null ) : null;
-			if ( 3 !== $count ) {
-				$bad( __( 'use "steps.<id>.<output>".', 'pegwork' ) );
-			} elseif ( null === $type && isset( $this->step_ids[ $parts[1] ] ) ) {
-				/* translators: %s: step id. */
-				$bad( sprintf( __( 'step "%s" runs only in another branch.', 'pegwork' ), $parts[1] ) );
-			} elseif ( null === $type ) {
-				/* translators: %s: step id. */
-				$bad( sprintf( __( 'no step "%s" runs before this point.', 'pegwork' ), $parts[1] ) );
-			} elseif ( ! in_array( $parts[2], self::STEP_OUTPUTS[ $type ] ?? array(), true ) ) {
-				/* translators: 1: step type, 2: output name. */
-				$bad( sprintf( __( '%1$s steps have no output "%2$s".', 'pegwork' ), $type, $parts[2] ) );
-			}
-			return;
+			return $this->scan_step_path( $parts, $pointer, $context, $template, $scope, $uses, $bad );
 		}
 
 		if ( 'site' === $root ) {
 			if ( 2 !== $count || ! in_array( $parts[1], array( 'name', 'url' ), true ) ) {
 				$bad( __( 'use "site.name" or "site.url".', 'pegwork' ) );
 			}
-			return;
+			return $template ? $text : null; // Conditions on site.* stay untyped, as before typed outputs.
 		}
 
 		if ( $template && in_array( $root, array( 'today', 'now' ), true ) ) {
 			if ( 1 !== $count ) {
 				$bad( __( 'today and now have no sub-keys.', 'pegwork' ) );
 			}
-			return;
+			return array( 'def' => array( 'type' => 'date' ) );
 		}
 		if ( $template && 'run' === $root ) {
 			if ( 2 !== $count || 'id' !== $parts[1] ) {
 				$bad( __( 'use "run.id".', 'pegwork' ) );
 			}
-			return;
+			return $text;
 		}
 		if ( $template && 'link' === $root ) {
 			if ( 2 !== $count ) {
@@ -1038,7 +1625,7 @@ trait AutomationRules {
 				/* translators: %s: path. */
 				$this->add( 'automation_no_record', $pointer, sprintf( __( 'Path "%s" signs a link for the bound record, but this trigger binds none.', 'pegwork' ), $path ) );
 			}
-			return;
+			return $text;
 		}
 
 		$bad(
@@ -1046,6 +1633,131 @@ trait AutomationRules {
 				? __( 'paths start with record, trigger, steps, site, today, now, run or link.', 'pegwork' )
 				: __( 'condition paths start with record, trigger, steps or site (use a date operand for today and now).', 'pegwork' )
 		);
+		return null;
+	}
+
+	/**
+	 * A record key of a content type (the bound record, a read record, a loop or `{{#each}}` item): `id`,
+	 * `status`, `type`, in templates `permalink` and `edit_url`, else a field or taxonomy (checked in references()).
+	 *
+	 * @param string|null                $type     Content type key; null when the trigger names none, '' when unknown.
+	 * @param string                     $key      Key.
+	 * @param string                     $pointer  JSON pointer of the path (or of its template).
+	 * @param string                     $context  `condition`, `private` or `public`.
+	 * @param bool                       $template Whether the path is in a template.
+	 * @param list<array<string, mixed>> $uses     Uses, appended to.
+	 * @return array<string, mixed> The path's type (see scan_path()).
+	 */
+	private function record_path( ?string $type, string $key, string $pointer, string $context, bool $template, array &$uses ): array {
+		if ( 'id' === $key ) {
+			return array( 'def' => array( 'type' => 'number' ) );
+		}
+		if ( in_array( $key, array( 'status', 'type' ), true ) || ( $template && in_array( $key, array( 'permalink', 'edit_url' ), true ) ) ) {
+			return array( 'def' => array( 'type' => 'text' ) );
+		}
+		$uses[] = array(
+			'use'     => 'record_key',
+			'pointer' => $pointer,
+			'key'     => $key,
+			'context' => $context,
+			'type'    => $type,
+		);
+		return array(
+			'ctype' => $type,
+			'key'   => $key,
+		);
+	}
+
+	/**
+	 * Checks a `steps.<id>.<output>[.<key>]` path: the step runs on every path before this point (or is the
+	 * loop whose body holds this point), has the output, and a record or sum key is valid.
+	 *
+	 * @param string[]                   $parts    Path segments.
+	 * @param string                     $pointer  JSON pointer of the path.
+	 * @param string                     $context  `condition`, `private` or `public`.
+	 * @param bool                       $template Whether the path is in a template.
+	 * @param array<string, mixed>       $scope    Scan scope.
+	 * @param list<array<string, mixed>> $uses     Uses, appended to.
+	 * @param callable                   $bad      Reports an invalid_var error with a reason.
+	 * @return array<string, mixed>|null The path's type (see scan_path()).
+	 */
+	private function scan_step_path( array $parts, string $pointer, string $context, bool $template, array $scope, array &$uses, callable $bad ): ?array {
+		$count = count( $parts );
+		if ( $count < 3 || $count > 4 ) {
+			$bad( __( 'use "steps.<id>.<output>", or "steps.<id>.record.<key>", "steps.<id>.item.<key>" or "steps.<id>.sum.<field>".', 'pegwork' ) );
+			return null;
+		}
+		[ , $id, $output ] = $parts;
+
+		if ( isset( $scope['loops'][ $id ] ) ) {
+			$type    = $scope['loops'][ $id ];
+			$outputs = self::LOOP_BODY_OUTPUTS;
+			if ( 'count' === $output ) {
+				/* translators: %s: loop step id. */
+				$bad( sprintf( __( 'the count of loop "%s" is set after the loop; inside it, use "index".', 'pegwork' ), $id ) );
+				return null;
+			}
+			$step = array(
+				'type'         => 'loop',
+				'content_type' => $type,
+			);
+		} else {
+			$step = $this->step_in_scope( $id, $scope );
+			if ( is_string( $step ) ) {
+				$bad( $step );
+				return null;
+			}
+			$outputs = ( self::STEP_OUTPUTS[ $step['type'] ] ?? array() ) + ( isset( $step['on_error'] ) ? self::ON_ERROR_OUTPUTS : array() );
+			if ( 'loop' === $step['type'] && isset( self::LOOP_BODY_OUTPUTS[ $output ] ) ) {
+				/* translators: 1: output name, 2: loop step id. */
+				$bad( sprintf( __( '"%1$s" exists only inside the body of loop "%2$s".', 'pegwork' ), $output, $id ) );
+				return null;
+			}
+		}
+
+		$kind = $outputs[ $output ] ?? null;
+		if ( null === $kind ) {
+			/* translators: 1: step type, 2: output name. */
+			$bad( sprintf( __( '%1$s steps have no output "%2$s".', 'pegwork' ), $step['type'] . ( isset( self::ON_ERROR_OUTPUTS[ $output ] ) ? __( ' (without "on_error")', 'pegwork' ) : '' ), $output ) );
+			return null;
+		}
+		if ( 'records' === $kind ) {
+			$bad( __( '"records" is a list: use it as a loop\'s "over" or in {{#each}} ... {{/each}}; "count" holds how many records match.', 'pegwork' ) );
+			return null;
+		}
+		$keyed = in_array( $kind, array( 'record', 'sum' ), true );
+		if ( ( 4 === $count ) !== $keyed ) {
+			$bad(
+				$keyed
+					/* translators: 1: step id, 2: output name. */
+					? sprintf( __( 'use "steps.%1$s.%2$s.<key>".', 'pegwork' ), $id, $output )
+					/* translators: 1: step id, 2: output name. */
+					: sprintf( __( 'use "steps.%1$s.%2$s".', 'pegwork' ), $id, $output )
+			);
+			return null;
+		}
+		if ( 'record' === $kind ) {
+			return $this->record_path( $step['content_type'], $parts[3], $pointer, $context, $template, $uses );
+		}
+		if ( 'sum' === $kind ) {
+			if ( ! in_array( $parts[3], $step['sum'] ?? array(), true ) ) {
+				/* translators: 1: field key, 2: step id. */
+				$bad( sprintf( __( 'step "%2$s" does not sum "%1$s"; add it to its "sum".', 'pegwork' ), $parts[3], $id ) );
+				return null;
+			}
+			if ( 'public' === $context ) {
+				$uses[] = array(
+					'use'     => 'record_key',
+					'pointer' => $pointer,
+					'key'     => $parts[3],
+					'context' => $context,
+					'type'    => $step['content_type'],
+				);
+			}
+			return array( 'def' => array( 'type' => 'number' ) );
+		}
+
+		return array( 'def' => array( 'type' => $kind ) );
 	}
 
 	/**
@@ -1057,8 +1769,9 @@ trait AutomationRules {
 	 * @param array<string, mixed>       $scope   Scan scope.
 	 * @param list<array<string, mixed>> $uses    Uses, appended to.
 	 * @param callable                   $bad     Reports an invalid_var error with a reason.
+	 * @return array<string, mixed>|null The path's type (see scan_path()).
 	 */
-	private function scan_trigger_path( array $parts, string $pointer, string $context, array $scope, array &$uses, callable $bad ): void {
+	private function scan_trigger_path( array $parts, string $pointer, string $context, array $scope, array &$uses, callable $bad ): ?array {
 		$count = count( $parts );
 		$key   = $parts[1] ?? null;
 
@@ -1066,11 +1779,18 @@ trait AutomationRules {
 			if ( 'payload' !== $key ) {
 				$bad( __( 'webhook triggers expose "trigger.payload.*" only.', 'pegwork' ) );
 			}
-			return;
+			return null;
 		}
 		if ( 'schedule' === $scope['trigger'] ) {
 			$bad( __( 'schedule triggers have no payload.', 'pegwork' ) );
-			return;
+			return null;
+		}
+		if ( 'manual' === $scope['trigger'] ) {
+			if ( 2 !== $count || ! in_array( $key, array( 'user_id', 'source' ), true ) ) {
+				$bad( __( 'manual triggers expose "trigger.user_id" and "trigger.source".', 'pegwork' ) );
+				return null;
+			}
+			return array( 'def' => array( 'type' => 'user_id' === $key ? 'number' : 'text' ) );
 		}
 
 		$event = (string) $scope['event'];
@@ -1078,12 +1798,12 @@ trait AutomationRules {
 			if ( null === $key || ! in_array( $key, self::RECORD_EVENT_KEYS[ $event ], true ) ) {
 				/* translators: 1: event name, 2: comma-separated keys. */
 				$bad( sprintf( __( '%1$s payloads have %2$s.', 'pegwork' ), $event, implode( ', ', self::RECORD_EVENT_KEYS[ $event ] ) ) );
-				return;
+				return null;
 			}
 			if ( 'old' === $key ) {
 				if ( 3 !== $count ) {
 					$bad( __( 'use "trigger.old.<key>".', 'pegwork' ) );
-					return;
+					return null;
 				}
 				$uses[] = array(
 					'use'     => 'record_key',
@@ -1092,15 +1812,19 @@ trait AutomationRules {
 					'context' => $context,
 					'type'    => $scope['type'],
 				);
+				return array(
+					'ctype' => $scope['type'],
+					'key'   => $parts[2],
+				);
 			}
-			return;
+			return null;
 		}
 
 		if ( str_starts_with( $event, 'form.' ) ) {
 			if ( null === $key || ! in_array( $key, self::FORM_EVENT_KEYS, true ) ) {
 				/* translators: %s: comma-separated keys. */
 				$bad( sprintf( __( 'form event payloads have %s.', 'pegwork' ), implode( ', ', self::FORM_EVENT_KEYS ) ) );
-				return;
+				return null;
 			}
 			if ( 'values' === $key && 3 === $count && null !== $scope['form'] ) {
 				$uses[] = array(
@@ -1112,6 +1836,7 @@ trait AutomationRules {
 				);
 			}
 		}
+		return null;
 	}
 
 	/**
@@ -1132,7 +1857,7 @@ trait AutomationRules {
 			$targets['/trigger/for_each/content_type'] = $trigger['for_each']['content_type'];
 		}
 		foreach ( self::step_tree( $data['steps'], '/steps' ) as $at => $step ) {
-			if ( 'create_record' === $step['type'] ) {
+			if ( isset( $step['content_type'] ) && in_array( $step['type'], array( 'create_record', 'get_record', 'find_records', 'call_webhook' ), true ) ) {
 				$targets[ $at . '/content_type' ] = $step['content_type'];
 			}
 		}
@@ -1154,13 +1879,17 @@ trait AutomationRules {
 				continue;
 			}
 			match ( $found['use'] ) {
-				'record_key'    => $this->check_record_key( $found, $known ),
-				'option'        => $this->check_option( $found, $known ),
-				'date_filter'   => $this->check_date_filter( $found, $known ),
-				'form_value'    => $this->check_form_value( $found, $known ),
-				'leaf'          => $this->check_leaf( $found, $known ),
-				'write'         => $this->check_write( $found, $known ),
-				default         => null,
+				'record_key' => $this->check_record_key( $found, $known ),
+				'option'     => $this->check_option( $found, $known ),
+				'filter'     => $this->check_filter( $found, $known ),
+				'form_value' => $this->check_form_value( $found, $known ),
+				'leaf'       => $this->check_leaf( $found, $known ),
+				'write'      => $this->check_write( $found, $known ),
+				'related'    => $this->check_related( $found, $known ),
+				'read_leaf'  => $this->check_read_leaf( $found, $known ),
+				'read_field' => $this->check_read_field( $found, $known ),
+				'relate'     => $this->check_relate( $found, $known ),
+				default      => null,
 			};
 		}
 	}
@@ -1257,23 +1986,28 @@ trait AutomationRules {
 			);
 			return;
 		}
-		if ( $found['date'] && 'date' !== ( $field['type'] ?? '' ) ) {
-			/* translators: 1: options page key, 2: field key. */
-			$this->add( 'invalid_template', $found['pointer'], sprintf( __( 'Options field "%1$s.%2$s" is not a date field, so it cannot take "| date".', 'pegwork' ), $found['page'], $found['key'] ) );
+		foreach ( $found['filters'] as $filter ) {
+			$wanted = 'number' === $filter ? 'number' : 'date';
+			if ( ( $field['type'] ?? '' ) !== $wanted ) {
+				/* translators: 1: options page key, 2: field key, 3: field type, 4: filter. */
+				$this->add( 'invalid_template', $found['pointer'], sprintf( __( 'Options field "%1$s.%2$s" is not a %3$s field, so it cannot take "| %4$s".', 'pegwork' ), $found['page'], $found['key'], $wanted, $filter ) );
+				return;
+			}
 		}
 	}
 
 	/**
-	 * Checks that a `| date` filter on a record field names a date field.
+	 * Checks that a `| date` or `| add` filter on a record field names a date field, and `| number` a number field.
 	 *
-	 * @param array<string, mixed>                $found Use from scan_date_filter().
+	 * @param array<string, mixed>                $found Use from scan_filter().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
 	 */
-	private function check_date_filter( array $found, array $known ): void {
+	private function check_filter( array $found, array $known ): void {
 		$definition = $this->record_key_definition( $found['type'], $found['key'], $known );
-		if ( is_array( $definition ) && 'date' !== ( $definition['type'] ?? '' ) ) {
-			/* translators: %s: path. */
-			$this->add( 'invalid_template', $found['pointer'], sprintf( __( 'Path "%s" is not a date field, so it cannot take "| date".', 'pegwork' ), $found['path'] ) );
+		$wanted     = 'number' === $found['filter'] ? 'number' : 'date';
+		if ( is_array( $definition ) && ( $definition['type'] ?? '' ) !== $wanted ) {
+			/* translators: 1: path, 2: field type, 3: filter. */
+			$this->add( 'invalid_template', $found['pointer'], sprintf( __( 'Path "%1$s" is not a %2$s field, so it cannot take "| %3$s".', 'pegwork' ), $found['path'], $wanted, $found['filter'] ) );
 		}
 	}
 
@@ -1304,30 +2038,20 @@ trait AutomationRules {
 	}
 
 	/**
-	 * Type of the value a condition var reads, when known: a field definition, or a pseudo field.
+	 * Type of the value a path reads, when known: a field definition, or a pseudo field `{ type }`.
 	 *
-	 * @param string                              $path  Var path.
-	 * @param string|null                         $type  Bound content type.
+	 * @param array<string, mixed>|null           $ref   The path's type from scan_path().
 	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
 	 * @return array<string, mixed>|null Definition with `type`, or null when the type is not known.
 	 */
-	private function var_definition( string $path, ?string $type, array $known ): ?array {
-		$parts = explode( '.', $path );
-		if ( 'record' === $parts[0] && 2 === count( $parts ) ) {
-			if ( 'id' === $parts[1] ) {
-				return array( 'type' => 'number' );
-			}
-			if ( in_array( $parts[1], array( 'status', 'type' ), true ) ) {
-				return array( 'type' => 'text' );
-			}
-			$key = $parts[1];
-		} elseif ( 'trigger' === $parts[0] && 'old' === ( $parts[1] ?? null ) && 3 === count( $parts ) ) {
-			$key = $parts[2];
-		} else {
+	private function ref_definition( ?array $ref, array $known ): ?array {
+		if ( isset( $ref['def'] ) ) {
+			return $ref['def'];
+		}
+		if ( ! is_array( $ref ) || ! isset( $ref['key'] ) ) {
 			return null;
 		}
-
-		$definition = $this->record_key_definition( $type, $key, $known );
+		$definition = $this->record_key_definition( $ref['ctype'], $ref['key'], $known );
 
 		return is_array( $definition ) ? $definition : null;
 	}
@@ -1340,46 +2064,190 @@ trait AutomationRules {
 	 */
 	private function check_leaf( array $found, array $known ): void {
 		$leaf       = $found['leaf'];
-		$definition = $this->var_definition( $leaf['var'], $found['type'], $known );
-		if ( null === $definition ) {
-			return;
-		}
-		$type     = $definition['type'];
-		$op       = $leaf['op'];
-		$mismatch = function ( string $message ) use ( $found, $leaf ): void {
+		$definition = $this->ref_definition( $found['ref'], $known );
+		$reason     = null === $definition ? null : self::leaf_mismatch( $definition, $leaf );
+		if ( null !== $reason ) {
 			/* translators: 1: var path, 2: reason. */
-			$this->add( 'condition_type_mismatch', $found['pointer'], sprintf( __( 'Condition on "%1$s": %2$s', 'pegwork' ), $leaf['var'], $message ) );
-		};
+			$this->add( 'condition_type_mismatch', $found['pointer'], sprintf( __( 'Condition on "%1$s": %2$s', 'pegwork' ), $leaf['var'], $reason ) );
+		}
+	}
+
+	/**
+	 * Why a condition or filter leaf's operator and literal operands do not suit the value's type, or null.
+	 *
+	 * @param array<string, mixed> $definition Field definition or pseudo field `{ type }`.
+	 * @param array<string, mixed> $leaf       Leaf with `op` and maybe `value`.
+	 */
+	private static function leaf_mismatch( array $definition, array $leaf ): ?string {
+		$type = $definition['type'];
+		$op   = $leaf['op'];
 
 		if ( in_array( $op, self::ORDER_OPS, true ) && ! in_array( $type, array( 'number', 'date' ), true ) ) {
 			/* translators: 1: operator, 2: field type. */
-			$mismatch( sprintf( __( '"%1$s" compares numbers and dates, not %2$s values.', 'pegwork' ), $op, $type ) );
-			return;
+			return sprintf( __( '"%1$s" compares numbers and dates, not %2$s values.', 'pegwork' ), $op, $type );
 		}
 		if ( 'contains' === $op && ! ( 'taxonomy' === $type && 'multi' === $definition['select'] ) ) {
-			$mismatch( __( '"contains" applies to multi-select taxonomies only.', 'pegwork' ) );
-			return;
+			return __( '"contains" applies to multi-select taxonomies only.', 'pegwork' );
 		}
 		if ( in_array( $op, self::UNARY_OPS, true ) ) {
-			return;
+			return null;
 		}
 
 		$value = $leaf['value'];
 		if ( is_array( $value ) && isset( $value['date'] ) ) {
-			if ( 'date' !== $type ) {
-				/* translators: %s: field type. */
-				$mismatch( sprintf( __( 'a date operand cannot compare with a %s value.', 'pegwork' ), $type ) );
-			}
-			return;
+			/* translators: %s: field type. */
+			return 'date' !== $type ? sprintf( __( 'a date operand cannot compare with a %s value.', 'pegwork' ), $type ) : null;
 		}
 		if ( is_array( $value ) && isset( $value['var'] ) ) {
-			return;
+			return null;
 		}
 		foreach ( in_array( $op, self::LIST_OPS, true ) ? $value : array( $value ) as $literal ) {
 			$reason = self::literal_mismatch( $definition, $literal, 'contains' === $op );
 			if ( null !== $reason ) {
-				$mismatch( $reason );
-				return;
+				return $reason;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Checks a read's `related`: the relationship exists, has the read type at one end, and a typed `of`
+	 * reference is a record of the other end.
+	 *
+	 * @param array<string, mixed>                $found Use from scan_read().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_related( array $found, array $known ): void {
+		$relationship = $this->relationship_definition( $found['relationship'], $found['pointer'] . '/relationship', $known );
+		if ( null === $relationship ) {
+			return;
+		}
+		$ends = array( $relationship['from'], $relationship['to'] );
+		if ( ! in_array( $found['type'], $ends, true ) ) {
+			/* translators: 1: relationship key, 2: content type key. */
+			$this->add( 'relationship_end', $found['pointer'] . '/relationship', sprintf( __( 'Relationship "%1$s" does not link "%2$s" records.', 'pegwork' ), $found['relationship'], $found['type'] ) );
+			return;
+		}
+		$other = $relationship['from'] === $found['type'] ? $relationship['to'] : $relationship['from'];
+		if ( null !== $found['of'] && $other !== $found['of'] ) {
+			/* translators: 1: content type key, 2: relationship key, 3: content type key. */
+			$this->add( 'relationship_end', $found['pointer'] . '/of', sprintf( __( '"of" is a "%1$s" record, but relationship "%2$s" reads from "%3$s" records here.', 'pegwork' ), $found['of'], $found['relationship'], $other ) );
+		}
+	}
+
+	/**
+	 * A relationship definition, reporting `unknown_relationship` when it is not defined.
+	 *
+	 * @param string                              $key     Relationship key.
+	 * @param string                              $pointer JSON pointer of the reference.
+	 * @param array<string, array<string, mixed>> $known   Defined objects by kind, then key.
+	 * @return array<string, mixed>|null The definition, or null when missing or its contents are unknown.
+	 */
+	private function relationship_definition( string $key, string $pointer, array $known ): ?array {
+		if ( ! isset( $known['relationship'][ $key ] ) ) {
+			/* translators: %s: relationship key. */
+			$this->add( 'unknown_relationship', $pointer, sprintf( __( 'Relationship "%s" is not defined.', 'pegwork' ), $key ) );
+			return null;
+		}
+		$relationship = $known['relationship'][ $key ];
+
+		return is_array( $relationship ) && isset( $relationship['from'], $relationship['to'] ) ? $relationship : null;
+	}
+
+	/**
+	 * Checks a read filter leaf: the field exists and can be filtered, and the operator and literals fit its type.
+	 *
+	 * @param array<string, mixed>                $found Use from scan_read().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_read_leaf( array $found, array $known ): void {
+		$leaf       = $found['leaf'];
+		$definition = 'id' === $leaf['field'] ? array( 'type' => 'number' ) : $this->read_field_definition( $found['type'], $leaf['field'], $found['pointer'] . '/field', $known );
+		if ( null === $definition ) {
+			return;
+		}
+		if ( in_array( $definition['type'], RecordQuery::UNFILTERABLE_TYPES, true ) || 'post_content' === ( $definition['wp']['storage'] ?? null ) ) {
+			/* translators: %s: field key. */
+			$this->add( 'filter_field', $found['pointer'] . '/field', sprintf( __( 'Field "%s" holds long text and cannot be filtered.', 'pegwork' ), $leaf['field'] ) );
+			return;
+		}
+		$reason = self::leaf_mismatch( $definition, $leaf );
+		if ( null !== $reason ) {
+			/* translators: 1: field key, 2: reason. */
+			$this->add( 'condition_type_mismatch', $found['pointer'], sprintf( __( 'Filter on "%1$s": %2$s', 'pegwork' ), $leaf['field'], $reason ) );
+		}
+	}
+
+	/**
+	 * Checks a `sum` field (a number field) or the `sort` field (`id`, a text, number, date, select or email
+	 * field, or a title-storage field).
+	 *
+	 * @param array<string, mixed>                $found Use from scan_read().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_read_field( array $found, array $known ): void {
+		if ( 'sort' === $found['role'] && 'id' === $found['key'] ) {
+			return;
+		}
+		$definition = $this->read_field_definition( $found['type'], $found['key'], $found['pointer'], $known );
+		if ( null === $definition ) {
+			return;
+		}
+		$storage = $definition['wp']['storage'] ?? null;
+		if ( 'sum' === $found['role'] && 'number' !== $definition['type'] ) {
+			/* translators: %s: field key. */
+			$this->add( 'filter_field', $found['pointer'], sprintf( __( 'Only number fields can be summed, not "%s".', 'pegwork' ), $found['key'] ) );
+		}
+		if ( 'sort' === $found['role'] && ( 'post_content' === $storage || ( 'post_title' !== $storage && ! in_array( $definition['type'], RecordQuery::SORTABLE_TYPES, true ) ) ) ) {
+			/* translators: %s: field key. */
+			$this->add( 'filter_field', $found['pointer'], sprintf( __( 'Records cannot be sorted by "%s".', 'pegwork' ), $found['key'] ) );
+		}
+	}
+
+	/**
+	 * The definition of a field or taxonomy a read names, reporting `unknown_field` when it is not defined.
+	 *
+	 * @param string                              $type    Content type read.
+	 * @param string                              $key     Field or taxonomy key.
+	 * @param string                              $pointer JSON pointer of the key.
+	 * @param array<string, array<string, mixed>> $known   Defined objects by kind, then key.
+	 * @return array<string, mixed>|null The definition, or null when missing or the type's contents are unknown.
+	 */
+	private function read_field_definition( string $type, string $key, string $pointer, array $known ): ?array {
+		$definition = $this->record_key_definition( $type, $key, $known );
+		if ( false === $definition ) {
+			/* translators: 1: field key, 2: content type key. */
+			$this->add( 'unknown_field', $pointer, sprintf( __( '"%1$s" is not a field or taxonomy of content type "%2$s".', 'pegwork' ), $key, $type ) );
+			return null;
+		}
+		return $definition;
+	}
+
+	/**
+	 * Checks a relate step: the relationship exists, `from` defaults to a bound record of its "from" type, and
+	 * typed `from` and `to` references are records of the right ends.
+	 *
+	 * @param array<string, mixed>                $found Use from scan_steps().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_relate( array $found, array $known ): void {
+		$relationship = $this->relationship_definition( $found['relationship'], $found['pointer'] . '/relationship', $known );
+		if ( null === $relationship ) {
+			return;
+		}
+		$default = $found['default_from'];
+		if ( false !== $default && '' !== $default && $relationship['from'] !== $default ) {
+			$this->add(
+				'missing_property',
+				$found['pointer'],
+				/* translators: 1: content type key, 2: relationship key. */
+				sprintf( __( 'Missing "from": it defaults to the bound record only when that is a "%1$s" record, the "from" end of "%2$s".', 'pegwork' ), $relationship['from'], $found['relationship'] )
+			);
+		}
+		foreach ( array( 'from', 'to' ) as $end ) {
+			if ( null !== $found[ $end ] && $relationship[ $end ] !== $found[ $end ] ) {
+				/* translators: 1: end, 2: content type key, 3: relationship key, 4: content type key. */
+				$this->add( 'relationship_end', $found['pointer'] . '/' . $end, sprintf( __( '"%1$s" is a "%2$s" record, but the "%1$s" end of relationship "%3$s" is "%4$s".', 'pegwork' ), $end, $found[ $end ], $found['relationship'], $relationship[ $end ] ) );
 			}
 		}
 	}
@@ -1396,7 +2264,18 @@ trait AutomationRules {
 		}
 		$definition = $this->record_key_definition( $found['type'], $found['key'], $known );
 		if ( false === $definition ) {
-			$this->check_record_key( $found + array( 'context' => 'private' ), $known );
+			$definition = $this->written_relationship( (string) $found['type'], $found['key'], $known );
+		}
+		if ( false === $definition ) {
+			$this->add(
+				'unknown_field',
+				$found['pointer'],
+				null === $found['type']
+					/* translators: %s: field key. */
+					? sprintf( __( 'Field "%s" cannot be checked: name the trigger\'s "content_type" to use record fields.', 'pegwork' ), $found['key'] )
+					/* translators: 1: field key, 2: content type key. */
+					: sprintf( __( '"%1$s" is not a field or taxonomy of content type "%2$s", or a relationship from it.', 'pegwork' ), $found['key'], $found['type'] )
+			);
 			return;
 		}
 		if ( null === $definition ) {
@@ -1407,10 +2286,13 @@ trait AutomationRules {
 		if ( is_string( $value ) && ( '' === $value || str_contains( $value, '{{' ) ) ) {
 			return; // Empty clears the field; templates are cast to the field type at run time.
 		}
-		if ( is_array( $value ) ) {
-			$reason = 'taxonomy' === $definition['type'] && 'multi' === $definition['select']
+		if ( 'relationship' === $definition['type'] ) {
+			$ids    = is_array( $value ) ? array() === array_filter( $value, fn( $id ) => ! is_int( $id ) || $id < 1 ) : is_string( $value ) && 1 === preg_match( '/^\s*[1-9][0-9]*(\s*,\s*[1-9][0-9]*)*\s*$/', $value );
+			$reason = $ids ? null : __( 'a relationship takes record IDs: a template, comma-separated IDs or a list of integers.', 'pegwork' );
+		} elseif ( is_array( $value ) ) {
+			$reason = 'taxonomy' === $definition['type'] && 'multi' === $definition['select'] && count( array_filter( $value, 'is_string' ) ) === count( $value )
 				? null
-				: __( 'only multi-select taxonomies take a list.', 'pegwork' );
+				: __( 'only multi-select taxonomies take a list, of term slugs.', 'pegwork' );
 		} else {
 			$reason = self::literal_mismatch( $definition, $value, false );
 		}
@@ -1418,6 +2300,26 @@ trait AutomationRules {
 			/* translators: 1: field key, 2: reason. */
 			$this->add( 'automation_value_type', $found['pointer'], sprintf( __( 'Value for "%1$s": %2$s', 'pegwork' ), $found['key'], $reason ) );
 		}
+	}
+
+	/**
+	 * A relationship whose "from" end is the written type, as a pseudo field `{ type: relationship }`.
+	 *
+	 * @param string                              $type  Content type written.
+	 * @param string                              $key   Values key.
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 * @return array<string, mixed>|false|null False when no such relationship, null when its contents are unknown.
+	 */
+	private function written_relationship( string $type, string $key, array $known ): array|false|null {
+		$relationship = $known['relationship'][ $key ] ?? null;
+		if ( null === $relationship ) {
+			return false;
+		}
+		if ( ! is_array( $relationship ) || ! isset( $relationship['from'] ) ) {
+			return null;
+		}
+
+		return $type === $relationship['from'] ? array( 'type' => 'relationship' ) : false;
 	}
 
 	/**

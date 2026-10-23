@@ -1,0 +1,9 @@
+{ "format": 1, "key": "barn_resend_thanks", "label": "Resend the thank-you for a gift",
+  "trigger": { "type": "manual", "content_type": "barn_gift", "button": "Resend thank-you", "allow": "editors" },
+  "steps": [
+    { "id": "donor", "type": "get_record", "content_type": "barn_contact",
+      "related": { "relationship": "gift_donor", "of": "{{record.id}}" } },
+    { "id": "has_donor", "type": "condition", "when": { "var": "steps.donor.found", "op": "eq", "value": true } },
+    { "id": "thank", "type": "send_email", "to": "{{steps.donor.record.email}}",
+      "subject": "Thank you for your gift",
+      "text": "Dear {{steps.donor.record.name}},\n\nThank you again for your gift of ${{record.amount | number}} on {{record.received_on | date}}.\n\n{{site.name}}" } ] }

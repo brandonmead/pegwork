@@ -412,4 +412,89 @@ class NormalizerTest extends TestCase {
 			}
 		}
 	}
+
+	/**
+	 * Automation v3 defaults: reads get `status` (sorted) and `sort`, find_records `limit`, relate `action`,
+	 * manual triggers `allow`, filled inside loop bodies and branches; the result is idempotent.
+	 */
+	public function test_reads_defaults() {
+		$read = array(
+			'id'           => 'r',
+			'type'         => 'get_record',
+			'content_type' => 'barn_gift',
+			'record'       => '{{record.id}}',
+		);
+		$data = Normalizer::normalize(
+			'automation',
+			array(
+				'format'  => 1,
+				'key'     => 'a',
+				'label'   => 'A',
+				'trigger' => array(
+					'type'   => 'manual',
+					'button' => 'Run',
+				),
+				'steps'   => array(
+					array(
+						'id'           => 'f',
+						'type'         => 'find_records',
+						'content_type' => 'barn_gift',
+						'status'       => array( 'publish', 'draft' ),
+						'sort'         => array( 'field' => 'amount' ),
+						'filter'       => array(
+							'all' => array(
+								array(
+									'field' => 'amount',
+									'op'    => 'not_empty',
+								),
+							),
+						),
+					),
+					array(
+						'id'    => 'l',
+						'type'  => 'loop',
+						'over'  => 'steps.f.records',
+						'steps' => array(
+							$read,
+							array(
+								'id'           => 'link',
+								'type'         => 'relate',
+								'relationship' => 'gift_donor',
+								'to'           => '1',
+							),
+						),
+					),
+				),
+			)
+		);
+
+		$this->assertSame( 'admins', $data['trigger']['allow'] );
+		$this->assertSame( array( 'draft', 'publish' ), $data['steps'][0]['status'] );
+		$this->assertSame(
+			array(
+				'field' => 'amount',
+				'order' => 'asc',
+			),
+			$data['steps'][0]['sort']
+		);
+		$this->assertSame( 10, $data['steps'][0]['limit'] );
+		$body = $data['steps'][1]['steps'];
+		$this->assertSame( array( 'private', 'publish' ), $body[0]['status'] );
+		$this->assertSame(
+			array(
+				'field' => 'id',
+				'order' => 'asc',
+			),
+			$body[0]['sort']
+		);
+		$this->assertArrayNotHasKey( 'limit', $body[0] );
+		$this->assertSame( 'add', $body[1]['action'] );
+		$this->assertSame( wp_json_encode( $data ), wp_json_encode( Normalizer::normalize( 'automation', $data ) ) );
+
+		$result = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/reads' ) );
+		$this->assertTrue( $result->is_valid() );
+		foreach ( $result->registry->automations() as $object ) {
+			$this->assertSame( wp_json_encode( $object ), wp_json_encode( Normalizer::normalize( 'automation', $object ) ) );
+		}
+	}
 }
