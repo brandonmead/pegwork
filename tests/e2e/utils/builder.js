@@ -45,8 +45,9 @@ async function focus( locator ) {
 					)
 				)
 		);
+	// Each try is bounded, so a control that never appears fails here, not at the test timeout.
 	await expect( async () => {
-		await locator.focus();
+		await locator.focus( { timeout: 2000 } );
 		await expect( locator ).toBeFocused( { timeout: 1000 } );
 	} ).toPass( { timeout: 10_000 } );
 }
@@ -204,7 +205,7 @@ async function selectCard( page, id ) {
 		.locator(
 			'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " block-editor-block-list__block ")][1]'
 		);
-	await card.focus();
+	await card.focus( { timeout: 10_000 } );
 	await expect.poll( () => selectedId( page ) ).toBe( id );
 	return card;
 }

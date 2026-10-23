@@ -67,6 +67,8 @@ do_create() {
 		wp config set WP_DEBUG true --raw --quiet
 		wp config set WP_DEBUG_LOG true --raw --quiet
 		wp config set WP_DEBUG_DISPLAY false --raw --quiet
+		# As wp-env in CI: development React builds, whose StrictMode runs mount effects twice.
+		wp config set SCRIPT_DEBUG true --raw --quiet
 	fi
 	# Fails when the database already exists; the install check below catches real problems.
 	wp db create >/dev/null 2>&1 || true

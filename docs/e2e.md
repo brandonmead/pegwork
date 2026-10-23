@@ -45,7 +45,7 @@ bin/e2e-local-site.sh stop e2e
 bin/e2e-local-site.sh destroy e2e         # stop, drop database wpenv_e2e; delete ~/wp-envs/e2e yourself
 ```
 
-Subcommands: `create <name> <port>`, `start <name> <port>`, `stop <name>`, `destroy <name>`. All are idempotent. The script only touches database `wpenv_<name>` and folder `~/wp-envs/<name>`, and writes the random admin password only to `~/wp-envs/<name>/.e2e-env` (mode 600).
+Subcommands: `create <name> <port>`, `start <name> <port>`, `stop <name>`, `destroy <name>`. All are idempotent. A new site gets `WP_DEBUG` and `SCRIPT_DEBUG` like wp-env in CI: `SCRIPT_DEBUG` loads development React, whose StrictMode runs mount effects twice, so effect bugs that only CI showed reproduce locally (on an older site: `wp config set SCRIPT_DEBUG true --raw`). The script only touches database `wpenv_<name>` and folder `~/wp-envs/<name>`, and writes the random admin password only to `~/wp-envs/<name>/.e2e-env` (mode 600).
 
 What `create` does, step by step (the same by hand):
 

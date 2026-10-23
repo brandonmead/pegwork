@@ -18,6 +18,7 @@ const {
 	canvas,
 	checkPegworkA11y,
 	choose,
+	focus,
 	insertFrom,
 	insertMain,
 	openBlockTab,
