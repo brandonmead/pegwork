@@ -14,9 +14,9 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Registry: `decision` step and form binding (merged, #42).
 2. Engine: branches, `Plan`, form binding in triggers, run log path (merged, #50).
 3. Save API and editing surface (merged, #52).
-4. Preview and dry run (in review, #53).
-5. Editor UI (planned).
-6. BarnCRM proof: 6a (fixture package `tests/fixtures/valid/barn`, E2E package `tests/e2e/packages/barn`, `BarnFlowsGateTest` for both section 11 timelines, Local runbook) in review, branch `phase6-barn`; 6b (keyboard-only editor E2E that builds both examples and compares them with the fixtures, screenshots) after PR 5.
+4. Preview and dry run (merged, #53).
+5. Editor UI (in review, #55, branch `phase6-editor`).
+6. BarnCRM proof: 6a (fixture package `tests/fixtures/valid/barn`, E2E package `tests/e2e/packages/barn`, `BarnFlowsGateTest` for both section 11 timelines, Local runbook) merged (#54); 6b (keyboard-only editor E2E that builds both examples and compares them with the fixtures, screenshots) after PR 5.
 
 ## Phase 1 PRs
 1. Scaffold (merged)

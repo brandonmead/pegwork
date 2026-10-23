@@ -9,7 +9,11 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Editor;
 
+use Pegwork\Api\Registry;
 use PegworkAutomation\Admin\Screen;
+use PegworkAutomation\Engine;
+use PegworkAutomation\Overrides;
+use PegworkAutomation\Webhooks\Inbound;
 use WP_Block_Type_Registry;
 use WP_Post;
 
@@ -126,7 +130,8 @@ final class BuilderEditor {
 
 	/**
 	 * Enqueues the builder stylesheet on automation editor screens. Hooked to enqueue_block_assets,
-	 * which the block editor also runs for its iframed canvas.
+	 * which the block editor also runs for its iframed canvas. Depends on dashicons, which the canvas
+	 * does not load by itself, for the card icons.
 	 */
 	public static function enqueue_style(): void {
 		if ( ! is_admin() ) {
@@ -138,7 +143,7 @@ final class BuilderEditor {
 		}
 		$asset_file = PEGWORK_DIR . 'assets/build/automation-builder.asset.php';
 		$version    = is_readable( $asset_file ) ? ( require $asset_file )['version'] : null;
-		wp_enqueue_style( self::HANDLE, plugins_url( 'assets/build/automation-builder.css', PEGWORK_FILE ), array(), $version );
+		wp_enqueue_style( self::HANDLE, plugins_url( 'assets/build/automation-builder.css', PEGWORK_FILE ), array( 'dashicons' ), $version );
 		wp_style_add_data( self::HANDLE, 'rtl', 'replace' );
 	}
 
@@ -152,6 +157,19 @@ final class BuilderEditor {
 		$key    = AutomationPost::key_of( $post->ID );
 		$source = '' === $key ? null : pegwork_registry()->automation_source( $key );
 		$file   = null !== $source && 'db' !== $source;
+		$open   = 0;
+		if ( null !== $source ) {
+			$engine = Engine::instance();
+			$counts = $engine->runs()->summary( $engine->runs()->stamp( $engine->clock()->now() ) )[ $key ] ?? array();
+			$open   = (int) ( $counts['queued'] ?? 0 ) + (int) ( $counts['waiting'] ?? 0 ) + (int) ( $counts['running'] ?? 0 );
+		}
+		$rest = array();
+		foreach ( array_keys( pegwork_registry()->content_types() ) as $type ) {
+			$object = get_post_type_object( (string) $type );
+			if ( null !== $object && $object->show_in_rest ) {
+				$rest[ (string) $type ] = (string) ( $object->rest_base ? $object->rest_base : $type );
+			}
+		}
 
 		return array(
 			'lockedKey'    => $key,
@@ -159,6 +177,115 @@ final class BuilderEditor {
 			'package'      => $file ? substr( (string) $source, 5 ) : '',
 			'duplicateUrl' => $file ? self::duplicate_url( $key ) : '',
 			'listUrl'      => Screen::url(),
+			'webhookUrl'   => null !== $source ? Inbound::url( $key ) : '',
+			'override'     => null !== $source ? (string) Overrides::get( $key ) : '',
+			'openRuns'     => $open,
+			'rest'         => (object) $rest,
+		) + self::registry_config( pegwork_registry() );
+	}
+
+	/**
+	 * What the builder needs from the registry to list fields, merge tags and operators: content types
+	 * (fields with type, options and privacy; taxonomies with single or multiple select and terms),
+	 * forms (target, confirm, items with privacy from the target type) and options pages. The shared
+	 * fixture tests/fixtures/automation/scope.json holds this shape for the branching fixture package.
+	 *
+	 * @param Registry $registry Registry.
+	 * @return array{types: list<array<string, mixed>>, forms: list<array<string, mixed>>, optionsPages: list<array<string, mixed>>}
+	 */
+	public static function registry_config( Registry $registry ): array {
+		$taxonomies = $registry->taxonomies();
+		$options    = static fn( $choices ) => array_map(
+			static fn( $option ) => array(
+				'value' => (string) $option['value'],
+				'label' => (string) ( $option['label'] ?? $option['value'] ),
+			),
+			is_array( $choices ) ? array_values( $choices ) : array()
+		);
+		$field      = static fn( array $definition ) => array_filter(
+			array(
+				'key'     => (string) $definition['key'],
+				'label'   => (string) ( $definition['label'] ?? $definition['key'] ),
+				'type'    => (string) $definition['type'],
+				'options' => isset( $definition['options'] ) ? $options( $definition['options'] ) : null,
+				'private' => 'private' === ( $definition['visibility'] ?? 'public' ) ? true : null,
+			),
+			static fn( $value ) => null !== $value
+		);
+
+		$types = array();
+		foreach ( $registry->content_types() as $type_key => $type ) {
+			$usages = array();
+			foreach ( $type['taxonomies'] ?? array() as $usage ) {
+				$definition = $taxonomies[ $usage['key'] ] ?? array();
+				$multiple   = 'multi' === ( $usage['select'] ?? 'multi' );
+				$labels     = $definition['labels'] ?? array();
+				$usages[]   = array(
+					'key'      => (string) $usage['key'],
+					'label'    => (string) ( $multiple ? ( $labels['plural'] ?? $usage['key'] ) : ( $labels['singular'] ?? $usage['key'] ) ),
+					'multiple' => $multiple,
+					'options'  => array_map(
+						static fn( $term ) => array(
+							'value' => (string) $term['slug'],
+							'label' => (string) $term['name'],
+						),
+						$definition['terms'] ?? array()
+					),
+				);
+			}
+			$types[] = array(
+				'key'        => (string) $type_key,
+				'label'      => (string) ( $type['labels']['singular'] ?? $type_key ),
+				'fields'     => array_map( $field, array_values( $registry->fields( (string) $type_key ) ) ),
+				'taxonomies' => $usages,
+			);
+		}
+
+		$forms = array();
+		foreach ( $registry->forms() as $form_key => $form ) {
+			$target = (string) ( $form['target']['content_type'] ?? '' );
+			$fields = $registry->fields( $target );
+			$items  = array();
+			$lists  = isset( $form['steps'] ) ? array_column( $form['steps'], 'fields' ) : array( $form['fields'] ?? array() );
+			foreach ( $lists as $list ) {
+				foreach ( $list as $item ) {
+					$bound = $item['bind']['field'] ?? null;
+					$key   = (string) ( $bound ?? ( $item['bind']['taxonomy'] ?? ( $item['key'] ?? '' ) ) );
+					if ( '' === $key ) {
+						continue;
+					}
+					$items[] = array_filter(
+						array(
+							'key'     => $key,
+							'label'   => (string) ( $item['label'] ?? ( $fields[ $key ]['label'] ?? $key ) ),
+							'private' => null !== $bound && 'private' === ( $fields[ $key ]['visibility'] ?? 'public' ) ? true : null,
+						),
+						static fn( $value ) => null !== $value
+					);
+				}
+			}
+			$forms[] = array(
+				'key'     => (string) $form_key,
+				'label'   => (string) ( $form['label'] ?? $form_key ),
+				'target'  => $target,
+				'confirm' => isset( $form['confirm'] ),
+				'fields'  => $items,
+			);
+		}
+
+		$pages = array();
+		foreach ( $registry->options_pages() as $page_key => $page ) {
+			$pages[] = array(
+				'key'    => (string) $page_key,
+				'label'  => (string) ( $page['title'] ?? $page_key ),
+				'fields' => array_map( $field, array_values( $page['fields'] ?? array() ) ),
+			);
+		}
+
+		return array(
+			'types'        => $types,
+			'forms'        => $forms,
+			'optionsPages' => $pages,
 		);
 	}
 

@@ -33,6 +33,7 @@ import { typeDescription, typeLabel } from './labels';
 import SettingsPanels from './settings';
 import StepEdit from './step-edit';
 import { useTargetType } from './store';
+import lockTitle from '../shared/lock-title';
 import './builder.scss';
 
 const ICONS = {
@@ -165,57 +166,6 @@ function BoundVariations() {
 	return null;
 }
 
-const TITLE = '.editor-post-title__input';
-
-/**
- * Makes the post title read-only. Core has no setting for it (the title is a contenteditable the
- * template lock does not reach, and it lives in the editor canvas iframe, which the admin body
- * class does not cross), so the canvas body gets the same `pegwork-form-readonly` class (styles:
- * no caret, default cursor) and every edit of the title (typing, Backspace, Delete, paste, cut, drop) is cancelled
- * before it reaches the DOM. The title stays focusable and readable by a screen reader.
- *
- * @return {() => void} Stops watching.
- */
-function lockTitle() {
-	const done = new WeakSet();
-	const cancel = ( event ) => {
-		// Keys that change text on their own (the rich text's delete handler acts on keydown, not on
-		// beforeinput); other keys, arrows and Tab included, still work.
-		const edits =
-			event.type !== 'keydown' ||
-			[ 'Backspace', 'Delete', 'Enter' ].includes( event.key );
-		if ( edits && event.target?.closest?.( TITLE ) ) {
-			// Stopped as well: the rich text's own paste, cut and delete handlers run on the element
-			// and would otherwise still insert or remove text.
-			event.preventDefault();
-			event.stopPropagation();
-		}
-	};
-	// The canvas iframe is mounted after this runs and replaced when it reloads, so check it on a timer.
-	const attach = () => {
-		const frame = document.querySelector( 'iframe[name="editor-canvas"]' );
-		for ( const doc of [ document, frame?.contentDocument ] ) {
-			if ( ! doc?.body || done.has( doc ) ) {
-				continue;
-			}
-			done.add( doc );
-			doc.body.classList.add( 'pegwork-form-readonly' );
-			for ( const type of [
-				'beforeinput',
-				'keydown',
-				'paste',
-				'cut',
-				'drop',
-			] ) {
-				doc.addEventListener( type, cancel, true );
-			}
-		}
-	};
-	attach();
-	const timer = window.setInterval( attach, 50 );
-	return () => window.clearInterval( timer );
-}
-
 /**
  * File-defined forms: saving is locked, the title is read-only and a notice offers "Duplicate as
  * site form".
@@ -228,7 +178,7 @@ function ReadOnly() {
 		if ( ! config.readOnly ) {
 			return undefined;
 		}
-		const unlock = lockTitle();
+		const unlock = lockTitle( 'pegwork-form-readonly' );
 		lockPostSaving( 'pegwork-file-form' );
 		createWarningNotice(
 			sprintf(

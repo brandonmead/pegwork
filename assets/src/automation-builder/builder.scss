@@ -1,35 +1,123 @@
-// Automation builder placeholder cards (Phase 6 PR 3). Nesting shows as an indent, a left rule and
-// heading text, never color alone.
+// Automation builder: canvas cards, branches and sidebar controls. Nesting shows as an indent, a left
+// rule and heading text, never color alone (WCAG 1.4.1). Loaded in the canvas iframe and the editor.
 
+$border: #8c8f94;
+$muted: #50575e;
+$error: #cc1818;
+
+// The canvas carries the theme's type; cards use the admin's, so they read as UI, not content.
 .pegwork-automation-step,
 .pegwork-automation-decision {
 	margin: 0 0 12px;
 	padding: 8px 12px;
-	border: 1px solid #8c8f94;
+	border: 1px solid $border;
 	border-radius: 2px;
 	background: #fff;
 	color: #1e1e1e;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+
+	p {
+		font-size: inherit;
+		line-height: inherit;
+	}
+
+	&.has-error {
+		border-color: $error;
+		border-width: 2px;
+	}
 }
 
-.pegwork-automation-decision__heading,
-.pegwork-automation-branch__heading,
-.pegwork-automation-decision__then {
-	margin: 0 0 8px;
+.pegwork-automation-step__head,
+.pegwork-automation-decision__heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	margin: 0 0 4px;
+
+	.dashicon {
+		flex: none;
+	}
+}
+
+.pegwork-automation-step__summary {
+	margin: 0;
+	color: $muted;
+	overflow-wrap: anywhere;
+}
+
+.pegwork-automation-decision__heading .pegwork-automation-step__summary {
+	flex-basis: 100%;
+}
+
+.pegwork-automation-decision__branches {
+	margin: 8px 0 0;
 }
 
 .pegwork-automation-branch {
 	margin: 0 0 12px;
-	padding: 0 0 0 12px;
-	border-left: 3px solid #50575e;
+	padding: 4px 0 4px 16px;
+	border-left: 4px solid $muted;
+
+	&.is-otherwise {
+		border-left-style: dashed;
+	}
+
+	&.has-error {
+		border-left-color: $error;
+	}
+}
+
+.pegwork-automation-branch__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 12px;
+	margin: 0 0 8px;
 }
 
 .pegwork-automation-branch__heading {
+	margin: 0;
 	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.pegwork-automation-branch__name {
+	display: flex;
+	flex: 1 1 12em;
+	align-items: baseline;
+	gap: 4px;
+	min-width: 0;
+	color: $muted;
+	font-size: 13px;
+
+	label {
+		flex: none;
+	}
+}
+
+.pegwork-automation-branch__label {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 0 4px;
+	border: 1px solid transparent;
+	border-radius: 2px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	resize: none;
+
+	&:hover {
+		border-color: #dcdcde;
+	}
 }
 
 .pegwork-automation-decision__then {
 	margin: 8px 0 0;
-	color: #50575e;
+	color: $muted;
+	font-style: italic;
 }
 
 .pegwork-automation-step code,
@@ -37,8 +125,199 @@
 	overflow-wrap: anywhere;
 }
 
-// templateLock "all" leaves core's inserter toggle enabled; hide it for file automations.
+// Core floats a nested block's appender over its last child; ours sit below the list instead.
+.pegwork-automation-branch__steps > .block-list-appender,
+.pegwork-automation-decision__branches > .block-list-appender {
+	position: static;
+	width: auto;
+	margin: 0;
+}
+
+.pegwork-automation__appender {
+	margin: 4px 0;
+}
+
+.pegwork-automation__errors {
+	margin: 4px 0 8px;
+}
+
+.pegwork-automation__error {
+	margin: 0 0 4px;
+	color: $error;
+	overflow-wrap: anywhere;
+}
+
+// Sidebar and inspector.
+.pegwork-automation__help {
+	margin: 4px 0 8px;
+	color: #757575;
+	font-size: 12px;
+}
+
+.pegwork-automation-settings .components-base-control,
+.pegwork-automation__template,
+.pegwork-automation__fieldset,
+.pegwork-automation__conditions {
+	margin-bottom: 16px;
+}
+
+.pegwork-automation__fieldset,
+.pegwork-automation__group,
+.pegwork-automation__condition {
+	min-width: 0;
+	margin: 0 0 12px;
+	padding: 0;
+	border: 0;
+
+	> legend {
+		padding: 0;
+		margin-bottom: 8px;
+		font-weight: 600;
+	}
+}
+
+.pegwork-automation__group {
+	padding: 8px 0 8px 12px;
+	border-left: 3px solid $muted;
+}
+
+.pegwork-automation__condition {
+	padding: 8px;
+	border: 1px solid #dcdcde;
+
+	.components-base-control {
+		margin-bottom: 8px;
+	}
+}
+
+.pegwork-automation__row {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pegwork-automation__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.pegwork-automation__remove,
+.pegwork-automation__actions .components-button.is-link {
+	height: auto;
+	text-align: left;
+	white-space: normal;
+}
+
+.pegwork-automation__values {
+	margin: 0 0 8px;
+	padding: 0;
+	list-style: none;
+}
+
+.pegwork-automation__value {
+	padding: 8px 0;
+	border-bottom: 1px solid #dcdcde;
+
+	.components-base-control {
+		margin-bottom: 8px;
+	}
+
+	.components-button.is-link {
+		height: auto;
+		white-space: normal;
+		text-align: left;
+	}
+}
+
+.pegwork-automation__tags-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 280px;
+	max-width: calc(100vw - 32px);
+	padding: 12px;
+}
+
+.pegwork-automation__preview-body,
+.pegwork-automation__report {
+	margin-top: 12px;
+}
+
+.pegwork-automation__preview-label {
+	margin: 8px 0 4px;
+	font-weight: 600;
+}
+
+.pegwork-automation__preview-text {
+	padding: 8px;
+	background: #f6f7f7;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.pegwork-automation__preview-html {
+	width: 100%;
+	min-height: 160px;
+	border: 1px solid #dcdcde;
+}
+
+.pegwork-automation__template textarea {
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.pegwork-automation__report {
+	h3 {
+		margin: 0 0 8px;
+		font-size: 13px;
+		font-weight: 600;
+		text-transform: none;
+
+		&:focus {
+			outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+			outline-offset: 2px;
+		}
+	}
+
+	p,
+	li {
+		overflow-wrap: anywhere;
+	}
+}
+
+.pegwork-automation__report-list {
+	margin: 0 0 8px;
+	padding-left: 16px;
+	list-style: disc;
+
+	.pegwork-automation__report-list {
+		border-left: 3px solid $muted;
+	}
+}
+
+.pegwork-automation__report-branch {
+	list-style: none;
+}
+
+.pegwork-automation__report-heading {
+	margin: 4px 0;
+	font-weight: 600;
+}
+
+.pegwork-automation__webhook code {
+	overflow-wrap: anywhere;
+}
+
+// templateLock "all" leaves core's inserter toggle enabled; hide it for file automations. The title
+// cannot be locked through core, so lockTitle() cancels its edits; here it only looks like text.
 .pegwork-automation-readonly .editor-document-tools .editor-document-tools__left > .editor-document-tools__inserter-toggle,
 .pegwork-automation-readonly .editor-post-last-edited-panel {
 	display: none;
+}
+
+.pegwork-automation-readonly .editor-post-title__input {
+	caret-color: transparent;
+	cursor: default;
 }

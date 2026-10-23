@@ -21,6 +21,8 @@
 		"customClassName": false,
 		"reusable": false,
 		"renaming": false,
-		"lock": false
+		"lock": false,
+		"inserter": false,
+		"customCSS": false
 	}
 }

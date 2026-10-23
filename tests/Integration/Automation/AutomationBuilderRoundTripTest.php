@@ -164,7 +164,18 @@ class AutomationBuilderRoundTripTest extends WP_UnitTestCase {
 		$this->assertCount( 2, $blocks[0]['innerBlocks'] );
 		$this->assertSame( 'Big', $blocks[0]['innerBlocks'][0]['attrs']['label'] );
 		$this->assertSame( array(), $blocks[0]['innerBlocks'][0]['innerBlocks'] );
-		$this->assertSame( array( 'otherwise' => true ), $blocks[0]['innerBlocks'][1]['attrs'] );
+		$this->assertSame( Builder::OTHERWISE, $blocks[0]['innerBlocks'][1]['attrs'] );
+		$this->assertSame(
+			array(
+				'otherwise' => true,
+				'lock'      => array(
+					'move'   => true,
+					'remove' => true,
+				),
+			),
+			$blocks[0]['innerBlocks'][1]['attrs'],
+			'The otherwise branch is flagged and locked in place.'
+		);
 		$this->assertSame( Builder::STEP, $blocks[0]['innerBlocks'][1]['innerBlocks'][0]['blockName'] );
 		$this->assertCount( 1, $blocks[1]['innerBlocks'], 'An empty otherwise is omitted.' );
 

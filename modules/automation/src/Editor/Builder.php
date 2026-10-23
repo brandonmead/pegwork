@@ -55,6 +55,18 @@ final class Builder {
 	public const BRANCH_ATTRIBUTES = array( 'label', 'when' );
 
 	/**
+	 * Attributes of an otherwise branch block: the editor-only flag, and a lock that keeps the branch
+	 * in place (the builder keeps it last and offers Add and Remove otherwise on the toolbar).
+	 */
+	public const OTHERWISE = array(
+		'otherwise' => true,
+		'lock'      => array(
+			'move'   => true,
+			'remove' => true,
+		),
+	);
+
+	/**
 	 * Attributes the block editor adds to every block; never part of the definition.
 	 */
 	private const EDITOR_ATTRIBUTES = array( 'lock', 'metadata', 'className' );
@@ -283,7 +295,7 @@ final class Builder {
 			$inner[] = self::block( self::BRANCH, self::ordered( array_diff_key( $branch, array( 'steps' => true ) ), self::BRANCH_ATTRIBUTES ), self::step_blocks( $steps ) );
 		}
 		if ( is_array( $step['otherwise'] ?? null ) && array() !== $step['otherwise'] ) {
-			$inner[] = self::block( self::BRANCH, array( 'otherwise' => true ), self::step_blocks( $step['otherwise'] ) );
+			$inner[] = self::block( self::BRANCH, self::OTHERWISE, self::step_blocks( $step['otherwise'] ) );
 		}
 		$attrs = array_diff_key( $step, array_flip( array( 'type', 'branches', 'otherwise' ) ) );
 
