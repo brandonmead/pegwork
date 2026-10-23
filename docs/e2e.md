@@ -28,7 +28,7 @@ tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest woul
 
 ## CI
 
-The `E2E` job in `.github/workflows/ci.yml` builds the assets, starts wp-env (`npx wp-env start`, WordPress latest, PHP 8.2), and runs the specs. On failure it uploads `playwright-report/` and `test-results/` (traces, screenshots) as the `playwright-report` artifact. View a trace with `npx playwright show-trace <trace.zip>`.
+The `E2E` job in `.github/workflows/ci.yml` runs as two parallel shards, `E2E (1/2)` and `E2E (2/2)` (`--shard=N/2`, whole spec files, 15 minute timeout each). Each shard builds the assets, starts its own wp-env (`npx wp-env start`, WordPress latest, PHP 8.2), and runs its share of the specs. Specs must stay independent of each other and of file order: each one creates and resets its own state in `beforeAll`/`afterAll`. On failure each shard uploads `playwright-report/` and `test-results/` (traces, screenshots) as the `playwright-report-shard-1` or `playwright-report-shard-2` artifact. View a trace with `npx playwright show-trace <trace.zip>`.
 
 Locally with Docker: `npm run wp-env -- start`, then `npm run test:e2e`.
 
