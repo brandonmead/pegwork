@@ -248,8 +248,8 @@ trait AutomationRules {
 				$this->add(
 					'automation_too_large',
 					$pointer . '/steps',
-					/* translators: 1: worst-case step attempts, 2: limit, 3: items per loop. */
-					sprintf( __( 'This automation can take %1$d step attempts in one run (a loop body counts %3$d times); the limit is %2$d. Move steps out of loops or split the automation.', 'pegwork' ), $attempts, self::MAX_ATTEMPTS, self::LOOP_MAX_ITEMS )
+					/* translators: 1: worst-case step attempts, 2: limit, 3: items per loop, 4: body steps that fit after one step, 5: attempts of that example. */
+					sprintf( __( 'This automation can take %1$d step attempts in one run; the limit is %2$d. Every step outside a loop body counts once (the loop step itself too, and a decision adds its longest branch), and every step inside a body counts %3$d times. So with one step before a %3$d-item loop, the body can hold %4$d steps: 1 + 1 + %4$d x %3$d = %5$d. Move steps out of the loop or split the automation.', 'pegwork' ), $attempts, self::MAX_ATTEMPTS, self::LOOP_MAX_ITEMS, intdiv( self::MAX_ATTEMPTS - 2, self::LOOP_MAX_ITEMS ), 2 + intdiv( self::MAX_ATTEMPTS - 2, self::LOOP_MAX_ITEMS ) * self::LOOP_MAX_ITEMS )
 				);
 			}
 		}

@@ -131,7 +131,7 @@ final class Templates {
 	/**
 	 * Read record paths whose values are URLs.
 	 */
-	private const READ_URL_PATH = '/^(?:steps\.[a-z0-9_]+\.record|item)\.(?:permalink|edit_url)$/';
+	private const READ_URL_PATH = '/^(?:steps\.[a-z0-9_]+\.(?:record|item)|item)\.(?:permalink|edit_url)$/';
 
 	/**
 	 * Renders a template to a string.

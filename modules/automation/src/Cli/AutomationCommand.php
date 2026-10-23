@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace PegworkAutomation\Cli;
 
 use Pegwork\Api\Records;
+use PegworkAutomation\Admin\Format;
 use PegworkAutomation\DryRun;
 use PegworkAutomation\Duration;
 use PegworkAutomation\Engine;
@@ -117,7 +118,9 @@ final class AutomationCommand {
 			if ( 'table' === $format ) {
 				WP_CLI::log( '' );
 			}
-			WP_CLI\Utils\format_items( $format, $steps, array( 'step', 'type', 'attempt', 'status', 'started_at', 'duration_ms', 'summary', 'error' ) );
+			// Table output groups loop rows under "Item 2 of 12: ..." lines; other formats carry `iteration`.
+			$columns = array( 'step', 'type', 'attempt', 'status', 'started_at', 'duration_ms', 'summary', 'error' );
+			WP_CLI\Utils\format_items( $format, $steps, 'table' === $format ? $columns : array_merge( array_slice( $columns, 0, 3 ), array( 'iteration' ), array_slice( $columns, 3 ) ) );
 			return;
 		}
 
@@ -552,35 +555,45 @@ final class AutomationCommand {
 
 	/**
 	 * A run's step attempts as log rows. With `$indent` (table output) each step id is indented two spaces per
-	 * branch level of the current definition, and an id no longer in it is marked; other formats keep plain ids.
+	 * branch or loop level of the current definition, an id no longer in it is marked, and the rows of each
+	 * loop item follow a line "Item 2 of 12: Task #38 (Call Ada)" in the step column (the title only for a
+	 * user who can read the record, so with `--user`); other formats keep plain ids and give `iteration`.
 	 *
 	 * @param array<string, mixed>             $run    Run.
 	 * @param array<int, array<string, mixed>> $steps  Run-step rows, oldest first.
-	 * @param bool                             $indent Whether to indent step ids.
+	 * @param bool                             $indent Whether to indent step ids and add item lines.
 	 * @return array<int, array<string, mixed>>
 	 */
 	public static function step_rows( array $run, array $steps, bool $indent ): array {
-		$plan = $indent ? Plan::for_run( $run, pegwork_registry()->automation( (string) $run['automation'] ) ) : null;
-		return array_map(
-			function ( array $step ) use ( $plan ): array {
-				$id = (string) $step['step_id'];
-				if ( null !== $plan ) {
-					$depth = $plan->depth( $id );
-					$id    = null === $depth ? $id . ' (no longer in this automation)' : str_repeat( '  ', $depth ) . $id;
-				}
-				return array(
-					'step'        => $id,
-					'type'        => $step['step_type'],
-					'attempt'     => (int) $step['attempt'],
-					'status'      => $step['status'],
-					'started_at'  => $step['started_at'],
-					'duration_ms' => (int) $step['duration_ms'],
-					'summary'     => array() === $step['summary'] ? '' : (string) wp_json_encode( $step['summary'] ),
-					'error'       => (string) $step['error'],
+		$plan     = $indent ? Plan::for_run( $run, pegwork_registry()->automation( (string) $run['automation'] ) ) : null;
+		$headings = $indent ? Format::item_headings( $steps, $plan ) : array();
+		$rows     = array();
+		foreach ( array_values( $steps ) as $index => $step ) {
+			$id = (string) $step['step_id'];
+			if ( isset( $headings[ $index ] ) ) {
+				$loop   = 'loop' === $step['step_type'] ? $id : $plan?->loop_of( $id );
+				$rows[] = array_fill_keys( array( 'type', 'attempt', 'iteration', 'status', 'started_at', 'duration_ms', 'summary', 'error' ), '' ) + array(
+					'step' => str_repeat( '  ', null === $loop ? 0 : (int) $plan?->depth( $loop ) ) . $headings[ $index ],
 				);
-			},
-			$steps
-		);
+			}
+			if ( null !== $plan ) {
+				$depth = $plan->depth( $id );
+				$depth = null !== $depth && 'loop' === $step['step_type'] && null !== ( $step['iteration'] ?? null ) ? $depth + 1 : $depth;
+				$id    = null === $depth ? $id . ' (no longer in this automation)' : str_repeat( '  ', $depth ) . $id;
+			}
+			$rows[] = array(
+				'step'        => $id,
+				'type'        => $step['step_type'],
+				'attempt'     => (int) $step['attempt'],
+				'iteration'   => $step['iteration'] ?? '',
+				'status'      => $step['status'],
+				'started_at'  => $step['started_at'],
+				'duration_ms' => (int) $step['duration_ms'],
+				'summary'     => array() === $step['summary'] ? '' : (string) wp_json_encode( $step['summary'] ),
+				'error'       => (string) $step['error'],
+			);
+		}
+		return $rows;
 	}
 
 	/**

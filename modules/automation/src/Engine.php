@@ -281,8 +281,9 @@ final class Engine {
 	/**
 	 * Why this module version cannot run a definition, or null when it can. The registry accepts Automation
 	 * v3 shapes (docs/automation-v3-design.md) before the engine runs them all, so the executor refuses such a
-	 * run before its first step instead of acting on part of it: a step type without a handler (`loop`, until
-	 * the loop engine lands), at any depth.
+	 * run before its first step instead of acting on part of it: a step type without a handler, at any depth.
+	 * `loop` has no handler because the executor's cursor runs it. Every type the registry accepts runs today,
+	 * so this guards a definition from a newer registry against an older module.
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */
@@ -310,7 +311,7 @@ final class Engine {
 			$step = (array) $step;
 			$id   = (string) ( $step['id'] ?? '' );
 			$type = (string) ( $step['type'] ?? '' );
-			if ( null === $this->step( $type ) ) {
+			if ( null === $this->step( $type ) && 'loop' !== $type ) { // The executor's cursor runs loops itself.
 				return sprintf( 'step "%1$s" has type "%2$s", which this version of the automation module cannot run.', $id, $type );
 			}
 			$children = array_merge(

@@ -22,7 +22,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Core: `Records::find()`, `relate()`, `unrelate()`, relationship keys in `create()`/`update()` and in record events, `Content\RecordQuery`, API 0.3.0: done, in review (branch `v3-records`).
 2. Registry: new steps, outputs and triggers: done, in review (branch `v3-registry`). The engine refuses v3 shapes (`Engine::unsupported()`) until PRs 3 to 5; each removes its feature from that guard.
 3. Engine: reads, relate, on_error, templates: done, in review (branch `v3-engine-reads`). Only `loop` (PR 4) and the `manual` trigger (PR 5) stay refused. Left for later PRs: read record titles in the run detail (PR 4's run detail grouping), `[from step <id>: <Field label>]` in the editor preview (PR 6).
-4. Engine: loops. Planned.
+4. Engine: loops: done, in review (branch `v3-loops`). Read record titles in the run detail included. Left for PR 7: item headings in the editor's Test run panel (the report entries carry `item`; the panel lists them nested without the heading).
 5. Manual trigger. Planned.
 6. Editor: reads, relate, on_error, manual trigger. Planned.
 7. Editor: loops and lists. Planned.

@@ -1,0 +1,1 @@
+{ "format": 1, "id": "engine_loops", "version": "1.0.0", "label": "Automation v3 engine: loops at run time (the digest of worked example c, and a loop with a skip, a decision, a webhook and a retried email)", "requires": { "pegwork": ">=0.3.0" } }

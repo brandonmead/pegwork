@@ -24,8 +24,8 @@ use WP_Error;
  * record that template names instead of the bound one (a read record); a missing record fails
  * `pegwork_record_not_found` and one of another type `record_type`, neither retried. `fields` holds the step's `fields` keys, or every public
  * field and taxonomy of the type when it has none; private fields are never sent (the registry rejects them
- * in `fields`, and they are skipped here as well). Headers: `X-Pegwork-Delivery: <run id>-<step id>`
- * (stable across retries, for receiver dedupe), `X-Pegwork-Timestamp` (Unix time of the attempt) and
+ * in `fields`, and they are skipped here as well). Headers: `X-Pegwork-Delivery: <run id>-<step id>`, or
+ * `<run id>-<step id>-<iteration>` inside a loop body (stable across retries, for receiver dedupe), `X-Pegwork-Timestamp` (Unix time of the attempt) and
  * `X-Pegwork-Signature: sha256=<HMAC-SHA256 of "<timestamp>.<body>">` with the automation's secret.
  *
  * A 2xx response succeeds. Any other status or a transport error fails the attempt, retryable (default
@@ -47,7 +47,8 @@ final class CallWebhook implements Step {
 	 * @param array<string, mixed> $run     Run row.
 	 */
 	public function run( array $step, Context $context, array $run ): StepResult {
-		$delivery = (int) $run['id'] . '-' . (string) $step['id'];
+		$item     = $context->iteration( (string) $step['id'] );
+		$delivery = (int) $run['id'] . '-' . (string) $step['id'] . ( null === $item ? '' : '-' . $item ); // Inside a loop, one per item.
 		$url      = trim( Templates::render_url( (string) ( $step['url'] ?? '' ), $context ) );
 		$host     = (string) wp_parse_url( $url, PHP_URL_HOST );
 		$summary  = array(
