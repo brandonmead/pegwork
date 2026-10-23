@@ -1,1 +1,1 @@
-{ "format": 1, "id": "e2e_barn", "version": "1.0.0", "label": "E2E BarnCRM: types, form and settings for building the example flows", "requires": { "pegwork": ">=0.2.0" } }
+{ "format": 1, "id": "e2e_barn", "version": "2.0.0", "label": "E2E BarnCRM: types, relationships, form and settings for building the example flows", "requires": { "pegwork": ">=0.3.0" } }

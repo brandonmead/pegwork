@@ -13,7 +13,7 @@ Modules (Listings, Filters, Forms, Automation) are off until you turn them on un
 
 ## Status
 
-Version 0.2.0. Pre-1.0: the public PHP API (`Pegwork\Api`, `docs/extension-api.md`) and the JSON format may still change between minor versions. Pegwork is not on WordPress.org yet.
+Version 0.3.0. Pre-1.0: the public PHP API (`Pegwork\Api`, `docs/extension-api.md`) and the JSON format may still change between minor versions. Pegwork is not on WordPress.org yet.
 
 ## Requirements
 

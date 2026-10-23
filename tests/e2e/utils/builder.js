@@ -245,6 +245,43 @@ async function setCondition( page, field, op ) {
 	await choose( panel.getByRole( 'combobox', { name: 'Operator' } ), op );
 }
 
+// Picks a radio of the selected block's inspector by keyboard.
+async function radio( page, name ) {
+	const option = sidebar( page ).getByRole( 'radio', { name, exact: true } );
+	await press( option, 'Space' );
+	await expect( option ).toBeChecked();
+}
+
+// Picks a relationship in the selected block's combobox by typing its label.
+async function relationship( page, label ) {
+	const box = sidebar( page ).getByRole( 'combobox', {
+		name: 'Relationship',
+	} );
+	await typeInto( box, label );
+	const option = sidebar( page ).getByRole( 'option', {
+		name: new RegExp( `^${ label } \\(` ),
+	} );
+	await expect( option ).toBeVisible();
+	await page.keyboard.press( 'ArrowDown' );
+	await page.keyboard.press( 'Enter' );
+	await expect( box ).toHaveValue( new RegExp( `^${ label } \\(` ) );
+}
+
+// Sets the selected read step's content type and finds it through the Donor relationship of `of`.
+async function readByDonor( page, contentType, of ) {
+	await openBlockTab( page );
+	await choose(
+		sidebar( page ).getByRole( 'combobox', { name: 'Content type' } ),
+		contentType
+	);
+	await radio( page, 'A relationship' );
+	await relationship( page, 'Donor' );
+	await insertInto(
+		sidebar( page ).getByRole( 'textbox', { name: 'Of', exact: true } ),
+		of
+	);
+}
+
 // Axe on the Pegwork parts: canvas cards, the document panels and the block inspector, and no
 // horizontal page scroll.
 async function checkPegworkA11y( page ) {
@@ -293,6 +330,9 @@ module.exports = {
 	openEditor,
 	openPanel,
 	press,
+	radio,
+	readByDonor,
+	relationship,
 	renameBranch,
 	saveByKeyboard,
 	selectBranch,

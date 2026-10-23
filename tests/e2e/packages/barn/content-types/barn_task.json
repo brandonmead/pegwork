@@ -6,7 +6,7 @@
     { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
     { "key": "due_on", "type": "date", "label": "Due on" },
     { "key": "assignee_email", "type": "email", "label": "Assignee email", "visibility": "private" },
-    { "key": "related_gift", "type": "number", "label": "Related gift" },
-    { "key": "done", "type": "boolean", "label": "Done" }
+    { "key": "done", "type": "boolean", "label": "Done" },
+    { "key": "reminded_on", "type": "date", "label": "Reminded on" }
   ]
 }

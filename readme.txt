@@ -4,7 +4,7 @@ Tags: custom post types, custom fields, forms, directory, automation
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -48,6 +48,9 @@ Deleting Pegwork from the Plugins screen removes, on every site of a multisite n
 WP-Cron only runs when someone visits the site. On a production site set `define( 'DISABLE_WP_CRON', true );` in wp-config.php and add a server cron that runs `wp cron event run --due-now` every 5 minutes. Tools > Site Health shows whether Pegwork's automations are on time (see docs/automation.md, Production scheduling).
 
 == Changelog ==
+
+= 0.3.0 =
+* Automation v3: automations read records (Get a record, Find records with counts and totals, by ID, relationship or matching fields), link records, repeat steps for each record found, continue past a failed step, start from a button for staff, and list records in emails; relationship keys in Records create and update; public API 0.3.0.
 
 = 0.2.0 =
 * Registry sections for listings, options pages, forms and automations; modules Listings, Filters, Forms and Automation; public API 0.2.0.

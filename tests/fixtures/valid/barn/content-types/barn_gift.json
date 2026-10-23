@@ -5,9 +5,6 @@
   "fields": [
     { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
     { "key": "amount", "type": "number", "label": "Amount" },
-    { "key": "received_on", "type": "date", "label": "Received on" },
-    { "key": "donor_id", "type": "number", "label": "Donor (contact ID)" },
-    { "key": "donor_name", "type": "text", "label": "Donor name" },
-    { "key": "donor_email", "type": "email", "label": "Donor email", "visibility": "private" }
+    { "key": "received_on", "type": "date", "label": "Received on" }
   ]
 }

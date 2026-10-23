@@ -84,8 +84,8 @@ class FixturesTest extends TestCase {
 	}
 
 	/**
-	 * The E2E BarnCRM package holds the proof fixture's types, form and options page byte for byte, and no
-	 * automations (the editor E2E builds those and compares them with the fixture's).
+	 * The E2E BarnCRM package holds the proof fixture's types, relationships, form and options page byte for
+	 * byte, and no automations (the editor E2Es build those and compare them with the fixture's).
 	 */
 	public function test_e2e_barn_package_matches_the_fixture() {
 		$root    = dirname( __DIR__, 3 );
@@ -102,28 +102,26 @@ class FixturesTest extends TestCase {
 		$result = Loader::load( array( $e2e ) );
 		$this->assertSame( array(), array_map( 'strval', $result->errors ) );
 		$this->assertCount( 4, $result->registry->content_types() );
+		$this->assertCount( 2, $result->registry->relationships() );
 		$this->assertSame( array(), $result->registry->automations() );
 	}
 
 	/**
-	 * The E2E BarnCRM reads package holds the reads fixture's types, relationships, taxonomy and options
-	 * page byte for byte, and no automations (the reads editor E2E builds barn_lifetime_milestone).
+	 * The test packages that carry BarnCRM automations for their own purposes (`reads`: every new step shape
+	 * and the editor scope fixture; `engine-loops`: the loop engine tests) hold them byte for byte as the
+	 * BarnCRM proof fixture does, so the worked examples have one text.
 	 */
-	public function test_e2e_barn_reads_package_matches_the_fixture() {
-		$root    = dirname( __DIR__, 3 );
-		$fixture = $root . '/tests/fixtures/valid/reads';
-		$e2e     = $root . '/tests/e2e/packages/barn-reads';
-		$objects = fn( $dir ) => array_map( fn( $file ) => substr( $file, strlen( $dir ) + 1 ), glob( $dir . '/*/*.json' ) );
-
-		$expected = array_values( array_filter( $objects( $fixture ), fn( $file ) => ! str_starts_with( $file, 'automations/' ) ) );
-		$this->assertSame( $expected, $objects( $e2e ) );
-		foreach ( $expected as $file ) {
-			$this->assertFileEquals( "$fixture/$file", "$e2e/$file" );
+	public function test_barn_automation_copies_match_the_fixture() {
+		$root    = dirname( __DIR__, 3 ) . '/tests/fixtures/valid';
+		$copies  = array_merge( glob( $root . '/reads/automations/barn_*.json' ), glob( $root . '/engine-loops/automations/barn_*.json' ) );
+		$checked = array();
+		foreach ( $copies as $copy ) {
+			$this->assertFileEquals( $root . '/barn/automations/' . basename( $copy ), $copy );
+			$checked[] = basename( dirname( $copy, 2 ) ) . '/' . basename( $copy, '.json' );
 		}
-
-		$result = Loader::load( array( $e2e ) );
-		$this->assertSame( array(), array_map( 'strval', $result->errors ) );
-		$this->assertCount( 2, $result->registry->relationships() );
-		$this->assertSame( array(), $result->registry->automations() );
+		$this->assertSame(
+			array( 'reads/barn_donation_inbound', 'reads/barn_gift_thanks', 'reads/barn_lifetime_milestone', 'reads/barn_resend_thanks', 'reads/barn_tasks_digest', 'engine-loops/barn_tasks_digest' ),
+			$checked
+		);
 	}
 }

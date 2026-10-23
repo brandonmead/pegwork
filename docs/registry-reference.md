@@ -60,7 +60,7 @@ A package is a directory with `manifest.json` and one JSON file per object:
 | `label` | yes | non-empty string |
 | `requires` | no | map of name to version constraint strings; informational |
 
-`requires` is validated for shape only (string values, no callables) and is never compared with the running versions: Pegwork does not refuse a package whose constraint it does not meet. It tells readers and tools which plugin version the package was written for. An older Pegwork rejects the newer sections on its own (unknown keys), which is the real guard. The plugin version (`PEGWORK_VERSION`, plugin header) and the API version (`Pegwork\Api\VERSION`) are both 0.2.0.
+`requires` is validated for shape only (string values, no callables) and is never compared with the running versions: Pegwork does not refuse a package whose constraint it does not meet. It tells readers and tools which plugin version the package was written for. An older Pegwork rejects the newer sections on its own (unknown keys), which is the real guard. The plugin version (`PEGWORK_VERSION`, plugin header) and the API version (`Pegwork\Api\VERSION`) are both 0.3.0.
 
 ## Content types
 

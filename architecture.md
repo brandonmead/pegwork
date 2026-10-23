@@ -169,7 +169,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Browser checks: harness site `~/wp-envs/options` (DB `wpenv_options`, port 8181). PHPUnit DB `pegwork_tests_options` against `~/wp-envs/core-latest` (WP 7.1.3); the bundled wp-phpunit does not run against `~/wp-envs/core-6.7` (missing `class-wp-phpmailer.php`), so 6.7 is CI only.
 
 ## Events and Records API (Phase 4 PR 1)
-- Contract and payloads: `docs/events.md`. `Pegwork\Api\VERSION` was frozen at 0.2.0 for the Phase 4 to 6 cycle (Phase 4 decision 7); Automation v3 moved it to 0.3.0 (`docs/automation-v3-design.md` section 3.6) while the plugin stays 0.2.0 until the next minor release.
+- Contract and payloads: `docs/events.md`. `Pegwork\Api\VERSION` was frozen at 0.2.0 for the Phase 4 to 6 cycle (Phase 4 decision 7); Automation v3 moved it to 0.3.0 (`docs/automation-v3-design.md` section 3.6); the plugin followed at v3 sign-off (PR 8).
 - `Events\RecordEvents` hooks: `rest_pre_insert_{type}` at priority 1000 (after RecordValidator, so rejected saves take no snapshot), `rest_after_insert_{type}`, `pre_post_update`, `wp_after_insert_post`, `before_delete_post`, `deleted_post`, plus `rest_request_before|after_callbacks` to track REST routes (source `rest`, autosave detection).
 - Snapshot first-wins per post, consumed on emit; REST marks the post flushed after its listeners run, so the controller's own `wp_after_insert_post` does not emit twice. `wp_publish_post` takes no `pre_post_update` snapshot: the status before comes from `$post_before`.
 - Records writes: `wp_insert_post`/`wp_update_post` with `fire_after_hooks` false, `meta_input`, then `wp_set_object_terms` by term ID (no `tax_input`: it checks `assign_terms` for the current user), then `wp_after_insert_post()` called directly; `RecordEvents::claim()` carries the origin.
@@ -213,7 +213,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Step block attributes: every read, relate and `on_error` property is declared in `automation-step/block.json` (core drops undeclared ones on parse) and in `Builder::STEP_ATTRIBUTES` (order); `status` is `["string","array"]`.
 - Scope rules mirrored in `scope.js` (`STEP_OUTPUTS`, `typedReference()`); `reads.js` is pure (Vitest).
 - Preview route param `steps`: `DryRun::preview()` sets `Context::use_plan()` so `Templates` can name fields (`Context::field_label()`).
-- E2E: package `tests/e2e/packages/barn-reads` replaces `barn` while option `pegwork_e2e_barn_reads` is set (route `POST pegwork-e2e/v1/barn/reads`); the two share `barn_*` keys, so never both.
+- E2E: the interim package `barn-reads` and its switch route were removed in PR 8; the builder specs use `tests/e2e/packages/barn`.
 - Size: builder 24,893 bytes gzipped of 25,600.
 - Local runs: test DBs `pegwork_tests_v3ed82`, `_v3ed84`, `_v3ed82_67`, `_v3ed84_67`; site `~/wp-envs/v3ed` (port 8237). Last verified 2026-10-23.
 
@@ -224,6 +224,13 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Gotchas (E2E): typing leaves the block toolbar hidden (`isTyping`), so reach "Move to" with Alt+F10 first. Read filters start with one row; the second comes from "Add filter". Core's `word-break: break-word` on admin tables acts like `overflow-wrap: anywhere` (shrinks min-content); reset both to keep ids whole.
 - Size: builder 26,994 bytes gzipped; budget 27,136 (was 25,600).
 - Local runs: test DBs `pegwork_tests_v3edl82`, `_v3edl84`, `_v3edl82_67`, `_v3edl84_67`; site `~/wp-envs/v3edl` (port 8238). Last verified 2026-10-23.
+
+## Automation v3 BarnCRM proof (PR 8, branch `v3-barn-proof`)
+- Fixture `tests/fixtures/valid/barn` 2.0.0 on v3 flows: relationships `gift_donor`, `task_gift`; automations `barn_gift_thanks`, `barn_lifetime_milestone`, `barn_tasks_digest`, `barn_resend_thanks`, `barn_donation_inbound`, `barn_volunteer_intake`; no `donor_*` stand-ins. E2E package `tests/e2e/packages/barn` matches it without automations (`FixturesTest`), always registered by `pegwork-e2e-barn.php`.
+- Kept interim fixtures: `reads` (every new registry shape; `scope.json`, Validator, Normalizer, ExportImport, V3Guard tests), `engine-reads`, `engine-loops`. Their `barn_*` automation copies must equal the barn files (`FixturesTest::test_barn_automation_copies_match_the_fixture`).
+- Editor: values rows of create/update record offer relationships whose "from" end is the type (`scope.js` `valueFields()`).
+- Size: builder 27,014 bytes gzipped of 27,136.
+- Local runs: test DBs `pegwork_tests_v3barn82`, `_v3barn84`, `_v3barn82_67`, `_v3barn84_67`; site `~/wp-envs/v3barn` (port 8239). Last verified 2026-10-23.
 
 ## Automation engine (Phase 4 PR 3)
 - `docs/automation.md`. Module `automation` (`modules/automation`, `PegworkAutomation\`, `PEGWORK_AUTOMATION_DIR`). Tables `{prefix}pegwork_runs`, `{prefix}pegwork_run_steps` (dbDelta on boot when option `pegwork_automation_db_version` != `Schema::VERSION`); dropped by `modules/automation/uninstall.php`, which core `uninstall.php` includes (it includes every `modules/*/uninstall.php`).
@@ -348,12 +355,12 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Local runs: test DBs `pegwork_tests_p6s82`, `_p6s84`, `_p6s82_67`, `_p6s84_67`; site `~/wp-envs/p6save` (port 8227, DB `wpenv_p6save`). Last verified 2026-10-22.
 
 ## BarnCRM proof (Phase 6 PR 6a, branch `phase6-barn`)
-- Fixture `tests/fixtures/valid/barn` (worked examples verbatim; `donor_*` fields are Phase 5 stand-ins), E2E copy without automations `tests/e2e/packages/barn` (not registered by any mu-plugin yet; `FixturesTest` keeps the copies identical). Gate `BarnFlowsGateTest` (site time America/New York; volunteers through `Submission::process()` as user 0). Runbook `docs/automation.md#trying-the-barncrm-example-flows` (`wp pegwork schema import` of the fixture; needs a dev checkout).
+- Fixture `tests/fixtures/valid/barn` (rewritten to v3 flows in Automation v3 PR 8, see that section), E2E copy without automations `tests/e2e/packages/barn` (`FixturesTest` keeps the copies identical). Gate `BarnFlowsGateTest` (site time America/New York; volunteers through `Submission::process()` as user 0). Runbook `docs/automation.md#trying-the-barncrm-example-flows` (`wp pegwork schema import` of the fixture; needs a dev checkout).
 - Gotcha: options page and content `url` fields share the network-free `Meta::valid_url()` (http/https, `esc_url_raw`), so an unresolvable domain such as `barn.example` is kept on save and saving needs no network. Never use `wp_http_validate_url()` (DNS lookup).
 - Local runs: test DBs `pegwork_tests_p6b82`, `_p6b84`, `_p6b82_67`, `_p6b84_67`; site `~/wp-envs/p6barn` (port 8229, DB `wpenv_p6barn`). Last verified 2026-10-22.
 
 ## Version
-- Plugin version 0.2.0 (header, `PEGWORK_VERSION`, readme Stable tag, package.json); `Pegwork\Api\VERSION` is 0.3.0 since Automation v3 PR 1 (`PluginLoadsTest` checks both). The plugin takes the next minor at Automation v3 sign-off. Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
+- Plugin version 0.3.0 since Automation v3 sign-off (header, `PEGWORK_VERSION`, readme Stable tag, package.json, pot); `Pegwork\Api\VERSION` is 0.3.0 since Automation v3 PR 1 (`PluginLoadsTest` checks both). Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
 - Module manifest `label` and `description` are closures around `__()`, resolved after `init` (WordPress 6.7 just-in-time textdomain loading warns on earlier calls).
 - Schema error paths in admin screens go through `Registry\Status::display_path()` (relative to `wp-content/` or the package); `wp pegwork schema` keeps absolute paths.
 
