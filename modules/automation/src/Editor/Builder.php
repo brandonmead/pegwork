@@ -42,7 +42,7 @@ final class Builder {
 	/**
 	 * Step keys, in block attribute order (`blocks/automation-step/block.json`).
 	 */
-	public const STEP_ATTRIBUTES = array( 'id', 'type', 'to', 'reply_to', 'subject', 'text', 'html', 'record', 'content_type', 'status', 'values', 'url', 'fields', 'timeout', 'for', 'when', 'retry' );
+	public const STEP_ATTRIBUTES = array( 'id', 'type', 'to', 'reply_to', 'subject', 'text', 'html', 'record', 'content_type', 'status', 'values', 'url', 'fields', 'timeout', 'for', 'when', 'retry', 'related', 'filter', 'sort', 'limit', 'sum', 'relationship', 'action', 'from', 'on_error' );
 
 	/**
 	 * Decision keys other than `type`, `branches` and `otherwise` (`blocks/automation-decision/block.json`).

@@ -17,6 +17,22 @@ export const STEP_TYPES = [
 	'call_webhook',
 	'wait',
 	'condition',
+	'get_record',
+	'find_records',
+	'relate',
+];
+
+/**
+ * Step types that take `"on_error": "continue"` (AutomationRules::ON_ERROR_TYPES).
+ */
+export const ON_ERROR_TYPES = [
+	'update_record',
+	'create_record',
+	'send_email',
+	'call_webhook',
+	'relate',
+	'get_record',
+	'find_records',
 ];
 
 /**
@@ -30,6 +46,9 @@ const ID_BASE = {
 	wait: 'wait',
 	condition: 'check',
 	decision: 'decision',
+	get_record: 'get',
+	find_records: 'find',
+	relate: 'link',
 };
 
 /**
@@ -64,6 +83,10 @@ export function parseConfig( raw ) {
 		),
 		optionsPages: list( config.optionsPages ).filter(
 			( page ) => page && typeof page.key === 'string'
+		),
+		relationships: list( config.relationships ).filter(
+			( relationship ) =>
+				relationship && typeof relationship.key === 'string'
 		),
 		rest: config.rest && typeof config.rest === 'object' ? config.rest : {},
 		lockedKey: text( config.lockedKey ),

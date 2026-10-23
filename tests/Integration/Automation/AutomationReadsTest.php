@@ -539,6 +539,28 @@ class AutomationReadsTest extends AutomationTestCase {
 	}
 
 	/**
+	 * The editor preview runs no read: with the edited steps it names a read record's field and a total
+	 * by label (`[from step donor: Email]`), other outputs by step only, and escapes in HTML mode.
+	 */
+	public function test_preview_names_read_fields() {
+		$ada     = $this->contact( 'Ada', 'ada@example.org' );
+		$gift    = $this->gift( 'Gift 1', 300, array( $ada ) );
+		$steps   = pegwork_registry()->automation( 'er_gift' )['steps'];
+		$trigger = pegwork_registry()->automation( 'er_gift' )['trigger'];
+		$record  = DryRun::sample_record( $trigger, $gift );
+		$payload = DryRun::payload( $trigger, $record, null );
+		$before  = $this->state();
+
+		$this->assertSame(
+			'To [from step donor: Email], [from step donor] found, total [from step giving: Amount], id [from step donor]',
+			DryRun::preview( 'To {{steps.donor.record.email}}, {{steps.donor.found}} found, total {{steps.giving.sum.amount | number:2}}, id {{steps.donor.record.id}}', false, $record, $payload, $steps )
+		);
+		$this->assertSame( '[from step donor: Lifetime 1,000 reached on]', DryRun::preview( '{{steps.donor.record.milestone_1000_on}}', true, $record, $payload, $steps ) );
+		$this->assertSame( '[from step donor]', DryRun::preview( '{{steps.donor.record.email}}', false, $record, $payload ), 'Without the steps, no label.' );
+		$this->assertSame( $before, $this->state() );
+	}
+
+	/**
 	 * What a dry run must leave unchanged: run and step rows, posts, post meta (relationship links are
 	 * meta rows), sent mail.
 	 *

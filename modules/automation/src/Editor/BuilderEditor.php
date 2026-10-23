@@ -187,11 +187,13 @@ final class BuilderEditor {
 	/**
 	 * What the builder needs from the registry to list fields, merge tags and operators: content types
 	 * (fields with type, options and privacy; taxonomies with single or multiple select and terms),
-	 * forms (target, confirm, items with privacy from the target type) and options pages. The shared
-	 * fixture tests/fixtures/automation/scope.json holds this shape for the branching fixture package.
+	 * forms (target, confirm, items with privacy from the target type), options pages and relationships
+	 * (key, label, from and to types, for reads and Link records). Fields name their `storage` when it is
+	 * the title or the content (reads sort by a title and never filter post content). The shared fixture
+	 * tests/fixtures/automation/scope.json holds this shape for its fixture packages.
 	 *
 	 * @param Registry $registry Registry.
-	 * @return array{types: list<array<string, mixed>>, forms: list<array<string, mixed>>, optionsPages: list<array<string, mixed>>}
+	 * @return array{types: list<array<string, mixed>>, forms: list<array<string, mixed>>, optionsPages: list<array<string, mixed>>, relationships: list<array<string, string>>}
 	 */
 	public static function registry_config( Registry $registry ): array {
 		$taxonomies = $registry->taxonomies();
@@ -209,6 +211,7 @@ final class BuilderEditor {
 				'type'    => (string) $definition['type'],
 				'options' => isset( $definition['options'] ) ? $options( $definition['options'] ) : null,
 				'private' => 'private' === ( $definition['visibility'] ?? 'public' ) ? true : null,
+				'storage' => in_array( $definition['wp']['storage'] ?? null, array( 'post_title', 'post_content' ), true ) ? (string) $definition['wp']['storage'] : null,
 			),
 			static fn( $value ) => null !== $value
 		);
@@ -236,6 +239,7 @@ final class BuilderEditor {
 			$types[] = array(
 				'key'        => (string) $type_key,
 				'label'      => (string) ( $type['labels']['singular'] ?? $type_key ),
+				'plural'     => (string) ( $type['labels']['plural'] ?? ( $type['labels']['singular'] ?? $type_key ) ),
 				'fields'     => array_map( $field, array_values( $registry->fields( (string) $type_key ) ) ),
 				'taxonomies' => $usages,
 			);
@@ -282,10 +286,21 @@ final class BuilderEditor {
 			);
 		}
 
+		$relationships = array();
+		foreach ( $registry->relationships() as $relationship_key => $relationship ) {
+			$relationships[] = array(
+				'key'   => (string) $relationship_key,
+				'label' => (string) ( $relationship['label'] ?? $relationship_key ),
+				'from'  => (string) $relationship['from'],
+				'to'    => (string) $relationship['to'],
+			);
+		}
+
 		return array(
-			'types'        => $types,
-			'forms'        => $forms,
-			'optionsPages' => $pages,
+			'types'         => $types,
+			'forms'         => $forms,
+			'optionsPages'  => $pages,
+			'relationships' => $relationships,
 		);
 	}
 

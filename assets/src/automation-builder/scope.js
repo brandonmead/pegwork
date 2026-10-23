@@ -1,8 +1,9 @@
 /**
  * What a step can read: the record the trigger binds, the trigger payload, outputs of steps that ran
- * on every path before it, the site, and in templates the time, run, signed links and public options.
- * Mirrors AutomationRules::automation_scan() and scan_path(); the shared fixture
- * tests/fixtures/automation/scope.json holds both sides to the same lists. Pure: no WordPress imports.
+ * on every path before it (reads included: a read record's fields, totals), the site, and in
+ * templates the time, run, signed links and public options. Mirrors AutomationRules::automation_scan()
+ * and scan_path(); the shared fixture tests/fixtures/automation/scope.json holds both sides to the same
+ * lists. Pure: no WordPress imports.
  */
 
 /**
@@ -25,9 +26,20 @@ export const FORM_EVENTS = [ 'form.submitted', 'form.confirmed' ];
 const FORM_KEYS = [ 'form', 'entry_id', 'post_id', 'record_id' ];
 
 /**
- * Step outputs (STEP_OUTPUTS).
+ * Step outputs with their types (STEP_OUTPUTS): `record` takes one key of the read type, `sum` one
+ * summed field, `records` is a list (loops and {{#each}} only, never a tag or a condition).
  */
-const OUTPUTS = { create_record: [ 'record_id' ] };
+const OUTPUTS = {
+	create_record: { record_id: 'number' },
+	get_record: { found: 'boolean', record_id: 'number', record: 'record' },
+	find_records: { count: 'number', records: 'records', sum: 'sum' },
+	loop: { count: 'number' },
+};
+
+/**
+ * Outputs of a step with `on_error` (ON_ERROR_OUTPUTS).
+ */
+const ON_ERROR_OUTPUTS = { failed: 'boolean', error: 'text' };
 
 /**
  * The record a trigger binds: whether it binds one, and its content type (null when the trigger
@@ -41,6 +53,11 @@ export function binding( trigger, config ) {
 	const event = typeof trigger?.event === 'string' ? trigger.event : '';
 	if ( trigger?.type === 'schedule' && trigger.for_each ) {
 		return { binds: true, type: trigger.for_each.content_type ?? null };
+	}
+	if ( trigger?.type === 'manual' ) {
+		return trigger.content_type
+			? { binds: true, type: trigger.content_type }
+			: { binds: false, type: null };
 	}
 	if ( trigger?.type !== 'event' ) {
 		return { binds: false, type: null };
@@ -67,7 +84,7 @@ export function binding( trigger, config ) {
  *
  * @param {Array}  steps   The automation's steps.
  * @param {string} pointer Pointer of a step, a branch, or a property inside one.
- * @return {Array<{id: string, type: string}>} Steps, in document order.
+ * @return {Array<Object>} Steps (the step objects), in document order.
  */
 export function stepsBefore( steps, pointer ) {
 	const parts = String( pointer ).split( '/' ).slice( 1 );
@@ -79,11 +96,7 @@ export function stepsBefore( steps, pointer ) {
 		if ( ! Number.isInteger( index ) ) {
 			break;
 		}
-		current
-			.slice( 0, index )
-			.forEach( ( step ) =>
-				found.push( { id: step.id, type: step.type } )
-			);
+		found.push( ...current.slice( 0, index ) );
 		const step = current[ index ];
 		if ( parts[ at + 1 ] === 'branches' && parts[ at + 3 ] === 'steps' ) {
 			current =
@@ -100,15 +113,26 @@ export function stepsBefore( steps, pointer ) {
 }
 
 /**
+ * A content type of the config.
+ *
+ * @param {Object} config Parsed config.
+ * @param {string} type   Content type key.
+ * @return {?Object} Type (`key`, `label`, `plural`, `fields`, `taxonomies`).
+ */
+export function typeOf( config, type ) {
+	return config.types.find( ( item ) => item.key === type ) || null;
+}
+
+/**
  * Fields and taxonomies of a content type, as paths under a prefix.
  *
  * @param {Object} config Parsed config.
  * @param {string} type   Content type key.
  * @param {string} prefix Path prefix, such as `record.`.
- * @return {Array<Object>} Paths with label, type, options, multiple and private.
+ * @return {Array<Object>} Paths with label, type, options, multiple, private and storage.
  */
 export function typeFields( config, type, prefix ) {
-	const definition = config.types.find( ( item ) => item.key === type );
+	const definition = typeOf( config, type );
 	if ( ! definition ) {
 		return [];
 	}
@@ -120,6 +144,7 @@ export function typeFields( config, type, prefix ) {
 			type: field.type,
 			options: field.options,
 			private: field.private === true,
+			storage: field.storage,
 		} ) ),
 		...( definition.taxonomies || [] ).map( ( taxonomy ) => ( {
 			path: prefix + taxonomy.key,
@@ -133,6 +158,23 @@ export function typeFields( config, type, prefix ) {
 }
 
 /**
+ * A record of a content type as paths: id, status and type, then its fields and taxonomies.
+ *
+ * @param {Object}  config Parsed config.
+ * @param {?string} type   Content type key (null or '' when not known: no fields).
+ * @param {string}  prefix Path prefix, such as `record.` or `steps.donor.record.`.
+ * @return {Array<Object>} Paths.
+ */
+function recordFields( config, type, prefix ) {
+	return [
+		{ path: `${ prefix }id`, key: 'id', type: 'number' },
+		{ path: `${ prefix }status`, key: 'status', type: 'text' },
+		{ path: `${ prefix }type`, key: 'type', type: 'text' },
+		...( type ? typeFields( config, type, prefix ) : [] ),
+	];
+}
+
+/**
  * The paths a trigger's payload offers.
  *
  * @param {Object} trigger Trigger.
@@ -141,6 +183,12 @@ export function typeFields( config, type, prefix ) {
  */
 function triggerPaths( trigger, config ) {
 	const event = typeof trigger?.event === 'string' ? trigger.event : '';
+	if ( trigger?.type === 'manual' ) {
+		return [
+			{ path: 'trigger.user_id', type: 'number' },
+			{ path: 'trigger.source', type: 'text' },
+		];
+	}
 	if ( trigger?.type !== 'event' ) {
 		return [];
 	}
@@ -170,14 +218,68 @@ function triggerPaths( trigger, config ) {
 }
 
 /**
+ * The output paths of one step in scope: typed values, a read record's keys, and summed fields.
+ *
+ * @param {Object} step   Step.
+ * @param {Object} config Parsed config.
+ * @return {Array<Object>} Paths (`group` steps, `step` the id, `output` the output name).
+ */
+function stepPaths( step, config ) {
+	const outputs = {
+		...( OUTPUTS[ step.type ] || {} ),
+		...( step.on_error ? ON_ERROR_OUTPUTS : {} ),
+	};
+	const base = `steps.${ step.id }.`;
+	const paths = [];
+	for ( const [ output, kind ] of Object.entries( outputs ) ) {
+		if ( kind === 'record' ) {
+			paths.push(
+				...recordFields(
+					config,
+					step.content_type,
+					`${ base }record.`
+				).map( ( field ) => ( { ...field, output } ) )
+			);
+		} else if ( kind === 'sum' ) {
+			const fields = typeFields( config, step.content_type, '' );
+			for ( const key of Array.isArray( step.sum ) ? step.sum : [] ) {
+				const field = fields.find( ( item ) => item.key === key );
+				paths.push( {
+					path: `${ base }sum.${ key }`,
+					key,
+					label: field?.label,
+					type: 'number',
+					private: field?.private === true,
+					output,
+				} );
+			}
+		} else if ( kind !== 'records' ) {
+			paths.push( { path: base + output, type: kind, output } );
+		}
+	}
+	const source = {
+		type: step.type,
+		content_type: step.content_type,
+		relationship: step.related?.relationship,
+	};
+	return paths.map( ( path ) => ( {
+		...path,
+		group: 'steps',
+		step: step.id,
+		source,
+	} ) );
+}
+
+/**
  * Paths a condition at a pointer can test: the record's fields and taxonomies (private ones
- * included and flagged), id, status and type, the trigger payload, step outputs and the site.
+ * included and flagged), id, status and type, the trigger payload, step outputs (a read record's
+ * keys and totals included) and the site.
  *
  * @param {Object} definition Automation (trigger and steps).
  * @param {string} pointer    Pointer of the condition.
  * @param {Object} config     Parsed config.
- * @return {Array<Object>} Fields: `path`, `label`, `type` (null when unknown), `group`, and for
- *                         typed ones `options`, `multiple`, `private`.
+ * @return {Array<Object>} Fields: `path`, `label`, `type` (null when unknown), `group` (and `step`
+ *                         for step outputs), and for typed ones `options`, `multiple`, `private`.
  */
 export function conditionFields( definition, pointer, config ) {
 	const trigger = definition?.trigger || {};
@@ -185,18 +287,12 @@ export function conditionFields( definition, pointer, config ) {
 	const fields = [];
 	if ( binds ) {
 		fields.push(
-			{ path: 'record.id', type: 'number', group: 'record' },
-			{ path: 'record.status', type: 'text', group: 'record' },
-			{ path: 'record.type', type: 'text', group: 'record' }
+			...recordFields( config, type, 'record.' ).map( ( field ) => ( {
+				...field,
+				group: 'record',
+				source: { content_type: type },
+			} ) )
 		);
-		if ( type ) {
-			fields.push(
-				...typeFields( config, type, 'record.' ).map( ( field ) => ( {
-					...field,
-					group: 'record',
-				} ) )
-			);
-		}
 	}
 	fields.push(
 		...triggerPaths( trigger, config ).map( ( field ) => ( {
@@ -205,13 +301,7 @@ export function conditionFields( definition, pointer, config ) {
 		} ) )
 	);
 	for ( const step of stepsBefore( definition?.steps, pointer ) ) {
-		for ( const output of OUTPUTS[ step.type ] || [] ) {
-			fields.push( {
-				path: `steps.${ step.id }.${ output }`,
-				type: null,
-				group: 'steps',
-			} );
-		}
+		fields.push( ...stepPaths( step, config ) );
 	}
 	fields.push(
 		{ path: 'site.name', type: null, group: 'site' },
@@ -228,26 +318,34 @@ export function conditionFields( definition, pointer, config ) {
  * @param {string} pointer    Pointer of the template.
  * @param {Object} config     Parsed config.
  * @param {string} context    `private` or `public`.
- * @return {Array<Object>} Tags: `path` (inside the braces), `label`, `group`, `date` (takes `| date`).
+ * @return {Array<Object>} Tags: `path` (inside the braces), `label`, `group`, `step` and `source`
+ *                         (the record or step a tag reads, for group names), `private`, `date`
+ *                         (takes `| date` and `| add`) and `number` (takes `| number`).
  */
 export function mergeTags( definition, pointer, config, context ) {
 	const trigger = definition?.trigger || {};
 	const { binds } = binding( trigger, config );
 	const tags = [];
+	const tag = ( field ) => ( {
+		path: field.path,
+		label: field.label,
+		group: field.group,
+		step: field.step,
+		source: field.source,
+		private: field.private,
+		date: field.type === 'date',
+		number: field.type === 'number',
+	} );
 	for ( const field of conditionFields( definition, pointer, config ) ) {
 		if ( context === 'public' && field.private ) {
 			continue;
 		}
-		tags.push( {
-			path: field.path,
-			label: field.label,
-			group: field.group,
-			date: field.type === 'date',
-		} );
-		if ( field.path === 'record.type' ) {
+		tags.push( tag( field ) );
+		if ( field.key === 'type' && field.path.endsWith( 'record.type' ) ) {
+			const prefix = field.path.slice( 0, -'type'.length );
 			tags.push(
-				{ path: 'record.permalink', group: 'record', date: false },
-				{ path: 'record.edit_url', group: 'record', date: false }
+				tag( { ...field, path: `${ prefix }permalink`, type: null } ),
+				tag( { ...field, path: `${ prefix }edit_url`, type: null } )
 			);
 		}
 	}
@@ -269,6 +367,7 @@ export function mergeTags( definition, pointer, config, context ) {
 					label: `${ page.label }: ${ field.label }`,
 					group: 'option',
 					date: field.type === 'date',
+					number: field.type === 'number',
 				} );
 			}
 		}
@@ -277,16 +376,62 @@ export function mergeTags( definition, pointer, config, context ) {
 }
 
 /**
+ * The content type of a template that is exactly a typed record reference, as
+ * AutomationRules::typed_reference() reads it: `{{record.id}}` of a bound record, or
+ * `{{steps.<id>.record_id}}` of a get_record or create_record step that ran before.
+ *
+ * @param {string} template   Template.
+ * @param {Object} definition Automation (trigger and steps).
+ * @param {string} pointer    Pointer of the template.
+ * @param {Object} config     Parsed config.
+ * @return {?string} Content type key, or null.
+ */
+export function typedReference( template, definition, pointer, config ) {
+	const match = /^\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*\}\}$/.exec(
+		typeof template === 'string' ? template : ''
+	);
+	if ( ! match ) {
+		return null;
+	}
+	const parts = match[ 1 ].split( '.' );
+	let type = null;
+	if ( match[ 1 ] === 'record.id' ) {
+		const bound = binding( definition?.trigger || {}, config );
+		type = bound.binds ? bound.type : null;
+	} else if (
+		parts.length === 3 &&
+		parts[ 0 ] === 'steps' &&
+		parts[ 2 ] === 'record_id'
+	) {
+		const step = stepsBefore( definition?.steps, pointer ).find(
+			( item ) => item.id === parts[ 1 ]
+		);
+		type = [ 'get_record', 'create_record' ].includes( step?.type )
+			? step.content_type
+			: null;
+	}
+	return typeof type === 'string' && type !== '' ? type : null;
+}
+
+/**
  * A merge tag as written in a template.
  *
  * @param {string} path      Path.
- * @param {Object} [filters] `date` (boolean) and `fallback` (text for `| default`).
- * @return {string} Tag such as `{{record.due | date}}`.
+ * @param {Object} [filters] `add` (signed duration for `| add`), `date` (boolean), `number` (true,
+ *                           or the decimals 0 to 4) and `fallback` (text for `| default`).
+ * @return {string} Tag such as `{{record.due | add:"P2D" | date}}`.
  */
 export function formatTag( path, filters = {} ) {
 	let tag = path;
+	if ( filters.add ) {
+		tag += ` | add:"${ String( filters.add ).replace( /"/g, '' ) }"`;
+	}
 	if ( filters.date ) {
 		tag += ' | date';
+	} else if ( filters.number === true ) {
+		tag += ' | number';
+	} else if ( Number.isInteger( filters.number ) ) {
+		tag += ` | number:${ filters.number }`;
 	}
 	if ( filters.fallback ) {
 		tag += ` | default:"${ String( filters.fallback ).replace( /"/g, '' ) }"`;

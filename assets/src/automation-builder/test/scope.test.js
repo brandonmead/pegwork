@@ -96,7 +96,7 @@ describe( 'operators (shared fixture)', () => {
 		const { definition, config } = load( item );
 		const known = conditionFields(
 			definition,
-			'/trigger/when',
+			item.at ?? '/trigger/when',
 			config
 		).find( ( field ) => field.path === item.var );
 		const field = known?.type ? known : null;

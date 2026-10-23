@@ -208,6 +208,15 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Perf: the 50-item digest wake-up (103 rows) 0.1 s locally (budget 5 s).
 - Local runs: test DBs `pegwork_tests_v3loop82`, `_v3loop84`, `_v3loop82_67`, `_v3loop84_67`; site `~/wp-envs/v3loop` (port 8235). Last verified 2026-10-23.
 
+## Automation v3 editor reads (PR 6, branch `v3-editor-reads`)
+- `registry_config()` adds `plural` per type, `storage` per field (`post_title`, `post_content`) and top-level `relationships` `[ { key, label, from, to } ]`; the scope fixture's configs must be regenerated when it changes (`AutomationBuilderScopeTest::test_config_matches_registry`).
+- Step block attributes: every read, relate and `on_error` property is declared in `automation-step/block.json` (core drops undeclared ones on parse) and in `Builder::STEP_ATTRIBUTES` (order); `status` is `["string","array"]`.
+- Scope rules mirrored in `scope.js` (`STEP_OUTPUTS`, `typedReference()`); `reads.js` is pure (Vitest).
+- Preview route param `steps`: `DryRun::preview()` sets `Context::use_plan()` so `Templates` can name fields (`Context::field_label()`).
+- E2E: package `tests/e2e/packages/barn-reads` replaces `barn` while option `pegwork_e2e_barn_reads` is set (route `POST pegwork-e2e/v1/barn/reads`); the two share `barn_*` keys, so never both.
+- Size: builder 24,893 bytes gzipped of 25,600.
+- Local runs: test DBs `pegwork_tests_v3ed82`, `_v3ed84`, `_v3ed82_67`, `_v3ed84_67`; site `~/wp-envs/v3ed` (port 8237). Last verified 2026-10-23.
+
 ## Automation engine (Phase 4 PR 3)
 - `docs/automation.md`. Module `automation` (`modules/automation`, `PegworkAutomation\`, `PEGWORK_AUTOMATION_DIR`). Tables `{prefix}pegwork_runs`, `{prefix}pegwork_run_steps` (dbDelta on boot when option `pegwork_automation_db_version` != `Schema::VERSION`); dropped by `modules/automation/uninstall.php`, which core `uninstall.php` includes (it includes every `modules/*/uninstall.php`).
 - Hooks: listener on `pegwork_event`; WP-Cron hooks `pegwork_automation_run` [run id] and `pegwork_automation_maintenance` (daily 03:00 site time, self-rescheduling, re-created on boot when missing). Options `pegwork_automation_overrides`, `pegwork_automation_retention_days`. Filters `pegwork_automation_max_depth` (3), `pegwork_automation_time_budget` (20), `pegwork_automation_retention_days`, `pegwork_automation_spawn_cron`.

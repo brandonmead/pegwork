@@ -17,6 +17,7 @@ import {
 	Dashicon,
 	Disabled,
 	PanelBody,
+	RadioControl,
 	SelectControl,
 	TextControl,
 } from '@wordpress/components';
@@ -30,10 +31,17 @@ import { __, sprintf } from '@wordpress/i18n';
 import ConditionBuilder from './condition-builder';
 import { DurationControl, Errors, TemplateControl, wire } from './controls';
 import { stepSummary, typeLabel } from './labels';
-import { assignId, flatten, toNumber } from './logic';
+import { ON_ERROR_TYPES, assignId, flatten, toNumber } from './logic';
 import MoveToBranch from './move';
 import { PreviewPanel } from './preview';
-import { binding, conditionFields, mergeTags, typeFields } from './scope';
+import { ReadFields, RelateFields } from './read-edit';
+import {
+	binding,
+	conditionFields,
+	mergeTags,
+	typeFields,
+	typedReference,
+} from './scope';
 import { config, useDefinition, useErrorOwners } from './store';
 
 export const ICONS = {
@@ -43,6 +51,9 @@ export const ICONS = {
 	call_webhook: 'admin-site-alt3',
 	wait: 'clock',
 	condition: 'filter',
+	get_record: 'search',
+	find_records: 'list-view',
+	relate: 'admin-links',
 };
 
 const STATUSES = [ 'draft', 'pending', 'publish', 'private' ];
@@ -337,7 +348,14 @@ function ValuesControl( { values, onChange, fields, pointer, errors, tags } ) {
  * @param {Object}   props.errors     Errors by pointer.
  * @param {Object}   props.definition Edited definition.
  */
-function TypeFields( { attributes, set, pointer, errors, definition } ) {
+function TypeFields( {
+	attributes,
+	set,
+	setAttributes,
+	pointer,
+	errors,
+	definition,
+} ) {
 	const at = ( name ) => `${ pointer }/${ name }`;
 	const tags = mergeTags( definition, pointer, config, 'private' );
 	const template = ( name, label, extra = {} ) => (
@@ -384,8 +402,40 @@ function TypeFields( { attributes, set, pointer, errors, definition } ) {
 					) }
 				</>
 			);
+		case 'get_record':
+		case 'find_records':
+			return (
+				<ReadFields
+					attributes={ attributes }
+					set={ set }
+					setAttributes={ setAttributes }
+					pointer={ pointer }
+					errors={ errors }
+					definition={ definition }
+					tags={ tags }
+				/>
+			);
+		case 'relate':
+			return (
+				<RelateFields
+					attributes={ attributes }
+					set={ set }
+					pointer={ pointer }
+					errors={ errors }
+					definition={ definition }
+					tags={ tags }
+				/>
+			);
 		case 'update_record': {
-			const known = ! attributes.record && binds && type;
+			// The bound record, or a record whose type the template names exactly ({{steps.donor.record_id}}).
+			const known = attributes.record
+				? typedReference(
+						attributes.record,
+						definition,
+						pointer,
+						config
+					)
+				: binds && type;
 			return (
 				<>
 					{ template(
@@ -401,7 +451,9 @@ function TypeFields( { attributes, set, pointer, errors, definition } ) {
 					<ValuesControl
 						values={ attributes.values }
 						onChange={ ( values ) => set( 'values', values ) }
-						fields={ known ? typeFields( config, type, '' ) : null }
+						fields={
+							known ? typeFields( config, known, '' ) : null
+						}
 						pointer={ at( 'values' ) }
 						errors={ errors }
 						tags={ tags }
@@ -600,6 +652,7 @@ function TypeFields( { attributes, set, pointer, errors, definition } ) {
 export function Advanced( { attributes, set, pointer, errors, retry = true } ) {
 	const id = wire( errors, `${ pointer }/id`, true );
 	const retryWire = wire( errors, `${ pointer }/retry` );
+	const onError = wire( errors, `${ pointer }/on_error` );
 	const policy = attributes.retry || null;
 	const backoff = Array.isArray( policy?.backoff )
 		? policy.backoff.join( ', ' )
@@ -608,7 +661,9 @@ export function Advanced( { attributes, set, pointer, errors, retry = true } ) {
 		<PanelBody
 			title={ __( 'Advanced', 'pegwork' ) }
 			initialOpen={ Boolean(
-				id.messages.length || retryWire.messages.length
+				id.messages.length ||
+				retryWire.messages.length ||
+				onError.messages.length
 			) }
 		>
 			<TextControl
@@ -680,6 +735,46 @@ export function Advanced( { attributes, set, pointer, errors, retry = true } ) {
 					/>
 				</fieldset>
 			) }
+			{ ON_ERROR_TYPES.includes( attributes.type ) && (
+				<>
+					<RadioControl
+						label={ __(
+							'If this step fails after retries',
+							'pegwork'
+						) }
+						help={
+							attributes.on_error === 'continue'
+								? __(
+										'Later steps can check Failed.',
+										'pegwork'
+									)
+								: undefined
+						}
+						selected={
+							attributes.on_error === 'continue'
+								? 'continue'
+								: 'stop'
+						}
+						options={ [
+							{
+								value: 'stop',
+								label: __( 'Stop the run', 'pegwork' ),
+							},
+							{
+								value: 'continue',
+								label: __( 'Continue', 'pegwork' ),
+							},
+						] }
+						onChange={ ( value ) =>
+							set(
+								'on_error',
+								value === 'continue' ? 'continue' : undefined
+							)
+						}
+					/>
+					<Errors messages={ onError.messages } />
+				</>
+			) }
 		</PanelBody>
 	);
 }
@@ -707,7 +802,8 @@ export default function StepEdit( {
 	const summary = stepSummary(
 		attributes,
 		conditionFields( definition, pointer, config ),
-		config
+		config,
+		binding( definition.trigger, config ).type
 	);
 	const set = ( name, value ) =>
 		setAttributes( {
@@ -724,6 +820,7 @@ export default function StepEdit( {
 				<TypeFields
 					attributes={ attributes }
 					set={ set }
+					setAttributes={ setAttributes }
 					pointer={ pointer }
 					errors={ errors }
 					definition={ definition }
@@ -768,6 +865,11 @@ export default function StepEdit( {
 			</p>
 			{ summary && (
 				<p className="pegwork-automation-step__summary">{ summary }</p>
+			) }
+			{ attributes.on_error === 'continue' && (
+				<p className="pegwork-automation-step__note">
+					{ __( 'Continues if it fails', 'pegwork' ) }
+				</p>
 			) }
 			<Errors messages={ messages } />
 			{ isSelected && ! config.readOnly && (

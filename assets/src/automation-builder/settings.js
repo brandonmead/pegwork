@@ -10,6 +10,7 @@
 import {
 	CheckboxControl,
 	Notice,
+	RadioControl,
 	SelectControl,
 	TextControl,
 	TextareaControl,
@@ -53,10 +54,14 @@ function MaybeDisabled( { children } ) {
  * The trigger kind of a trigger.
  *
  * @param {Object} trigger Trigger.
- * @return {string} record, form, schedule, webhook, other or ''.
+ * @return {string} record, form, schedule, webhook, manual, other or ''.
  */
 export function triggerKind( trigger ) {
-	if ( trigger?.type === 'schedule' || trigger?.type === 'webhook' ) {
+	if (
+		trigger?.type === 'schedule' ||
+		trigger?.type === 'webhook' ||
+		trigger?.type === 'manual'
+	) {
 		return trigger.type;
 	}
 	if ( trigger?.type !== 'event' ) {
@@ -470,6 +475,104 @@ function TriggerFields( { trigger, setTrigger, errors } ) {
 			</p>
 		);
 	}
+	if ( kind === 'manual' ) {
+		const button = wire( errors, '/trigger/button', true );
+		const allow = wire( errors, '/trigger/allow' );
+		return (
+			<>
+				{ select(
+					'content_type',
+					__( 'Content type', 'pegwork' ),
+					[
+						{
+							value: '',
+							label: __(
+								'None: Run now on the Automations list',
+								'pegwork'
+							),
+						},
+						...types,
+					],
+					trigger.content_type,
+					( value ) =>
+						// Editors can run it only on a record they can edit, so "editors" needs a type.
+						setTrigger(
+							withValue(
+								value ? trigger : withValue( trigger, 'allow' ),
+								'content_type',
+								value
+							)
+						),
+					{
+						help: trigger.content_type
+							? __(
+									'A button on the edit screen of these records runs it for that record.',
+									'pegwork'
+								)
+							: __(
+									'The run has no record. Start it with Run now on the Automations list.',
+									'pegwork'
+								),
+					}
+				) }
+				<TextControl
+					__next40pxDefaultSize
+					__nextHasNoMarginBottom
+					label={ __( 'Button text', 'pegwork' ) }
+					help={ __(
+						'Such as "Resend thank-you". At most 40 characters.',
+						'pegwork'
+					) }
+					maxLength={ 40 }
+					value={ trigger.button ?? '' }
+					onChange={ ( value ) => set( 'button', value ) }
+					{ ...button.props }
+				/>
+				<Errors
+					messages={ button.messages }
+					id={ `${ button.id }-errors` }
+				/>
+				<RadioControl
+					label={ __( 'Who can run it', 'pegwork' ) }
+					help={
+						trigger.allow === 'editors'
+							? __(
+									"It runs with this automation's full access: it may email people and read other records.",
+									'pegwork'
+								)
+							: undefined
+					}
+					selected={
+						trigger.allow === 'editors' ? 'editors' : 'admins'
+					}
+					options={ [
+						{
+							value: 'admins',
+							label: __( 'Administrators', 'pegwork' ),
+						},
+						...( trigger.content_type || trigger.allow === 'editors'
+							? [
+									{
+										value: 'editors',
+										label: __(
+											'Anyone who can edit the record',
+											'pegwork'
+										),
+									},
+								]
+							: [] ),
+					] }
+					onChange={ ( value ) =>
+						set(
+							'allow',
+							value === 'editors' ? 'editors' : undefined
+						)
+					}
+				/>
+				<Errors messages={ allow.messages } />
+			</>
+		);
+	}
 	if ( kind === 'other' ) {
 		const w = wire( errors, '/trigger/event', true );
 		return (
@@ -519,6 +622,7 @@ function TriggerPanel() {
 			},
 			schedule: { type: 'schedule', every: 'day' },
 			webhook: { type: 'webhook' },
+			manual: { type: 'manual', ...keep },
 			other: { type: 'event', event: '', ...keep },
 		}[ next ];
 		setTrigger( fresh );
@@ -559,6 +663,10 @@ function TriggerPanel() {
 						},
 						{ value: 'webhook', label: __( 'Webhook', 'pegwork' ) },
 						{
+							value: 'manual',
+							label: __( 'Started by staff', 'pegwork' ),
+						},
+						{
 							value: 'other',
 							label: __( 'Other event', 'pegwork' ),
 						},
@@ -577,10 +685,17 @@ function TriggerPanel() {
 					setTrigger={ setTrigger }
 					errors={ errors }
 				/>
-				{ trigger.type === 'event' && (
+				{ ( trigger.type === 'event' || trigger.type === 'manual' ) && (
 					<ConditionBuilder
 						label={ __( 'Only when', 'pegwork' ) }
-						empty={ __( 'Every event starts a run.', 'pegwork' ) }
+						empty={
+							trigger.type === 'manual'
+								? __(
+										'Staff can always run it. When this condition is false, the button says the automation does not apply.',
+										'pegwork'
+									)
+								: __( 'Every event starts a run.', 'pegwork' )
+						}
 						value={ trigger.when }
 						onChange={ ( when ) =>
 							setTrigger( withValue( trigger, 'when', when ) )
