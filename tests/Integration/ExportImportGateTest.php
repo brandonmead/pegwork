@@ -403,9 +403,10 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Phase 6 gate: the BarnCRM proof package (four types, an options page, a form and three automations with
-	 * decisions, a templated update_record target and a form-bound trigger) exports, re-imports into the DB
-	 * source and re-exports byte-identically; the export holds one file per fixture object.
+	 * Phase 6 and Automation v3 gate: the BarnCRM proof package (four types, two relationships, an options page,
+	 * a form and six automations with decisions, reads, a loop, manual and webhook triggers, typed update_record
+	 * targets and a form-bound trigger) exports, re-imports into the DB source and re-exports byte-identically;
+	 * the export holds one file per fixture object.
 	 */
 	public function test_barn_package_round_trip() {
 		$fixture       = dirname( __DIR__ ) . '/fixtures/valid/barn';
@@ -413,9 +414,9 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		add_action( 'pegwork_register', $this->package );
 		$this->reregister();
 		$this->assertSame( array(), Plugin::result()->errors );
-		$sections = array( 'content_types', 'options_pages', 'forms', 'automations' );
+		$sections = array( 'content_types', 'relationships', 'options_pages', 'forms', 'automations' );
 		$before   = array_map( fn( $section ) => Plugin::registry()->$section(), array_combine( $sections, $sections ) );
-		$this->assertSame( array( 4, 1, 1, 3 ), array_values( array_map( 'count', $before ) ) );
+		$this->assertSame( array( 4, 2, 1, 1, 6 ), array_values( array_map( 'count', $before ) ) );
 
 		$a    = $this->export();
 		$tree = $this->tree( $a );
@@ -425,8 +426,9 @@ class ExportImportGateTest extends WP_UnitTestCase {
 			'One exported file per fixture object.'
 		);
 		$thanks = json_decode( $tree['automations/barn_gift_thanks.json'], true );
-		$this->assertSame( 'publish', $thanks['steps'][0]['branches'][0]['steps'][1]['status'] );
-		$this->assertSame( '{{record.donor_id}}', $thanks['steps'][2]['record'] );
+		$this->assertSame( 'publish', $thanks['steps'][2]['branches'][0]['steps'][1]['status'] );
+		$this->assertSame( '{{record.id}}', $thanks['steps'][2]['branches'][0]['steps'][1]['values']['task_gift'] );
+		$this->assertSame( '{{steps.donor.record_id}}', $thanks['steps'][3]['record'] );
 
 		remove_action( 'pegwork_register', $this->package );
 		delete_option( Loader::DB_OPTION );

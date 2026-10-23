@@ -1,2 +1,0 @@
-{ "format": 1, "key": "barn_fund", "labels": { "singular": "Fund", "plural": "Funds" },
-  "terms": [ { "slug": "general", "name": "General" }, { "slug": "building", "name": "Building" } ] }

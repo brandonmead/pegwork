@@ -1,0 +1,15 @@
+{ "format": 1, "key": "barn_donation_inbound", "label": "Donation platform: record the gift",
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "has_email", "type": "condition", "when": { "var": "trigger.payload.email", "op": "not_empty" } },
+    { "id": "existing", "type": "get_record", "content_type": "barn_contact",
+      "filter": { "all": [ { "field": "email", "op": "eq", "value": { "var": "trigger.payload.email" } } ] } },
+    { "id": "new_contact", "type": "decision",
+      "branches": [ { "label": "Not in the CRM yet", "when": { "var": "steps.existing.found", "op": "eq", "value": false },
+        "steps": [ { "id": "add_contact", "type": "create_record", "content_type": "barn_contact", "status": "private",
+          "values": { "name": "{{trigger.payload.name}}", "email": "{{trigger.payload.email}}" } } ] } ] },
+    { "id": "contact", "type": "get_record", "content_type": "barn_contact",
+      "filter": { "all": [ { "field": "email", "op": "eq", "value": { "var": "trigger.payload.email" } } ] } },
+    { "id": "add_gift", "type": "create_record", "content_type": "barn_gift", "status": "private",
+      "values": { "name": "Gift from {{steps.contact.record.name}}", "amount": "{{trigger.payload.amount}}",
+        "received_on": "{{today}}", "gift_donor": "{{steps.contact.record_id}}" } } ] }

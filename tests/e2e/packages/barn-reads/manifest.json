@@ -1,1 +1,0 @@
-{ "format": 1, "id": "e2e_barn_reads", "version": "1.0.0", "label": "E2E BarnCRM reads: types, relationships, fund and settings for building the reads examples", "requires": { "pegwork": ">=0.3.0" } }
