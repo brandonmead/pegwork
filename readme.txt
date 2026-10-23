@@ -41,6 +41,12 @@ Pegwork connects to an outside service only when a site owner sets one up.
 
 Deleting Pegwork from the Plugins screen removes, on every site of a multisite network, its settings and secrets (every `pegwork_` option), its transients, its scheduled events, the automation run log tables and the rate limit table. Content (posts, fields, terms) is never deleted. Form entries (the `pegwork_entries` table) and files uploaded through forms (`wp-content/uploads/pegwork-forms/`) are also kept on purpose, so submissions are not lost by removing the plugin; delete them under Pegwork > Entries before uninstalling, or remove the table and folder afterwards.
 
+== Frequently Asked Questions ==
+
+= Automations run late or not at all. Why? =
+
+WP-Cron only runs when someone visits the site. On a production site set `define( 'DISABLE_WP_CRON', true );` in wp-config.php and add a server cron that runs `wp cron event run --due-now` every 5 minutes. Tools > Site Health shows whether Pegwork's automations are on time (see docs/automation.md, Production scheduling).
+
 == Changelog ==
 
 = 0.2.0 =

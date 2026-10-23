@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E automation
- * Description: Test-only helpers for the Automations screen browser tests: registers tests/e2e/packages/automation, can make wp_mail() fail on demand, and exposes admin-only REST routes to toggle the automation module, run due automation wake-ups in process, and reset. Not shipped.
+ * Description: Test-only helpers for the Automations screen browser tests: registers tests/e2e/packages/automation, can make wp_mail() fail on demand, and exposes admin-only REST routes to toggle the automation module, run due automation wake-ups in process, add an overdue run for Site Health, and reset. Not shipped.
  *
  * @package Pegwork
  */
@@ -87,6 +87,36 @@ add_action(
 						}
 					}
 					return rest_ensure_response( $fired );
+				},
+			)
+		);
+
+		// Adds (on) or deletes (off) one waiting run of the unregistered key e2e_health, an hour past its resume time: an overdue run for Site Health.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/automation/overdue',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					global $wpdb;
+					$runs = $wpdb->prefix . 'pegwork_runs';
+					$wpdb->query( $wpdb->prepare( "DELETE FROM {$runs} WHERE automation = %s", 'e2e_health' ) );
+					if ( rest_sanitize_boolean( $request['on'] ) ) {
+						$wpdb->insert(
+							$runs,
+							array(
+								'automation'   => 'e2e_health',
+								'trigger_type' => 'schedule',
+								'status'       => 'waiting',
+								'current_step' => 'step',
+								'resume_at'    => gmdate( 'Y-m-d H:i:s', time() - HOUR_IN_SECONDS ),
+								'context'      => '{}',
+								'created_at'   => gmdate( 'Y-m-d H:i:s', time() - 2 * HOUR_IN_SECONDS ),
+							)
+						);
+					}
+					return rest_ensure_response( true );
 				},
 			)
 		);
