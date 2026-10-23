@@ -47,17 +47,35 @@ const definition = async ( key ) =>
 		key,
 	} );
 
+// Moves focus to a control. Retried: when focus first enters the canvas from the sidebar, the
+// editor can hand it back to the selected block once.
+async function focus( locator ) {
+	// Let the editor finish rendering the last keystrokes first.
+	await locator
+		.page()
+		.evaluate(
+			() =>
+				new Promise( ( resolve ) =>
+					window.requestAnimationFrame( () =>
+						window.requestAnimationFrame( resolve )
+					)
+				)
+		);
+	await expect( async () => {
+		await locator.focus();
+		await expect( locator ).toBeFocused( { timeout: 1000 } );
+	} ).toPass( { timeout: 10_000 } );
+}
+
 // Moves focus to a control and activates it with the keyboard.
 async function press( locator, key = 'Enter' ) {
-	await locator.focus();
-	await expect( locator ).toBeFocused();
+	await focus( locator );
 	await locator.page().keyboard.press( key );
 }
 
 // Focuses a text field, selects what it holds and types over it.
 async function typeInto( locator, text ) {
-	await locator.focus();
-	await expect( locator ).toBeFocused();
+	await focus( locator );
 	await locator.page().keyboard.press( 'ControlOrMeta+a' );
 	await locator.page().keyboard.type( text );
 }
@@ -138,7 +156,8 @@ function blockOption( page, name ) {
 async function insertFrom( page, appender, search ) {
 	await press( appender );
 	const box = page.getByRole( 'searchbox' ).last();
-	await expect( box ).toBeFocused();
+	// The quick inserter focuses its search box; the same hand-back as in focus() can undo it.
+	await focus( box );
 	await page.keyboard.type( search );
 	await press( blockOption( page, search ) );
 	await expect( page.getByRole( 'searchbox' ) ).toHaveCount( 0 );
