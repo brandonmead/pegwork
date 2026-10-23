@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "barn_volunteer_signup",
+  "label": "Volunteer with us",
+  "target": { "content_type": "barn_volunteer", "action": "create", "status": "pending" },
+  "fields": [
+    { "bind": { "field": "name" } },
+    { "bind": { "field": "email" } },
+    { "bind": { "field": "interest" } }
+  ]
+}

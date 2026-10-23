@@ -310,6 +310,57 @@ On a test site with the `sifg` package (siforgood.local with `sifg-config`, or `
 
 To repeat the cycle use a new Project: the reactivation sets Last verified to the real today, which may equal the value the sweep already keyed.
 
+## Trying the BarnCRM example flows
+
+The Phase 6 worked examples (`docs/phase-6-design.md`, "Worked examples: BarnCRM flows") live in `tests/fixtures/valid/barn`, so this needs a dev checkout of the plugin (the release zip has no `tests/`): a throwaway site from `bin/e2e-local-site.sh start <name> <port>`, or any Local site whose `wp-content/plugins/pegwork` is a checkout. `donor_id`, `donor_name` and `donor_email` on gifts stand in for the Phase 5 relationship (`tests/fixtures/valid/barn/README.md`). Mail: Local's Mailpit, or on an E2E site the forms mu-plugin's option `pegwork_e2e_mail` (`wp option get pegwork_e2e_mail --format=json`).
+
+1. Set up:
+   ```sh
+   wp config set WP_ENVIRONMENT_TYPE local --type=constant   # --now is refused in production
+   wp pegwork module enable automation forms
+   wp pegwork schema import "$(wp plugin path pegwork --dir)/tests/fixtures/valid/barn"
+   wp pegwork options set barn_settings development_email development@example.org
+   wp pegwork options set barn_settings events_coordinator events@example.org
+   wp pegwork options set barn_settings garden_coordinator garden@example.org
+   wp pegwork options set barn_settings volunteer_manager manager@example.org
+   wp pegwork options set barn_settings donate_url https://example.org/donate
+   ```
+   Expect 10 added objects (manifest, four types, the form, three automations, the options page) and `wp pegwork automation list` showing `barn_gift_thanks`, `barn_gift_followup` and `barn_volunteer_intake` enabled. The `donate_url` check resolves the host name, so use a domain that exists.
+2. A first gift, as staff would record it:
+   ```sh
+   TODAY=$(wp eval 'echo wp_date( "Y-m-d" );')
+   C=$(wp post create --post_type=barn_contact --post_status=private --post_title="Ada Lovelace" \
+     --meta_input='{"_barn_contact_email":"ada@example.org"}' --user=admin --porcelain)
+   G=$(wp post create --post_type=barn_gift --post_status=private --post_title="Gift from Ada" \
+     --meta_input="{\"_barn_gift_amount\":\"300\",\"_barn_gift_received_on\":\"$TODAY\",\"_barn_gift_donor_id\":\"$C\",\"_barn_gift_donor_name\":\"Ada Lovelace\",\"_barn_gift_donor_email\":\"ada@example.org\"}" \
+     --user=admin --porcelain)
+   wp cron event run --due-now            # or let WP-Cron run it
+   wp pegwork automation log barn_gift_thanks
+   wp pegwork automation log barn_gift_followup
+   ```
+   Expect a `barn_gift_thanks` run `completed` at `stamp_donor`, the email "Thank you for your generous gift" to ada@example.org with Reply-To development@example.org, one `barn_task` "Thank-you call: Ada Lovelace" (`wp post list --post_type=barn_task --post_status=any`), the contact's `_barn_contact_first_gift_on` and `_last_gift_on` both today, and a `barn_gift_followup` run at depth 1 `waiting` at `no_second_gift`.
+3. Two volunteers. The form path is what the site uses (`form.submitted` binds the record the form created); on the command line `run --record` starts the same flow on a record you create, as a `manual` run:
+   ```sh
+   V1=$(wp post create --post_type=barn_volunteer --post_status=pending --post_title="Vera Garden" \
+     --meta_input='{"_barn_volunteer_email":"vera@example.org","_barn_volunteer_interest":"garden","_barn_volunteer_stage":"new"}' --user=admin --porcelain)
+   V2=$(wp post create --post_type=barn_volunteer --post_status=pending --post_title="Evan Events" \
+     --meta_input='{"_barn_volunteer_email":"evan@example.org","_barn_volunteer_interest":"events","_barn_volunteer_stage":"new"}' --user=admin --porcelain)
+   wp pegwork automation run barn_volunteer_intake --record=$V1 --sync
+   wp pegwork automation run barn_volunteer_intake --record=$V2 --sync
+   ```
+   Expect each `Matched 1, created 1 run(s)` with the run `waiting` at `check`, coordinator emails garden@example.org and events@example.org in the records, and the notices "New volunteer: Vera Garden" to garden@example.org (Reply-To vera@example.org) and "New volunteer: Evan Events" to events@example.org.
+4. Evan's coordinator reaches out: set his Stage to Contacted on the edit screen, or `wp post meta update $V2 _barn_volunteer_stage contacted`.
+5. Two and five days later. Each `--now` is an offset from the real clock, and a wait created under `--now` is stored on that timeline, so the second wait (three days from `+3days`) needs `+7days`:
+   ```sh
+   wp pegwork automation tick --now=+3days
+   wp pegwork automation tick --now=+7days
+   ```
+   Expect `Resumed 2 run(s)`: Evan's run `completed` at `check` with no email, Vera's `waiting` at `still_new` after "Reminder: Vera Garden is waiting to hear from you" to garden@example.org. Then `Resumed 1 run(s)`: Vera's run `completed` at `escalate`, "Volunteer not contacted after five days: Vera Garden" to manager@example.org.
+6. A month later: `wp pegwork automation tick --now=+31days`. Expect `Resumed 1 run(s)`, the follow-up run `completed` at `follow_up`, and "What your gift made possible" to ada@example.org ending with "If you would like to give again: https://example.org/donate". A second gift for Ada before this tick (another `wp post create` with a later `_barn_gift_received_on`) would stop it at `no_second_gift` instead.
+7. The path: `wp pegwork automation log barn_volunteer_intake`, then `wp pegwork automation log --run=<Vera's run>`. Expect, with branch steps indented two spaces: `route` (`{"branch":"Garden","index":1}`), `  to_garden`, `notify`, `grace`, `check` (`{"branch":"Not contacted yet","index":0}`), `  remind`, `  grace_2`, `  still_new` (`{"passed":true}`), `  escalate`. Evan's run ends at `check` with `{"branch":null,"index":null}`. Pegwork > Automations > Log shows the same runs, indented, with the branch labels.
+
+`tests/Integration/Automation/BarnFlowsGateTest.php` runs both flows on a frozen clock, through the real form for volunteers.
+
 ## Admin screens
 
 Pegwork > Automations (`modules/automation/src/Admin/`, slug `pegwork-automations`, submenu position 30, added on `admin_menu` at the default priority while the module is enabled). Capability `manage_options` on every view and action: other users get 403 from WordPress on the views and from the handlers on the actions. Standard markup: `wrap`, `h1` with a `page-title-action` link, notices, `widefat striped` tables with captions and row headers (not `WP_List_Table`, whose small-screen CSS stacks cells without their headers, as on Modules). No JavaScript: every action is a form, so the screens are keyboard operable as they are. Times show in site time inside `<time datetime>`.
@@ -354,6 +405,7 @@ Phase 6 PR 3 (`docs/phase-6-design.md` section 6, "Surface"). The registry stays
 
 - Unit: `tests/Unit/Automation/ConditionsTest.php` (operators, operands, dates in site time, templates, `FrozenClock` across DST); `SchedulesTest.php` (next firing times including DST and week start, durations, retry policy, `InlineScheduler`); `TokenTest.php` (round trip, every kind of tampering, foreign key, malformed tokens).
 - Gate: `tests/Integration/StalenessCycleGateTest.php` runs `examples/sifg` on a frozen clock from 2026-11-02 (approval email with permalink and Last verified; nothing on 2027-11-01; one "still active?" email per Project on 2027-11-02, none the next day; a Project that confirms during the wait stops at `still_stale`; the other is paused on 2027-12-02 with `paused_from`, `paused_volunteers`, a fresh link, and anonymous REST showing `paused` and no private field; the original link reactivates it on 2028-01-15; tampered and expired tokens change nothing; every run completes, no token in the log). Clicks go through `Handler::respond()` as user 0.
+- BarnCRM gate (Phase 6): `tests/Integration/Automation/BarnFlowsGateTest.php` runs `tests/fixtures/valid/barn` (design section 11 timelines) on a frozen clock in site time, with the site in New York so the donor's 30-day wait crosses the start of daylight saving time and still resumes at 09:00 site time. Donor: on 2027-03-01 gifts of 300 and exactly 250 take the major branch (email A, Reply-To the development email, one call task each, due that day), 40 takes otherwise (email B, no task), both contacts get `first_gift_on` = `last_gift_on` and one waiting follow-up run each (a same-day second gift starts none); on 2027-03-10 a second gift is thanked and its follow-up stops at `only_gift` at once; nothing on 2027-03-30 or before 09:00 on 2027-03-31; then the first donor's run stops at `no_second_gift` and the other gets the one follow-up; a gift without `donor_id` is thanked and stops at `has_donor`; every run completes. Volunteer: three sign-ups through `Submission::process()` as visitors on 2027-05-03 (Garden, Events, Otherwise: coordinator from `barn_settings`, one notice each with Reply-To the volunteer and the edit URL); a contacted volunteer completes at `check` with no reminder; reminders on 2027-05-05; on 2027-05-08 one escalation to the volunteer manager and a stop at `still_new`; the escalated run's path and branch summaries, `log --run` rows and the run detail markup indented by depth. `FixturesTest` checks `tests/e2e/packages/barn` holds the same types, form and options page; `ExportImportGateTest` round-trips the package.
 - Links: `tests/Integration/Automation/AutomationLinksTest.php` with fixture `tests/fixtures/valid/links` (`ticket_links`: links `confirmed`, `instant`, `elsewhere`): one token per link per render, key option autoload off, `[link]` in the log, `confirm: false` acts on GET but not HEAD, nonce required with confirm, `success_url` and `expired_url` redirects, disabled automation, trashed record and rotated key refused, `link_scope`, `definition_changed`, rate limit.
 - Browser: `tests/e2e/specs/automation-links.e2e.js` (JavaScript off, axe on a JavaScript-on copy of each page) with mu-plugin `tests/e2e/mu-plugins/pegwork-e2e-links.php` (admin-only routes: Project, record read, link mint with the code `wp pegwork automation link` uses; link rate limit raised) and the module switch in `pegwork-e2e-automation.php`.
 - Integration: `tests/Integration/Automation/` with fixture package `tests/fixtures/valid/engine` (type `job` with private `note` and `contact_email`, `url` field `website`; automations `job_approved` (stamp and email), `job_loop`, `job_spawn`, `job_disabled`, `job_verified`, `job_private` (closes, then `call_webhook`; the engine test removes that handler to prove `unsupported_step`), `job_hook` (on publish with marker `hook`: two `call_webhook` steps, one with `fields`), `job_inbound` and `job_inbound_off` (webhook triggers creating a draft job), `job_mail` (HTML email with a private field), `job_sweep` (daily sweep, wait P30D, condition, close, email; `max_runs` 3), `job_digest` (hourly, no record, custom retry); options page `job_settings` for `{option:...}` recipients), `FrozenClock` and `tests/Support/FakeScheduler.php` (`drain( $until, $hooks )`); emails through the WP test suite's mock PHPMailer, failures through `pre_wp_mail`. `AutomationEmailTest` (recipients, escaping, privacy of the log, retries, `retry`), `AutomationScheduleTest` (one email per record per cycle, wait resumes after 30 days and not before, `max_runs`, chained sweep, `--now` refusal, `run`/`tick` with time travel). `AutomationWpCronTest` runs the default engine on real WP-Cron events, firing them as `wp-cron.php` does (approval, schedule firing, wait wake-up 30 days out, a wait inside a branch resuming inside it and then after the decision).
