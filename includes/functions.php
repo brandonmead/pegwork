@@ -129,7 +129,7 @@ function pegwork_validate_fields( array $fields, array $values, bool $complete =
  *                       `pegwork_form_file_defined` (409).
  */
 function pegwork_save_form( array $definition ): bool|WP_Error {
-	return Pegwork\Registry\Forms::save( $definition );
+	return Pegwork\Registry\SiteDefinitions::save( 'form', $definition );
 }
 
 /**
@@ -142,7 +142,36 @@ function pegwork_save_form( array $definition ): bool|WP_Error {
  * @return true|WP_Error `pegwork_form_file_defined` (409) or `pegwork_form_not_found` (404).
  */
 function pegwork_delete_form( string $key ): bool|WP_Error {
-	return Pegwork\Registry\Forms::delete( $key );
+	return Pegwork\Registry\SiteDefinitions::delete( 'form', $key );
+}
+
+/**
+ * Saves a site-local automation definition (the `pegwork_schema` option), then rebuilds the registry.
+ *
+ * The definition passes the registry validator and its references resolve against the effective
+ * registry. Keys a file package defines are refused. No capability check: the caller authorizes.
+ *
+ * @since 0.2.0
+ *
+ * @param array<string, mixed> $definition Automation definition (format 1).
+ * @return true|WP_Error `pegwork_invalid_automation` (400, messages by JSON pointer in data `fields`) or
+ *                       `pegwork_automation_file_defined` (409).
+ */
+function pegwork_save_automation( array $definition ): bool|WP_Error {
+	return Pegwork\Registry\SiteDefinitions::save( 'automation', $definition );
+}
+
+/**
+ * Deletes a site-local automation definition, then rebuilds the registry. Its runs are kept.
+ * No capability check: the caller authorizes.
+ *
+ * @since 0.2.0
+ *
+ * @param string $key Automation key.
+ * @return true|WP_Error `pegwork_automation_file_defined` (409) or `pegwork_automation_not_found` (404).
+ */
+function pegwork_delete_automation( string $key ): bool|WP_Error {
+	return Pegwork\Registry\SiteDefinitions::delete( 'automation', $key );
 }
 
 /**

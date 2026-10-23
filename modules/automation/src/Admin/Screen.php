@@ -99,6 +99,8 @@ final class Screen {
 			. '.pegwork-automations .pegwork-actions form{display:inline-block;margin:0 4px 4px 0;}'
 			. '.pegwork-automations .pegwork-actions .button{margin-bottom:4px;}'
 			. '.pegwork-automations .pegwork-runs-link{display:block;}'
+			. '.pegwork-automations .pegwork-edit-links{display:block;margin:0 0 6px;}'
+			. '.pegwork-automations .pegwork-edit-links a{display:inline-block;margin:0 8px 2px 0;}'
 			. '.pegwork-automations .pegwork-reason{display:block;margin-top:2px;}'
 			. '.pegwork-automations .pegwork-summary{margin:0;}'
 			. '.pegwork-automations .pegwork-summary li{margin:0 0 2px;}'

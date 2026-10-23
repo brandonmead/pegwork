@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E automation
- * Description: Test-only helpers for the Automations screen browser tests: registers tests/e2e/packages/automation, can make wp_mail() fail on demand, and exposes admin-only REST routes to toggle the automation module, run due automation wake-ups in process, add an overdue run for Site Health, and reset. Not shipped.
+ * Description: Test-only helpers for the Automations screen browser tests: registers tests/e2e/packages/automation, can make wp_mail() fail on demand, and exposes admin-only REST routes to toggle the automation module, run due automation wake-ups in process, add an overdue run for Site Health, read a registry automation, and reset (runs, overrides, e2e_ site automations). Not shipped.
  *
  * @package Pegwork
  */
@@ -113,6 +113,58 @@ add_action(
 								'created_at'   => gmdate( 'Y-m-d H:i:s', time() - 2 * HOUR_IN_SECONDS ),
 							)
 						);
+					}
+					return rest_ensure_response( true );
+				},
+			)
+		);
+
+		// Reads one registry automation (canonical) and its source, for the editor surface spec.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/automation/definition',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin,
+				'args'                => array( 'key' => array( 'required' => true ) ),
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$key = sanitize_key( (string) $request->get_param( 'key' ) );
+					return rest_ensure_response(
+						array(
+							'definition' => pegwork_registry()->automation( $key ),
+							'source'     => pegwork_registry()->automation_source( $key ),
+						)
+					);
+				},
+			)
+		);
+
+		// Deletes the site automations whose key starts with e2e_ (definition and post), and unsaved posts.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/automation/site-reset',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function () {
+					$posts = get_posts(
+						array(
+							'post_type'      => 'pegwork_automation',
+							'post_status'    => 'any',
+							'posts_per_page' => -1,
+							'fields'         => 'ids',
+						)
+					);
+					foreach ( $posts as $post_id ) {
+						$key = (string) get_post_meta( (int) $post_id, '_pegwork_automation_key', true );
+						if ( '' === $key || ( str_starts_with( $key, 'e2e_' ) && 'db' === pegwork_registry()->automation_source( $key ) ) ) {
+							wp_delete_post( (int) $post_id, true );
+						}
+					}
+					foreach ( array_keys( pegwork_registry()->automations() ) as $key ) {
+						if ( str_starts_with( (string) $key, 'e2e_' ) && 'db' === pegwork_registry()->automation_source( (string) $key ) ) {
+							pegwork_delete_automation( (string) $key );
+						}
 					}
 					return rest_ensure_response( true );
 				},

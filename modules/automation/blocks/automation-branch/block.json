@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/automation-branch",
+	"title": "Branch",
+	"category": "pegwork",
+	"icon": "editor-indent",
+	"description": "One branch of a decision: a condition and its steps, or the Otherwise steps.",
+	"keywords": [ "branch", "if", "otherwise", "automation" ],
+	"textdomain": "pegwork",
+	"parent": [ "pegwork/automation-decision" ],
+	"allowedBlocks": [ "pegwork/automation-step", "pegwork/automation-decision" ],
+	"attributes": {
+		"label": { "type": "string" },
+		"when": { "type": "object" },
+		"otherwise": { "type": "boolean" }
+	},
+	"supports": {
+		"html": false,
+		"className": false,
+		"customClassName": false,
+		"reusable": false,
+		"renaming": false,
+		"lock": false
+	}
+}
