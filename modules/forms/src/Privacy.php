@@ -11,7 +11,8 @@ namespace PegworkForms;
 
 /**
  * Registers form entries with Tools > Export Personal Data and Erase Personal Data, matched by the
- * entry's `email` column (the confirm field, else the form's first email item). The eraser deletes the
+ * entry's `email` column (the confirm field, else the form's first email item), or by the user account
+ * with that address for entries it submitted while logged in (Entries::by_email()). The eraser deletes the
  * entries and reports records created from them as retained: those are directory records, and editing
  * them is a person's decision. Adds suggested text to Settings > Privacy.
  */
@@ -233,11 +234,11 @@ final class Privacy {
 		}
 
 		$paragraphs = array(
-			__( 'When you submit a form on this site, we store what you entered, the time, and, if you are logged in, your user account. We do not store your IP address; a keyed hash of it is kept for a few minutes to limit repeated submissions.', 'pegwork' ),
+			__( 'When you submit a form on this site, we store what you entered, the time, and, if you are logged in, your user account. We do not store your IP address. To limit repeated submissions, a keyed hash of it is kept for up to a day, and a keyed hash of it combined with your answers is kept with your submission to recognise accidental double submissions.', 'pegwork' ),
 			__( 'Some forms send you an email to confirm your submission. Unconfirmed submissions are deleted after 7 days. Submissions caught as spam are deleted after 30 days. Other submissions are kept for the period each form sets, or until deleted by a site administrator.', 'pegwork' ),
 			__( 'Files you upload with a form are stored privately on this server, outside the public media library. Only the people who manage this site\'s forms can download them, and they are deleted with your submission.', 'pegwork' ),
 			__( 'If a form creates a listing or post from your submission, that record is kept as site content. Asking us to erase your data deletes your form submissions; tell us if the record should change too.', 'pegwork' ),
-			__( 'Forms that use Cloudflare Turnstile to check for spam load a script from Cloudflare, which receives information about your browser and visit. See Cloudflare\'s privacy policy: https://www.cloudflare.com/privacypolicy/', 'pegwork' ), // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- A link in privacy policy text; nothing is loaded.
+			__( 'Forms that use Cloudflare Turnstile to check for spam load a script from Cloudflare, which receives information about your browser and visit; when you submit such a form, this site also sends Cloudflare your IP address to check the result. See Cloudflare\'s privacy policy: https://www.cloudflare.com/privacypolicy/', 'pegwork' ), // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- A link in privacy policy text; nothing is loaded.
 		);
 
 		wp_add_privacy_policy_content( __( 'Pegwork Forms', 'pegwork' ), wp_kses_post( '<p>' . implode( '</p><p>', array_map( 'esc_html', $paragraphs ) ) . '</p>' ) );

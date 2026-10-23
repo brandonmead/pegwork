@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()` and the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()`, the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive).
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -253,3 +253,23 @@ $ok     = Pegwork\Api\Records::update( 42, array( 'last_verified' => '2026-10-18
 ```
 
 No capability check: the caller authorizes. Details: `docs/events.md`.
+
+## Rate limits
+
+`Pegwork\Api\Throttle` (API 0.2.0, additive) is the sliding-window limiter the forms, signed links and inbound webhooks use. Each hit is a row in `{prefix}pegwork_throttle` (created on `plugins_loaded`, option `pegwork_throttle_db_version`, dropped on uninstall); `take()` inserts its hit and then counts the others, so parallel requests never get more than `max` through, with or without a persistent object cache (under a burst a few may be refused early). Bucket names are stored as an HMAC (`wp_salt( 'nonce' )`), so an IP or address in a bucket name is never stored.
+
+```php
+use Pegwork\Api\Throttle;
+
+$wait = Throttle::take( 'myplugin|vote|' . Throttle::client_ip(), 10, HOUR_IN_SECONDS, time() );
+if ( $wait > 0 ) {
+	header( 'Retry-After: ' . $wait ); // Refused: seconds until a hit leaves the window.
+}
+Throttle::wait( $bucket, $max, $now );  // Same answer without counting a hit.
+Throttle::expiries( $bucket, $now );    // Expiry times of the live hits, oldest first.
+Throttle::clear( $bucket );             // Forget a bucket.
+```
+
+`take()` returns 0 when the hit was counted; `max` 0 or less turns the limit off. If the table is missing it fails open (returns 0). Prefix bucket names with your plugin's slug.
+
+`Throttle::client_ip()` is `REMOTE_ADDR`, then the `pegwork_client_ip` filter (`( string $ip )`), validated (`''` when not an IP). Every Pegwork limit keys on it; behind a proxy, return the proxy's client header only when the request came from the proxy's own addresses (Cloudflare example in `docs/forms.md`, Rate limits).

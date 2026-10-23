@@ -1,0 +1,1 @@
+{ "code": "private_condition_field", "file": "content-types/thing.json", "pointer": "/fields/1/show_when/field", "schema": false }

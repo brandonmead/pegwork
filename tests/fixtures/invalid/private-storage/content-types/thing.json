@@ -1,0 +1,2 @@
+{ "format": 1, "key": "thing", "labels": { "singular": "Thing", "plural": "Things" },
+  "fields": [ { "key": "secret_note", "type": "textarea", "label": "Secret note", "visibility": "private", "wp": { "storage": "post_content" } } ] }

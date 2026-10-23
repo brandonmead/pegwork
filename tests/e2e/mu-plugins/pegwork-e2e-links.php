@@ -6,6 +6,8 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
+
 add_filter( 'pegwork_automation_link_rate_limit', static fn() => 1000 );
 
 add_action(

@@ -57,6 +57,7 @@ final class Plugin {
 		add_action( 'admin_notices', array( Notices::class, 'render' ) );
 		Admin\EditorPanel::register();
 		Admin\Menu::register();
+		Admin\SiteHealth::register();
 		Options\Screen::register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -74,9 +75,11 @@ final class Plugin {
 	}
 
 	/**
-	 * Runs once all plugins are loaded: loads the enabled modules (they boot on pegwork_loaded) and registers the CLI commands.
+	 * Runs once all plugins are loaded: installs the rate limit table when needed, loads the enabled modules
+	 * (they boot on pegwork_loaded) and registers the CLI commands.
 	 */
 	public static function plugins_loaded(): void {
+		Throttle\Schema::maybe_install();
 		Modules\Loader::load();
 		self::register_module_cli();
 	}

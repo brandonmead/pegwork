@@ -131,7 +131,8 @@ final class Constraints {
 	 * @param string               $type        Content type key.
 	 * @param array<string, mixed> $constraints Constraints (see the class comment).
 	 * @return array<string, mixed> Args: always `post_status` `publish`; `tax_query`, `meta_query`, `s` and
-	 *                              `post__in` when constrained. Empty for a type that is not in the registry.
+	 *                              `post__in` when constrained; `has_password` false with field or taxonomy
+	 *                              constraints. Empty for a type that is not in the registry.
 	 */
 	public static function to_query_args( string $type, array $constraints ): array {
 		$registry = pegwork_registry();
@@ -164,6 +165,11 @@ final class Constraints {
 			if ( null !== $clause ) {
 				$meta_query[] = $clause;
 			}
+		}
+		if ( array() !== $meta_query || array() !== $tax_query ) {
+			// Bindings hide every value of a password-protected record, so filtering on values must not
+			// show which branch it falls in: field and taxonomy constraints leave such records out.
+			$args['has_password'] = false;
 		}
 		foreach ( $related['meta_query'] ?? array() as $clause ) {
 			$meta_query[] = $clause;
@@ -308,6 +314,10 @@ final class Constraints {
 
 		if ( isset( $args['post_status'] ) ) {
 			$vars['post_status'] = $args['post_status'];
+		}
+
+		if ( isset( $args['has_password'] ) ) {
+			$vars['has_password'] = $args['has_password'];
 		}
 
 		return $vars;

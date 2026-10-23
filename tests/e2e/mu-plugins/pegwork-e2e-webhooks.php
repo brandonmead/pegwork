@@ -6,6 +6,8 @@
  * @package Pegwork
  */
 
+defined( 'ABSPATH' ) || exit;
+
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test helper clearing the module's own tables.
 
 const PEGWORK_E2E_HOOK_SECRET = 'e2e-webhook-secret-not-for-production-0123456789';
@@ -75,9 +77,7 @@ add_action(
 					update_option( 'pegwork_automation_secrets', $secrets, false );
 					delete_option( 'pegwork_e2e_hook_down' );
 					delete_option( 'pegwork_e2e_hook_received' );
-					foreach ( array( 'e2e_hook', '' ) as $bucket ) {
-						delete_transient( 'pegwork_automation_hook_' . md5( $bucket ) );
-					}
+					$wpdb->query( "DELETE FROM {$wpdb->prefix}pegwork_throttle" );
 					$runs  = $wpdb->prefix . 'pegwork_runs';
 					$steps = $wpdb->prefix . 'pegwork_run_steps';
 					if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $runs ) ) === $runs ) {
