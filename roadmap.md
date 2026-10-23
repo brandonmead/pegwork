@@ -25,7 +25,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 4. Engine: loops: done, in review (branch `v3-loops`). Read record titles in the run detail included. Left for PR 7: item headings in the editor's Test run panel (the report entries carry `item`; the panel lists them nested without the heading).
 5. Manual trigger: done, in review (branch `v3-manual`). REST start route, record editor section (`automation-actions.js`, 1.3 KB gzipped), the list's Run now for no-record manual automations, CLI `run`. The trigger picker ("Started by staff") stays for PR 6.
 6. Editor: reads, relate, on_error, manual trigger: done, in review (branch `v3-editor-reads`). Get a record, Find records, Link records inspectors, "If this step fails after retries", "Started by staff", grouped variable picker with `| add` and `| number`, `[from step <id>: <Field label>]` in the preview. The builder is 24,893 bytes gzipped of its 25,600 budget: PR 7 (loop block, "Insert list of records") needs room, by trimming or by raising the budget with a reason.
-7. Editor: loops and lists. Planned.
+7. Editor: loops and lists: done, in review (branch `v3-editor-loops`). "Repeat for each" block, inserter and paste rules (no Wait or loop in a body), Move to into loop bodies, "Insert list of records", Test run item headings (closes PR 4's leftover), run-detail step ids on one line. Builder budget raised to 27,136 bytes gzipped (26,994 measured).
 8. BarnCRM proof with reads. Planned.
 
 ## Phase 1 PRs

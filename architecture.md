@@ -217,6 +217,14 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Size: builder 24,893 bytes gzipped of 25,600.
 - Local runs: test DBs `pegwork_tests_v3ed82`, `_v3ed84`, `_v3ed82_67`, `_v3ed84_67`; site `~/wp-envs/v3ed` (port 8237). Last verified 2026-10-23.
 
+## Automation v3 editor loops (PR 7, branch `v3-editor-loops`)
+- Block `pegwork/automation-loop` (attributes `id`, `over`; `Builder::LOOP`, `LOOP_ATTRIBUTES`); allowed in `AutomationPost::allowed_block_types` and in `automation-branch/block.json`.
+- Inserter rules: core has no per-variation inserter filter, so `index.js` subscribes to the block-editor store and unregisters the Wait variation while the selection is a loop or inside one (registers it back after); loops are refused in loops by `blockEditor.__unstableCanInsertBlockType`. A paste bypasses both (with a block selected, core's paste replaces it): `StepEdit` and `LoopEdit` show the refusal; the validator refuses on save.
+- Move to rules are pure: `moveTargets( blocks, block )` in `logic.js`.
+- Gotchas (E2E): typing leaves the block toolbar hidden (`isTyping`), so reach "Move to" with Alt+F10 first. Read filters start with one row; the second comes from "Add filter". Core's `word-break: break-word` on admin tables acts like `overflow-wrap: anywhere` (shrinks min-content); reset both to keep ids whole.
+- Size: builder 26,994 bytes gzipped; budget 27,136 (was 25,600).
+- Local runs: test DBs `pegwork_tests_v3edl82`, `_v3edl84`, `_v3edl82_67`, `_v3edl84_67`; site `~/wp-envs/v3edl` (port 8238). Last verified 2026-10-23.
+
 ## Automation engine (Phase 4 PR 3)
 - `docs/automation.md`. Module `automation` (`modules/automation`, `PegworkAutomation\`, `PEGWORK_AUTOMATION_DIR`). Tables `{prefix}pegwork_runs`, `{prefix}pegwork_run_steps` (dbDelta on boot when option `pegwork_automation_db_version` != `Schema::VERSION`); dropped by `modules/automation/uninstall.php`, which core `uninstall.php` includes (it includes every `modules/*/uninstall.php`).
 - Hooks: listener on `pegwork_event`; WP-Cron hooks `pegwork_automation_run` [run id] and `pegwork_automation_maintenance` (daily 03:00 site time, self-rescheduling, re-created on boot when missing). Options `pegwork_automation_overrides`, `pegwork_automation_retention_days`. Filters `pegwork_automation_max_depth` (3), `pegwork_automation_time_budget` (20), `pegwork_automation_retention_days`, `pegwork_automation_spawn_cron`.
@@ -273,7 +281,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Local runs: test DBs as PR 3 (`pegwork_tests_p6s82`, `_p6s84`, `_p6s82_67`, `_p6s84_67`); site `~/wp-envs/p6dry` (`bin/e2e-local-site.sh start p6dry 8228`).
 
 ## Automation editor UI (Phase 6 PR 5, branch `phase6-editor`)
-- `docs/automation.md#editor`. Script `assets/src/automation-builder/` (pure modules `logic.js`, `conditions.js`, `scope.js` under Vitest; components in `step-edit.js`, `decision-edit.js`, `settings.js`, `condition-builder.js`, `controls.js`, `move.js`, `preview.js`); `lockTitle()` shared with the form builder in `assets/src/shared/lock-title.js`. Config `Editor\BuilderEditor::config()` plus `registry_config()`. Budget 25 KB gzipped in `npm run check:size`.
+- `docs/automation.md#editor`. Script `assets/src/automation-builder/` (pure modules `logic.js`, `conditions.js`, `scope.js` under Vitest; components in `step-edit.js`, `decision-edit.js`, `settings.js`, `condition-builder.js`, `controls.js`, `move.js`, `preview.js`); `lockTitle()` shared with the form builder in `assets/src/shared/lock-title.js`. Config `Editor\BuilderEditor::config()` plus `registry_config()`. Budget 26.5 KB gzipped (27,136 bytes since v3 PR 7) in `npm run check:size`.
 - Validator parity: `scope.js` mirrors `AutomationRules` scope and operator rules; `tests/fixtures/automation/scope.json` is read by Vitest and `AutomationBuilderScopeTest`.
 - Gotchas (WP 7.1): per-block "Additional CSS" (`supports.customCSS`) shows in the inspector unless block.json sets it false. `TextareaControl` labels its own instance ID and ignores an `id` prop, so a textarea needing a known ID uses `BaseControl` plus a `textarea`. `PluginDocumentSettingPanel` content renders through a slot after the component's effects, so focusing an element there needs a callback ref. The canvas iframe loads no dashicons: the builder style depends on `dashicons`. Core floats a nested block list's appender over its last child; the builder resets it to static.
 - Local runs: test DBs `pegwork_tests_p6e82`, `_p6e84`, `_p6e82_67`, `_p6e84_67`; site `~/wp-envs/p6editor` (`bin/e2e-local-site.sh start p6editor 8228`).
