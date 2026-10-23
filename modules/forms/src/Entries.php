@@ -55,8 +55,8 @@ final class Entries {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A );
 		if ( ! is_array( $row ) ) {
 			return null;
 		}
@@ -94,8 +94,8 @@ final class Entries {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$found = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE fingerprint = %s AND status <> 'spam' AND created_at >= %s LIMIT 1", $fingerprint, gmdate( 'Y-m-d H:i:s', $since ) ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$found = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE fingerprint = %s AND status <> 'spam' AND created_at >= %s LIMIT 1", $table, $fingerprint, gmdate( 'Y-m-d H:i:s', $since ) ) );
 
 		return null !== $found;
 	}
@@ -122,11 +122,9 @@ final class Entries {
 		$order    = 'asc' === ( $args['order'] ?? 'desc' ) ? 'ASC' : 'DESC';
 		$table    = Schema::table();
 
-		$count = "SELECT COUNT(*) FROM {$table} WHERE {$where[0]}";
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom table; $where[0] holds only placeholders, its values are prepared here (prepare() refuses a query without any); $order is one of two literals.
-		$total = (int) $wpdb->get_var( array() === $where[1] ? $count : $wpdb->prepare( $count, ...$where[1] ) );
-		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$where[0]} ORDER BY created_at {$order}, id {$order} LIMIT %d OFFSET %d", ...array_merge( $where[1], array( $per_page, $offset ) ) ), ARRAY_A );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $where[0] holds only placeholders and its values are prepared here; $order is one of two literals.
+		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE {$where[0]}", ...array_merge( array( $table ), $where[1] ) ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE {$where[0]} ORDER BY created_at {$order}, id {$order} LIMIT %d OFFSET %d", ...array_merge( array( $table ), $where[1], array( $per_page, $offset ) ) ), ARRAY_A );
 		// phpcs:enable
 
 		return array(
@@ -153,9 +151,8 @@ final class Entries {
 			)
 		);
 		$table = Schema::table();
-		$sql   = "SELECT status, COUNT(*) AS n FROM {$table} WHERE {$where[0]} GROUP BY status";
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $where[0] holds only placeholders, prepared when there are values (prepare() refuses a query without any).
-		$rows = $wpdb->get_results( array() === $where[1] ? $sql : $wpdb->prepare( $sql, ...$where[1] ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $where[0] holds only placeholders, its values are prepared here.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT status, COUNT(*) AS n FROM %i WHERE {$where[0]} GROUP BY status", ...array_merge( array( $table ), $where[1] ) ), ARRAY_A );
 
 		$counts = array_fill_keys( self::STATUSES, 0 );
 		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
@@ -173,8 +170,8 @@ final class Entries {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix; no input.
-		$rows = $wpdb->get_results( "SELECT form_key, status, COUNT(*) AS n FROM {$table} GROUP BY form_key, status", ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table; no input.
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT form_key, status, COUNT(*) AS n FROM %i GROUP BY form_key, status', $table ), ARRAY_A );
 
 		$counts = array();
 		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
@@ -192,8 +189,8 @@ final class Entries {
 		global $wpdb;
 
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix; no input.
-		$keys = $wpdb->get_col( "SELECT DISTINCT form_key FROM {$table} ORDER BY form_key" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table; no input.
+		$keys = $wpdb->get_col( $wpdb->prepare( 'SELECT DISTINCT form_key FROM %i ORDER BY form_key', $table ) );
 
 		return array_map( 'strval', is_array( $keys ) ? $keys : array() );
 	}
@@ -213,8 +210,8 @@ final class Entries {
 		$email = strtolower( trim( $email ) );
 		$user  = '' === $email ? false : get_user_by( 'email', $email );
 		$table = Schema::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table name from $wpdb->prefix.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s OR ( user_id > 0 AND user_id = %d ) ORDER BY id ASC LIMIT %d OFFSET %d", $email, $user ? (int) $user->ID : 0, $limit, $offset ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE email = %s OR ( user_id > 0 AND user_id = %d ) ORDER BY id ASC LIMIT %d OFFSET %d', $table, $email, $user ? (int) $user->ID : 0, $limit, $offset ), ARRAY_A );
 
 		return array_map( array( self::class, 'decode' ), is_array( $rows ) ? $rows : array() );
 	}
@@ -244,8 +241,8 @@ final class Entries {
 		}
 		$params[] = $limit;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Custom table; $sql holds only placeholders.
-		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$table} WHERE {$sql} ORDER BY id ASC LIMIT %d", ...$params ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom table; $sql holds only placeholders.
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE {$sql} ORDER BY id ASC LIMIT %d", ...array_merge( array( $table ), $params ) ) );
 
 		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
 	}
@@ -267,9 +264,9 @@ final class Entries {
 		$table = Schema::table();
 		$sql   = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Custom table; $sql holds only %d placeholders.
-		$rows    = $wpdb->get_col( $wpdb->prepare( "SELECT field_values FROM {$table} WHERE id IN ({$sql}) AND field_values LIKE %s", ...array_merge( $ids, array( '%' . $wpdb->esc_like( '"path":"' . Uploads::DIR ) . '%' ) ) ) );
-		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE id IN ({$sql})", ...$ids ) );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom table; $sql holds only %d placeholders.
+		$rows    = $wpdb->get_col( $wpdb->prepare( "SELECT field_values FROM %i WHERE id IN ({$sql}) AND field_values LIKE %s", ...array_merge( array( $table ), $ids, array( '%' . $wpdb->esc_like( '"path":"' . Uploads::DIR ) . '%' ) ) ) );
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE id IN ({$sql})", ...array_merge( array( $table ), $ids ) ) );
 		// phpcs:enable
 
 		if ( $deleted > 0 ) {

@@ -224,6 +224,22 @@ class OptionsPagesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Url fields need no network: a well-formed URL on a domain that does not resolve is kept; other schemes are not.
+	 */
+	public function test_url_field_needs_no_network() {
+		$field = array(
+			'type'  => 'url',
+			'label' => 'Website',
+		);
+
+		$this->assertSame( array( 'https://example.invalid/x' ), Values::check_type( $field, 'https://example.invalid/x' ) );
+		$this->assertSame( array( 'http://barn.example/a?b=1' ), Values::check_type( $field, 'http://barn.example/a?b=1' ) );
+		foreach ( array( 'javascript:alert(1)', 'ftp://example.org/x', 'not a url', '//example.org' ) as $bad ) {
+			$this->assertSame( 'Website must be a web address starting with http:// or https://.', Values::check_type( $field, $bad ), $bad );
+		}
+	}
+
+	/**
 	 * Type checks and shared rules on the talk_settings fields: number range, select, date, boolean, words.
 	 */
 	public function test_types_and_shared_rules() {

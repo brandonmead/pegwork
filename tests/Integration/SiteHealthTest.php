@@ -52,6 +52,11 @@ class SiteHealthTest extends WP_UnitTestCase {
 		$this->assertSame( 'good', SiteHealth::result( true, 'local' )['status'] );
 		$this->assertSame( 'good', SiteHealth::result( true, 'development' )['status'] );
 		$this->assertSame( 'good', SiteHealth::result( false, 'production' )['status'] );
+		$this->assertSame( 'Pegwork is installed without development dependencies', SiteHealth::result( false, 'local' )['label'] );
+		$this->assertSame( 'Pegwork is installed without development dependencies', SiteHealth::result( false, 'production' )['label'] );
+		$this->assertSame( 'Pegwork development dependencies are allowed on local sites', SiteHealth::result( true, 'local' )['label'] );
+		$this->assertSame( 'Pegwork development dependencies are allowed on local sites', SiteHealth::result( true, 'development' )['label'] );
+		$this->assertSame( 'Pegwork is installed with its development dependencies', SiteHealth::result( true, 'production' )['label'] );
 		$this->assertSame( SiteHealth::TEST, SiteHealth::result( true, 'production' )['test'] );
 	}
 }

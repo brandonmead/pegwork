@@ -10,6 +10,7 @@ namespace Pegwork\Tests\Integration;
 use Pegwork\Api\Events;
 use Pegwork\Api\Records;
 use Pegwork\Api\RegistryBuilder;
+use Pegwork\Events\RecordEvents;
 use Pegwork\Modules\Loader;
 use Pegwork\Plugin;
 use WP_REST_Request;
@@ -39,6 +40,7 @@ class RecordEventsTest extends WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
+		self::reset_save_state();
 		add_action( 'pegwork_register', fn( RegistryBuilder $builder ) => $builder->add_package( dirname( __DIR__, 2 ) . '/examples/sifg' ) );
 		Plugin::init();
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Rebuild routes for the registered types.
@@ -62,8 +64,20 @@ class RecordEventsTest extends WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		parent::tear_down();
+		self::reset_save_state();
 		Plugin::init();
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Drop routes for the removed types.
+	}
+
+	/**
+	 * Empties RecordEvents' per-save bookkeeping. A test that dies mid-save (core on a newer PHP than it
+	 * supports throws a deprecation as an error) never reaches the hooks that clear it, and post IDs are
+	 * reused after the rollback, so a stale entry would silence a later test's events.
+	 */
+	private static function reset_save_state(): void {
+		foreach ( array( 'snapshots', 'claims', 'flushed', 'deleting', 'routes', 'depths' ) as $property ) {
+			( new \ReflectionProperty( RecordEvents::class, $property ) )->setValue( null, array() );
+		}
 	}
 
 	/**

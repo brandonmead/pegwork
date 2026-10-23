@@ -104,7 +104,7 @@ final class Runs {
 
 		$columns = implode( ', ', array_keys( $row ) );
 		$holders = array();
-		$values  = array();
+		$values  = array( $this->runs );
 		foreach ( $row as $value ) {
 			if ( null === $value ) {
 				$holders[] = 'NULL';
@@ -116,8 +116,8 @@ final class Runs {
 		$holders = implode( ', ', $holders );
 
 		// IGNORE: the unique (automation, idempotency_key) index decides duplicates atomically.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Column list and placeholders built above from fixed keys.
-		$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$this->runs} ({$columns}) VALUES ({$holders})", $values ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Column list and placeholders built above from fixed keys.
+		$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO %i ({$columns}) VALUES ({$holders})", $values ) );
 
 		return 1 === (int) $wpdb->rows_affected ? (int) $wpdb->insert_id : 0;
 	}
@@ -130,7 +130,7 @@ final class Runs {
 	 */
 	public function get( int $id ): ?array {
 		global $wpdb;
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->runs} WHERE id = %d", $id ), ARRAY_A );
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $this->runs, $id ), ARRAY_A );
 		return is_array( $row ) ? self::decode( $row ) : null;
 	}
 
@@ -143,7 +143,7 @@ final class Runs {
 	 */
 	public function find_key( string $automation, string $key ): ?array {
 		global $wpdb;
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->runs} WHERE automation = %s AND idempotency_key = %s", $automation, $key ), ARRAY_A );
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE automation = %s AND idempotency_key = %s', $this->runs, $automation, $key ), ARRAY_A );
 		return is_array( $row ) ? self::decode( $row ) : null;
 	}
 
@@ -160,8 +160,9 @@ final class Runs {
 
 		$wpdb->query(
 			$wpdb->prepare(
-				"UPDATE {$this->runs} SET status = 'running', claimed_at = %s, started_at = COALESCE(started_at, %s)
+				"UPDATE %i SET status = 'running', claimed_at = %s, started_at = COALESCE(started_at, %s)
 				WHERE id = %d AND ( status = 'queued' OR ( status = 'waiting' AND resume_at <= %s ) )",
+				$this->runs,
 				$now,
 				$now,
 				$id,
@@ -242,8 +243,9 @@ final class Runs {
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare(
-				"UPDATE {$this->runs} SET status = 'queued', error = NULL, finished_at = NULL, resume_at = NULL, claimed_at = %s, context = %s
+				"UPDATE %i SET status = 'queued', error = NULL, finished_at = NULL, resume_at = NULL, claimed_at = %s, context = %s
 				WHERE id = %d AND status = 'failed'",
+				$this->runs,
 				$this->stamp(),
 				self::encode_context( $context ),
 				$id
@@ -305,7 +307,7 @@ final class Runs {
 	 */
 	public function steps( int $run_id ): array {
 		global $wpdb;
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->steps} WHERE run_id = %d ORDER BY id", $run_id ), ARRAY_A );
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE run_id = %d ORDER BY id', $this->steps, $run_id ), ARRAY_A );
 		foreach ( $rows as &$row ) {
 			$row['summary'] = null === $row['summary'] ? array() : (array) json_decode( $row['summary'], true );
 		}
@@ -319,7 +321,7 @@ final class Runs {
 	 */
 	public function step_count( int $run_id ): int {
 		global $wpdb;
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->steps} WHERE run_id = %d", $run_id ) );
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE run_id = %d', $this->steps, $run_id ) );
 	}
 
 	/**
@@ -330,7 +332,7 @@ final class Runs {
 	 */
 	public function attempts( int $run_id, string $step_id ): int {
 		global $wpdb;
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->steps} WHERE run_id = %d AND step_id = %s", $run_id, $step_id ) );
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE run_id = %d AND step_id = %s', $this->steps, $run_id, $step_id ) );
 	}
 
 	/**
@@ -346,13 +348,13 @@ final class Runs {
 		$limit = max( 1, min( 1000, $limit ) );
 
 		if ( null !== $automation && null !== $status ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->runs} WHERE automation = %s AND status = %s ORDER BY id DESC LIMIT %d", $automation, $status, $limit ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE automation = %s AND status = %s ORDER BY id DESC LIMIT %d', $this->runs, $automation, $status, $limit ), ARRAY_A );
 		} elseif ( null !== $automation ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->runs} WHERE automation = %s ORDER BY id DESC LIMIT %d", $automation, $limit ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE automation = %s ORDER BY id DESC LIMIT %d', $this->runs, $automation, $limit ), ARRAY_A );
 		} elseif ( null !== $status ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->runs} WHERE status = %s ORDER BY id DESC LIMIT %d", $status, $limit ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE status = %s ORDER BY id DESC LIMIT %d', $this->runs, $status, $limit ), ARRAY_A );
 		} else {
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->runs} ORDER BY id DESC LIMIT %d", $limit ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT %d', $this->runs, $limit ), ARRAY_A );
 		}
 		return array_map( array( self::class, 'decode' ), $rows );
 	}
@@ -371,9 +373,10 @@ final class Runs {
 		[ $where, $values ] = self::filter( $automation, $status );
 		$values[]           = max( 1, min( 1000, $limit ) );
 		$values[]           = max( 0, $offset );
+		array_unshift( $values, $this->runs );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders -- $where holds fixed columns with placeholders, one per value.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->runs}{$where} ORDER BY id DESC LIMIT %d OFFSET %d", $values ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where holds fixed columns with placeholders, one per value.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i{$where} ORDER BY id DESC LIMIT %d OFFSET %d", $values ), ARRAY_A );
 		return array_map( array( self::class, 'decode' ), $rows );
 	}
 
@@ -386,11 +389,9 @@ final class Runs {
 	public function count( ?string $automation = null, ?string $status = null ): int {
 		global $wpdb;
 		[ $where, $values ] = self::filter( $automation, $status );
-		if ( array() === $values ) {
-			return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->runs}" );
-		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders -- $where holds fixed columns with placeholders, one per value.
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->runs}{$where}", $values ) );
+		array_unshift( $values, $this->runs );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where holds fixed columns with placeholders, one per value.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i{$where}", $values ) );
 	}
 
 	/**
@@ -433,7 +434,11 @@ final class Runs {
 		);
 
 		$latest = $wpdb->get_results(
-			"SELECT r.automation, r.status, r.created_at FROM {$this->runs} r JOIN (SELECT automation, MAX(id) AS id FROM {$this->runs} GROUP BY automation) m ON r.id = m.id",
+			$wpdb->prepare(
+				'SELECT r.automation, r.status, r.created_at FROM %i r JOIN (SELECT automation, MAX(id) AS id FROM %i GROUP BY automation) m ON r.id = m.id',
+				$this->runs,
+				$this->runs
+			),
 			ARRAY_A
 		);
 		foreach ( $latest as $row ) {
@@ -445,7 +450,8 @@ final class Runs {
 
 		$counts = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT automation, status, COUNT(*) AS n FROM {$this->runs} WHERE status IN ('queued','waiting','running') OR ( status = 'failed' AND created_at >= %s ) GROUP BY automation, status",
+				"SELECT automation, status, COUNT(*) AS n FROM %i WHERE status IN ('queued','waiting','running') OR ( status = 'failed' AND created_at >= %s ) GROUP BY automation, status",
+				$this->runs,
 				$failed_since
 			),
 			ARRAY_A
@@ -471,8 +477,9 @@ final class Runs {
 		global $wpdb;
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT id FROM {$this->runs} WHERE ( status = 'queued' AND COALESCE(claimed_at, created_at) < %s )
+				"SELECT id FROM %i WHERE ( status = 'queued' AND COALESCE(claimed_at, created_at) < %s )
 				OR ( status = 'waiting' AND resume_at <= %s ) ORDER BY id LIMIT %d",
+				$this->runs,
 				$idle_before,
 				$this->stamp(),
 				$limit
@@ -493,7 +500,8 @@ final class Runs {
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT COUNT(*) AS n, MIN( CASE WHEN status = 'waiting' THEN resume_at ELSE COALESCE(claimed_at, created_at) END ) AS oldest
-				FROM {$this->runs} WHERE ( status = 'queued' AND COALESCE(claimed_at, created_at) < %s ) OR ( status = 'waiting' AND resume_at < %s )",
+				FROM %i WHERE ( status = 'queued' AND COALESCE(claimed_at, created_at) < %s ) OR ( status = 'waiting' AND resume_at < %s )",
+				$this->runs,
 				$due_before,
 				$due_before
 			),
@@ -514,7 +522,7 @@ final class Runs {
 	public function stale( string $claimed_before ): array {
 		global $wpdb;
 		$ids = $wpdb->get_col(
-			$wpdb->prepare( "SELECT id FROM {$this->runs} WHERE status = 'running' AND claimed_at < %s ORDER BY id LIMIT 500", $claimed_before )
+			$wpdb->prepare( "SELECT id FROM %i WHERE status = 'running' AND claimed_at < %s ORDER BY id LIMIT 500", $this->runs, $claimed_before )
 		);
 		return array_map( 'intval', $ids );
 	}
@@ -531,7 +539,8 @@ final class Runs {
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare(
-				"UPDATE {$this->runs} SET status = 'failed', error = %s, finished_at = %s WHERE id = %d AND status = 'running' AND claimed_at < %s",
+				"UPDATE %i SET status = 'failed', error = %s, finished_at = %s WHERE id = %d AND status = 'running' AND claimed_at < %s",
+				$this->runs,
 				$error,
 				$this->stamp(),
 				$id,
@@ -559,7 +568,7 @@ final class Runs {
 		$in = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
 		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders -- Placeholder lists built above, one per value.
 		$ids = $wpdb->get_col(
-			$wpdb->prepare( "SELECT id FROM {$this->runs} WHERE status IN ({$in}) AND COALESCE(finished_at, created_at) < %s ORDER BY id LIMIT %d", array_merge( $statuses, array( $before, $limit ) ) )
+			$wpdb->prepare( "SELECT id FROM %i WHERE status IN ({$in}) AND COALESCE(finished_at, created_at) < %s ORDER BY id LIMIT %d", array_merge( array( $this->runs ), $statuses, array( $before, $limit ) ) )
 		);
 		if ( array() === $ids ) {
 			return 0;
@@ -567,8 +576,8 @@ final class Runs {
 
 		$ids  = array_map( 'intval', $ids );
 		$list = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$this->steps} WHERE run_id IN ({$list})", $ids ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$this->runs} WHERE id IN ({$list})", $ids ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ({$list})", array_merge( array( $this->steps ), $ids ) ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE id IN ({$list})", array_merge( array( $this->runs ), $ids ) ) );
 		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders
 		return count( $ids );
 	}
