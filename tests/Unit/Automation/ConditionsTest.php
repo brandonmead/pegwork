@@ -196,13 +196,15 @@ class ConditionsTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Preview modes: links and step outputs are placeholders (even when the context has outputs), the
-	 * rest renders as text or escaped HTML, and nothing creates the link key.
+	 * Preview modes: links and the outputs of steps that did not run are placeholders (a dry run's reads
+	 * have real outputs, which render), the rest renders as text or escaped HTML, and nothing creates the
+	 * link key.
 	 */
 	public function test_templates_preview_mode() {
 		$context = $this->context();
-		$this->assertSame( 'Clean water [signed link] [from step child] 10', Templates::render( '{{record.title}} {{link.confirm}} {{steps.child.record_id}} {{trigger.old.seats}}', $context, Templates::PREVIEW ) );
-		$this->assertSame( '<a href="[signed link]">[from step child]</a>', Templates::render( '<a href="{{link.confirm}}">{{steps.child.record_id}}</a>', $context, Templates::PREVIEW_HTML ) );
+		$this->assertSame( 'Clean water [signed link] [from step later] 10', Templates::render( '{{record.title}} {{link.confirm}} {{steps.later.record_id}} {{trigger.old.seats}}', $context, Templates::PREVIEW ) );
+		$this->assertSame( '<a href="[signed link]">[from step later]</a>', Templates::render( '<a href="{{link.confirm}}">{{steps.later.record_id}}</a>', $context, Templates::PREVIEW_HTML ) );
+		$this->assertSame( '7', Templates::render( '{{steps.child.record_id}}', $context, Templates::PREVIEW ) );
 		$this->assertSame( 'a, b', Templates::render( '{{record.tags}}', $context, Templates::PREVIEW ) );
 		$this->assertSame( 'none', Templates::render( '{{record.note | default:"none"}}', $context, Templates::PREVIEW_HTML ) );
 		$this->assertFalse( get_option( 'pegwork_link_secret' ) );

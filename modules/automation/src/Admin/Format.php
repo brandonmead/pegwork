@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Admin;
 
+use PegworkAutomation\Executor;
+
 /**
  * Labels and escaped HTML fragments. Every method returns escaped HTML or plain text for esc_html().
  *
@@ -186,7 +188,8 @@ final class Format {
 	}
 
 	/**
-	 * A run's outcome: a stopped condition, else its error or skip reason.
+	 * A run's outcome: a stopped condition, steps that failed and were continued past, else its error or
+	 * skip reason.
 	 *
 	 * @param array<string, mixed> $run Run.
 	 */
@@ -195,6 +198,10 @@ final class Format {
 		if ( is_string( $outcome ) && str_starts_with( $outcome, 'stopped_at:' ) ) {
 			/* translators: %s: step ID. */
 			return sprintf( __( 'Stopped at condition %s', 'pegwork' ), substr( $outcome, 11 ) );
+		}
+		if ( is_string( $outcome ) && str_starts_with( $outcome, Executor::ERRORS_OUTCOME ) ) {
+			/* translators: %s: comma-separated step IDs. */
+			return sprintf( __( 'Completed with errors in %s', 'pegwork' ), str_replace( ',', ', ', substr( $outcome, strlen( Executor::ERRORS_OUTCOME ) ) ) );
 		}
 		return is_string( $outcome ) && '' !== $outcome ? $outcome : (string) $run['error'];
 	}

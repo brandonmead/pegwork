@@ -29,11 +29,16 @@ final class Values {
 	public static function render( array $values, Context $context, string $type ): array {
 		$definition = pegwork_registry()->content_type( $type );
 		$taxonomies = array_column( $definition['taxonomies'] ?? array(), 'key' );
+		$links      = array_keys( array_filter( pegwork_registry()->relationships(), fn( $relationship ) => ( $relationship['from'] ?? null ) === $type ) );
 		$out        = array();
 
 		foreach ( $values as $key => $value ) {
 			$rendered = Templates::value( $value, $context );
-			if ( in_array( $key, $taxonomies, true ) ) {
+			if ( in_array( $key, $links, true ) ) {
+				// Linked IDs replace the record's links: a list, or one ID or comma-separated IDs; empty clears them.
+				$items    = is_array( $rendered ) ? $rendered : explode( ',', is_scalar( $rendered ) ? (string) $rendered : '' );
+				$rendered = array_values( array_filter( array_map( fn( $item ) => is_scalar( $item ) ? (int) trim( (string) $item ) : 0, $items ), fn( int $item ) => $item > 0 ) );
+			} elseif ( in_array( $key, $taxonomies, true ) ) {
 				if ( ! is_array( $rendered ) ) {
 					$rendered = array_values( array_filter( array_map( 'trim', explode( ',', (string) $rendered ) ), 'strlen' ) );
 				}

@@ -16,9 +16,10 @@ use PegworkAutomation\Manual;
 require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
 
 /**
- * Until the engine PRs add the handlers (docs/automation-v3-design.md section 11, PRs 3 to 5), a run of an
- * automation that uses a read, loop, relate, `on_error`, `call_webhook.record` or a new template filter fails
- * with `unsupported_step` before its first step, and a manual trigger never starts a run.
+ * Reads, relate, `on_error`, `call_webhook.record` and the new template filters run (Automation v3 PR 3).
+ * Until the loop and manual-trigger PRs land (docs/automation-v3-design.md section 11, PRs 4 and 5), a run
+ * of an automation that holds a `loop` fails with `unsupported_step` before its first step, and a manual
+ * trigger never starts a run.
  */
 class AutomationV3GuardTest extends AutomationTestCase {
 
@@ -46,113 +47,50 @@ class AutomationV3GuardTest extends AutomationTestCase {
 	}
 
 	/**
-	 * Every v3 fixture is refused, with the reason naming a step; every earlier fixture runs as before.
+	 * Only the fixtures that hold a loop are refused, with the reason naming the loop step; every other
+	 * fixture (reads, relate, on_error, the new filters included) runs.
 	 */
-	public function test_v3_definitions_are_refused_and_earlier_ones_are_not() {
-		$v3 = 0;
+	public function test_only_loops_are_refused() {
+		$refused = array();
 		foreach ( self::automations() as $path => $definition ) {
 			$reason = Engine::instance()->unsupported( $definition );
-			if ( str_starts_with( $path, 'tests/fixtures/valid/reads/' ) ) {
-				++$v3;
-				$this->assertIsString( $reason, $path );
-				$this->assertStringStartsWith( 'step "', $reason, $path );
-			} else {
-				$this->assertNull( $reason, $path );
+			if ( null !== $reason ) {
+				$refused[ $path ] = $reason;
 			}
 		}
-		$this->assertSame( 7, $v3 );
-
-		$definition = self::automations()['tests/fixtures/valid/reads/automations/barn_tasks_digest.json'];
-		$this->assertStringContainsString( '"find_records"', Engine::instance()->unsupported( $definition ) );
-
-		// Features on step types that have handlers are refused too.
-		$mail   = array(
-			'id'      => 'mail',
-			'type'    => 'send_email',
-			'to'      => 'ops@example.org',
-			'subject' => 'Hi',
-			'text'    => 'Hi',
-		);
-		$checks = array(
-			'on_error' => array( 'on_error' => 'continue' ) + $mail,
-			'| number' => array( 'text' => 'Total {{record.amount | number:2}}' ) + $mail,
-			'| add'    => array( 'subject' => 'Due {{today | add:"P2D"}}' ) + $mail,
-			'#each'    => array( 'text' => '{{#each steps.due.records}}x{{/each}}' ) + $mail,
-			'record'   => array(
-				'id'           => 'send',
-				'type'         => 'call_webhook',
-				'url'          => 'https://hooks.example.org/',
-				'record'       => '{{record.id}}',
-				'content_type' => 'barn_gift',
+		$this->assertSame(
+			array(
+				'tests/fixtures/valid/reads/automations/barn_tasks_digest.json' => 'step "each_task" has type "loop", which this version of the automation module cannot run.',
+				'tests/fixtures/valid/reads/automations/reads_manual_list.json' => 'step "each" has type "loop", which this version of the automation module cannot run.',
 			),
+			$refused
 		);
-		foreach ( $checks as $label => $step ) {
-			$branch = array(
-				array(
-					'id'       => 'route',
-					'type'     => 'decision',
-					'branches' => array(
-						array(
-							'label' => 'Always',
-							'when'  => array(
-								'var' => 'record.id',
-								'op'  => 'not_empty',
-							),
-							'steps' => array( $step ),
-						),
-					),
-				),
-			);
-			$this->assertNotNull( Engine::instance()->unsupported( array( 'steps' => $branch ) ), $label );
-		}
-		$this->assertNull( Engine::instance()->unsupported( array( 'steps' => array( array( 'text' => 'Due {{record.received_on | date | default:"never"}}' ) + $mail ) ) ) );
 	}
 
 	/**
-	 * A gift's record.created runs of barn_gift_thanks and barn_lifetime_milestone fail before any step: no
-	 * step row, no email, no task.
+	 * A firing of the digest (which holds a loop) fails before any step: no step row, no email.
 	 */
-	public function test_runs_fail_before_the_first_step() {
+	public function test_loop_run_fails_before_the_first_step() {
 		reset_phpmailer_instance();
-		$contact = Records::create(
-			'barn_contact',
+		$task = Records::create(
+			'barn_task',
 			array(
-				'name'  => 'Ada',
-				'email' => 'ada@example.org',
+				'name'   => 'Call Ada',
+				'due_on' => '2026-11-03',
 			),
-			'private'
+			'publish'
 		);
-		$this->assertIsInt( $contact );
-		$gift = Records::create(
-			'barn_gift',
-			array(
-				'name'        => 'Gift',
-				'amount'      => 300,
-				'received_on' => '2026-11-02',
-				'gift_donor'  => array( $contact ),
-			),
-			'private'
-		);
-		$this->assertIsInt( $gift );
+		$this->assertIsInt( $task );
+
+		Engine::instance()->schedules()->fire( 'barn_tasks_digest' );
 		$this->drain();
 
-		foreach ( array( 'barn_gift_thanks', 'barn_lifetime_milestone' ) as $key ) {
-			$run = $this->only_run( $key );
-			$this->assertSame( 'failed', $run['status'], $key );
-			$this->assertStringStartsWith( 'unsupported_step: step "donor" has type "get_record"', (string) $run['error'], $key );
-			$this->assertSame( array(), $this->steps( $run['id'] ), $key );
-		}
+		$run = $this->only_run( 'barn_tasks_digest' );
+		$this->assertSame( 'failed', $run['status'] );
+		$this->assertStringStartsWith( 'unsupported_step: step "each_task" has type "loop"', (string) $run['error'] );
+		$this->assertSame( array(), $this->steps( $run['id'] ) );
 		$this->assertCount( 0, tests_retrieve_phpmailer_instance()->mock_sent );
-		$this->assertSame(
-			array(),
-			get_posts(
-				array(
-					'post_type'   => 'barn_task',
-					'post_status' => 'any',
-				)
-			)
-		);
-		$this->assertSame( '', Records::get( $contact )['values']['last_gift_on'] );
+		$this->assertSame( '', (string) Records::get( $task )['values']['reminded_on'] );
 	}
 
 	/**

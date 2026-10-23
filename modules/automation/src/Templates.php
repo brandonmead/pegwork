@@ -9,15 +9,30 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation;
 
+use DateTimeImmutable;
 use WP_Term;
 
 /**
- * Renders `{{ path }}`, `{{ path | date }}`, `{{ path | default:"text" }}` and `{{ path | date | default:"text" }}`
- * (syntax validated at load time by the registry). A path is a context path (`record.name`) or
+ * Renders merge tags `{{ path [| add:"<signed duration>"] [| date | number[:<0-4>]] [| default:"text"] }}`
+ * and `{{#each steps.<id>.records}} ... {{item.<key>}} ... {{else}} ... {{/each}}` blocks (syntax and types
+ * validated at load time by the registry). A path is a context path (`record.name`) or
  * `option:<page>.<field>`, an options page field read with pegwork_get_option() (public fields only, checked
- * by the registry). `date` formats a `Y-m-d` date or an ISO 8601 date and time with the site's date format
- * (Settings > General) in site time; other values pass through unchanged. `default` applies when the value
- * is empty, and its text is never date-formatted.
+ * by the registry).
+ *
+ * Filters, applied in this order to a non-empty value:
+ * - `add` moves a `Y-m-d` date (giving `Y-m-d`) or an ISO 8601 date and time (giving ISO) by a signed
+ *   duration in site time, with calendar units, so `P1D` across a DST change keeps the wall-clock time.
+ * - `date` formats a `Y-m-d` date or an ISO 8601 date and time with the site's date format (Settings >
+ *   General) in site time.
+ * - `number` formats a number with number_format_i18n() (site locale): `number:2` with 2 decimals; without
+ *   decimals, whole numbers print bare and others with 2 decimals.
+ * Other values pass through each filter unchanged. `default` applies when the value is empty, and its text
+ * is never filtered.
+ *
+ * `{{#each}}` renders its body once per record of a find_records result that still exists (at most 50),
+ * with `item.*` reading that record, or its `{{else}}` part when there is none. A template with a block
+ * renders at most 64 KB, else TemplateTooLarge is thrown (the step fails `template_too_large`). Values are
+ * never rendered again, so a stored value that looks like a tag stays text.
  *
  * Modes:
  * - `raw` (record values, idempotency keys): lists render as comma-separated slugs, booleans as 1/0.
@@ -32,7 +47,8 @@ use WP_Term;
  *   whole URL, or the site URL a path follows) renders as `raw`.
  * - `preview` and `preview_html` (editor preview and dry run): as `text` and `html`, but `{{link.*}}`
  *   renders `[signed link]` and is never looked up (nothing is minted, no key is created), and
- *   `{{steps.<id>.*}}` renders `[from step <id>]`, since a preview runs no step.
+ *   `{{steps.<id>.*}}` (and an `{{#each}}` over it) renders `[from step <id>]` when that step has no
+ *   output, since a preview runs no step and a dry run applies no write (its reads have real outputs).
  */
 final class Templates {
 
@@ -87,9 +103,25 @@ final class Templates {
 	public const PREVIEW_LINK = '[signed link]';
 
 	/**
-	 * One merge tag: path (1), optional `date` filter (2), optional default (3).
+	 * Most items one `{{#each}}` renders.
 	 */
-	private const TAG = '/\{\{\s*((?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(\|\s*date\s*)?(?:\|\s*default:"([^"]*)"\s*)?\}\}/';
+	public const MAX_ITEMS = 50;
+
+	/**
+	 * Most bytes a template with an `{{#each}}` block renders to.
+	 */
+	public const MAX_BYTES = 65536;
+
+	/**
+	 * One merge tag: `path`, optional `add` duration, optional `format` (date or number) with `decimals`,
+	 * optional `fallback` with its `default` text.
+	 */
+	private const TAG = '\{\{\s*(?<path>(?:option:)?[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*(?:\|\s*add:"(?<add>[^"]*)"\s*)?(?:\|\s*(?<format>date|number)(?::(?<decimals>[0-4]))?\s*)?(?<fallback>\|\s*default:"(?<default>[^"]*)"\s*)?\}\}';
+
+	/**
+	 * One `{{#each <path>}} body {{else}} else {{/each}}` block.
+	 */
+	private const EACH = '\{\{\s*#each\s+(?<each>[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*\}\}(?<body>.*?)(?:\{\{\s*else\s*\}\}(?<else>.*?))?\{\{\s*\/each\s*\}\}';
 
 	/**
 	 * Paths whose values are URLs (escaped with esc_url in HTML).
@@ -97,18 +129,31 @@ final class Templates {
 	private const URL_PATHS = array( 'record.permalink', 'record.edit_url', 'site.url' );
 
 	/**
+	 * Read record paths whose values are URLs.
+	 */
+	private const READ_URL_PATH = '/^(?:steps\.[a-z0-9_]+\.record|item)\.(?:permalink|edit_url)$/';
+
+	/**
 	 * Renders a template to a string.
 	 *
 	 * @param string  $template Template.
 	 * @param Context $context  Run context.
 	 * @param string  $mode     raw, text, html, log, preview or preview_html.
+	 * @throws TemplateTooLarge When a template with an `{{#each}}` block renders past MAX_BYTES.
 	 */
 	public static function render( string $template, Context $context, string $mode = self::RAW ): string {
-		return (string) preg_replace_callback(
-			self::TAG,
-			fn( array $m ) => self::tag( $m, $context, $mode ),
-			$template
+		$out = (string) preg_replace_callback(
+			'/' . self::EACH . '|' . self::TAG . '/s',
+			fn( array $m ) => null !== $m['each'] ? self::each( $m, $context, $mode ) : self::tag( $m, $context, $mode ),
+			$template,
+			-1,
+			$count,
+			PREG_UNMATCHED_AS_NULL
 		);
+		if ( strlen( $out ) > self::MAX_BYTES && preg_match( '/\{\{\s*#each\b/', $template ) ) {
+			throw new TemplateTooLarge( esc_html( sprintf( 'The template rendered %1$d bytes; at most %2$d with {{#each}}.', strlen( $out ), self::MAX_BYTES ) ) );
+		}
+		return $out;
 	}
 
 	/**
@@ -119,20 +164,15 @@ final class Templates {
 	 */
 	public static function render_url( string $template, Context $context ): string {
 		return (string) preg_replace_callback(
-			self::TAG,
+			'/' . self::TAG . '/',
 			function ( array $m ) use ( $context ): string {
-				$groups = array();
-				foreach ( $m as $index => $group ) {
-					if ( -1 !== $group[1] ) {
-						$groups[ $index ] = $group[0];
-					}
-				}
+				$groups = array_map( fn( array $group ) => $group[0], $m );
 				return self::tag( $groups, $context, 0 === $m[0][1] ? self::RAW : self::URL );
 			},
 			trim( $template ),
 			-1,
 			$count,
-			PREG_OFFSET_CAPTURE
+			PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL
 		);
 	}
 
@@ -148,18 +188,74 @@ final class Templates {
 		if ( ! is_string( $value ) ) {
 			return $value;
 		}
-		if ( preg_match( '/^' . substr( self::TAG, 1, -1 ) . '$/', trim( $value ), $m ) ) {
+		if ( preg_match( '/^' . self::TAG . '$/', trim( $value ), $m, PREG_UNMATCHED_AS_NULL ) ) {
 			return self::lookup( $m, $context );
 		}
 		return self::render( $value, $context );
 	}
 
 	/**
+	 * Renders the tags of a block body (no nested blocks).
+	 *
+	 * @param string  $template Body.
+	 * @param Context $context  Run context.
+	 * @param string  $mode     Mode.
+	 */
+	private static function tags( string $template, Context $context, string $mode ): string {
+		return (string) preg_replace_callback(
+			'/' . self::TAG . '/',
+			fn( array $m ) => self::tag( $m, $context, $mode ),
+			$template,
+			-1,
+			$count,
+			PREG_UNMATCHED_AS_NULL
+		);
+	}
+
+	/**
+	 * Renders one `{{#each}}` block.
+	 *
+	 * @param array<string, string|null> $m       Match: `each` path, `body`, `else`.
+	 * @param Context                    $context Run context.
+	 * @param string                     $mode    Mode.
+	 * @throws TemplateTooLarge When the items render past MAX_BYTES.
+	 */
+	private static function each( array $m, Context $context, string $mode ): string {
+		$path = (string) $m['each'];
+		$ids  = $context->collection( $path );
+		if ( null === $ids && ( self::PREVIEW === $mode || self::PREVIEW_HTML === $mode ) ) {
+			/* translators: %s: step ID. */
+			$from = sprintf( __( '[from step %s]', 'pegwork' ), (string) ( explode( '.', $path )[1] ?? '' ) );
+			return self::PREVIEW_HTML === $mode ? esc_html( $from ) : $from;
+		}
+
+		$out   = '';
+		$shown = 0;
+		foreach ( array_slice( $ids ?? array(), 0, self::MAX_ITEMS ) as $id ) {
+			$record = $context->record_by_id( (int) $id );
+			if ( null === $record ) {
+				continue; // Deleted or trashed since it was found.
+			}
+			$context->set_item( $record );
+			try {
+				$out .= self::tags( (string) $m['body'], $context, $mode );
+			} finally {
+				$context->set_item( null );
+			}
+			++$shown;
+			if ( strlen( $out ) > self::MAX_BYTES ) {
+				throw new TemplateTooLarge( esc_html( sprintf( 'The {{#each}} block rendered more than %d bytes.', self::MAX_BYTES ) ) );
+			}
+		}
+		return 0 === $shown ? self::tags( (string) ( $m['else'] ?? '' ), $context, $mode ) : $out;
+	}
+
+	/**
 	 * Renders one tag match in a mode.
 	 *
-	 * @param array<int, string> $m       Match: path, optional default.
-	 * @param Context            $context Run context.
-	 * @param string             $mode    Mode.
+	 * @param array<int|string, string|null> $m       Match: `path`, `add`, `format`, `decimals`, `fallback`, `default`.
+	 * @param Context                        $context Run context.
+	 * @param string                         $mode    Mode.
 	 */
 	private static function tag( array $m, Context $context, string $mode ): string {
 		if ( self::RAW === $mode ) {
@@ -169,14 +265,15 @@ final class Templates {
 			return rawurlencode( self::text( self::lookup( $m, $context ) ) );
 		}
 
-		$path = $m[1];
+		$path = (string) $m['path'];
 		if ( self::PREVIEW === $mode || self::PREVIEW_HTML === $mode ) {
 			if ( str_starts_with( $path, 'link.' ) ) {
 				return self::PREVIEW_LINK;
 			}
-			if ( str_starts_with( $path, 'steps.' ) ) {
+			$step = str_starts_with( $path, 'steps.' ) ? (string) ( explode( '.', $path )[1] ?? '' ) : null;
+			if ( null !== $step && ! $context->has_output( $step ) ) {
 				/* translators: %s: step ID. */
-				$from = sprintf( __( '[from step %s]', 'pegwork' ), (string) ( explode( '.', $path )[1] ?? '' ) );
+				$from = sprintf( __( '[from step %s]', 'pegwork' ), $step );
 				return self::PREVIEW_HTML === $mode ? esc_html( $from ) : $from;
 			}
 			$mode = self::PREVIEW_HTML === $mode ? self::HTML : self::TEXT;
@@ -204,18 +301,75 @@ final class Templates {
 	}
 
 	/**
-	 * Resolves one tag match, applying its default when the value is empty.
+	 * Resolves one tag match: its default when the value is empty, else the value through its filters.
 	 *
-	 * @param array<int, string> $m       Match: path, optional default.
-	 * @param Context            $context Run context.
+	 * @param array<int|string, string|null> $m       Match.
+	 * @param Context                        $context Run context.
 	 * @return mixed
 	 */
 	private static function lookup( array $m, Context $context ): mixed {
-		$value = $context->resolve( $m[1] );
+		$value = $context->resolve( (string) $m['path'] );
 		if ( null === $value || '' === $value || array() === $value ) {
-			return isset( $m[3] ) ? $m[3] : $value;
+			return null !== ( $m['fallback'] ?? null ) ? (string) $m['default'] : $value;
 		}
-		return '' !== ( $m[2] ?? '' ) ? self::date( $value ) : $value;
+		if ( null !== ( $m['add'] ?? null ) ) {
+			$value = self::add( $value, (string) $m['add'] );
+		}
+		$format = $m['format'] ?? null;
+		if ( 'date' === $format ) {
+			return self::date( $value );
+		}
+		if ( 'number' === $format ) {
+			$decimals = $m['decimals'] ?? null;
+			return self::number( $value, null === $decimals ? null : (int) $decimals );
+		}
+		return $value;
+	}
+
+	/**
+	 * A date or date and time moved by a signed ISO 8601 duration in site time: a `Y-m-d` date gives
+	 * `Y-m-d`, an ISO 8601 date and time gives ISO 8601 in site time. Anything else is returned unchanged.
+	 *
+	 * @param mixed  $value    Value.
+	 * @param string $duration Signed duration, such as P2D or -PT6H.
+	 * @return mixed
+	 */
+	public static function add( mixed $value, string $duration ): mixed {
+		if ( ! is_string( $value ) ) {
+			return $value;
+		}
+		$zone = wp_timezone();
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+			$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $value, $zone );
+			if ( false === $date || $date->format( 'Y-m-d' ) !== $value ) {
+				return $value;
+			}
+			return Conditions::offset( $date, $duration )->format( 'Y-m-d' );
+		}
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?$/', $value ) ) {
+			$time = date_create_immutable( $value, $zone );
+			return false === $time ? $value : Conditions::offset( $time->setTimezone( $zone ), $duration )->format( 'Y-m-d\TH:i:sP' );
+		}
+		return $value;
+	}
+
+	/**
+	 * A number in the site locale: with the given decimals, else whole numbers bare and others with 2
+	 * decimals. Anything that is not numeric is returned unchanged.
+	 *
+	 * @param mixed    $value    Value.
+	 * @param int|null $decimals Decimals (0 to 4), or null.
+	 * @return mixed
+	 */
+	public static function number( mixed $value, ?int $decimals = null ): mixed {
+		if ( is_bool( $value ) || ! is_numeric( $value ) ) {
+			return $value;
+		}
+		$number = (float) $value;
+		if ( null === $decimals ) {
+			$decimals = floor( $number ) === $number ? 0 : 2;
+		}
+		return number_format_i18n( $number, $decimals );
 	}
 
 	/**
@@ -231,7 +385,7 @@ final class Templates {
 		}
 		$zone   = wp_timezone();
 		$parsed = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value )
-			? \DateTimeImmutable::createFromFormat( '!Y-m-d', $value, $zone )
+			? DateTimeImmutable::createFromFormat( '!Y-m-d', $value, $zone )
 			: ( preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?$/', $value ) ? date_create_immutable( $value, $zone ) : false );
 		if ( false === $parsed || ( 10 === strlen( $value ) && $parsed->format( 'Y-m-d' ) !== $value ) ) {
 			return $value;
@@ -260,13 +414,17 @@ final class Templates {
 	}
 
 	/**
-	 * Whether a path holds a URL: the permalink, edit URL, site URL, a signed link or a `url` field.
+	 * Whether a path holds a URL: a permalink or edit URL (bound, read or item record), the site URL, a
+	 * signed link or a `url` field.
 	 *
 	 * @param string  $path    Path.
 	 * @param Context $context Run context.
 	 */
 	private static function is_url( string $path, Context $context ): bool {
-		return in_array( $path, self::URL_PATHS, true ) || str_starts_with( $path, 'link.' ) || 'url' === $context->field_type( $path );
+		return in_array( $path, self::URL_PATHS, true )
+			|| str_starts_with( $path, 'link.' )
+			|| 1 === preg_match( self::READ_URL_PATH, $path )
+			|| 'url' === $context->field_type( $path );
 	}
 
 	/**

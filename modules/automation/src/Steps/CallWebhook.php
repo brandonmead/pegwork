@@ -20,7 +20,9 @@ use WP_Error;
  * It runs as a step of a background run, so the save that triggered it never waits for the receiver.
  *
  * Body: `{ event, automation, run_id, delivered_at, record: { id, type, status, permalink, fields } }`
- * (`record` is null when the run has no record). `fields` holds the step's `fields` keys, or every public
+ * (`record` is null when the run has no record). With `record` and `content_type` the body's record is the
+ * record that template names instead of the bound one (a read record); a missing record fails
+ * `pegwork_record_not_found` and one of another type `record_type`, neither retried. `fields` holds the step's `fields` keys, or every public
  * field and taxonomy of the type when it has none; private fields are never sent (the registry rejects them
  * in `fields`, and they are skipped here as well). Headers: `X-Pegwork-Delivery: <run id>-<step id>`
  * (stable across retries, for receiver dedupe), `X-Pegwork-Timestamp` (Unix time of the attempt) and
@@ -57,6 +59,11 @@ final class CallWebhook implements Step {
 			return StepResult::fail( 'invalid_url', 'The webhook URL did not render to an http:// or https:// URL.', $summary, false );
 		}
 
+		$record = self::target( $step, $context );
+		if ( $record instanceof WP_Error ) {
+			return StepResult::fail( (string) $record->get_error_code(), $record->get_error_message(), $summary, false );
+		}
+
 		$secret = Secrets::get( (string) $run['automation'] );
 		if ( null === $secret ) {
 			return StepResult::fail( 'no_secret', 'The webhook secret could not be stored.', $summary );
@@ -69,7 +76,7 @@ final class CallWebhook implements Step {
 				'automation'   => (string) $run['automation'],
 				'run_id'       => (int) $run['id'],
 				'delivered_at' => $now->format( 'Y-m-d\TH:i:s\Z' ),
-				'record'       => self::record( $step, $context ),
+				'record'       => self::body_record( $step, $record ),
 			),
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 		);
@@ -111,7 +118,41 @@ final class CallWebhook implements Step {
 	 * @return array<string, mixed>|null
 	 */
 	public static function record( array $step, Context $context ): ?array {
-		$record = $context->record();
+		$record = self::target( $step, $context );
+		return $record instanceof WP_Error ? null : self::body_record( $step, $record );
+	}
+
+	/**
+	 * The record a delivery sends: the one `record` names (checked against `content_type`), else the bound
+	 * record; null when there is none.
+	 *
+	 * @param array<string, mixed> $step    Step definition.
+	 * @param Context              $context Run context.
+	 * @return array<string, mixed>|null|WP_Error
+	 */
+	public static function target( array $step, Context $context ): array|null|WP_Error {
+		if ( ! isset( $step['record'] ) ) {
+			return $context->record();
+		}
+		$id     = (int) Templates::render( (string) $step['record'], $context );
+		$record = $context->record_by_id( $id );
+		if ( null === $record ) {
+			return new WP_Error( 'pegwork_record_not_found', $id > 0 ? sprintf( 'No record with ID %d.', $id ) : 'The record to send rendered empty.' );
+		}
+		if ( (string) ( $step['content_type'] ?? '' ) !== $record['type'] ) {
+			return new WP_Error( 'record_type', sprintf( 'Record %1$d is a %2$s, not a %3$s.', $id, (string) $record['type'], (string) ( $step['content_type'] ?? '' ) ) );
+		}
+		return $record;
+	}
+
+	/**
+	 * The `record` part of the body for a record: public values only.
+	 *
+	 * @param array<string, mixed>      $step   Step definition.
+	 * @param array<string, mixed>|null $record Record, or null.
+	 * @return array<string, mixed>|null
+	 */
+	private static function body_record( array $step, ?array $record ): ?array {
 		if ( null === $record ) {
 			return null;
 		}
