@@ -1,0 +1,29 @@
+{ "format": 1, "key": "barn_volunteer_intake", "label": "Volunteer sign-up: route, notify, remind",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "barn_volunteer_signup" },
+  "steps": [
+    { "id": "route", "type": "decision",
+      "branches": [
+        { "label": "Events", "when": { "var": "record.interest", "op": "eq", "value": "events" },
+          "steps": [ { "id": "to_events", "type": "update_record",
+            "values": { "coordinator_email": "{{option:barn_settings.events_coordinator}}" } } ] },
+        { "label": "Garden", "when": { "var": "record.interest", "op": "eq", "value": "garden" },
+          "steps": [ { "id": "to_garden", "type": "update_record",
+            "values": { "coordinator_email": "{{option:barn_settings.garden_coordinator}}" } } ] } ],
+      "otherwise": [ { "id": "to_manager", "type": "update_record",
+        "values": { "coordinator_email": "{{option:barn_settings.volunteer_manager}}" } } ] },
+    { "id": "notify", "type": "send_email", "to": "{{record.coordinator_email}}", "reply_to": "{{record.email}}",
+      "subject": "New volunteer: {{record.name}}",
+      "text": "{{record.name}} signed up to help with {{record.interest}}. Please reach out within two days, then set Stage to Contacted: {{record.edit_url}}" },
+    { "id": "grace", "type": "wait", "for": "P2D" },
+    { "id": "check", "type": "decision",
+      "branches": [
+        { "label": "Not contacted yet", "when": { "var": "record.stage", "op": "eq", "value": "new" },
+          "steps": [
+            { "id": "remind", "type": "send_email", "to": "{{record.coordinator_email}}",
+              "subject": "Reminder: {{record.name}} is waiting to hear from you",
+              "text": "{{record.name}} signed up two days ago and is still marked New: {{record.edit_url}}" },
+            { "id": "grace_2", "type": "wait", "for": "P3D" },
+            { "id": "still_new", "type": "condition", "when": { "var": "record.stage", "op": "eq", "value": "new" } },
+            { "id": "escalate", "type": "send_email", "to": "{{option:barn_settings.volunteer_manager}}",
+              "subject": "Volunteer not contacted after five days: {{record.name}}",
+              "text": "{{record.name}} ({{record.interest}}) has not been contacted. Coordinator: {{record.coordinator_email}}. {{record.edit_url}}" } ] } ] } ] }

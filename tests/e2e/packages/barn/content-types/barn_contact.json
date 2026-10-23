@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "key": "barn_contact",
+  "labels": { "singular": "Contact", "plural": "Contacts" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "visibility": "private" },
+    { "key": "first_gift_on", "type": "date", "label": "First gift on", "visibility": "private" },
+    { "key": "last_gift_on", "type": "date", "label": "Last gift on", "visibility": "private" }
+  ]
+}

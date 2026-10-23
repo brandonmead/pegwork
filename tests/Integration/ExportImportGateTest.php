@@ -343,6 +343,49 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Phase 6 gate: the BarnCRM proof package (four types, an options page, a form and three automations with
+	 * decisions, a templated update_record target and a form-bound trigger) exports, re-imports into the DB
+	 * source and re-exports byte-identically; the export holds one file per fixture object.
+	 */
+	public function test_barn_package_round_trip() {
+		$fixture       = dirname( __DIR__ ) . '/fixtures/valid/barn';
+		$this->package = fn( RegistryBuilder $builder ) => $builder->add_package( $fixture );
+		add_action( 'pegwork_register', $this->package );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		$sections = array( 'content_types', 'options_pages', 'forms', 'automations' );
+		$before   = array_map( fn( $section ) => Plugin::registry()->$section(), array_combine( $sections, $sections ) );
+		$this->assertSame( array( 4, 1, 1, 3 ), array_values( array_map( 'count', $before ) ) );
+
+		$a    = $this->export();
+		$tree = $this->tree( $a );
+		$this->assertSame(
+			array_map( fn( $file ) => substr( $file, strlen( $fixture ) + 1 ), glob( $fixture . '/*/*.json' ) ),
+			array_values( array_diff( array_keys( $tree ), array( 'manifest.json' ) ) ),
+			'One exported file per fixture object.'
+		);
+		$thanks = json_decode( $tree['automations/barn_gift_thanks.json'], true );
+		$this->assertSame( 'publish', $thanks['steps'][0]['branches'][0]['steps'][1]['status'] );
+		$this->assertSame( '{{record.donor_id}}', $thanks['steps'][2]['record'] );
+
+		remove_action( 'pegwork_register', $this->package );
+		delete_option( Loader::DB_OPTION );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::registry()->automations() );
+		$this->assertFalse( post_type_exists( 'barn_gift' ) );
+
+		$this->assertTrue( Importer::import( $a )->is_valid() );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		foreach ( $sections as $section ) {
+			$this->assertSame( $before[ $section ], Plugin::registry()->$section(), "$section unchanged." );
+		}
+		$this->assertTrue( post_type_exists( 'barn_volunteer' ) );
+		$this->assertSame( $tree, $this->tree( $this->export() ) );
+		$this->assertSame( 0, Importer::import( $a )->count() );
+	}
+
+	/**
 	 * Import creates missing seed terms by slug and never deletes terms; dry run writes nothing.
 	 */
 	public function test_import_seeds_missing_terms_and_dry_run_writes_nothing() {
