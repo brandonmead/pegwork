@@ -52,9 +52,7 @@ final class UpdateRecord implements Step {
 			return StepResult::fail( (string) $result->get_error_code(), $result->get_error_message(), $summary );
 		}
 
-		if ( null !== $bound && $id === (int) $bound['id'] ) {
-			$context->refresh_record();
-		}
+		$context->forget( $id ); // Later steps read the written values (the bound record is re-read too).
 		return StepResult::ok( array( 'record_id' => $id ), $summary );
 	}
 

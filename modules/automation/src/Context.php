@@ -13,11 +13,22 @@ use Pegwork\Api\Records;
 use PegworkAutomation\Clock\Clock;
 
 /**
- * Resolves paths (`record.*`, `trigger.*`, `steps.<id>.*`, `site.*`, `today`, `now`, `run.id`) for one
- * run. The record is read through `Pegwork\Api\Records` (private fields included: contexts that output
- * values choose what to show).
+ * Resolves paths (`record.*`, `trigger.*`, `steps.<id>.*`, `site.*`, `today`, `now`, `run.id`, and
+ * `item.*` inside an `{{#each}}` block) for one run. Records are read through `Pegwork\Api\Records`
+ * (private fields included: contexts that output values choose what to show).
+ *
+ * Read outputs are references: a `get_record` stores `found` and `record_id`, a `find_records` stores
+ * `count`, `ids` and `sum`. `steps.<id>.record.<key>` and `{{#each}}` items re-read the record by ID
+ * through a per-wake-up cache, which write steps invalidate by ID (forget()), so a later step sees written
+ * values and a step after a wait sees current ones. The context also counts the records reads return
+ * (`context.reads`, at most read_limit() per run).
  */
 final class Context {
+
+	/**
+	 * Default most records a run may read (IDs returned by reads, plus loop items).
+	 */
+	public const READ_LIMIT = 500;
 
 	/**
 	 * Engine clock.
@@ -70,6 +81,34 @@ final class Context {
 	private array $links = array();
 
 	/**
+	 * Records read by ID in this wake-up (null when the ID is not a registry record), by ID.
+	 *
+	 * @var array<int, array<string, mixed>|null>
+	 */
+	private array $cache = array();
+
+	/**
+	 * The run's steps (to know the content type a read step reads), or null.
+	 *
+	 * @var Plan|null
+	 */
+	private ?Plan $plan = null;
+
+	/**
+	 * The current `{{#each}}` item, or null outside a block.
+	 *
+	 * @var array<string, mixed>|null
+	 */
+	private ?array $item = null;
+
+	/**
+	 * Records read so far in the run.
+	 *
+	 * @var int
+	 */
+	private int $reads = 0;
+
+	/**
 	 * Builds a context.
 	 *
 	 * @param Clock                               $clock      Engine clock.
@@ -104,6 +143,123 @@ final class Context {
 		if ( null !== $this->record ) {
 			$this->record = Records::get( (int) $this->record['id'] );
 		}
+	}
+
+	/**
+	 * Uses the run's step plan, so read outputs know their content type (privacy of `sum` fields, field
+	 * types of a record that was not found).
+	 *
+	 * @param Plan $plan Plan.
+	 */
+	public function use_plan( Plan $plan ): void {
+		$this->plan = $plan;
+	}
+
+	/**
+	 * A record by ID through the wake-up cache (the bound record for its own ID), or null when the ID is
+	 * not a registry record or the record is in the trash.
+	 *
+	 * @param int $id Record ID.
+	 * @return array<string, mixed>|null
+	 */
+	public function record_by_id( int $id ): ?array {
+		if ( $id <= 0 ) {
+			return null;
+		}
+		if ( null !== $this->record && (int) $this->record['id'] === $id ) {
+			return $this->record;
+		}
+		if ( ! array_key_exists( $id, $this->cache ) ) {
+			$record             = Records::get( $id );
+			$this->cache[ $id ] = null !== $record && 'trash' === $record['status'] ? null : $record; // Trash is never read.
+		}
+		return $this->cache[ $id ];
+	}
+
+	/**
+	 * Drops a record from the cache after a step wrote it, and re-reads the bound record when it is that one.
+	 *
+	 * @param int $id Record ID.
+	 */
+	public function forget( int $id ): void {
+		unset( $this->cache[ $id ] );
+		if ( null !== $this->record && (int) $this->record['id'] === $id ) {
+			$this->refresh_record();
+		}
+	}
+
+	/**
+	 * Sets the current `{{#each}}` item (null after the block).
+	 *
+	 * @param array<string, mixed>|null $record Record.
+	 */
+	public function set_item( ?array $record ): void {
+		$this->item = $record;
+	}
+
+	/**
+	 * Whether a step has stored outputs (it ran in this run, or was read in this dry run).
+	 *
+	 * @param string $step_id Step ID.
+	 */
+	public function has_output( string $step_id ): bool {
+		return isset( $this->steps[ $step_id ] );
+	}
+
+	/**
+	 * The record IDs of a collection path (`steps.<id>.records`), or null when that step has no output.
+	 *
+	 * @param string $path Path.
+	 * @return int[]|null
+	 */
+	public function collection( string $path ): ?array {
+		$parts = explode( '.', $path );
+		if ( 3 !== count( $parts ) || 'steps' !== $parts[0] || 'records' !== $parts[2] || ! isset( $this->steps[ $parts[1] ]['ids'] ) ) {
+			return null;
+		}
+		return array_values( array_map( 'intval', (array) $this->steps[ $parts[1] ]['ids'] ) );
+	}
+
+	/**
+	 * Records read so far in the run.
+	 */
+	public function reads(): int {
+		return $this->reads;
+	}
+
+	/**
+	 * Restores the run's stored read count (`context.reads`).
+	 *
+	 * @param int $reads Count.
+	 */
+	public function restore_reads( int $reads ): void {
+		$this->reads = max( 0, $reads );
+	}
+
+	/**
+	 * Counts the records a read returned; false, counting nothing, when that would pass the read limit.
+	 *
+	 * @param int $count Records returned.
+	 */
+	public function count_reads( int $count ): bool {
+		if ( $this->reads + $count > self::read_limit() ) {
+			return false;
+		}
+		$this->reads += $count;
+		return true;
+	}
+
+	/**
+	 * Most records one run may read.
+	 */
+	public static function read_limit(): int {
+		/**
+		 * Filters the most records one run may read: IDs returned by get_record and find_records, plus loop
+		 * items. A read past it fails with `read_limit` (no retry; `on_error` applies).
+		 *
+		 * @param int $limit Default 500.
+		 */
+		return max( 0, (int) apply_filters( 'pegwork_automation_read_limit', self::READ_LIMIT ) );
 	}
 
 	/**
@@ -184,13 +340,37 @@ final class Context {
 			case 'trigger':
 				return self::dig( $this->trigger, $parts );
 			case 'steps':
-				return self::dig( $this->steps, $parts );
+				return $this->step_value( $parts );
 			case 'record':
-				return $this->record_value( $parts );
+				return self::record_value( $this->record, $parts );
+			case 'item':
+				return self::record_value( $this->item, $parts );
 			case 'link':
 				return 1 === count( $parts ) ? $this->link( $parts[0] ) : null;
 		}
 		return null;
+	}
+
+	/**
+	 * A `steps.<id>.*` value: `steps.<id>.record.<key>` reads the record a get_record found, `records` is a
+	 * collection (not a value), everything else is the stored output.
+	 *
+	 * @param string[] $parts Path after `steps`.
+	 * @return mixed
+	 */
+	private function step_value( array $parts ): mixed {
+		$output = $this->steps[ $parts[0] ?? '' ] ?? null;
+		if ( ! is_array( $output ) ) {
+			return null;
+		}
+		$name = $parts[1] ?? null;
+		if ( 'record' === $name && array_key_exists( 'found', $output ) ) {
+			return self::record_value( $this->record_by_id( (int) ( $output['record_id'] ?? 0 ) ), array_slice( $parts, 2 ) );
+		}
+		if ( 'records' === $name && array_key_exists( 'ids', $output ) ) {
+			return null; // Consumed only by {{#each}} and loops, through collection().
+		}
+		return self::dig( $output, array_slice( $parts, 1 ) );
 	}
 
 	/**
@@ -210,9 +390,10 @@ final class Context {
 	}
 
 	/**
-	 * Whether a path reads a private field: `record.<key>`, `trigger.old.<key>` or (form events)
-	 * `trigger.values.<key>` of a field with visibility `private` (contexts that show values outside the
-	 * email use this to hide them).
+	 * Whether a path reads a private field: `record.<key>`, `trigger.old.<key>`, a read record's
+	 * `steps.<id>.record.<key>`, an `{{#each}}` `item.<key>`, a `steps.<id>.sum.<field>` over a private
+	 * field, or (form events) `trigger.values.<key>`, of a field with visibility `private` (contexts that
+	 * show values outside the email use this to hide them).
 	 *
 	 * @param string $path Dot path.
 	 */
@@ -249,7 +430,7 @@ final class Context {
 	}
 
 	/**
-	 * Field type of a `record.<key>` or `trigger.old.<key>` path, or null when it is not a field.
+	 * Field type of a record field path (see path_key()), or null when it is not a field.
 	 *
 	 * @param string $path Dot path.
 	 */
@@ -259,7 +440,7 @@ final class Context {
 	}
 
 	/**
-	 * Taxonomy name when a `record.<key>` or `trigger.old.<key>` path is a taxonomy of the record's type.
+	 * Taxonomy name when a record field path (see path_key()) is a taxonomy of the record's type.
 	 *
 	 * @param string $path Dot path.
 	 */
@@ -274,7 +455,7 @@ final class Context {
 	}
 
 	/**
-	 * Registry field behind a `record.<key>` or `trigger.old.<key>` path.
+	 * Registry field behind a record field path or an options page path.
 	 *
 	 * @param string $path Dot path.
 	 * @return array<string, mixed>|null
@@ -290,7 +471,9 @@ final class Context {
 	}
 
 	/**
-	 * Content type and key a path reads: `record.<key>` (bound record) or `trigger.old.<key>` (payload type).
+	 * Content type and key a path reads: `record.<key>` (bound record), `trigger.old.<key>` (payload type),
+	 * `item.<key>` (the `{{#each}}` item), `steps.<id>.record.<key>` and `steps.<id>.sum.<field>` (the
+	 * content type of that read step).
 	 *
 	 * @param string $path Dot path.
 	 * @return array{0: string|null, 1: string}
@@ -300,36 +483,47 @@ final class Context {
 		if ( 2 === count( $parts ) && 'record' === $parts[0] && null !== $this->record ) {
 			return array( (string) $this->record['type'], $parts[1] );
 		}
+		if ( 2 === count( $parts ) && 'item' === $parts[0] && null !== $this->item ) {
+			return array( (string) $this->item['type'], $parts[1] );
+		}
 		if ( 3 === count( $parts ) && 'trigger' === $parts[0] && 'old' === $parts[1] ) {
 			$type = $this->trigger['type'] ?? ( $this->record['type'] ?? null );
 			return array( is_string( $type ) ? $type : null, $parts[2] );
+		}
+		if ( 4 === count( $parts ) && 'steps' === $parts[0] && in_array( $parts[2], array( 'record', 'sum' ), true ) ) {
+			$type = $this->plan?->step( $parts[1] )['content_type'] ?? null;
+			if ( ! is_string( $type ) && 'record' === $parts[2] ) {
+				$type = $this->record_by_id( (int) ( $this->steps[ $parts[1] ]['record_id'] ?? 0 ) )['type'] ?? null;
+			}
+			return array( is_string( $type ) ? $type : null, $parts[3] );
 		}
 		return array( null, '' );
 	}
 
 	/**
-	 * A `record.*` value.
+	 * A value of a record: `id`, `status`, `type`, `permalink`, `edit_url`, or a field or taxonomy key.
 	 *
-	 * @param string[] $parts Path after `record`.
+	 * @param array<string, mixed>|null $record Record, or null.
+	 * @param string[]                  $parts  Path after the record.
 	 * @return mixed
 	 */
-	private function record_value( array $parts ): mixed {
-		if ( null === $this->record || 1 !== count( $parts ) ) {
+	private static function record_value( ?array $record, array $parts ): mixed {
+		if ( null === $record || 1 !== count( $parts ) ) {
 			return null;
 		}
 		$key = $parts[0];
 		switch ( $key ) {
 			case 'id':
-				return (int) $this->record['id'];
+				return (int) $record['id'];
 			case 'status':
 			case 'type':
 			case 'permalink':
-				return $this->record[ $key ];
+				return $record[ $key ];
 			case 'edit_url':
 				// Not get_edit_post_link(): runs have no current user, and that returns null without one.
-				return admin_url( 'post.php?post=' . (int) $this->record['id'] . '&action=edit' );
+				return admin_url( 'post.php?post=' . (int) $record['id'] . '&action=edit' );
 		}
-		return $this->record['values'][ $key ] ?? null;
+		return $record['values'][ $key ] ?? null;
 	}
 
 	/**

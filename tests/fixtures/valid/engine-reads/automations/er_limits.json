@@ -1,0 +1,11 @@
+{ "format": 1, "key": "er_limits", "label": "Inbound: reads against the read limit and empty operands",
+  "trigger": { "type": "webhook" },
+  "steps": [
+    { "id": "contact", "type": "get_record", "content_type": "barn_contact",
+      "filter": { "all": [ { "field": "email", "op": "eq", "value": { "var": "trigger.payload.email" } } ] } },
+    { "id": "open", "type": "find_records", "content_type": "barn_task", "limit": 2,
+      "filter": { "all": [ { "field": "done", "op": "ne", "value": true } ] } },
+    { "id": "more", "type": "find_records", "content_type": "barn_task", "limit": 50, "on_error": "continue",
+      "filter": { "all": [ { "field": "done", "op": "ne", "value": true } ] } },
+    { "id": "all", "type": "find_records", "content_type": "barn_task", "limit": 50,
+      "filter": { "all": [ { "field": "done", "op": "ne", "value": true } ] } } ] }

@@ -12,14 +12,21 @@ namespace PegworkAutomation;
 use Pegwork\Api\Records;
 use PegworkAutomation\Steps\CallWebhook;
 use PegworkAutomation\Steps\Decision;
+use PegworkAutomation\Steps\FindRecords;
+use PegworkAutomation\Steps\GetRecord;
 use PegworkAutomation\Steps\SendEmail;
 use WP_Error;
 
 /**
  * Walks an automation's steps with the same Plan the executor uses, and reports what each step would
- * do. No step handler runs: no email, no HTTP, no record write, no run row, no signed link and no
- * secret or link key. Decisions and conditions are evaluated; a false condition stops the walk ("stops
- * here"); waits continue as if they had passed, against the record as it is now.
+ * do. No step with a side effect runs: no email, no HTTP, no record write or link, no run row, no signed
+ * link and no secret or link key. Decisions and conditions are evaluated; a false condition stops the
+ * walk ("stops here"); waits continue as if they had passed, against the record as it is now.
+ *
+ * Reads (`get_record`, `find_records`) run for real through their handlers (read-only queries, the same
+ * read limit), so later steps see their real outputs; the report names found records by ID and title
+ * and gives counts and sums. Reads after a step that would write see the site as it is now, and the
+ * report says so once. A step with `on_error: continue` that would fail is reported and the walk goes on.
  *
  * The trigger payload is synthesized from the sample record (`old.*` holds the current values,
  * `changed` is empty, form `values` are the record's values for the form's bound keys), or for a
@@ -233,13 +240,32 @@ final class DryRun {
 			'outcome'    => 'completed',
 		);
 
-		$plan  = new Plan( array_values( (array) $definition['steps'] ) );
-		$id    = $plan->first();
-		$count = 0;
+		$plan = new Plan( array_values( (array) $definition['steps'] ) );
+		$context->use_plan( $plan );
+		$id     = $plan->first();
+		$count  = 0;
+		$errors = array();
+		$state  = array(
+			'wrote' => false,
+			'noted' => false,
+		);
 		while ( null !== $id && $count < self::MAX_STEPS ) {
 			++$count;
 			$step  = (array) $plan->step( $id );
-			$entry = self::step( $step, $context, $record, $plan );
+			$entry = self::step( $step, $context, $record, $plan, $state );
+
+			if ( 'fails' === $entry['result'] && 'continue' === ( $step['on_error'] ?? null ) ) {
+				$entry['result']   = 'continues';
+				$entry['message'] .= ' ' . __( 'The run would continue (on_error).', 'pegwork' );
+				$context->set_output(
+					$id,
+					array(
+						'failed' => true,
+						'error'  => (string) ( $entry['detail']['error'] ?? 'failed' ),
+					)
+				);
+				$errors[] = $id;
+			}
 
 			$report['steps'][] = $entry;
 			if ( 'stops' === $entry['result'] ) {
@@ -254,6 +280,9 @@ final class DryRun {
 		}
 		if ( null !== $id && $count >= self::MAX_STEPS && 'completed' === $report['outcome'] ) {
 			$report['outcome'] = 'step_limit';
+		}
+		if ( array() !== $errors && ( 'completed' === $report['outcome'] || str_starts_with( $report['outcome'], 'stopped_at:' ) ) ) {
+			$report['outcome'] = Executor::ERRORS_OUTCOME . implode( ',', $errors ); // As the executor reports it.
 		}
 
 		return $report;
@@ -314,9 +343,10 @@ final class DryRun {
 	 * @param Context                   $context Context.
 	 * @param array<string, mixed>|null $record  Sample record.
 	 * @param Plan                      $plan    Plan.
+	 * @param array<string, bool>       $state   `wrote` (a step would have written), `noted` (the report said so).
 	 * @return array{id: string, type: string, depth: int, branch: string|null, result: string, detail: array<string, mixed>, message: string}
 	 */
-	private static function step( array $step, Context $context, ?array $record, Plan $plan ): array {
+	private static function step( array $step, Context $context, ?array $record, Plan $plan, array &$state ): array {
 		$id       = (string) $step['id'];
 		$type     = (string) $step['type'];
 		$location = $plan->location( $id );
@@ -372,12 +402,50 @@ final class DryRun {
 				break;
 
 			case 'send_email':
-				$entry = self::email( $step, $context ) + $entry;
+				try {
+					$entry = self::email( $step, $context ) + $entry;
+				} catch ( TemplateTooLarge $e ) {
+					$entry['result']  = 'fails';
+					$entry['detail']  = array( 'error' => 'template_too_large' );
+					$entry['message'] = sprintf(
+						/* translators: 1: step ID, 2: error message. */
+						__( 'Send email %1$s: would fail: %2$s', 'pegwork' ),
+						$id,
+						$e->getMessage()
+					);
+				}
+				break;
+
+			case 'get_record':
+			case 'find_records':
+				$entry = self::read( $step, $context, $state ) + $entry;
+				break;
+
+			case 'relate':
+				$state['wrote'] = true;
+				$relationship   = pegwork_registry()->relationships()[ (string) $step['relationship'] ] ?? array();
+				$bound          = null !== $record && ( $relationship['from'] ?? null ) === $record['type'] ? (string) $record['id'] : '?';
+				$from           = isset( $step['from'] ) ? Templates::render( (string) $step['from'], $context, Templates::PREVIEW ) : $bound;
+				$to             = Templates::render( (string) ( $step['to'] ?? '' ), $context, Templates::PREVIEW );
+				$action         = 'remove' === ( $step['action'] ?? 'add' ) ? 'remove' : 'add';
+
+				$entry['detail']  = array(
+					'relationship' => (string) $step['relationship'],
+					'action'       => $action,
+					'from'         => $from,
+					'to'           => $to,
+				);
+				$entry['message'] = 'add' === $action
+					/* translators: 1: step ID, 2: relationship key, 3: "from" record ID, 4: "to" record ID. */
+					? sprintf( __( 'Relate %1$s: would add a %2$s link from record %3$s to record %4$s (not applied).', 'pegwork' ), $id, (string) $step['relationship'], '' === $from ? '?' : $from, '' === $to ? '?' : $to )
+					/* translators: 1: step ID, 2: relationship key, 3: "from" record ID, 4: "to" record ID. */
+					: sprintf( __( 'Relate %1$s: would remove the %2$s link from record %3$s to record %4$s (not applied).', 'pegwork' ), $id, (string) $step['relationship'], '' === $from ? '?' : $from, '' === $to ? '?' : $to );
 				break;
 
 			case 'update_record':
 			case 'create_record':
-				$values = array();
+				$state['wrote'] = true;
+				$values         = array();
 				foreach ( (array) ( $step['values'] ?? array() ) as $key => $value ) {
 					$values[ (string) $key ] = is_string( $value ) ? Templates::render( $value, $context, Templates::PREVIEW ) : $value;
 				}
@@ -401,8 +469,38 @@ final class DryRun {
 				break;
 
 			case 'call_webhook':
-				$url    = trim( Templates::render( (string) ( $step['url'] ?? '' ), $context, Templates::PREVIEW ) );
-				$host   = (string) wp_parse_url( $url, PHP_URL_HOST );
+				$url     = trim( Templates::render( (string) ( $step['url'] ?? '' ), $context, Templates::PREVIEW ) );
+				$host    = (string) wp_parse_url( $url, PHP_URL_HOST );
+				$pending = isset( $step['record'] ) ? self::pending( (string) $step['record'], $context ) : null;
+				if ( null !== $pending ) {
+					$entry['detail']  = array(
+						'host'   => $host,
+						'fields' => array(),
+					);
+					$entry['message'] = sprintf(
+						/* translators: 1: step ID, 2: host name, 3: step ID. */
+						__( 'Call webhook %1$s: would POST to %2$s with the record from step %3$s, known only in a real run (not sent).', 'pegwork' ),
+						$id,
+						'' === $host ? '?' : $host,
+						$pending
+					);
+					break;
+				}
+				$target = CallWebhook::target( $step, $context );
+				if ( $target instanceof WP_Error ) {
+					$entry['result']  = 'fails';
+					$entry['detail']  = array(
+						'host'  => $host,
+						'error' => (string) $target->get_error_code(),
+					);
+					$entry['message'] = sprintf(
+						/* translators: 1: step ID, 2: error message. */
+						__( 'Call webhook %1$s: would fail: %2$s', 'pegwork' ),
+						$id,
+						$target->get_error_message()
+					);
+					break;
+				}
 				$fields = array_keys( (array) ( CallWebhook::record( $step, $context )['fields'] ?? array() ) );
 
 				$entry['detail']  = array(
@@ -450,15 +548,15 @@ final class DryRun {
 		}
 
 		$template = (string) ( $step['to'] ?? '' );
-		if ( preg_match( '/\{\{\s*steps\./', $template ) ) {
-			// A recipient from an earlier step's output is known only in a real run.
+		if ( null !== self::pending( $template, $context ) ) {
+			// A recipient from the output of a step the test does not run is known only in a real run.
 			$detail['to'] = array( Templates::render( $template, $context, Templates::PREVIEW ) );
 		} else {
 			$to = ( new SendEmail() )->recipients( $template, $context );
 			if ( $to instanceof WP_Error ) {
 				return array(
 					'result'  => 'fails',
-					'detail'  => $detail,
+					'detail'  => $detail + array( 'error' => (string) $to->get_error_code() ),
 					/* translators: 1: step ID, 2: error message. */
 					'message' => sprintf( __( 'Send email %1$s: would fail: %2$s', 'pegwork' ), $id, $to->get_error_message() ),
 				);
@@ -497,8 +595,139 @@ final class DryRun {
 			'completed' === $report['outcome']                     => __( 'The run would complete.', 'pegwork' ),
 			str_starts_with( (string) $report['outcome'], 'stopped_at:' ) => __( 'The run would stop there.', 'pegwork' ),
 			'step_limit' === $report['outcome']                    => __( 'The run would hit the step limit.', 'pegwork' ),
+			str_starts_with( (string) $report['outcome'], Executor::ERRORS_OUTCOME ) => sprintf(
+				/* translators: %s: comma-separated step IDs. */
+				__( 'The run would complete with errors in %s.', 'pegwork' ),
+				str_replace( ',', ', ', substr( (string) $report['outcome'], strlen( Executor::ERRORS_OUTCOME ) ) )
+			),
 			default                                                => __( 'The run would fail there.', 'pegwork' ),
 		};
 		return $lines;
+	}
+
+	/**
+	 * The first step a template reads (`{{steps.<id>...}}`) that has no output in this test, or null.
+	 *
+	 * @param string  $template Template.
+	 * @param Context $context  Context.
+	 */
+	private static function pending( string $template, Context $context ): ?string {
+		preg_match_all( '/\{\{\s*steps\.([a-z0-9_]+)/', $template, $m );
+		foreach ( $m[1] as $step ) {
+			if ( ! $context->has_output( $step ) ) {
+				return $step;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * What a read step finds: it runs for real (read-only), its outputs are stored for later steps, and the
+	 * report names the records by ID and title.
+	 *
+	 * @param array<string, mixed> $step    Step.
+	 * @param Context              $context Context.
+	 * @param array<string, bool>  $state   Walk state (see step()).
+	 * @return array{result: string, detail: array<string, mixed>, message: string}
+	 */
+	private static function read( array $step, Context $context, array &$state ): array {
+		$id     = (string) $step['id'];
+		$type   = (string) $step['content_type'];
+		$get    = 'get_record' === $step['type'];
+		$result = ( $get ? new GetRecord() : new FindRecords() )->run( $step, $context, array() );
+		$label  = (string) ( pegwork_registry()->content_type( $type )['labels'][ $get ? 'singular' : 'plural' ] ?? $type );
+
+		if ( 'failed' === $result->status ) {
+			$error = (string) $result->error;
+			return array(
+				'result'  => 'fails',
+				'detail'  => array(
+					'content_type' => $type,
+					'error'        => (string) strtok( $error, ':' ),
+				),
+				/* translators: 1: step ID, 2: error message. */
+				'message' => sprintf( $get ? __( 'Get record %1$s: would fail: %2$s', 'pegwork' ) : __( 'Find records %1$s: would fail: %2$s', 'pegwork' ), $id, $error ),
+			);
+		}
+		$context->set_output( $id, $result->output + ( 'continue' === ( $step['on_error'] ?? null ) ? array( 'failed' => false ) : array() ) );
+
+		$note = '';
+		if ( $state['wrote'] && ! $state['noted'] ) {
+			$state['noted'] = true;
+			$note           = ' ' . __( 'Reads in a test see the site as it is now: the writes before them are not applied.', 'pegwork' );
+		}
+
+		if ( $get ) {
+			$record_id = (int) ( $result->output['record_id'] ?? 0 );
+			$detail    = array(
+				'content_type' => $type,
+				'found'        => $record_id > 0,
+				'record_id'    => $record_id > 0 ? $record_id : null,
+				'title'        => $record_id > 0 ? self::title( $record_id ) : null,
+			);
+			$pending   = isset( $step['record'] ) ? self::pending( (string) $step['record'], $context ) : null;
+			if ( $record_id > 0 ) {
+				/* translators: 1: step ID, 2: content type label, 3: record ID, 4: record title. */
+				$message = sprintf( __( 'Get record %1$s: found %2$s %3$d "%4$s".', 'pegwork' ), $id, $label, $record_id, $detail['title'] );
+			} elseif ( null !== $pending ) {
+				/* translators: 1: step ID, 2: step ID. */
+				$message = sprintf( __( 'Get record %1$s: not found in a test run (step %2$s would create or name it).', 'pegwork' ), $id, $pending );
+			} else {
+				/* translators: 1: step ID, 2: content type label. */
+				$message = sprintf( __( 'Get record %1$s: no %2$s found.', 'pegwork' ), $id, $label );
+			}
+			return array(
+				'result'  => 'ok',
+				'detail'  => $detail,
+				'message' => $message . $note,
+			);
+		}
+
+		$ids     = (array) $result->output['ids'];
+		$records = array_map(
+			fn( $record_id ) => array(
+				'id'    => (int) $record_id,
+				'title' => self::title( (int) $record_id ),
+			),
+			$ids
+		);
+		$shown   = array_map( fn( $item ) => sprintf( '%d "%s"', $item['id'], $item['title'] ), array_slice( $records, 0, 3 ) );
+		if ( count( $records ) > 3 ) {
+			/* translators: %d: number of further records. */
+			$shown[] = sprintf( __( 'and %d more', 'pegwork' ), count( $records ) - 3 );
+		}
+		$sums = array();
+		foreach ( (array) $result->output['sum'] as $key => $total ) {
+			/* translators: 1: field key, 2: total. */
+			$sums[] = sprintf( __( 'sum of %1$s %2$s', 'pegwork' ), (string) $key, (string) Templates::number( $total ) );
+		}
+		$message = sprintf(
+			/* translators: 1: step ID, 2: number of matches, 3: content type label (singular for 1), 4: number returned. */
+			__( 'Find records %1$s: %2$d %3$s found, %4$d returned', 'pegwork' ),
+			$id,
+			(int) $result->output['count'],
+			1 === (int) $result->output['count'] ? (string) ( pegwork_registry()->content_type( $type )['labels']['singular'] ?? $type ) : $label,
+			count( $ids )
+		) . ( array() === $shown ? '' : ' (' . implode( ', ', $shown ) . ')' ) . ( array() === $sums ? '' : '; ' . implode( ', ', $sums ) ) . '.';
+
+		return array(
+			'result'  => 'ok',
+			'detail'  => array(
+				'content_type' => $type,
+				'count'        => (int) $result->output['count'],
+				'records'      => $records,
+				'sum'          => (array) $result->output['sum'],
+			),
+			'message' => $message . $note,
+		);
+	}
+
+	/**
+	 * A record's title as plain text (without the "Private:" prefix of get_the_title()).
+	 *
+	 * @param int $id Record ID.
+	 */
+	private static function title( int $id ): string {
+		return wp_specialchars_decode( (string) get_post_field( 'post_title', $id, 'raw' ), ENT_QUOTES );
 	}
 }

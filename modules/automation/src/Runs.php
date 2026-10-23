@@ -463,6 +463,29 @@ final class Runs {
 			}
 			$out[ $key ][ $row['status'] ] = (int) $row['n'];
 		}
+
+		// Completed runs in which `on_error: continue` steps failed count as failures too. The LIKE narrows the
+		// rows; the decoded outcome decides (a trigger payload could hold the same text).
+		$partial = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT automation, context FROM %i WHERE status = 'completed' AND created_at >= %s AND context LIKE %s",
+				$this->runs,
+				$failed_since,
+				'%' . $wpdb->esc_like( '"outcome":"' . Executor::ERRORS_OUTCOME ) . '%'
+			),
+			ARRAY_A
+		);
+		foreach ( $partial as $row ) {
+			$context = json_decode( (string) $row['context'], true );
+			if ( ! is_array( $context ) || ! str_starts_with( (string) ( $context['outcome'] ?? '' ), Executor::ERRORS_OUTCOME ) ) {
+				continue;
+			}
+			$key = $row['automation'];
+			if ( ! isset( $out[ $key ] ) ) {
+				$out[ $key ] = $base;
+			}
+			++$out[ $key ]['failed'];
+		}
 		return $out;
 	}
 

@@ -11,6 +11,7 @@ namespace PegworkAutomation\Steps;
 
 use PegworkAutomation\Context;
 use PegworkAutomation\Templates;
+use PegworkAutomation\TemplateTooLarge;
 use WP_Error;
 
 /**
@@ -26,7 +27,8 @@ use WP_Error;
  *
  * Private fields may appear in the email (it goes to its recipients by design) but nowhere else: the log
  * summary holds masked recipients and the subject with private fields as `[private]`; error messages
- * have the recipients masked. A wp_mail() failure is retryable (default policy: 2 retries 15 minutes
+ * have the recipients masked. A body with an `{{#each}}` block that renders past 64 KB fails
+ * `template_too_large`. A wp_mail() failure is retryable (default policy: 2 retries 15 minutes
  * apart); recipient errors are not.
  */
 final class SendEmail implements Step {
@@ -65,6 +67,20 @@ final class SendEmail implements Step {
 	 * @param array<string, mixed> $run     Run row.
 	 */
 	public function run( array $step, Context $context, array $run ): StepResult {
+		try {
+			return $this->send( $step, $context );
+		} catch ( TemplateTooLarge $e ) {
+			return StepResult::fail( 'template_too_large', $e->getMessage(), array(), false );
+		}
+	}
+
+	/**
+	 * Renders and sends the email.
+	 *
+	 * @param array<string, mixed> $step    Step definition.
+	 * @param Context              $context Run context.
+	 */
+	private function send( array $step, Context $context ): StepResult {
 		$subject = self::one_line( Templates::render( (string) ( $step['subject'] ?? '' ), $context, Templates::TEXT ) );
 		$summary = array(
 			'subject' => self::one_line( Templates::render( (string) ( $step['subject'] ?? '' ), $context, Templates::LOG ) ),

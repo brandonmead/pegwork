@@ -25,6 +25,11 @@ use Throwable;
  * Waits and retries share one mechanism: the run becomes `waiting` with `resume_at` and the step to run
  * next (the step after a wait, the same step for a retry), and a wake-up is scheduled for `resume_at`. The
  * claim takes a waiting run only once `resume_at` has passed.
+ *
+ * A step with `on_error: continue` that fails after its retries is logged `failed`, outputs `failed: true`
+ * and `error: "<code>"`, and the run continues; such a run completes with outcome
+ * `completed_with_errors:<ids>`. Steps with `on_error` output `failed: false` on success. The run's read
+ * count (`context.reads`) is restored on each wake-up and stored with the outputs.
  */
 final class Executor {
 
@@ -37,6 +42,11 @@ final class Executor {
 	 * Maximum step attempts per run.
 	 */
 	public const MAX_STEPS = 100;
+
+	/**
+	 * Outcome prefix of a completed run in which steps with `on_error: continue` failed.
+	 */
+	public const ERRORS_OUTCOME = 'completed_with_errors:';
 
 	/**
 	 * Engine.
@@ -97,6 +107,8 @@ final class Executor {
 		$stored  = $run['context'];
 		$record  = null === $run['record_id'] ? null : Records::get( (int) $run['record_id'] );
 		$context = new Context( $this->engine->clock(), $record, (array) ( $stored['trigger'] ?? array() ), (array) ( $stored['steps'] ?? array() ), $id, (string) $run['automation'] );
+		$context->use_plan( $plan );
+		$context->restore_reads( (int) ( $stored['reads'] ?? 0 ) );
 
 		/**
 		 * Filters the time budget of one executor wake-up, in seconds. When it is used up, the run is
@@ -129,6 +141,10 @@ final class Executor {
 			$attempt = $runs->attempts( $id, $step_id ) + 1;
 			++$attempts;
 
+			$continue = 'continue' === ( $step['on_error'] ?? null );
+			if ( $continue && 'ok' === $result->status ) {
+				$result->output += array( 'failed' => false );
+			}
 			if ( array() !== $result->output ) {
 				$context->set_output( $step_id, $result->output );
 			}
@@ -145,6 +161,21 @@ final class Executor {
 					$this->wake( $id, $at->getTimestamp() );
 					return 'waiting';
 				}
+				if ( $continue ) {
+					// `on_error: continue`: the failure is an output, and the run goes on.
+					$context->set_output(
+						$step_id,
+						array(
+							'failed' => true,
+							'error'  => self::code( (string) $result->error ),
+						) + $result->output
+					);
+					$stored['errors'] = array_values( array_unique( array_merge( (array) ( $stored['errors'] ?? array() ), array( $step_id ) ) ) );
+					unset( $stored['retries'][ $step_id ] );
+					$step_id = $plan->next( $step_id );
+					$first   = false;
+					continue;
+				}
 				$error = (string) $result->error . ( $done > 0 ? sprintf( ' (after %d attempts)', $done + 1 ) : '' );
 				$runs->finish( $id, 'failed', $error, self::store( $stored, $context ) );
 				return 'failed';
@@ -155,7 +186,7 @@ final class Executor {
 
 			if ( $result->stop ) {
 				$stored['outcome'] = 'stopped_at:' . $step_id;
-				$runs->finish( $id, 'completed', null, self::store( $stored, $context ) );
+				$runs->finish( $id, 'completed', null, self::store( self::outcome( $stored ), $context ) );
 				return 'completed';
 			}
 			$next = 'decision' === ( $step['type'] ?? null ) ? $plan->after_branch( $step_id, $result->branch ) : $plan->next( $step_id );
@@ -169,8 +200,33 @@ final class Executor {
 		}
 
 		// A wait at the end of the tree has nothing left to wait for: the run completes now.
-		$runs->finish( $id, 'completed', null, self::store( $stored, $context ) );
+		$runs->finish( $id, 'completed', null, self::store( self::outcome( $stored ), $context ) );
 		return 'completed';
+	}
+
+	/**
+	 * Stored context with the outcome of a completed run: `completed_with_errors:<ids>` when steps with
+	 * `on_error: continue` failed (it wins over `stopped_at:<id>`, so the failures stay visible and count in
+	 * the list's failures), else the outcome so far.
+	 *
+	 * @param array<string, mixed> $stored Stored context.
+	 * @return array<string, mixed>
+	 */
+	private static function outcome( array $stored ): array {
+		if ( array() !== (array) ( $stored['errors'] ?? array() ) ) {
+			$stored['outcome'] = self::ERRORS_OUTCOME . implode( ',', (array) $stored['errors'] );
+		}
+		return $stored;
+	}
+
+	/**
+	 * The code of a step error (`code: message`).
+	 *
+	 * @param string $error Error.
+	 */
+	private static function code( string $error ): string {
+		$colon = strpos( $error, ':' );
+		return false === $colon ? $error : substr( $error, 0, $colon );
 	}
 
 	/**
@@ -255,6 +311,9 @@ final class Executor {
 	 */
 	private static function store( array $stored, Context $context ): array {
 		$stored['steps'] = $context->outputs();
+		if ( $context->reads() > 0 ) {
+			$stored['reads'] = $context->reads();
+		}
 		if ( isset( $stored['retries'] ) && array() === $stored['retries'] ) {
 			unset( $stored['retries'] );
 		}
