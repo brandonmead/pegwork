@@ -128,8 +128,11 @@ function outputName( field ) {
 		return field.label || pathName( `record.${ parts[ 3 ] }` );
 	}
 	if ( parts.length === 4 && parts[ 2 ] === 'sum' ) {
-		/* translators: %s: field label. */
-		return sprintf( __( 'Total %s', 'pegwork' ), field.label || parts[ 3 ] );
+		return sprintf(
+			/* translators: %s: field label. */
+			__( 'Total %s', 'pegwork' ),
+			field.label || parts[ 3 ]
+		);
 	}
 	const names = {
 		found: __( 'Found', 'pegwork' ),
@@ -207,8 +210,12 @@ export function groupLabel( tag, config ) {
 			} else {
 				name = typeLabel( source.type );
 			}
-			/* translators: 1: group name, 2: step ID. */
-			return sprintf( __( '%1$s (from %2$s)', 'pegwork' ), name, tag.step );
+			return sprintf(
+				/* translators: 1: group name, 2: step ID. */
+				__( '%1$s (from %2$s)', 'pegwork' ),
+				name,
+				tag.step
+			);
 		}
 		case 'time':
 			return __( 'Time', 'pegwork' );
@@ -392,9 +399,7 @@ function recordWords( template, bound, config ) {
 				)
 			: __( 'this record', 'pegwork' );
 	}
-	const step = /^\{\{\s*steps\.([a-z0-9_]+)\.record_id\s*\}\}$/.exec(
-		value
-	);
+	const step = /^\{\{\s*steps\.([a-z0-9_]+)\.record_id\s*\}\}$/.exec( value );
 	return step ? step[ 1 ] : value;
 }
 
@@ -416,16 +421,18 @@ function readSummary( step, config, bound ) {
 	const relationship = config.relationships.find(
 		( item ) => item.key === step.related?.relationship
 	);
-	const fields = filterFields(
-		typeFields( config, step.content_type, '' )
-	);
+	const fields = filterFields( typeFields( config, step.content_type, '' ) );
 	const where = step.filter
 		? conditionText( filterToCondition( step.filter ), fields )
 		: '';
 	let text;
 	if ( get && step.record !== undefined ) {
-		/* translators: 1: content type label, 2: record ID template. */
-		text = sprintf( __( 'Get %1$s by ID %2$s', 'pegwork' ), name, step.record );
+		text = sprintf(
+			/* translators: 1: content type label, 2: record ID template. */
+			__( 'Get %1$s by ID %2$s', 'pegwork' ),
+			name,
+			step.record
+		);
 	} else if ( step.related ) {
 		const of = recordWords( step.related.of, bound, config );
 		text = get

@@ -490,10 +490,7 @@ function LeafRow( {
 							: [
 									{
 										value: OTHER,
-										label: __(
-											'Another path…',
-											'pegwork'
-										),
+										label: __( 'Another path…', 'pegwork' ),
 									},
 								] ),
 					] }
@@ -569,17 +566,17 @@ function LeafRow( {
 /**
  * The condition builder.
  *
- * @param {Object}   props          Props.
- * @param {string}   props.label    What the condition decides ("Run this branch when").
- * @param {?Object}  props.value    Condition JSON, or undefined.
- * @param {Function} props.onChange Called with the new condition (undefined when removed).
- * @param {Array}    props.fields   Fields in scope (scope.js conditionFields()).
- * @param {?string}  props.event    Trigger event (for `changed`).
- * @param {string}   props.pointer  Pointer of the condition.
- * @param {Object}   props.errors   Errors by pointer.
- * @param {string}   [props.empty]  Text shown when there is no condition.
- * @param {boolean}  [props.flat]   One All or Any group of rows, no nesting and no Not (read
- *                                  filters).
+ * @param {Object}   props            Props.
+ * @param {string}   props.label      What the condition decides ("Run this branch when").
+ * @param {?Object}  props.value      Condition JSON, or undefined.
+ * @param {Function} props.onChange   Called with the new condition (undefined when removed).
+ * @param {Array}    props.fields     Fields in scope (scope.js conditionFields()).
+ * @param {?string}  props.event      Trigger event (for `changed`).
+ * @param {string}   props.pointer    Pointer of the condition.
+ * @param {Object}   props.errors     Errors by pointer.
+ * @param {string}   [props.empty]    Text shown when there is no condition.
+ * @param {boolean}  [props.flat]     One All or Any group of rows, no nesting and no Not (read
+ *                                    filters).
  * @param {?Array}   [props.operands] Paths "Another value" may name (read filters: run paths).
  */
 export default function ConditionBuilder( {
@@ -691,15 +688,13 @@ export default function ConditionBuilder( {
 					__nextHasNoMarginBottom
 					label={ __( 'Match', 'pegwork' ) }
 					value={ match }
-					options={ (
-						flat
-							? [ 'all', 'any' ]
-							: [ 'all', 'any', 'not_all', 'not_any' ]
+					options={ ( flat
+						? [ 'all', 'any' ]
+						: [ 'all', 'any', 'not_all', 'not_any' ]
 					).map( ( option ) => ( {
-							value: option,
-							label: legendOf( option ),
-						} )
-					) }
+						value: option,
+						label: legendOf( option ),
+					} ) ) }
 					onChange={ ( next ) => {
 						const kind = next.replace( 'not_', '' );
 						const inner = { kind, items: group.items };
@@ -749,24 +744,24 @@ export default function ConditionBuilder( {
 						<Button
 							variant="secondary"
 							disabled={ ! canNest }
-						onClick={ () =>
-							set(
-								replace( model, groupPath, ( g ) => ( {
-									...g,
-									items: [
-										...g.items,
-										{
-											kind:
-												g.kind === 'all'
-													? 'any'
-													: 'all',
-											items: [ newLeaf( fields ) ],
-										},
-									],
-								} ) )
-							)
-						}
-					>
+							onClick={ () =>
+								set(
+									replace( model, groupPath, ( g ) => ( {
+										...g,
+										items: [
+											...g.items,
+											{
+												kind:
+													g.kind === 'all'
+														? 'any'
+														: 'all',
+												items: [ newLeaf( fields ) ],
+											},
+										],
+									} ) )
+								)
+							}
+						>
 							{ __( 'Add group', 'pegwork' ) }
 						</Button>
 					) }

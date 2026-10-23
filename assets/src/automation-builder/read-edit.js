@@ -167,7 +167,10 @@ export function ReadFields( {
 				label={ __( 'Content type', 'pegwork' ) }
 				value={ type }
 				options={ [
-					{ value: '', label: __( 'Choose a content type', 'pegwork' ) },
+					{
+						value: '',
+						label: __( 'Choose a content type', 'pegwork' ),
+					},
 					...config.types.map( ( item ) => ( {
 						value: item.key,
 						label: item.label,
@@ -217,9 +220,7 @@ export function ReadFields( {
 						'pegwork'
 					) }
 					value={ attributes.record ?? '' }
-					onChange={ ( value ) =>
-						setAttributes( { record: value } )
-					}
+					onChange={ ( value ) => setAttributes( { record: value } ) }
 					pointer={ at( 'record' ) }
 					errors={ errors }
 					tags={ tags }
@@ -361,8 +362,8 @@ export function ReadFields( {
 				title={ __( 'More options', 'pegwork' ) }
 				initialOpen={ Boolean(
 					attributes.sort ||
-						attributes.status ||
-						errors[ at( 'sort/field' ) ]
+					attributes.status ||
+					errors[ at( 'sort/field' ) ]
 				) }
 			>
 				<div className="pegwork-automation__row">
@@ -379,7 +380,10 @@ export function ReadFields( {
 							} ) ),
 						] }
 						onChange={ ( value ) =>
-							set( 'sort', withSort( attributes.sort, 'field', value ) )
+							set(
+								'sort',
+								withSort( attributes.sort, 'field', value )
+							)
 						}
 						{ ...wire( errors, at( 'sort/field' ) ).props }
 					/>
@@ -391,21 +395,32 @@ export function ReadFields( {
 						options={ [
 							{
 								value: 'asc',
-								label: __( 'Lowest or oldest first', 'pegwork' ),
+								label: __(
+									'Lowest or oldest first',
+									'pegwork'
+								),
 							},
 							{
 								value: 'desc',
-								label: __( 'Highest or newest first', 'pegwork' ),
+								label: __(
+									'Highest or newest first',
+									'pegwork'
+								),
 							},
 						] }
 						onChange={ ( value ) =>
-							set( 'sort', withSort( attributes.sort, 'order', value ) )
+							set(
+								'sort',
+								withSort( attributes.sort, 'order', value )
+							)
 						}
 					/>
 				</div>
 				<Errors messages={ wire( errors, at( 'sort' ) ).messages } />
 				<fieldset className="pegwork-automation__fieldset pegwork-automation__choices">
-					<legend>{ __( 'Include records that are', 'pegwork' ) }</legend>
+					<legend>
+						{ __( 'Include records that are', 'pegwork' ) }
+					</legend>
 					{ READ_STATUSES.map( ( value ) => (
 						<CheckboxControl
 							key={ value }
@@ -415,12 +430,18 @@ export function ReadFields( {
 							onChange={ ( checked ) =>
 								set(
 									'status',
-									withStatus( attributes.status, value, checked )
+									withStatus(
+										attributes.status,
+										value,
+										checked
+									)
 								)
 							}
 						/>
 					) ) }
-					<Errors messages={ wire( errors, at( 'status' ) ).messages } />
+					<Errors
+						messages={ wire( errors, at( 'status' ) ).messages }
+					/>
 				</fieldset>
 			</PanelBody>
 		</>
@@ -493,7 +514,10 @@ export function RelateFields( {
 								__( 'Empty: this %s.', 'pegwork' ),
 								name( relationship.from )
 							)
-						: __( 'A record ID, such as {{steps.task.record_id}}.', 'pegwork' )
+						: __(
+								'A record ID, such as {{steps.task.record_id}}.',
+								'pegwork'
+							)
 				}
 				value={ attributes.from ?? '' }
 				onChange={ ( value ) => set( 'from', value ) }

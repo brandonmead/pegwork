@@ -8,7 +8,13 @@
 /**
  * Statuses a read may include, and the default (private and published).
  */
-export const READ_STATUSES = [ 'publish', 'future', 'draft', 'pending', 'private' ];
+export const READ_STATUSES = [
+	'publish',
+	'future',
+	'draft',
+	'pending',
+	'private',
+];
 const DEFAULT_STATUSES = [ 'private', 'publish' ];
 
 const UNFILTERABLE = [ 'rich_text', 'textarea' ];
@@ -52,7 +58,7 @@ export function withSource( step, source, firstRow ) {
 			? step.filter || { all: firstRow ? [ firstRow ] : [] }
 			: undefined;
 	return {
-		record: source === 'record' ? step.record ?? '' : undefined,
+		record: source === 'record' ? ( step.record ?? '' ) : undefined,
 		related,
 		filter,
 	};

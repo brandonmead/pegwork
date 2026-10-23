@@ -108,6 +108,11 @@ final class PreviewRoutes {
 						'type'     => 'object',
 						'required' => true,
 					),
+					'steps'    => array(
+						'type'    => 'array',
+						'items'   => array( 'type' => 'object' ),
+						'default' => array(),
+					),
 				) + $sample,
 			)
 		);
@@ -194,7 +199,8 @@ final class PreviewRoutes {
 			(string) $request->get_param( 'template' ),
 			(bool) $request->get_param( 'html' ),
 			$record,
-			DryRun::payload( $trigger, $record, $payload )
+			DryRun::payload( $trigger, $record, $payload ),
+			array_values( array_filter( (array) $request->get_param( 'steps' ), 'is_array' ) )
 		);
 		return new WP_REST_Response( array( 'rendered' => $rendered ), 200 );
 	}

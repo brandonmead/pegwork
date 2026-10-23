@@ -1,5 +1,5 @@
 {
-	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the trigger condition (exactly those validate with \"sample\").",
+	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the condition at \"at\", the trigger condition when absent (exactly those validate with \"sample\").",
 	"packages": {
 		"branching": {
 			"dir": "tests/fixtures/valid/branching",
@@ -8,11 +8,13 @@
 					{
 						"key": "help_request",
 						"label": "Help request",
+						"plural": "Help requests",
 						"fields": [
 							{
 								"key": "name",
 								"label": "Name",
-								"type": "text"
+								"type": "text",
+								"storage": "post_title"
 							},
 							{
 								"key": "email",
@@ -81,11 +83,13 @@
 					{
 						"key": "help_task",
 						"label": "Help task",
+						"plural": "Help tasks",
 						"fields": [
 							{
 								"key": "name",
 								"label": "Name",
-								"type": "text"
+								"type": "text",
+								"storage": "post_title"
 							},
 							{
 								"key": "related",
@@ -153,7 +157,8 @@
 						]
 					}
 				],
-				"optionsPages": []
+				"optionsPages": [],
+				"relationships": []
 			}
 		},
 		"sections": {
@@ -163,16 +168,19 @@
 					{
 						"key": "talk",
 						"label": "Talk",
+						"plural": "Talks",
 						"fields": [
 							{
 								"key": "title",
 								"label": "Title",
-								"type": "text"
+								"type": "text",
+								"storage": "post_title"
 							},
 							{
 								"key": "abstract",
 								"label": "Abstract",
-								"type": "rich_text"
+								"type": "rich_text",
+								"storage": "post_content"
 							},
 							{
 								"key": "speaker_email",
@@ -399,6 +407,185 @@
 								"type": "date"
 							}
 						]
+					}
+				],
+				"relationships": []
+			}
+		},
+		"reads": {
+			"dir": "tests/fixtures/valid/reads",
+			"config": {
+				"types": [
+					{
+						"key": "barn_contact",
+						"label": "Contact",
+						"plural": "Contacts",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "last_gift_on",
+								"label": "Last gift on",
+								"type": "date",
+								"private": true
+							},
+							{
+								"key": "milestone_1000_on",
+								"label": "Lifetime 1,000 reached on",
+								"type": "date",
+								"private": true
+							},
+							{
+								"key": "notes",
+								"label": "Notes",
+								"type": "rich_text",
+								"private": true
+							}
+						],
+						"taxonomies": []
+					},
+					{
+						"key": "barn_gift",
+						"label": "Gift",
+						"plural": "Gifts",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "amount",
+								"label": "Amount",
+								"type": "number"
+							},
+							{
+								"key": "received_on",
+								"label": "Received on",
+								"type": "date"
+							},
+							{
+								"key": "method",
+								"label": "Method",
+								"type": "select",
+								"options": [
+									{
+										"value": "card",
+										"label": "Card"
+									},
+									{
+										"value": "check",
+										"label": "Check"
+									}
+								]
+							}
+						],
+						"taxonomies": [
+							{
+								"key": "barn_fund",
+								"label": "Funds",
+								"multiple": true,
+								"options": [
+									{
+										"value": "general",
+										"label": "General"
+									},
+									{
+										"value": "building",
+										"label": "Building"
+									}
+								]
+							}
+						]
+					},
+					{
+						"key": "barn_task",
+						"label": "Task",
+						"plural": "Tasks",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "due_on",
+								"label": "Due on",
+								"type": "date"
+							},
+							{
+								"key": "assignee_email",
+								"label": "Assignee email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "done",
+								"label": "Done",
+								"type": "boolean"
+							},
+							{
+								"key": "reminded_on",
+								"label": "Reminded on",
+								"type": "date"
+							}
+						],
+						"taxonomies": []
+					}
+				],
+				"forms": [],
+				"optionsPages": [
+					{
+						"key": "barn_settings",
+						"label": "BarnCRM settings",
+						"fields": [
+							{
+								"key": "development_email",
+								"label": "Development email",
+								"type": "email"
+							},
+							{
+								"key": "donate_url",
+								"label": "Donate URL",
+								"type": "url"
+							},
+							{
+								"key": "campaign_ends_on",
+								"label": "Campaign ends on",
+								"type": "date"
+							},
+							{
+								"key": "goal",
+								"label": "Campaign goal",
+								"type": "number"
+							}
+						]
+					}
+				],
+				"relationships": [
+					{
+						"key": "gift_donor",
+						"label": "Donor",
+						"from": "barn_gift",
+						"to": "barn_contact"
+					},
+					{
+						"key": "task_gift",
+						"label": "Gift",
+						"from": "barn_task",
+						"to": "barn_gift"
 					}
 				]
 			}
@@ -649,6 +836,214 @@
 				"option:talk_settings.organizer_email",
 				"trigger.new_status"
 			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_lifetime_milestone",
+			"at": "/steps/6/text",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"record.method",
+				"record.barn_fund",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"steps.donor.found",
+				"steps.donor.record_id",
+				"steps.donor.record.id",
+				"steps.donor.record.status",
+				"steps.donor.record.type",
+				"steps.donor.record.permalink",
+				"steps.donor.record.edit_url",
+				"steps.donor.record.name",
+				"steps.donor.record.email",
+				"steps.donor.record.last_gift_on",
+				"steps.donor.record.milestone_1000_on",
+				"steps.donor.record.notes",
+				"steps.giving.count",
+				"steps.giving.sum.amount",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.giving.records",
+				"steps.donor.failed",
+				"trigger.source"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_shapes",
+			"at": "/steps/10/url",
+			"context": "public",
+			"template": "https://hooks.example.org/{{tag}}",
+			"expect": [
+				"steps.gift.found",
+				"steps.gift.record_id",
+				"steps.gift.record.id",
+				"steps.gift.record.status",
+				"steps.gift.record.type",
+				"steps.gift.record.permalink",
+				"steps.gift.record.edit_url",
+				"steps.gift.record.name",
+				"steps.gift.record.amount",
+				"steps.gift.record.received_on",
+				"steps.gift.record.method",
+				"steps.gift.record.barn_fund",
+				"steps.gift.failed",
+				"steps.gift.error",
+				"steps.donor.found",
+				"steps.donor.record_id",
+				"steps.donor.record.id",
+				"steps.donor.record.status",
+				"steps.donor.record.type",
+				"steps.donor.record.permalink",
+				"steps.donor.record.edit_url",
+				"steps.donor.record.name",
+				"steps.recent.count",
+				"steps.recent.sum.amount",
+				"steps.recent.failed",
+				"steps.recent.error",
+				"steps.tasks.count",
+				"steps.link_donor.failed",
+				"steps.link_donor.error",
+				"steps.new_task.record_id",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.donor.record.email",
+				"steps.donor.record.notes",
+				"steps.tasks.records",
+				"steps.unlink_task.failed",
+				"steps.tasks.sum.amount"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_shapes",
+			"at": "/steps/11/text",
+			"context": "private",
+			"expect": [
+				"steps.gift.found",
+				"steps.gift.record_id",
+				"steps.gift.record.id",
+				"steps.gift.record.status",
+				"steps.gift.record.type",
+				"steps.gift.record.permalink",
+				"steps.gift.record.edit_url",
+				"steps.gift.record.name",
+				"steps.gift.record.amount",
+				"steps.gift.record.received_on",
+				"steps.gift.record.method",
+				"steps.gift.record.barn_fund",
+				"steps.gift.failed",
+				"steps.gift.error",
+				"steps.donor.found",
+				"steps.donor.record_id",
+				"steps.donor.record.id",
+				"steps.donor.record.status",
+				"steps.donor.record.type",
+				"steps.donor.record.permalink",
+				"steps.donor.record.edit_url",
+				"steps.donor.record.name",
+				"steps.donor.record.email",
+				"steps.donor.record.last_gift_on",
+				"steps.donor.record.milestone_1000_on",
+				"steps.donor.record.notes",
+				"steps.recent.count",
+				"steps.recent.sum.amount",
+				"steps.recent.failed",
+				"steps.recent.error",
+				"steps.tasks.count",
+				"steps.link_donor.failed",
+				"steps.link_donor.error",
+				"steps.new_task.record_id",
+				"steps.send.failed",
+				"steps.send.error",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"steps.unlink_task.error",
+				"steps.recent.record_id",
+				"steps.tasks.failed"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_resend_thanks",
+			"at": "/steps/2/text",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"record.method",
+				"record.barn_fund",
+				"trigger.user_id",
+				"trigger.source",
+				"steps.donor.found",
+				"steps.donor.record_id",
+				"steps.donor.record.id",
+				"steps.donor.record.status",
+				"steps.donor.record.type",
+				"steps.donor.record.permalink",
+				"steps.donor.record.edit_url",
+				"steps.donor.record.name",
+				"steps.donor.record.email",
+				"steps.donor.record.last_gift_on",
+				"steps.donor.record.milestone_1000_on",
+				"steps.donor.record.notes",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.donate_url",
+				"option:barn_settings.campaign_ends_on",
+				"option:barn_settings.goal"
+			],
+			"refuse": [
+				"trigger.id",
+				"trigger.payload"
+			]
 		}
 	],
 	"fields": [
@@ -737,6 +1132,79 @@
 				"trigger.old.notes",
 				"trigger.old.talk_track",
 				"trigger.old.talk_level",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_lifetime_milestone",
+			"at": "/steps/4/when",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"record.method",
+				"record.barn_fund",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"steps.donor.found",
+				"steps.donor.record_id",
+				"steps.donor.record.id",
+				"steps.donor.record.status",
+				"steps.donor.record.type",
+				"steps.donor.record.name",
+				"steps.donor.record.email",
+				"steps.donor.record.last_gift_on",
+				"steps.donor.record.milestone_1000_on",
+				"steps.donor.record.notes",
+				"steps.giving.count",
+				"steps.giving.sum.amount",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_shapes",
+			"at": "/steps/1/when",
+			"expect": [
+				"steps.gift.found",
+				"steps.gift.record_id",
+				"steps.gift.record.id",
+				"steps.gift.record.status",
+				"steps.gift.record.type",
+				"steps.gift.record.name",
+				"steps.gift.record.amount",
+				"steps.gift.record.received_on",
+				"steps.gift.record.method",
+				"steps.gift.record.barn_fund",
+				"steps.gift.failed",
+				"steps.gift.error",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_resend_thanks",
+			"at": "/trigger/when",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"record.method",
+				"record.barn_fund",
+				"trigger.user_id",
+				"trigger.source",
 				"site.name",
 				"site.url"
 			]
@@ -961,6 +1429,143 @@
 				"lte",
 				"gt",
 				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_resend_thanks",
+			"var": "trigger.user_id",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_resend_thanks",
+			"var": "trigger.source",
+			"sample": "editor",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_resend_thanks",
+			"var": "record.amount",
+			"sample": 10,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_lifetime_milestone",
+			"at": "/steps/4/when",
+			"var": "steps.giving.sum.amount",
+			"sample": 1000,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_lifetime_milestone",
+			"at": "/steps/4/when",
+			"var": "steps.giving.count",
+			"sample": 1,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_lifetime_milestone",
+			"at": "/steps/4/when",
+			"var": "steps.donor.found",
+			"sample": true,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "barn_lifetime_milestone",
+			"at": "/steps/4/when",
+			"var": "steps.donor.record.milestone_1000_on",
+			"sample": "2027-01-01",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"lt",
+				"lte",
+				"gt",
+				"gte",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "reads",
+			"automation": "reads_shapes",
+			"at": "/steps/1/when",
+			"var": "steps.gift.error",
+			"sample": "read_limit",
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
 				"empty",
 				"not_empty"
 			]

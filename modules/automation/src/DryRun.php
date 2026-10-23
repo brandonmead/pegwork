@@ -198,9 +198,15 @@ final class DryRun {
 	 * @param bool                      $html     Whether it is an email HTML body.
 	 * @param array<string, mixed>|null $record   Sample record.
 	 * @param array<string, mixed>      $trigger  Trigger payload.
+	 * @param array<int, mixed>         $steps    The edited steps, so a read's field renders as
+	 *                                            `[from step <id>: <Field label>]` (nothing runs).
 	 */
-	public static function preview( string $template, bool $html, ?array $record, array $trigger ): string {
-		return Templates::render( $template, self::context( $record, $trigger ), $html ? Templates::PREVIEW_HTML : Templates::PREVIEW );
+	public static function preview( string $template, bool $html, ?array $record, array $trigger, array $steps = array() ): string {
+		$context = self::context( $record, $trigger );
+		if ( array() !== $steps ) {
+			$context->use_plan( new Plan( $steps ) );
+		}
+		return Templates::render( $template, $context, $html ? Templates::PREVIEW_HTML : Templates::PREVIEW );
 	}
 
 	/**

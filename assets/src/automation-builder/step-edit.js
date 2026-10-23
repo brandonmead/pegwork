@@ -451,7 +451,9 @@ function TypeFields( {
 					<ValuesControl
 						values={ attributes.values }
 						onChange={ ( values ) => set( 'values', values ) }
-						fields={ known ? typeFields( config, known, '' ) : null }
+						fields={
+							known ? typeFields( config, known, '' ) : null
+						}
 						pointer={ at( 'values' ) }
 						errors={ errors }
 						tags={ tags }
@@ -660,8 +662,8 @@ export function Advanced( { attributes, set, pointer, errors, retry = true } ) {
 			title={ __( 'Advanced', 'pegwork' ) }
 			initialOpen={ Boolean(
 				id.messages.length ||
-					retryWire.messages.length ||
-					onError.messages.length
+				retryWire.messages.length ||
+				onError.messages.length
 			) }
 		>
 			<TextControl

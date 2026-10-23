@@ -272,8 +272,13 @@ final class Templates {
 			}
 			$step = str_starts_with( $path, 'steps.' ) ? (string) ( explode( '.', $path )[1] ?? '' ) : null;
 			if ( null !== $step && ! $context->has_output( $step ) ) {
-				/* translators: %s: step ID. */
-				$from = sprintf( __( '[from step %s]', 'pegwork' ), $step );
+				// A read record's field or a total names its field when the plan knows the step's type.
+				$label = $context->field_label( $path );
+				$from  = null === $label
+					/* translators: %s: step ID. */
+					? sprintf( __( '[from step %s]', 'pegwork' ), $step )
+					/* translators: 1: step ID, 2: field label. */
+					: sprintf( __( '[from step %1$s: %2$s]', 'pegwork' ), $step, $label );
 				return self::PREVIEW_HTML === $mode ? esc_html( $from ) : $from;
 			}
 			$mode = self::PREVIEW_HTML === $mode ? self::HTML : self::TEXT;

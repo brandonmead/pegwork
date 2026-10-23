@@ -550,8 +550,7 @@ function TriggerFields( { trigger, setTrigger, errors } ) {
 							value: 'admins',
 							label: __( 'Administrators', 'pegwork' ),
 						},
-						...( trigger.content_type ||
-						trigger.allow === 'editors'
+						...( trigger.content_type || trigger.allow === 'editors'
 							? [
 									{
 										value: 'editors',

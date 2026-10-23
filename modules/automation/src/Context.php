@@ -440,6 +440,16 @@ final class Context {
 	}
 
 	/**
+	 * Label of the field a record field path (see path_key()) names, or null when it is not a field.
+	 *
+	 * @param string $path Dot path.
+	 */
+	public function field_label( string $path ): ?string {
+		$field = $this->field( $path );
+		return null === $field ? null : (string) ( $field['label'] ?? $field['key'] );
+	}
+
+	/**
 	 * Taxonomy name when a record field path (see path_key()) is a taxonomy of the record's type.
 	 *
 	 * @param string $path Dot path.

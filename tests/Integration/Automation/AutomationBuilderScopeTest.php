@@ -144,7 +144,8 @@ class AutomationBuilderScopeTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Exactly the offered operators pass the validator for a var in the trigger condition.
+	 * Exactly the offered operators pass the validator for a var in a condition (the trigger's unless the
+	 * case names another, as for typed read outputs).
 	 */
 	public function test_operators() {
 		$all = array( 'eq', 'ne', 'in', 'not_in', 'lt', 'lte', 'gt', 'gte', 'empty', 'not_empty', 'contains', 'changed' );
@@ -161,7 +162,7 @@ class AutomationBuilderScopeTest extends WP_UnitTestCase {
 				} elseif ( ! in_array( $op, array( 'empty', 'not_empty', 'changed' ), true ) ) {
 					$leaf['value'] = $case['sample'];
 				}
-				if ( array() === self::errors( $case['package'], self::with( $data, '/trigger/when', $leaf ) ) ) {
+				if ( array() === self::errors( $case['package'], self::with( $data, $case['at'] ?? '/trigger/when', $leaf ) ) ) {
 					$valid[] = $op;
 				}
 			}
