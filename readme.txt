@@ -37,6 +37,12 @@ Pegwork connects to an outside service only when a site owner sets one up.
 
 **Webhooks** (automation). An automation step can send record data to a URL that a site owner enters. Nothing is sent unless an owner builds an automation with that step.
 
+== Frequently Asked Questions ==
+
+= Automations run late or not at all. Why? =
+
+WP-Cron only runs when someone visits the site. On a production site set `define( 'DISABLE_WP_CRON', true );` in wp-config.php and add a server cron that runs `wp cron event run --due-now` every 5 minutes. Tools > Site Health shows whether Pegwork's automations are on time (see docs/automation.md, Production scheduling).
+
 == Changelog ==
 
 = 0.2.0 =
