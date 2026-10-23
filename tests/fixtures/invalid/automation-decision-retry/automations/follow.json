@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "thing" },
+  "steps": [
+    { "id": "route", "type": "decision", "retry": { "max": 2 },
+      "branches": [ { "label": "Done", "when": { "var": "record.done", "op": "eq", "value": true }, "steps": [] } ] }
+  ]
+}

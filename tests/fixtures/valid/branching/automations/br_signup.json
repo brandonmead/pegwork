@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "key": "br_signup",
+  "label": "Help form submitted: assign a coordinator, then notify them",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "help_signup" },
+  "steps": [
+    { "id": "assign", "type": "decision",
+      "branches": [
+        { "label": "High", "when": { "var": "record.priority", "op": "eq", "value": "high" },
+          "steps": [ { "id": "to_lead", "type": "update_record", "values": { "coordinator": "lead@example.org" } } ] } ],
+      "otherwise": [ { "id": "to_team", "type": "update_record", "values": { "coordinator": "team@example.org" } } ] },
+    { "id": "notify", "type": "send_email", "to": "{{record.coordinator}}", "reply_to": "{{record.email}}",
+      "subject": "New request: {{record.name}}", "text": "{{record.name}} ({{trigger.values.priority}}): {{record.edit_url}}" }
+  ]
+}

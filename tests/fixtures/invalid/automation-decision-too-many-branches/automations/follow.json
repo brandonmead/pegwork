@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "thing" },
+  "steps": [
+    { "id": "route", "type": "decision", "branches": [
+      { "label": "1", "when": { "var": "record.count", "op": "eq", "value": 1 }, "steps": [] },
+      { "label": "2", "when": { "var": "record.count", "op": "eq", "value": 2 }, "steps": [] },
+      { "label": "3", "when": { "var": "record.count", "op": "eq", "value": 3 }, "steps": [] },
+      { "label": "4", "when": { "var": "record.count", "op": "eq", "value": 4 }, "steps": [] },
+      { "label": "5", "when": { "var": "record.count", "op": "eq", "value": 5 }, "steps": [] },
+      { "label": "6", "when": { "var": "record.count", "op": "eq", "value": 6 }, "steps": [] },
+      { "label": "7", "when": { "var": "record.count", "op": "eq", "value": 7 }, "steps": [] },
+      { "label": "8", "when": { "var": "record.count", "op": "eq", "value": 8 }, "steps": [] },
+      { "label": "9", "when": { "var": "record.count", "op": "eq", "value": 9 }, "steps": [] },
+      { "label": "10", "when": { "var": "record.count", "op": "eq", "value": 10 }, "steps": [] },
+      { "label": "11", "when": { "var": "record.count", "op": "eq", "value": 11 }, "steps": [] } ] }
+  ]
+}

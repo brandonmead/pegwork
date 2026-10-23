@@ -8,7 +8,15 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 3. Forms. Gate: two weeks of real submissions without defects. Status: design `docs/phase-3-design.md` (decisions 2026-10-18); PR 1 folded into the shared registry sections PR (merged) and PR 2; PR 2 (runtime without JS, entry-only forms) merged (#21); PR 3 (record mapping, confirmation, `form.confirmed`) merged (#25); PR 7 (entries admin, privacy) in review 2026-10-18, branch `forms-entries`; PR 4 (Turnstile, uploads) merged (#31); PR 6 (builder, Forms list) merged (#33); PR 5 (front-end view script) in review 2026-10-18, branch `forms-view`; then PR 8 (siforgood forms; adds the `pegwork_forms_draft_type` filter for Share a story to `sifg_story`).
 4. Automation v1. Gate: one full staleness check cycle. Status: PR 1 (event bus, Records API) in review 2026-10-18; PR 3 (engine, WP-Cron scheduler) in review 2026-10-18, branch `automation-engine`; PR 4 (email, schedules, waits, retries, `run|tick|retry`) in review 2026-10-18, branch `automation-email`; PR 5 (signed links, link handler, `examples/sifg` staleness automation, `StalenessCycleGateTest`) in review 2026-10-18, branch `automation-links` (#27); PR 6 (admin screens: list, toggles, Run now, run log and detail, Retry) merged (#26); PR 7 (webhooks: `call_webhook`, inbound endpoint, secrets) in review 2026-10-18, branch `automation-webhooks`; PR 8 (`sifg-config` automations, thank-you page, owner runs the Local runbook) closes the gate. Decided 2026-10-22: WordPress minimum stays 6.7, no Action Scheduler adapter; production runs WP-Cron from a server cron. Scheduling health (Site Health test, notice, production docs) in review, branch `cron-health`. Before SI for Good launch on Cloudways: set up the server cron (`docs/automation.md#production-scheduling`) and verify the items marked "verify" there (absolute path, `wp` on cron's `PATH`, Cron Optimizer interval and `DISABLE_WP_CRON`).
 5. BarnCRM foundation. Gate: pilot nonprofit runs daily work on it.
-6. Automation v2. Ongoing.
+6. Automation v2. Ongoing. Design `docs/phase-6-design.md` (approved 2026-10-22, PR #38).
+
+## Phase 6 PRs (`docs/phase-6-design.md` section 12)
+1. Registry: `decision` step and form binding (in review, branch `phase6-registry`).
+2. Engine: branches, `Plan`, form binding in triggers, run log path (in review, branch `phase6-engine`, stacked on 1).
+3. Save API and editing surface (planned).
+4. Preview and dry run (planned).
+5. Editor UI (planned).
+6. BarnCRM proof (planned).
 
 ## Phase 1 PRs
 1. Scaffold (merged)

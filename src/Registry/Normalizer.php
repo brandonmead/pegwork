@@ -165,18 +165,42 @@ final class Normalizer {
 			);
 		}
 
-		$steps         = fn( array $entries ) => array_map(
-			fn( array $step ) => 'create_record' === $step['type'] ? $step + array( 'status' => 'draft' ) : $step,
-			$entries
-		);
-		$data['steps'] = $steps( $data['steps'] );
+		$data['steps'] = self::steps( $data['steps'] );
 
 		foreach ( $data['links'] ?? array() as $name => $link ) {
-			$link['steps']          = $steps( $link['steps'] );
+			$link['steps']          = self::steps( $link['steps'] );
 			$data['links'][ $name ] = $link + array( 'confirm' => true );
 		}
 
 		return self::without_empty( $data, array( 'links', 'ui' ) );
+	}
+
+	/**
+	 * Fills step defaults in a step list and, recursively, in its decisions' branches; drops an empty
+	 * `otherwise`. List order is kept.
+	 *
+	 * @param list<array<string, mixed>> $steps Valid steps.
+	 * @return list<array<string, mixed>>
+	 */
+	private static function steps( array $steps ): array {
+		return array_map(
+			function ( array $step ): array {
+				if ( 'create_record' === $step['type'] ) {
+					return $step + array( 'status' => 'draft' );
+				}
+				if ( 'decision' === $step['type'] ) {
+					foreach ( $step['branches'] as $index => $branch ) {
+						$step['branches'][ $index ]['steps'] = self::steps( $branch['steps'] );
+					}
+					if ( isset( $step['otherwise'] ) ) {
+						$step['otherwise'] = self::steps( $step['otherwise'] );
+					}
+					return self::without_empty( $step, array( 'otherwise' ) );
+				}
+				return $step;
+			},
+			$steps
+		);
 	}
 
 	/**

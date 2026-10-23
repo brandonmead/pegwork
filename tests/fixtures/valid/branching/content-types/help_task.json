@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "help_task",
+  "labels": { "singular": "Help task", "plural": "Help tasks" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "related", "type": "number", "label": "Related request" },
+    { "key": "due_on", "type": "date", "label": "Due on" }
+  ]
+}

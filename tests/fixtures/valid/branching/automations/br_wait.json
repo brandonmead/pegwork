@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "key": "br_wait",
+  "label": "New request: remind until contacted (waits and a stop inside a branch)",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "help_request",
+    "when": { "var": "record.scenario", "op": "eq", "value": "wait" } },
+  "steps": [
+    { "id": "hold", "type": "wait", "for": "P1D" },
+    { "id": "check", "type": "decision",
+      "branches": [
+        { "label": "Not contacted yet", "when": { "var": "record.stage", "op": "eq", "value": "new" },
+          "steps": [
+            { "id": "remind", "type": "send_email", "to": "team@example.org",
+              "subject": "Reminder: {{record.name}}", "text": "{{record.name}} is still new: {{record.edit_url}}" },
+            { "id": "hold_2", "type": "wait", "for": "P2D" },
+            { "id": "still_new", "type": "condition", "when": { "var": "record.stage", "op": "eq", "value": "new" } },
+            { "id": "escalate", "type": "send_email", "to": "manager@example.org",
+              "subject": "Not contacted after three days: {{record.name}}", "text": "{{record.edit_url}}" },
+            { "id": "hold_3", "type": "wait", "for": "P1D" } ] } ] },
+    { "id": "wrap", "type": "update_record", "values": { "notes": "checked" } }
+  ]
+}

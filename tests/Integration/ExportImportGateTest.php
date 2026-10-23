@@ -311,6 +311,38 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Phase 6 gate: automations with decisions, nested branches, empty branches and form binding export,
+	 * re-import and re-export byte-identically, with defaults filled inside branches.
+	 */
+	public function test_nested_steps_round_trip() {
+		$this->package = fn( RegistryBuilder $builder ) => $builder->add_package( dirname( __DIR__ ) . '/fixtures/valid/branching' );
+		add_action( 'pegwork_register', $this->package );
+		$this->reregister();
+		$before = Plugin::registry()->automations();
+		$this->assertCount( 8, $before );
+		$this->assertSame( array(), Plugin::result()->errors );
+
+		$a    = $this->export();
+		$tree = $this->tree( $a );
+		$deep = json_decode( $tree['automations/br_deep.json'], true );
+		$task = $deep['steps'][0]['branches'][0]['steps'][0]['branches'][0]['steps'][0]['branches'][0]['steps'][0];
+		$this->assertSame( array( 'make_task', 'draft' ), array( $task['id'], $task['status'] ), 'create_record defaults fill inside branches.' );
+		$this->assertSame( array(), json_decode( $tree['automations/br_paths.json'], true )['steps'][0]['branches'][1]['steps'], 'An empty branch stays.' );
+
+		remove_action( 'pegwork_register', $this->package );
+		delete_option( Loader::DB_OPTION );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::registry()->automations() );
+
+		$this->assertTrue( Importer::import( $a )->is_valid() );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		$this->assertSame( $before, Plugin::registry()->automations() );
+		$this->assertSame( $tree, $this->tree( $this->export() ) );
+		$this->assertSame( 0, Importer::import( $a )->count() );
+	}
+
+	/**
 	 * Import creates missing seed terms by slug and never deletes terms; dry run writes nothing.
 	 */
 	public function test_import_seeds_missing_terms_and_dry_run_writes_nothing() {

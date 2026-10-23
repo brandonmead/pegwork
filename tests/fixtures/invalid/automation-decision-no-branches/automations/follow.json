@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "follow",
+  "label": "Follow up",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "thing" },
+  "steps": [
+    { "id": "route", "type": "decision", "branches": [],
+      "otherwise": [ { "id": "mail", "type": "send_email", "to": "ops@example.org", "subject": "Hi", "text": "Hi" } ] }
+  ]
+}

@@ -76,8 +76,19 @@ trait AutomationRules {
 	/**
 	 * Step types, and the subset allowed in signed links (they must finish within the click).
 	 */
-	public const STEP_TYPES      = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'wait', 'condition' );
+	public const STEP_TYPES      = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'wait', 'condition', 'decision' );
 	public const LINK_STEP_TYPES = array( 'update_record', 'condition' );
+
+	/**
+	 * Decision limits: branches per decision, and nesting levels (a decision inside a branch is level 2).
+	 */
+	public const DECISION_MAX_BRANCHES = 10;
+	public const DECISION_MAX_LEVELS   = 3;
+
+	/**
+	 * Form events that can bind the record the form wrote (section "Form binding" in docs/registry-reference.md).
+	 */
+	public const FORM_BINDING_EVENTS = array( 'form.submitted', 'form.confirmed' );
 
 	/**
 	 * Outputs a step exposes as `steps.<id>.<output>`.
@@ -111,6 +122,13 @@ trait AutomationRules {
 	 * Outbound webhook timeout limit, seconds.
 	 */
 	public const WEBHOOK_MAX_TIMEOUT = 15;
+
+	/**
+	 * Step ids seen so far in the step tree being scanned, in document order.
+	 *
+	 * @var array<string, true>
+	 */
+	private array $step_ids = array();
 
 	/**
 	 * Validates an automation.
@@ -225,17 +243,50 @@ trait AutomationRules {
 	}
 
 	/**
-	 * Validates a step list (at least one step).
+	 * Validates a step list: at least one step, except in a decision's branch or `otherwise`.
 	 *
 	 * @param mixed  $steps   Decoded list.
 	 * @param string $pointer JSON pointer of the list.
 	 * @param bool   $link    Whether the list belongs to a signed link.
+	 * @param int    $level   Nesting level of the list: 1 for the automation's own steps, 2 inside a decision.
 	 */
-	private function automation_steps( mixed $steps, string $pointer, bool $link ): void {
-		$this->list_of( $steps, $pointer, fn( $step, $p ) => $this->automation_step( $step, $p, $link ) );
-		if ( array() === $steps ) {
+	private function automation_steps( mixed $steps, string $pointer, bool $link, int $level = 1 ): void {
+		$this->list_of( $steps, $pointer, fn( $step, $p ) => $this->automation_step( $step, $p, $link, $level ) );
+		if ( array() === $steps && 1 === $level ) {
 			$this->add( 'invalid_value', $pointer, __( 'Add at least one step.', 'pegwork' ) );
 		}
+	}
+
+	/**
+	 * Validates a decision's branches: 1 to DECISION_MAX_BRANCHES of `{ label, when, steps }`, labels unique.
+	 *
+	 * @param mixed  $branches Decoded list.
+	 * @param string $pointer  JSON pointer of the list.
+	 * @param int    $level    Nesting level of the decision.
+	 */
+	private function automation_branches( mixed $branches, string $pointer, int $level ): void {
+		$this->list_of(
+			$branches,
+			$pointer,
+			fn( $branch, $p ) => $this->props(
+				$branch,
+				$p,
+				array(
+					'label' => fn( $v, $q ) => $this->type( $v, $q, 'string' ),
+					'when'  => fn( $v, $q ) => $this->automation_condition( $v, $q ),
+					'steps' => fn( $v, $q ) => $this->automation_steps( $v, $q, false, $level + 1 ),
+				),
+				array( 'label', 'when', 'steps' )
+			)
+		);
+		if ( ! is_array( $branches ) || ! array_is_list( $branches ) ) {
+			return;
+		}
+		if ( array() === $branches || count( $branches ) > self::DECISION_MAX_BRANCHES ) {
+			/* translators: %d: maximum number of branches. */
+			$this->add( 'invalid_value', $pointer, sprintf( __( 'A decision has from 1 to %d branches.', 'pegwork' ), self::DECISION_MAX_BRANCHES ) );
+		}
+		$this->unique( $branches, $pointer, 'label' );
 	}
 
 	/**
@@ -244,8 +295,9 @@ trait AutomationRules {
 	 * @param mixed  $step    Decoded step.
 	 * @param string $pointer JSON pointer of the step.
 	 * @param bool   $link    Whether the step belongs to a signed link.
+	 * @param int    $level   Nesting level of the step's list.
 	 */
-	private function automation_step( mixed $step, string $pointer, bool $link ): void {
+	private function automation_step( mixed $step, string $pointer, bool $link, int $level = 1 ): void {
 		if ( ! $this->type( $step, $pointer, 'object' ) ) {
 			return;
 		}
@@ -261,6 +313,11 @@ trait AutomationRules {
 		if ( $link && ! in_array( $type, self::LINK_STEP_TYPES, true ) ) {
 			/* translators: %s: step type. */
 			$this->add( 'automation_link_step', $pointer . '/type', sprintf( __( 'Link steps run within the click, so only update_record and condition are allowed, not "%s".', 'pegwork' ), $type ) );
+			return;
+		}
+		if ( 'decision' === $type && $level > self::DECISION_MAX_LEVELS ) {
+			/* translators: %d: maximum nesting levels. */
+			$this->add( 'decision_too_deep', $pointer, sprintf( __( 'Decisions nest at most %d levels deep.', 'pegwork' ), self::DECISION_MAX_LEVELS ) );
 			return;
 		}
 
@@ -332,7 +389,17 @@ trait AutomationRules {
 			),
 			'wait'          => array( array( 'for' => fn( $v, $p ) => $this->duration( $v, $p, true ) ), array( 'for' ) ),
 			'condition'     => array( array( 'when' => fn( $v, $p ) => $this->automation_condition( $v, $p ) ), array( 'when' ) ),
+			'decision'      => array(
+				array(
+					'branches'  => fn( $v, $p ) => $this->automation_branches( $v, $p, $level ),
+					'otherwise' => fn( $v, $p ) => $this->automation_steps( $v, $p, false, $level + 1 ),
+				),
+				array( 'branches' ),
+			),
 		};
+		if ( 'decision' === $type ) {
+			unset( $checks['retry'] ); // A decision only evaluates conditions; there is nothing to retry.
+		}
 
 		$this->props( $step, $pointer, $checks + $own[0], array_merge( array( 'id', 'type' ), $own[1] ) );
 	}
@@ -550,11 +617,12 @@ trait AutomationRules {
 	 * Walks a valid automation: checks everything that needs only the definition, and returns the uses
 	 * that references() checks against the registry.
 	 *
-	 * @param array<string, mixed> $data    Automation that passed the shape checks.
-	 * @param string               $pointer JSON pointer of the automation.
+	 * @param array<string, mixed>                     $data    Automation that passed the shape checks.
+	 * @param string                                   $pointer JSON pointer of the automation.
+	 * @param array<string, array<string, mixed>>|null $known   Defined objects (references pass), null in the shape pass.
 	 * @return list<array<string, mixed>> Uses: each has `use` (record_key, form_value, leaf, write, webhook_field) and `pointer`.
 	 */
-	private function automation_scan( array $data, string $pointer ): array {
+	private function automation_scan( array $data, string $pointer, ?array $known = null ): array {
 		$trigger = $data['trigger'];
 		$scope   = array(
 			'trigger' => $trigger['type'],
@@ -567,6 +635,18 @@ trait AutomationRules {
 		);
 		$uses    = array();
 
+		// Form binding needs the form, so it is decided in the references pass; the shape pass assumes it binds.
+		if ( 'event' === $trigger['type'] && in_array( $trigger['event'], self::FORM_BINDING_EVENTS, true ) && isset( $trigger['form'] ) ) {
+			$form = $known['form'][ $trigger['form'] ] ?? null;
+			if ( is_array( $form ) ) {
+				$scope['binds'] = self::form_binds( $trigger['event'], $form );
+				$scope['type']  = $scope['binds'] ? (string) $form['target']['content_type'] : null;
+			} else {
+				$scope['binds'] = true;
+				$scope['type']  = ''; // Unknown form contents: record keys are not checked (unknown_form reports a missing form).
+			}
+		}
+
 		if ( isset( $trigger['when'] ) ) {
 			$this->scan_condition( $trigger['when'], $pointer . '/trigger/when', $scope, $uses );
 		}
@@ -577,10 +657,14 @@ trait AutomationRules {
 			$this->scan_template( $data['idempotency'], $pointer . '/idempotency', 'private', $scope, $uses );
 		}
 
+		// Step ids are unique across the main tree; each link's steps are a tree of their own.
+		$this->step_ids = array();
 		$this->scan_steps( $data['steps'], $pointer . '/steps', $scope, $uses );
 		foreach ( $data['links'] ?? array() as $name => $link ) {
-			$at = self::pointer( $pointer . '/links', $name );
+			$at             = self::pointer( $pointer . '/links', $name );
+			$this->step_ids = array();
 			$this->scan_steps( $link['steps'], $at . '/steps', $scope, $uses );
+			$this->step_ids = array();
 			foreach ( array( 'button', 'success_url', 'success_message', 'expired_url' ) as $text ) {
 				if ( isset( $link[ $text ] ) ) {
 					$this->scan_template( $link[ $text ], $at . '/' . $text, 'public', $scope, $uses );
@@ -592,21 +676,23 @@ trait AutomationRules {
 	}
 
 	/**
-	 * Walks one step list: unique ids, step references in order, templates, values and webhook fields.
+	 * Walks one step list and the branches of its decisions: unique ids across the tree, step references in
+	 * scope, templates, values and webhook fields.
+	 *
+	 * Output scope: `scope.steps` holds the steps that ran on every path before this point (earlier siblings and
+	 * earlier siblings of enclosing lists). A branch adds its own steps for the rest of that branch only.
 	 *
 	 * @param list<array<string, mixed>> $steps   Steps.
 	 * @param string                     $pointer JSON pointer of the list.
-	 * @param array<string, mixed>       $scope   Scan scope; `steps` is reset for this list.
+	 * @param array<string, mixed>       $scope   Scan scope; `steps` are the outputs in scope where the list starts.
 	 * @param list<array<string, mixed>> $uses    Uses, appended to.
 	 */
 	private function scan_steps( array $steps, string $pointer, array $scope, array &$uses ): void {
-		$scope['steps'] = array();
-
 		foreach ( $steps as $index => $step ) {
 			$at = $pointer . '/' . $index;
-			if ( isset( $scope['steps'][ $step['id'] ] ) ) {
+			if ( isset( $this->step_ids[ $step['id'] ] ) ) {
 				/* translators: %s: step id. */
-				$this->add( 'duplicate_key', $at . '/id', sprintf( __( 'Step id "%s" is already used in this step list.', 'pegwork' ), $step['id'] ) );
+				$this->add( 'duplicate_key', $at . '/id', sprintf( __( 'Step id "%s" is already used in this automation.', 'pegwork' ), $step['id'] ) );
 			}
 
 			switch ( $step['type'] ) {
@@ -658,10 +744,56 @@ trait AutomationRules {
 				case 'condition':
 					$this->scan_condition( $step['when'], $at . '/when', $scope, $uses );
 					break;
+				case 'decision':
+					$this->step_ids[ $step['id'] ] = true;
+					foreach ( $step['branches'] as $branch_index => $branch ) {
+						$branch_at = $at . '/branches/' . $branch_index;
+						$this->scan_condition( $branch['when'], $branch_at . '/when', $scope, $uses );
+						$this->scan_steps( $branch['steps'], $branch_at . '/steps', $scope, $uses );
+					}
+					if ( isset( $step['otherwise'] ) ) {
+						$this->scan_steps( $step['otherwise'], $at . '/otherwise', $scope, $uses );
+					}
+					break;
 			}
 
+			$this->step_ids[ $step['id'] ] = true;
 			$scope['steps'][ $step['id'] ] = $step['type'];
 		}
+	}
+
+	/**
+	 * Every step of a step list and of its decisions' branches, in document order, by JSON pointer.
+	 *
+	 * @param list<array<string, mixed>> $steps   Valid steps.
+	 * @param string                     $pointer JSON pointer of the list.
+	 * @return array<string, array<string, mixed>>
+	 */
+	private static function step_tree( array $steps, string $pointer ): array {
+		$found = array();
+		foreach ( $steps as $index => $step ) {
+			$at           = $pointer . '/' . $index;
+			$found[ $at ] = $step;
+			if ( 'decision' === $step['type'] ) {
+				foreach ( $step['branches'] as $branch_index => $branch ) {
+					$found += self::step_tree( $branch['steps'], $at . '/branches/' . $branch_index . '/steps' );
+				}
+				$found += self::step_tree( $step['otherwise'] ?? array(), $at . '/otherwise' );
+			}
+		}
+		return $found;
+	}
+
+	/**
+	 * Whether a form event binds the record the form wrote: the form has a `target`, and the event is
+	 * `form.confirmed`, or `form.submitted` of a form without `confirm` (a confirm form writes on confirmation).
+	 *
+	 * @param string               $event Event name.
+	 * @param array<string, mixed> $form  Canonical form.
+	 */
+	public static function form_binds( string $event, array $form ): bool {
+		return in_array( $event, self::FORM_BINDING_EVENTS, true ) && isset( $form['target'] )
+			&& ( 'form.confirmed' === $event || ! isset( $form['confirm'] ) );
 	}
 
 	/**
@@ -835,7 +967,7 @@ trait AutomationRules {
 		if ( 'record' === $root ) {
 			if ( ! $scope['binds'] ) {
 				/* translators: %s: path. */
-				$this->add( 'automation_no_record', $pointer, sprintf( __( 'Path "%s" needs a record, but this trigger binds none (use a record.* event or a schedule with "for_each").', 'pegwork' ), $path ) );
+				$this->add( 'automation_no_record', $pointer, sprintf( __( 'Path "%s" needs a record, but this trigger binds none (use a record.* event, a schedule with "for_each", or a form event that binds: form.confirmed, or form.submitted of a form without "confirm", of a form with a "target").', 'pegwork' ), $path ) );
 				return;
 			}
 			if ( 2 !== $count ) {
@@ -864,6 +996,9 @@ trait AutomationRules {
 			$type = 3 === $count ? ( $scope['steps'][ $parts[1] ] ?? null ) : null;
 			if ( 3 !== $count ) {
 				$bad( __( 'use "steps.<id>.<output>".', 'pegwork' ) );
+			} elseif ( null === $type && isset( $this->step_ids[ $parts[1] ] ) ) {
+				/* translators: %s: step id. */
+				$bad( sprintf( __( 'step "%s" runs only in another branch.', 'pegwork' ), $parts[1] ) );
 			} elseif ( null === $type ) {
 				/* translators: %s: step id. */
 				$bad( sprintf( __( 'no step "%s" runs before this point.', 'pegwork' ), $parts[1] ) );
@@ -996,11 +1131,9 @@ trait AutomationRules {
 		if ( isset( $trigger['for_each'] ) ) {
 			$targets['/trigger/for_each/content_type'] = $trigger['for_each']['content_type'];
 		}
-		foreach ( array( '/steps' => $data['steps'] ) as $list => $steps ) {
-			foreach ( $steps as $index => $step ) {
-				if ( 'create_record' === $step['type'] ) {
-					$targets[ $list . '/' . $index . '/content_type' ] = $step['content_type'];
-				}
+		foreach ( self::step_tree( $data['steps'], '/steps' ) as $at => $step ) {
+			if ( 'create_record' === $step['type'] ) {
+				$targets[ $at . '/content_type' ] = $step['content_type'];
 			}
 		}
 		foreach ( $targets as $at => $type ) {
@@ -1015,7 +1148,7 @@ trait AutomationRules {
 			$this->add( 'unknown_form', $pointer . '/trigger/form', sprintf( __( 'Form "%s" is not defined.', 'pegwork' ), $trigger['form'] ) );
 		}
 
-		foreach ( $this->automation_scan( $data, $pointer ) as $found ) {
+		foreach ( $this->automation_scan( $data, $pointer, $known ) as $found ) {
 			$type = $found['type'] ?? null;
 			if ( isset( $missing[ (string) $type ] ) ) {
 				continue;

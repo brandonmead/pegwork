@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "br_confirmed",
+  "label": "Help request confirmed: note it on the record",
+  "trigger": { "type": "event", "event": "form.confirmed", "form": "help_confirm" },
+  "steps": [
+    { "id": "confirmed_note", "type": "update_record", "values": { "notes": "confirmed by {{record.name}}" } }
+  ]
+}
