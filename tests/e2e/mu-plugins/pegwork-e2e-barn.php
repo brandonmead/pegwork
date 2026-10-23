@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E BarnCRM
- * Description: Test-only helpers for the BarnCRM flows browser test: registers tests/e2e/packages/barn (types, form and options page, no automations), or tests/e2e/packages/barn-reads while the reads spec has switched to it, and exposes admin-only REST routes to switch packages, to create a sample gift (with a linked donor under barn-reads), to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample gifts). Not shipped.
+ * Description: Test-only helpers for the BarnCRM flows browser test: registers tests/e2e/packages/barn (types, form and options page, no automations), or tests/e2e/packages/barn-reads while the reads spec has switched to it, and exposes admin-only REST routes to switch packages, to create a sample gift (with a linked donor under barn-reads) or task, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample gifts). Not shipped.
  *
  * @package Pegwork
  */
@@ -30,6 +30,7 @@ function pegwork_e2e_barn_fixtures() {
 		'barn_gift_followup'      => 'barn',
 		'barn_volunteer_intake'   => 'barn',
 		'barn_lifetime_milestone' => 'reads',
+		'barn_tasks_digest'       => 'reads',
 	);
 }
 
@@ -58,6 +59,21 @@ add_action(
 	'rest_api_init',
 	static function () {
 		$admin = static fn() => current_user_can( 'manage_options' );
+
+		// Creates a published sample task under barn-reads (body: name, due_on, assignee_email, done); returns its ID.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/barn/task',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$values = array_intersect_key( (array) $request->get_json_params(), array_flip( array( 'name', 'due_on', 'assignee_email', 'done' ) ) );
+					$id     = \Pegwork\Api\Records::create( 'barn_task', $values, 'publish' );
+					return is_wp_error( $id ) ? $id : rest_ensure_response( array( 'id' => $id ) );
+				},
+			)
+		);
 
 		// Creates a private sample gift (no donor) with the given amount; returns its ID and title.
 		register_rest_route(

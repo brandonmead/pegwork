@@ -36,11 +36,11 @@ import { config, useDefinition, useErrorOwners } from './store';
 /**
  * Loop edit component.
  *
- * @param {Object}   props               Props.
- * @param {Object}   props.attributes    Attributes (`id`, `over`).
- * @param {Function} props.setAttributes Setter.
- * @param {string}   props.clientId      Block client ID.
- * @param {boolean}  props.isSelected    Whether the block is selected.
+ * @param {Object}                  props               Props.
+ * @param {Object}                  props.attributes    Attributes (`id`, `over`).
+ * @param {(attrs: Object) => void} props.setAttributes Setter.
+ * @param {string}                  props.clientId      Block client ID.
+ * @param {boolean}                 props.isSelected    Whether the block is selected.
  */
 export default function LoopEdit( {
 	attributes,

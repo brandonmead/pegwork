@@ -239,6 +239,10 @@ $error: #cc1818;
 	}
 }
 
+.pegwork-automation__tags + .pegwork-automation__tags {
+	margin-left: 16px;
+}
+
 .pegwork-automation__tags-form {
 	display: flex;
 	flex-direction: column;

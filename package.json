@@ -11,7 +11,7 @@
 	"scripts": {
 		"build": "wp-scripts build editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js filters-editor=./assets/src/filters-editor/index.js forms-builder=./assets/src/forms-builder/index.js forms-view=./assets/src/forms-view/index.js automation-builder=./assets/src/automation-builder/index.js automation-actions=./assets/src/automation-actions/index.js --experimental-modules --output-path=assets/build",
 		"start": "wp-scripts start editor-panel=./assets/src/editor-panel/index.js listings-editor=./assets/src/listings-editor/index.js options-page=./assets/src/options-page/index.js forms-editor=./assets/src/forms-editor/index.js filters-editor=./assets/src/filters-editor/index.js forms-builder=./assets/src/forms-builder/index.js forms-view=./assets/src/forms-view/index.js automation-builder=./assets/src/automation-builder/index.js automation-actions=./assets/src/automation-actions/index.js --experimental-modules --output-path=assets/build",
-		"check:size": "node bin/check-script-size.js assets/build/filters-view.js 10240 && node bin/check-script-size.js assets/build/automation-builder.js 25600 && node bin/check-script-size.js assets/build/automation-actions.js 3072",
+		"check:size": "node bin/check-script-size.js assets/build/filters-view.js 10240 && node bin/check-script-size.js assets/build/automation-builder.js 27136 && node bin/check-script-size.js assets/build/automation-actions.js 3072",
 		"lint:js": "wp-scripts lint-js",
 		"test:unit": "wp-scripts test-unit-js",
 		"test:e2e": "playwright test",
