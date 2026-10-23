@@ -278,7 +278,8 @@ final class Runs {
 	 * Records one step attempt.
 	 *
 	 * @param array<string, mixed> $step `run_id`, `step_id`, `step_type`, `attempt`, `status`, `started_at`, `duration_ms`,
-	 *                                   `summary` (array), `error`.
+	 *                                   `summary` (array), `error`, and `iteration` (1-based item number of a
+	 *                                   step inside a loop body, else null or absent).
 	 */
 	public function add_step( array $step ): void {
 		global $wpdb;
@@ -289,18 +290,19 @@ final class Runs {
 				'step_id'     => (string) $step['step_id'],
 				'step_type'   => (string) $step['step_type'],
 				'attempt'     => (int) ( $step['attempt'] ?? 1 ),
+				'iteration'   => isset( $step['iteration'] ) ? (int) $step['iteration'] : null, // wpdb writes null as NULL.
 				'status'      => (string) $step['status'],
 				'started_at'  => (string) $step['started_at'],
 				'duration_ms' => max( 0, (int) $step['duration_ms'] ),
 				'summary'     => array() === ( $step['summary'] ?? array() ) ? null : wp_json_encode( $step['summary'] ),
 				'error'       => $step['error'] ?? null,
 			),
-			array( '%d', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s' )
+			array( '%d', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s' )
 		);
 	}
 
 	/**
-	 * Step attempts of a run, oldest first, `summary` decoded.
+	 * Step attempts of a run, oldest first, `summary` decoded and `iteration` an int or null.
 	 *
 	 * @param int $run_id Run ID.
 	 * @return array<int, array<string, mixed>>
@@ -309,7 +311,8 @@ final class Runs {
 		global $wpdb;
 		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE run_id = %d ORDER BY id', $this->steps, $run_id ), ARRAY_A );
 		foreach ( $rows as &$row ) {
-			$row['summary'] = null === $row['summary'] ? array() : (array) json_decode( $row['summary'], true );
+			$row['summary']   = null === $row['summary'] ? array() : (array) json_decode( $row['summary'], true );
+			$row['iteration'] = isset( $row['iteration'] ) ? (int) $row['iteration'] : null;
 		}
 		return $rows;
 	}
@@ -325,14 +328,18 @@ final class Runs {
 	}
 
 	/**
-	 * Number of attempts of one step in a run.
+	 * Number of attempts of one step in a run; inside a loop body, of that step in one iteration.
 	 *
-	 * @param int    $run_id  Run ID.
-	 * @param string $step_id Step ID.
+	 * @param int      $run_id    Run ID.
+	 * @param string   $step_id   Step ID.
+	 * @param int|null $iteration 1-based iteration, or null for a step outside loops.
 	 */
-	public function attempts( int $run_id, string $step_id ): int {
+	public function attempts( int $run_id, string $step_id, ?int $iteration = null ): int {
 		global $wpdb;
-		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE run_id = %d AND step_id = %s', $this->steps, $run_id, $step_id ) );
+		if ( null === $iteration ) {
+			return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE run_id = %d AND step_id = %s AND iteration IS NULL', $this->steps, $run_id, $step_id ) );
+		}
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE run_id = %d AND step_id = %s AND iteration = %d', $this->steps, $run_id, $step_id, $iteration ) );
 	}
 
 	/**

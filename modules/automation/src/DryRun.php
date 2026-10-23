@@ -28,6 +28,11 @@ use WP_Error;
  * and gives counts and sums. Reads after a step that would write see the site as it is now, and the
  * report says so once. A step with `on_error: continue` that would fail is reported and the walk goes on.
  *
+ * Loops iterate every item of the real find, with the executor's loop state in the context, so item paths
+ * read real records. The report shows the first SHOWN_ITEMS items in full, each under an `item` heading,
+ * then "and 9 more items, same steps" (a later item's failure is still shown). A false condition in a loop
+ * body skips that item (`skips`), as in a real run.
+ *
  * The trigger payload is synthesized from the sample record (`old.*` holds the current values,
  * `changed` is empty, form `values` are the record's values for the form's bound keys), or for a
  * webhook trigger it is the pasted sample payload. The context is built without an automation key,
@@ -42,6 +47,12 @@ final class DryRun {
 	 * Most steps one report walks (the executor's per-run limit).
 	 */
 	private const MAX_STEPS = Executor::MAX_STEPS;
+
+	/**
+	 * Items of a loop the report shows in full; later items are walked but summed up in one line (their
+	 * failures are still shown).
+	 */
+	public const SHOWN_ITEMS = 3;
 
 	/**
 	 * The content type whose record a trigger binds: a record event's or sweep's `content_type`, or the
@@ -249,10 +260,25 @@ final class DryRun {
 			'wrote' => false,
 			'noted' => false,
 		);
+		$walk   = array(
+			'item' => null, // Heading of the item about to start, for the next entry shown.
+		);
 		while ( null !== $id && $count < self::MAX_STEPS ) {
+			$step = (array) $plan->step( $id );
+			if ( $plan->is_loop( $id ) ) {
+				if ( null === $context->loop( $id ) ) {
+					++$count; // Starting a loop is an attempt, advancing it is not (as in the executor).
+				}
+				$id = self::loop( $step, $context, $plan, $report, $walk );
+				if ( str_starts_with( $report['outcome'], 'failed_at:' ) ) {
+					break;
+				}
+				continue;
+			}
 			++$count;
-			$step  = (array) $plan->step( $id );
 			$entry = self::step( $step, $context, $record, $plan, $state );
+			$loop  = $plan->loop_of( $id );
+			$item  = $context->iteration( $id );
 
 			if ( 'fails' === $entry['result'] && 'continue' === ( $step['on_error'] ?? null ) ) {
 				$entry['result']   = 'continues';
@@ -266,8 +292,25 @@ final class DryRun {
 				);
 				$errors[] = $id;
 			}
+			if ( 'stops' === $entry['result'] && null !== $loop ) {
+				$entry['result']  = 'skips';
+				$entry['message'] = sprintf(
+					/* translators: %s: step ID. */
+					__( 'Condition %s is false: skips this item.', 'pegwork' ),
+					$id
+				);
+			}
 
-			$report['steps'][] = $entry;
+			// Later loop items are walked but not listed, unless something fails there.
+			if ( null === $item || $item <= self::SHOWN_ITEMS || in_array( $entry['result'], array( 'fails', 'continues' ), true ) ) {
+				$entry['item']     = $walk['item'];
+				$walk['item']      = null;
+				$report['steps'][] = $entry;
+			}
+			if ( 'skips' === $entry['result'] ) {
+				$id = $loop;
+				continue;
+			}
 			if ( 'stops' === $entry['result'] ) {
 				$report['outcome'] = 'stopped_at:' . $id;
 				break;
@@ -282,10 +325,136 @@ final class DryRun {
 			$report['outcome'] = 'step_limit';
 		}
 		if ( array() !== $errors && ( 'completed' === $report['outcome'] || str_starts_with( $report['outcome'], 'stopped_at:' ) ) ) {
-			$report['outcome'] = Executor::ERRORS_OUTCOME . implode( ',', $errors ); // As the executor reports it.
+			$report['outcome'] = Executor::ERRORS_OUTCOME . implode( ',', array_values( array_unique( $errors ) ) ); // As the executor reports it.
 		}
 
 		return $report;
+	}
+
+	/**
+	 * Walks a loop step at the cursor: starts it (a report line with the item count; the IDs count toward
+	 * the read limit) or advances it, then enters the next item that can still be read, or ends the loop
+	 * ("and 9 more items, same steps" when items were not shown in full).
+	 *
+	 * @param array<string, mixed> $step    Loop step.
+	 * @param Context              $context Context.
+	 * @param Plan                 $plan    Plan.
+	 * @param array<string, mixed> $report  Report (entries and outcome are added).
+	 * @param array<string, mixed> $walk    Walk state: `item`, the heading for the next entry.
+	 * @return string|null The step to continue at.
+	 */
+	private static function loop( array $step, Context $context, Plan $plan, array &$report, array &$walk ): ?string {
+		$id    = (string) $step['id'];
+		$depth = (int) $plan->depth( $id );
+		$over  = (string) $plan->over( $id );
+		$type  = (string) ( $plan->step( $over )['content_type'] ?? '' );
+		$entry = fn( string $result, array $detail, string $message, int $at ) => array(
+			'id'      => $id,
+			'type'    => 'loop',
+			'depth'   => $at,
+			'branch'  => null,
+			'result'  => $result,
+			'detail'  => $detail,
+			'message' => $message,
+			'item'    => null,
+		);
+
+		if ( null === $context->loop( $id ) ) {
+			$ids = $context->collection( (string) ( $step['over'] ?? '' ) ) ?? array();
+			if ( ! $context->count_reads( count( $ids ) ) ) {
+				$report['steps'][] = $entry(
+					'fails',
+					array( 'error' => 'read_limit' ),
+					/* translators: 1: step ID, 2: error message. */
+					sprintf( __( 'Loop %1$s: would fail: %2$s', 'pegwork' ), $id, (string) Steps\Reads::over_limit( count( $ids ), $context, array() )->error ),
+					$depth
+				);
+				$report['outcome'] = 'failed_at:' . $id;
+				return null;
+			}
+			$location = $plan->location( $id );
+			$plural   = 1 !== count( $ids );
+			$start    = $entry(
+				'ok',
+				array( 'items' => count( $ids ) ),
+				sprintf(
+					/* translators: 1: step ID, 2: number of items, 3: content type label (singular for 1). */
+					__( 'Loop %1$s: repeats its steps for %2$d %3$s.', 'pegwork' ),
+					$id,
+					count( $ids ),
+					self::type_label( $type, $plural )
+				),
+				$depth
+			);
+			$start['branch']   = null !== $location && $location['first'] ? $location['label'] : null;
+			$start['item']     = $walk['item'];
+			$walk['item']      = null;
+			$report['steps'][] = $start;
+			if ( array() === $ids ) {
+				$context->end_loop( $id );
+				return $plan->next( $id );
+			}
+			$context->start_loop( $id, $ids );
+		} else {
+			$context->advance_loop( $id ); // Past the last item there is no current item, and the loop ends below.
+		}
+
+		$state = (array) $context->loop( $id );
+		$total = count( (array) ( $state['ids'] ?? array() ) );
+		$body  = $plan->body_first( $id );
+		$item  = $context->loop_item( $id );
+		while ( null !== $body && null !== $item ) {
+			$index = (int) $context->loop( $id )['index'] + 1;
+			if ( null !== $context->record_by_id( $item ) ) {
+				$walk['item'] = array(
+					'index' => $index,
+					'count' => $total,
+					'id'    => $item,
+					'title' => self::title( $item ),
+					'label' => self::type_label( $type, false ),
+				);
+				return $body;
+			}
+			if ( $index <= self::SHOWN_ITEMS ) {
+				$report['steps'][] = $entry(
+					'ok',
+					array(
+						'item'         => $item,
+						'skipped_item' => true,
+					),
+					/* translators: 1: item number, 2: number of items, 3: record ID. */
+					sprintf( __( 'Item %1$d of %2$d (record %3$d) can no longer be read: skipped.', 'pegwork' ), $index, $total, $item ),
+					$depth + 1
+				);
+			}
+			if ( ! $context->advance_loop( $id ) ) {
+				break;
+			}
+		}
+
+		$walk['item'] = null; // A later item's heading never moves to the step after the loop.
+		$context->end_loop( $id );
+		if ( $total > self::SHOWN_ITEMS ) {
+			$more              = $total - self::SHOWN_ITEMS;
+			$report['steps'][] = $entry(
+				'ok',
+				array( 'more' => $more ),
+				/* translators: %d: number of further loop items. */
+				sprintf( _n( 'and %d more item, same steps.', 'and %d more items, same steps.', $more, 'pegwork' ), $more ),
+				$depth + 1
+			);
+		}
+		return $plan->next( $id );
+	}
+
+	/**
+	 * A content type's label, plural or singular (its key when the type is unknown).
+	 *
+	 * @param string $type   Content type key.
+	 * @param bool   $plural Whether the plural is wanted.
+	 */
+	private static function type_label( string $type, bool $plural ): string {
+		return (string) ( pegwork_registry()->content_type( $type )['labels'][ $plural ? 'plural' : 'singular' ] ?? $type );
 	}
 
 	/**
@@ -344,7 +513,7 @@ final class DryRun {
 	 * @param array<string, mixed>|null $record  Sample record.
 	 * @param Plan                      $plan    Plan.
 	 * @param array<string, bool>       $state   `wrote` (a step would have written), `noted` (the report said so).
-	 * @return array{id: string, type: string, depth: int, branch: string|null, result: string, detail: array<string, mixed>, message: string}
+	 * @return array{id: string, type: string, depth: int, branch: string|null, result: string, detail: array<string, mixed>, message: string, item: array<string, mixed>|null}
 	 */
 	private static function step( array $step, Context $context, ?array $record, Plan $plan, array &$state ): array {
 		$id       = (string) $step['id'];
@@ -358,6 +527,7 @@ final class DryRun {
 			'result'  => 'ok',
 			'detail'  => array(),
 			'message' => '',
+			'item'    => null, // The loop item this entry starts: index, count, id, title, label.
 		);
 
 		switch ( $type ) {
@@ -516,7 +686,7 @@ final class DryRun {
 				);
 				break;
 
-			default:
+			default: // Loops are walked by report() itself.
 				$entry['result'] = 'fails';
 				/* translators: 1: step ID, 2: step type. */
 				$entry['message'] = sprintf( __( 'Step %1$s: type "%2$s" is not supported.', 'pegwork' ), $id, $type );
@@ -583,6 +753,18 @@ final class DryRun {
 		$lines = array( (string) $report['trigger']['message'] );
 		foreach ( (array) $report['steps'] as $entry ) {
 			$indent = str_repeat( '  ', (int) $entry['depth'] );
+			$item   = $entry['item'] ?? null;
+			if ( is_array( $item ) ) {
+				$lines[] = substr( $indent, 2 ) . sprintf(
+					/* translators: 1: item number, 2: number of items, 3: content type label, 4: record ID, 5: record title. */
+					__( 'Item %1$d of %2$d: %3$s %4$d "%5$s":', 'pegwork' ),
+					(int) $item['index'],
+					(int) $item['count'],
+					(string) $item['label'],
+					(int) $item['id'],
+					(string) $item['title']
+				);
+			}
 			if ( null !== $entry['branch'] ) {
 				$lines[] = substr( $indent, 2 ) . ( 'otherwise' === $entry['branch']
 					? __( 'Otherwise:', 'pegwork' )

@@ -30,6 +30,14 @@ use Throwable;
  * and `error: "<code>"`, and the run continues; such a run completes with outcome
  * `completed_with_errors:<ids>`. Steps with `on_error` output `failed: false` on success. The run's read
  * count (`context.reads`) is restored on each wake-up and stored with the outputs.
+ *
+ * Loops: the cursor arriving at a loop id with no `context.loops.<id>` starts the loop (snapshot of the
+ * collection's IDs, one logged row `{ items, ids }`, counted as an attempt), else advances it (no row, no
+ * attempt). Each item runs the body from Plan::body_first(); an item deleted meanwhile is skipped with a
+ * row `skipped_item`; a false condition in the body skips to the next item. After the last item the state
+ * is removed, the loop outputs `count`, and the cursor continues at next( loop ). Because the state is part
+ * of the stored context, a time-budget requeue, a retry and Retry from the log all resume at the same item.
+ * Body rows carry `iteration` (1-based), and attempts are numbered per step and iteration.
  */
 final class Executor {
 
@@ -39,9 +47,10 @@ final class Executor {
 	public const TIME_BUDGET = 20;
 
 	/**
-	 * Maximum step attempts per run.
+	 * Default maximum step attempts per run (filter `pegwork_automation_step_limit`). The registry bounds a
+	 * definition at 500 attempts without retries, so this is a safety net for retries, not a design limit.
 	 */
-	public const MAX_STEPS = 100;
+	public const MAX_STEPS = 600;
 
 	/**
 	 * Outcome prefix of a completed run in which steps with `on_error: continue` failed.
@@ -109,6 +118,12 @@ final class Executor {
 		$context = new Context( $this->engine->clock(), $record, (array) ( $stored['trigger'] ?? array() ), (array) ( $stored['steps'] ?? array() ), $id, (string) $run['automation'] );
 		$context->use_plan( $plan );
 		$context->restore_reads( (int) ( $stored['reads'] ?? 0 ) );
+		$context->restore_loops( (array) ( $stored['loops'] ?? array() ) );
+		$moved = self::loop_mismatch( $plan, $step_id, $context );
+		if ( null !== $moved ) {
+			$runs->finish( $id, 'failed', 'definition_changed: ' . $moved );
+			return 'failed';
+		}
 
 		/**
 		 * Filters the time budget of one executor wake-up, in seconds. When it is used up, the run is
@@ -117,28 +132,51 @@ final class Executor {
 		 * @param int $seconds Default 20.
 		 */
 		$deadline = microtime( true ) + (float) apply_filters( 'pegwork_automation_time_budget', self::TIME_BUDGET );
+		$limit    = self::step_limit();
 		$attempts = $runs->step_count( $id );
 		$first    = true;
 
-		// The cursor walks the tree: each step names the next one (Plan), a decision picks its branch.
+		// The cursor walks the tree: each step names the next one (Plan), a decision picks its branch, a loop
+		// starts its body again or continues after itself.
 		while ( null !== $step_id ) {
-			$step = (array) $plan->step( $step_id );
+			$step    = (array) $plan->step( $step_id );
+			$is_loop = $plan->is_loop( $step_id );
+			$advance = $is_loop && null !== $context->loop( $step_id );
 
+			// Checked before every step, loop iterations included; the stored loop state resumes the item.
 			if ( ! $first && microtime( true ) >= $deadline ) {
 				$runs->requeue( $id, $step_id, self::store( $stored, $context ) );
 				$this->wake( $id, $this->engine->clock()->now()->getTimestamp() );
 				return 'queued';
 			}
-			if ( $attempts >= self::MAX_STEPS ) {
-				$runs->finish( $id, 'failed', sprintf( 'step_limit: more than %d step attempts.', self::MAX_STEPS ), self::store( $stored, $context ) );
+			if ( ! $advance && $attempts >= $limit ) {
+				$runs->finish( $id, 'failed', sprintf( 'step_limit: more than %d step attempts.', $limit ), self::store( $stored, $context ) );
 				return 'failed';
 			}
 
+			if ( $is_loop ) {
+				$error = null;
+				if ( $advance ) {
+					$context->advance_loop( $step_id ); // Not an attempt and no row: the wake-up's first step may still follow.
+					$step_id = $this->enter( $run, $step, $plan, $context, $attempts );
+				} else {
+					$step_id = $this->start( $run, $step, $plan, $context, $attempts, $error );
+					$first   = false;
+				}
+				if ( null !== $error ) {
+					$runs->finish( $id, 'failed', $error, self::store( $stored, $context ) );
+					return 'failed';
+				}
+				continue;
+			}
+
+			$loop      = $plan->loop_of( $step_id );
+			$iteration = $context->iteration( $step_id );
 			$runs->progress( $id, $step_id, self::store( $stored, $context ) );
 			$started = $runs->stamp();
 			$timer   = microtime( true );
 			$result  = $this->attempt( $step, $context, $run );
-			$attempt = $runs->attempts( $id, $step_id ) + 1;
+			$attempt = $runs->attempts( $id, $step_id, $iteration ) + 1;
 			++$attempts;
 
 			$continue = 'continue' === ( $step['on_error'] ?? null );
@@ -151,9 +189,9 @@ final class Executor {
 
 			if ( 'failed' === $result->status ) {
 				$done  = (int) ( $stored['retries'][ $step_id ] ?? 0 );
-				$delay = $result->retryable ? Retry::delay( $step, $done ) : null;
+				$delay = $result->retryable ? Retry::delay( $step, $done, null !== $loop ) : null;
 				$at    = null === $delay ? null : Duration::add( $this->engine->clock()->now(), $delay );
-				$this->log( $run, $step, $result, null === $at ? 'failed' : 'retrying', $attempt, $started, $timer );
+				$this->log( $run, $step, $result, null === $at ? 'failed' : 'retrying', $attempt, $started, $timer, $iteration );
 
 				if ( null !== $at ) {
 					$stored['retries'][ $step_id ] = $done + 1;
@@ -181,9 +219,18 @@ final class Executor {
 				return 'failed';
 			}
 
-			$this->log( $run, $step, $result, $result->status, $attempt, $started, $timer );
+			if ( $result->stop && null !== $loop ) {
+				$result->summary['skipped_item'] = true;
+			}
+			$this->log( $run, $step, $result, $result->status, $attempt, $started, $timer, $iteration );
 			unset( $stored['retries'][ $step_id ] );
 
+			if ( $result->stop && null !== $loop ) {
+				// A false condition inside a loop body skips the rest of this item, not the run.
+				$step_id = $loop;
+				$first   = false;
+				continue;
+			}
 			if ( $result->stop ) {
 				$stored['outcome'] = 'stopped_at:' . $step_id;
 				$runs->finish( $id, 'completed', null, self::store( self::outcome( $stored ), $context ) );
@@ -202,6 +249,122 @@ final class Executor {
 		// A wait at the end of the tree has nothing left to wait for: the run completes now.
 		$runs->finish( $id, 'completed', null, self::store( self::outcome( $stored ), $context ) );
 		return 'completed';
+	}
+
+	/**
+	 * Most step attempts one run may make.
+	 */
+	public static function step_limit(): int {
+		/**
+		 * Filters the most step attempts one run may make (retries and loop items included). Past it the run
+		 * fails with `step_limit`. The registry already bounds a definition at 500 attempts without retries.
+		 *
+		 * @param int $limit Default 600.
+		 */
+		return max( 1, (int) apply_filters( 'pegwork_automation_step_limit', self::MAX_STEPS ) );
+	}
+
+	/**
+	 * Starts a loop: snapshots the IDs of the collection it iterates (counted toward the read limit), logs
+	 * one row `{ items, ids }`, and continues at the first item that still exists, or after the loop when
+	 * there is none (`count` 0).
+	 *
+	 * @param array<string, mixed> $run      Run row.
+	 * @param array<string, mixed> $step     Loop step.
+	 * @param Plan                 $plan     Plan.
+	 * @param Context              $context  Context.
+	 * @param int                  $attempts Attempts so far in the run (incremented).
+	 * @param string|null          $error    Set to the run error when the loop cannot start.
+	 * @return string|null The step to continue at.
+	 */
+	private function start( array $run, array $step, Plan $plan, Context $context, int &$attempts, ?string &$error ): ?string {
+		$loop = (string) $step['id'];
+		$over = $plan->over( $loop );
+		if ( null === $over || ! $plan->has( $over ) ) {
+			$error = sprintf( 'definition_changed: loop "%1$s" iterates step "%2$s", which is no longer in the automation.', $loop, (string) $over );
+			return null;
+		}
+
+		$ids     = $context->collection( (string) $step['over'] ) ?? array(); // A find that failed with on_error has no records.
+		$summary = array(
+			'items' => count( $ids ),
+			'ids'   => $ids,
+		);
+		$started = $this->engine->runs()->stamp();
+		$timer   = microtime( true );
+		$attempt = $this->engine->runs()->attempts( (int) $run['id'], $loop ) + 1;
+		++$attempts;
+
+		if ( ! $context->count_reads( count( $ids ) ) ) {
+			$result = Steps\Reads::over_limit( count( $ids ), $context, $summary );
+			$this->log( $run, $step, $result, 'failed', $attempt, $started, $timer, null );
+			$error = (string) $result->error;
+			return null;
+		}
+		$this->log( $run, $step, StepResult::ok( array(), $summary ), 'ok', $attempt, $started, $timer, null );
+
+		if ( array() === $ids ) {
+			$context->end_loop( $loop );
+			return $plan->next( $loop );
+		}
+		$context->start_loop( $loop, $ids );
+		return $this->enter( $run, $step, $plan, $context, $attempts );
+	}
+
+	/**
+	 * Enters the loop's current item: the first step of the body when the item can still be read, else a row
+	 * `{ item, skipped_item }` for it and the next item. After the last item the loop ends (state removed,
+	 * output `count`) and the cursor continues after it.
+	 *
+	 * @param array<string, mixed> $run      Run row.
+	 * @param array<string, mixed> $step     Loop step.
+	 * @param Plan                 $plan     Plan.
+	 * @param Context              $context  Context.
+	 * @param int                  $attempts Attempts so far in the run (incremented per skipped item).
+	 * @return string|null The step to continue at.
+	 */
+	private function enter( array $run, array $step, Plan $plan, Context $context, int &$attempts ): ?string {
+		$loop = (string) $step['id'];
+		$body = $plan->body_first( $loop );
+		$item = $context->loop_item( $loop );
+		while ( null !== $item && null !== $body ) {
+			if ( null !== $context->record_by_id( $item ) ) {
+				return $body;
+			}
+			// Deleted or trashed since the snapshot: skipped.
+			$started = $this->engine->runs()->stamp();
+			$summary = array(
+				'item'         => $item,
+				'skipped_item' => true,
+			);
+			$this->log( $run, $step, StepResult::ok( array(), $summary ), 'ok', 1, $started, microtime( true ), (int) ( $context->loop( $loop )['index'] ?? 0 ) + 1 );
+			++$attempts;
+			$item = $context->advance_loop( $loop ) ? $context->loop_item( $loop ) : null;
+		}
+		$context->end_loop( $loop );
+		return $plan->next( $loop );
+	}
+
+	/**
+	 * Why the stored loop state no longer fits the cursor after a definition edit, or null: state for a loop
+	 * other than the one around (or at) the cursor, or a cursor inside a loop that has no state.
+	 *
+	 * @param Plan        $plan    Plan.
+	 * @param string|null $step_id Cursor.
+	 * @param Context     $context Context with the stored loop state.
+	 */
+	private static function loop_mismatch( Plan $plan, ?string $step_id, Context $context ): ?string {
+		$around   = null === $step_id ? null : $plan->loop_of( $step_id );
+		$expected = $around ?? ( null !== $step_id && $plan->is_loop( $step_id ) ? $step_id : null );
+		foreach ( array_keys( $context->loops() ) as $loop ) {
+			if ( $loop !== $expected ) {
+				return sprintf( 'loop "%1$s" is no longer around step "%2$s".', (string) $loop, (string) $step_id );
+			}
+		}
+		if ( null !== $around && null === $context->loop( $around ) ) {
+			return sprintf( 'step "%1$s" is now inside loop "%2$s".', (string) $step_id, $around );
+		}
+		return null;
 	}
 
 	/**
@@ -273,16 +436,18 @@ final class Executor {
 	 * @param StepResult           $result  Result.
 	 * @param string               $status  ok, failed or retrying.
 	 * @param int                  $attempt Attempt number of this step in the run.
-	 * @param string               $started Start time as stored.
-	 * @param float                $timer   Start, microtime.
+	 * @param string               $started   Start time as stored.
+	 * @param float                $timer     Start, microtime.
+	 * @param int|null             $iteration 1-based loop item number, null outside loop bodies.
 	 */
-	private function log( array $run, array $step, StepResult $result, string $status, int $attempt, string $started, float $timer ): void {
+	private function log( array $run, array $step, StepResult $result, string $status, int $attempt, string $started, float $timer, ?int $iteration ): void {
 		$this->engine->runs()->add_step(
 			array(
 				'run_id'      => (int) $run['id'],
 				'step_id'     => (string) $step['id'],
 				'step_type'   => (string) $step['type'],
 				'attempt'     => $attempt,
+				'iteration'   => $iteration,
 				'status'      => $status,
 				'started_at'  => $started,
 				'duration_ms' => (int) round( ( microtime( true ) - $timer ) * 1000 ),
@@ -313,6 +478,10 @@ final class Executor {
 		$stored['steps'] = $context->outputs();
 		if ( $context->reads() > 0 ) {
 			$stored['reads'] = $context->reads();
+		}
+		unset( $stored['loops'] );
+		if ( array() !== $context->loops() ) {
+			$stored['loops'] = $context->loops();
 		}
 		if ( isset( $stored['retries'] ) && array() === $stored['retries'] ) {
 			unset( $stored['retries'] );

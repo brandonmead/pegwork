@@ -14,6 +14,9 @@ namespace PegworkAutomation;
  * duration or a list, one per retry, the last repeating) wins over the defaults per type: `send_email`
  * 2 retries 15 minutes apart, `call_webhook` 3 retries after 1 minute, 10 minutes and 1 hour, others none.
  * Retries reuse the wait mechanism: the run is `waiting` at the same step until the backoff has passed.
+ *
+ * Inside a loop body the type defaults are off (no retries), so a mail outage cannot stretch one run over
+ * many items' backoffs; a step's explicit `retry` still applies there.
  */
 final class Retry {
 
@@ -39,14 +42,16 @@ final class Retry {
 	/**
 	 * The policy of a step.
 	 *
-	 * @param array<string, mixed> $step Step definition.
+	 * @param array<string, mixed> $step    Step definition.
+	 * @param bool                 $in_loop Whether the step is inside a loop body (no default retries).
 	 * @return array{max: int, backoff: string[]}
 	 */
-	public static function policy( array $step ): array {
-		$default = self::DEFAULTS[ (string) ( $step['type'] ?? '' ) ] ?? array(
+	public static function policy( array $step, bool $in_loop = false ): array {
+		$none    = array(
 			'max'     => 0,
 			'backoff' => array( self::BACKOFF ),
 		);
+		$default = $in_loop ? array( 'max' => 0 ) + ( self::DEFAULTS[ (string) ( $step['type'] ?? '' ) ] ?? $none ) : ( self::DEFAULTS[ (string) ( $step['type'] ?? '' ) ] ?? $none );
 		if ( ! isset( $step['retry'] ) || ! is_array( $step['retry'] ) ) {
 			return $default;
 		}
@@ -62,12 +67,13 @@ final class Retry {
 	/**
 	 * The wait before the next retry, or null when no retry is left.
 	 *
-	 * @param array<string, mixed> $step Step definition.
-	 * @param int                  $done Retries already made for this step in this run.
+	 * @param array<string, mixed> $step    Step definition.
+	 * @param int                  $done    Retries already made for this step (in this item, inside a loop).
+	 * @param bool                 $in_loop Whether the step is inside a loop body.
 	 * @return string|null ISO 8601 duration.
 	 */
-	public static function delay( array $step, int $done ): ?string {
-		$policy = self::policy( $step );
+	public static function delay( array $step, int $done, bool $in_loop = false ): ?string {
+		$policy = self::policy( $step, $in_loop );
 		if ( $done >= $policy['max'] ) {
 			return null;
 		}

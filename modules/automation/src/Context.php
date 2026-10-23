@@ -22,6 +22,10 @@ use PegworkAutomation\Clock\Clock;
  * through a per-wake-up cache, which write steps invalidate by ID (forget()), so a later step sees written
  * values and a step after a wait sees current ones. The context also counts the records reads return
  * (`context.reads`, at most read_limit() per run).
+ *
+ * Loops: the running loop's state (`context.loops.<id>`: the snapshot of item `ids` and the 0-based `index`
+ * of the current item) lives here, so `steps.<loop>.item.<key>` reads the current item fresh by ID and
+ * `steps.<loop>.index` is its 1-based number. After the loop, `steps.<loop>.count` is a stored output.
  */
 final class Context {
 
@@ -107,6 +111,13 @@ final class Context {
 	 * @var int
 	 */
 	private int $reads = 0;
+
+	/**
+	 * State of the running loop by loop id: `ids` (the snapshot) and `index` (0-based current item).
+	 *
+	 * @var array<string, array{ids: int[], index: int}>
+	 */
+	private array $loops = array();
 
 	/**
 	 * Builds a context.
@@ -203,7 +214,7 @@ final class Context {
 	 * @param string $step_id Step ID.
 	 */
 	public function has_output( string $step_id ): bool {
-		return isset( $this->steps[ $step_id ] );
+		return isset( $this->steps[ $step_id ] ) || isset( $this->loops[ $step_id ] ); // A running loop outputs item and index.
 	}
 
 	/**
@@ -218,6 +229,100 @@ final class Context {
 			return null;
 		}
 		return array_values( array_map( 'intval', (array) $this->steps[ $parts[1] ]['ids'] ) );
+	}
+
+	/**
+	 * Loop state, for storage (`context.loops`).
+	 *
+	 * @return array<string, array{ids: int[], index: int}>
+	 */
+	public function loops(): array {
+		return $this->loops;
+	}
+
+	/**
+	 * Restores the stored loop state (`context.loops`).
+	 *
+	 * @param array<mixed> $loops Stored state.
+	 */
+	public function restore_loops( array $loops ): void {
+		$this->loops = array();
+		foreach ( $loops as $id => $state ) {
+			if ( is_array( $state ) && isset( $state['ids'] ) ) {
+				$this->loops[ (string) $id ] = array(
+					'ids'   => array_values( array_map( 'intval', (array) $state['ids'] ) ),
+					'index' => max( 0, (int) ( $state['index'] ?? 0 ) ),
+				);
+			}
+		}
+	}
+
+	/**
+	 * The state of a loop, or null when it is not running.
+	 *
+	 * @param string $loop Loop id.
+	 * @return array{ids: int[], index: int}|null
+	 */
+	public function loop( string $loop ): ?array {
+		return $this->loops[ $loop ] ?? null;
+	}
+
+	/**
+	 * Starts a loop over a snapshot of item IDs, at the first item.
+	 *
+	 * @param string $loop Loop id.
+	 * @param int[]  $ids  Item IDs.
+	 */
+	public function start_loop( string $loop, array $ids ): void {
+		$this->loops[ $loop ] = array(
+			'ids'   => array_values( array_map( 'intval', $ids ) ),
+			'index' => 0,
+		);
+	}
+
+	/**
+	 * Moves a running loop to its next item; false when no item is left (the state stays until end_loop()).
+	 *
+	 * @param string $loop Loop id.
+	 */
+	public function advance_loop( string $loop ): bool {
+		if ( ! isset( $this->loops[ $loop ] ) ) {
+			return false;
+		}
+		++$this->loops[ $loop ]['index'];
+		return $this->loops[ $loop ]['index'] < count( $this->loops[ $loop ]['ids'] );
+	}
+
+	/**
+	 * Ends a loop: drops its state and stores its `count` output (the items it went through).
+	 *
+	 * @param string $loop Loop id.
+	 */
+	public function end_loop( string $loop ): void {
+		$count = count( $this->loops[ $loop ]['ids'] ?? array() );
+		unset( $this->loops[ $loop ] );
+		$this->set_output( $loop, array( 'count' => $count ) );
+	}
+
+	/**
+	 * The current item ID of a running loop, or null.
+	 *
+	 * @param string $loop Loop id.
+	 */
+	public function loop_item( string $loop ): ?int {
+		$state = $this->loops[ $loop ] ?? null;
+		return null === $state ? null : ( $state['ids'][ $state['index'] ] ?? null );
+	}
+
+	/**
+	 * The 1-based iteration a step runs in: the current item number of its enclosing loop, or null for a
+	 * step outside loops (or without a plan).
+	 *
+	 * @param string $step_id Step ID.
+	 */
+	public function iteration( string $step_id ): ?int {
+		$loop = $this->plan?->loop_of( $step_id );
+		return null === $loop || ! isset( $this->loops[ $loop ] ) ? null : $this->loops[ $loop ]['index'] + 1;
 	}
 
 	/**
@@ -359,6 +464,13 @@ final class Context {
 	 * @return mixed
 	 */
 	private function step_value( array $parts ): mixed {
+		$loop = $this->loops[ $parts[0] ?? '' ] ?? null;
+		if ( null !== $loop && 'item' === ( $parts[1] ?? null ) ) {
+			return self::record_value( $this->record_by_id( (int) ( $loop['ids'][ $loop['index'] ] ?? 0 ) ), array_slice( $parts, 2 ) );
+		}
+		if ( null !== $loop && array( 'index' ) === array_slice( $parts, 1 ) ) {
+			return $loop['index'] + 1;
+		}
 		$output = $this->steps[ $parts[0] ?? '' ] ?? null;
 		if ( ! is_array( $output ) ) {
 			return null;
@@ -489,6 +601,12 @@ final class Context {
 		if ( 3 === count( $parts ) && 'trigger' === $parts[0] && 'old' === $parts[1] ) {
 			$type = $this->trigger['type'] ?? ( $this->record['type'] ?? null );
 			return array( is_string( $type ) ? $type : null, $parts[2] );
+		}
+		if ( 4 === count( $parts ) && 'steps' === $parts[0] && 'item' === $parts[2] ) {
+			// A loop item: the content type of the find the loop iterates.
+			$over = $this->plan?->over( $parts[1] );
+			$type = null === $over ? null : ( $this->plan?->step( $over )['content_type'] ?? null );
+			return array( is_string( $type ) ? $type : null, $parts[3] );
 		}
 		if ( 4 === count( $parts ) && 'steps' === $parts[0] && in_array( $parts[2], array( 'record', 'sum' ), true ) ) {
 			$type = $this->plan?->step( $parts[1] )['content_type'] ?? null;

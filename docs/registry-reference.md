@@ -407,7 +407,7 @@ A `decision` runs the steps of the first branch whose `when` holds, or `otherwis
 - No `retry` or `on_error` (`unknown_property`). A loop counts as a nesting level toward the 3-level limit (`decision_too_deep`), and is not allowed in link steps (`automation_link_step`).
 - Inside the body: `steps.<loop>.item.<key>` (a record of the collection's type, checked as `record.<key>`) and `steps.<loop>.index` (number, 1-based). After the loop: `steps.<loop>.count` (number). Outputs of body steps exist only later in the same item (`invalid_var`, "step "x" runs inside loop "each_task"").
 - A false `condition` in the body skips to the next item.
-- Static bound: one run takes at most 500 step attempts without retries, counting each step once, each loop body step 50 times (the most items a find returns) and a decision's longest branch (`automation_too_large`). With a `find_records` and the loop itself in front, a body of 9 steps fits.
+- Static bound: one run takes at most 500 step attempts without retries, counting each step once, each loop body step 50 times (the most items a find returns) and a decision's longest branch (`automation_too_large`). The loop step itself counts once. Work out the room as: steps outside bodies + 50 x body steps <= 500. So with one step before a 50-item loop, the body can hold 9 steps (1 + 1 + 9 x 50 = 452), and 48 more steps fit outside it; a body of 10 never fits (at least 1 + 10 x 50 = 501). The error message says the same.
 
 ### Relate
 
