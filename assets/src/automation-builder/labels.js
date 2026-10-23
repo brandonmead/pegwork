@@ -32,6 +32,7 @@ export function typeLabel( type ) {
 		get_record: __( 'Get a record', 'pegwork' ),
 		find_records: __( 'Find records', 'pegwork' ),
 		relate: __( 'Link records', 'pegwork' ),
+		loop: __( 'Repeat for each', 'pegwork' ),
 	};
 	return labels[ type ] || type || __( 'Step', 'pegwork' );
 }
@@ -53,6 +54,7 @@ export function typeShort( type ) {
 		get_record: __( 'Get', 'pegwork' ),
 		find_records: __( 'Find', 'pegwork' ),
 		relate: __( 'Link', 'pegwork' ),
+		loop: __( 'Repeat', 'pegwork' ),
 	};
 	return labels[ type ] || __( 'Step', 'pegwork' );
 }
@@ -124,7 +126,7 @@ function pathName( path ) {
  */
 function outputName( field ) {
 	const parts = field.path.split( '.' );
-	if ( parts.length === 4 && parts[ 2 ] === 'record' ) {
+	if ( parts.length === 4 && /^(record|item)$/.test( parts[ 2 ] ) ) {
 		return field.label || pathName( `record.${ parts[ 3 ] }` );
 	}
 	if ( parts.length === 4 && parts[ 2 ] === 'sum' ) {
@@ -137,7 +139,11 @@ function outputName( field ) {
 	const names = {
 		found: __( 'Found', 'pegwork' ),
 		record_id: __( 'Record ID', 'pegwork' ),
-		count: __( 'Number found', 'pegwork' ),
+		count:
+			field.source?.type === 'loop'
+				? __( 'Items repeated', 'pegwork' )
+				: __( 'Number found', 'pegwork' ),
+		index: __( 'Item number', 'pegwork' ),
 		failed: __( 'Failed', 'pegwork' ),
 		error: __( 'Error code', 'pegwork' ),
 	};
@@ -200,6 +206,15 @@ export function groupLabel( tag, config ) {
 			return __( 'Trigger', 'pegwork' );
 		case 'steps': {
 			let name;
+			if ( source.item ) {
+				return sprintf(
+					/* translators: 1: content type label, 2: loop step ID. */
+					__( 'Each %1$s (in %2$s)', 'pegwork' ),
+					typeName( config, source.content_type ) ||
+						__( 'item', 'pegwork' ),
+					tag.step
+				);
+			}
 			if ( source.type === 'get_record' ) {
 				name =
 					config.relationships.find(
@@ -480,13 +495,14 @@ function readSummary( step, config, bound ) {
 /**
  * A step's one-line summary for its card ("Email to {{record.donor_email}}: Thank you").
  *
- * @param {Object}  step    Step attributes.
- * @param {Array}   fields  Fields in scope at the step.
- * @param {Object}  config  Parsed config.
- * @param {?string} [bound] Content type of the record the trigger binds.
+ * @param {Object}  step     Step attributes.
+ * @param {Array}   fields   Fields in scope at the step.
+ * @param {Object}  config   Parsed config.
+ * @param {?string} [bound]  Content type of the record the trigger binds.
+ * @param {boolean} [inLoop] Whether a loop body holds the step.
  * @return {string} Summary ('' when there is nothing to say yet).
  */
-export function stepSummary( step, fields, config, bound = null ) {
+export function stepSummary( step, fields, config, bound = null, inLoop ) {
 	const keysOf = () =>
 		Object.keys( step.values || {} ).join( LIST_SEPARATOR );
 	switch ( step.type ) {
@@ -560,12 +576,60 @@ export function stepSummary( step, fields, config, bound = null ) {
 				: '';
 		case 'condition':
 			return step.when
-				? /* translators: %s: condition in words. */ sprintf(
-						__( 'Continue only if %s', 'pegwork' ),
-						conditionText( step.when, fields )
-					)
+				? `${ conditionLabel( inLoop ) } ${ conditionText(
+						step.when,
+						fields
+					) }`
 				: '';
 		default:
 			return '';
 	}
+}
+
+/**
+ * The name of a condition step: "Continue with this item only if" inside a loop body (a false
+ * condition skips to the next item there), else "Continue only if".
+ *
+ * @param {boolean} inLoop Whether a loop body holds the step.
+ * @return {string} Name.
+ */
+export function conditionLabel( inLoop ) {
+	return inLoop
+		? __( 'Continue with this item only if', 'pegwork' )
+		: typeLabel( 'condition' );
+}
+
+/**
+ * A list of records for people, as "For each" offers it: "Tasks from due".
+ *
+ * @param {Object} find   A find_records step.
+ * @param {Object} config Parsed config.
+ * @return {string} Name.
+ */
+export function listName( find, config ) {
+	return sprintf(
+		/* translators: 1: content type plural label, 2: step ID. */
+		__( '%1$s from %2$s', 'pegwork' ),
+		typeName( config, find.content_type, true ),
+		find.id
+	);
+}
+
+/**
+ * A loop's card line: "For each Task from due (at most 50)".
+ *
+ * @param {?Object} find   The find_records step it repeats over.
+ * @param {Object}  config Parsed config.
+ * @return {string} Summary ('' without a list).
+ */
+export function loopSummary( find, config ) {
+	return find
+		? sprintf(
+				/* translators: 1: content type label, 2: step ID, 3: most items. */
+				__( 'For each %1$s from %2$s (at most %3$d)', 'pegwork' ),
+				typeName( config, find.content_type ),
+				find.id,
+				find.limit ?? 10
+			)
+		: '';
 }

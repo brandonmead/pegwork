@@ -9,13 +9,16 @@ import { describe, expect, it } from 'vitest';
 import {
 	BRANCH,
 	DECISION,
+	LOOP,
 	STEP,
 	assignId,
 	compileBlocks,
 	errorOwners,
 	errorsAt,
 	formatDuration,
+	heightOf,
 	levelOf,
+	moveTargets,
 	needsId,
 	parseDuration,
 	parseSettings,
@@ -193,6 +196,139 @@ describe( 'pointerMap', () => {
 		expect(
 			levelOf( '/steps/1/branches/0/steps/0/branches/0/steps/0' )
 		).toBe( 3 );
+		expect( levelOf( '/steps/2/steps/0' ) ).toBe( 2 );
+		expect( levelOf( '/steps/2/steps/1/otherwise/0' ) ).toBe( 3 );
+	} );
+} );
+
+// find, each_task (remind, route (Has: inner), stamp), pause (wait), outer (Big: deep), summary.
+const block = ( clientId, name, attributes = {}, innerBlocks = [] ) => ( {
+	clientId,
+	name,
+	attributes,
+	innerBlocks,
+} );
+const loopTree = [
+	block( 'find', STEP, { id: 'due', type: 'find_records' } ),
+	block( 'loop', LOOP, { id: 'each_task', over: 'steps.due.records' }, [
+		block( 'remind', STEP, { id: 'remind', type: 'send_email' } ),
+		block( 'route', DECISION, { id: 'route' }, [
+			block( 'has', BRANCH, { label: 'Has' }, [
+				block( 'inner', STEP, { id: 'inner', type: 'relate' } ),
+			] ),
+		] ),
+		block( 'stamp', STEP, { id: 'stamp', type: 'update_record' } ),
+	] ),
+	block( 'pause', STEP, { id: 'pause', type: 'wait', for: 'P1D' } ),
+	block( 'outer', DECISION, { id: 'outer' }, [
+		block( 'big', BRANCH, { label: 'Big' }, [
+			block( 'deep', DECISION, { id: 'deep' }, [
+				block( 'yes', BRANCH, { label: 'Yes' } ),
+			] ),
+		] ),
+	] ),
+	block( 'summary', STEP, { id: 'summary', type: 'send_email' } ),
+];
+
+describe( 'loops', () => {
+	it( 'compiles a loop block to a loop step with its body', () => {
+		const [ , loop ] = compileBlocks( loopTree );
+		expect( Object.keys( loop ) ).toEqual( [
+			'id',
+			'type',
+			'over',
+			'steps',
+		] );
+		expect( loop.steps.map( ( item ) => item.id ) ).toEqual( [
+			'remind',
+			'route',
+			'stamp',
+		] );
+		expect( loop.steps[ 1 ].branches[ 0 ].steps[ 0 ].id ).toBe( 'inner' );
+	} );
+
+	it( 'points into the body at <loop>/steps', () => {
+		const map = pointerMap( loopTree );
+		expect( map.loop ).toBe( '/steps/1' );
+		expect( map.stamp ).toBe( '/steps/1/steps/2' );
+		expect( map.inner ).toBe( '/steps/1/steps/1/branches/0/steps/0' );
+		expect( map.summary ).toBe( '/steps/4' );
+	} );
+
+	it( 'counts a loop as a nesting level', () => {
+		expect( heightOf( loopTree[ 1 ] ) ).toBe( 2 );
+		expect( heightOf( loopTree[ 3 ] ) ).toBe( 2 );
+		expect( heightOf( loopTree[ 0 ] ) ).toBe( 0 );
+	} );
+
+	const names = ( targets ) =>
+		targets.map(
+			( target ) =>
+				target.loop ??
+				( target.branch
+					? `${ target.decision }:${ target.branch.label }`
+					: 'main' )
+		);
+
+	it( 'Move to offers loop bodies to steps that fit there', () => {
+		expect( names( moveTargets( loopTree, loopTree[ 4 ] ) ) ).toEqual( [
+			'main',
+			'each_task',
+			'route:Has',
+			'outer:Big',
+			'deep:Yes',
+		] );
+	} );
+
+	it( 'Move to omits loop bodies for a wait, a loop and what holds them', () => {
+		expect( names( moveTargets( loopTree, loopTree[ 2 ] ) ) ).toEqual( [
+			'main',
+			'outer:Big',
+			'deep:Yes',
+		] );
+		// The loop itself (two levels): not into its own body, not into a loop, nor three levels down.
+		expect( names( moveTargets( loopTree, loopTree[ 1 ] ) ) ).toEqual( [
+			'main',
+			'outer:Big',
+		] );
+		// A decision holding a decision (two levels) fits the top level, a branch and a loop body.
+		expect( names( moveTargets( loopTree, loopTree[ 3 ] ) ) ).toEqual( [
+			'main',
+			'each_task',
+		] );
+	} );
+
+	it( 'opens a report level at each loop item, and closes it at the loop’s own lines', () => {
+		const item = ( index ) => ( {
+			index,
+			count: 6,
+			id: 40 + index,
+			title: `T${ index }`,
+			label: 'Task',
+		} );
+		const tree = reportTree( [
+			{ id: 'each', type: 'loop', depth: 0, branch: null, item: null },
+			{ id: 'mail', depth: 1, branch: null, item: item( 1 ) },
+			{ id: 'stamp', depth: 1, branch: null, item: null },
+			{ id: 'mail', depth: 1, branch: null, item: item( 2 ) },
+			{
+				id: 'each',
+				type: 'loop',
+				depth: 1,
+				branch: null,
+				item: null,
+				detail: { more: 4 },
+			},
+			{ id: 'done', depth: 0, branch: null, item: null },
+		] );
+		expect(
+			tree.map( ( node ) => node.entry?.id ?? node.heading?.title )
+		).toEqual( [ 'each', 'T1', 'T2', undefined, 'done' ] );
+		expect( tree[ 1 ].children.map( ( node ) => node.entry.id ) ).toEqual( [
+			'mail',
+			'stamp',
+		] );
+		expect( tree[ 3 ].children[ 0 ].entry.detail.more ).toBe( 4 );
 	} );
 } );
 

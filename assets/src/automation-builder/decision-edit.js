@@ -37,7 +37,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import ConditionBuilder from './condition-builder';
 import { Errors, wire } from './controls';
 import { conditionText } from './labels';
-import { BRANCH, DECISION, MAX_BRANCHES, STEP } from './logic';
+import { BRANCH, DECISION, LOOP, MAX_BRANCHES, STEP } from './logic';
 import MoveToBranch from './move';
 import { conditionFields } from './scope';
 import { Advanced, useStepId } from './step-edit';
@@ -260,13 +260,14 @@ export function DecisionEdit( {
 }
 
 /**
- * The appender of a branch: the quick inserter behind a button named for the branch.
+ * The appender of a branch or loop body: the quick inserter behind a button named for the list
+ * ("Add step to Major gift", "Add step for each item").
  *
  * @param {Object} props          Props.
- * @param {string} props.clientId Branch block.
- * @param {string} props.name     Branch name.
+ * @param {string} props.clientId Branch or loop block.
+ * @param {string} props.label    Button text.
  */
-function AddStep( { clientId, name } ) {
+export function AddStep( { clientId, label } ) {
 	return (
 		<Inserter
 			rootClientId={ clientId }
@@ -281,12 +282,7 @@ function AddStep( { clientId, name } ) {
 					aria-expanded={ isOpen }
 					disabled={ disabled }
 				>
-					{
-						/* translators: %s: branch name. */ sprintf(
-							__( 'Add step to %s', 'pegwork' ),
-							name
-						)
-					}
+					{ label }
 				</Button>
 			) }
 		/>
@@ -329,7 +325,17 @@ export function BranchEdit( {
 	// every render remounts the appender and closes its open quick inserter (focusing the
 	// appender of an unselected branch selects the branch and re-renders it).
 	const appender = useCallback(
-		() => <AddStep clientId={ clientId } name={ name } />,
+		() => (
+			<AddStep
+				clientId={ clientId }
+				label={
+					/* translators: %s: branch name. */ sprintf(
+						__( 'Add step to %s', 'pegwork' ),
+						name
+					)
+				}
+			/>
+		),
 		[ clientId, name ]
 	);
 
@@ -339,7 +345,7 @@ export function BranchEdit( {
 	const innerBlocksProps = useInnerBlocksProps(
 		{ className: 'pegwork-automation-branch__steps' },
 		{
-			allowedBlocks: [ STEP, DECISION ],
+			allowedBlocks: [ STEP, DECISION, LOOP ],
 			renderAppender: config.readOnly ? false : appender,
 		}
 	);

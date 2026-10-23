@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pegwork/automation-loop",
+	"title": "Repeat for each",
+	"category": "pegwork",
+	"icon": "update-alt",
+	"description": "Runs its steps once for each record a Find records step loaded, then continues below.",
+	"keywords": [ "loop", "repeat", "each", "list", "automation" ],
+	"textdomain": "pegwork",
+	"allowedBlocks": [ "pegwork/automation-step", "pegwork/automation-decision" ],
+	"attributes": {
+		"id": { "type": "string" },
+		"over": { "type": "string" }
+	},
+	"supports": {
+		"html": false,
+		"className": false,
+		"customClassName": false,
+		"reusable": false,
+		"renaming": false,
+		"lock": false,
+		"customCSS": false
+	}
+}

@@ -12,8 +12,18 @@ import {
 	InnerBlocks,
 	store as blockEditorStore,
 } from '@wordpress/block-editor';
-import { registerBlockType } from '@wordpress/blocks';
-import { dispatch, select, useDispatch, useSelect } from '@wordpress/data';
+import {
+	registerBlockType,
+	registerBlockVariation,
+	unregisterBlockVariation,
+} from '@wordpress/blocks';
+import {
+	dispatch,
+	select,
+	subscribe,
+	useDispatch,
+	useSelect,
+} from '@wordpress/data';
 import { store as editorStore } from '@wordpress/editor';
 import { useEffect } from '@wordpress/element';
 import { addFilter } from '@wordpress/hooks';
@@ -26,18 +36,22 @@ import { registerPlugin } from '@wordpress/plugins';
 import stepMetadata from '../../../modules/automation/blocks/automation-step/block.json';
 import decisionMetadata from '../../../modules/automation/blocks/automation-decision/block.json';
 import branchMetadata from '../../../modules/automation/blocks/automation-branch/block.json';
+import loopMetadata from '../../../modules/automation/blocks/automation-loop/block.json';
 import lockTitle from '../shared/lock-title';
 import { controlId } from './controls';
 import { BranchEdit, DecisionEdit, OTHERWISE } from './decision-edit';
 import { typeLabel, typeShort } from './labels';
 import {
 	BRANCH,
+	LOOP,
+	STEP,
 	STEP_TYPES,
 	errorOwners,
 	flatten,
 	pointerMap,
 	saveErrors,
 } from './logic';
+import LoopEdit from './loop-edit';
 import { TestRunPanel } from './preview';
 import SettingsPanels, { PANEL, TRIGGER_PANEL } from './settings';
 import StepEdit, { ICONS } from './step-edit';
@@ -93,6 +107,17 @@ const DESCRIPTIONS = {
 	relate: __( 'Adds or removes one relationship link.', 'pegwork' ),
 };
 
+const VARIATIONS = STEP_TYPES.map( ( type ) => ( {
+	name: type,
+	title: typeLabel( type ),
+	description: DESCRIPTIONS[ type ],
+	icon: ICONS[ type ],
+	attributes: type === 'wait' ? { type, for: 'P1D' } : { type },
+	isDefault: type === 'send_email',
+	scope: [ 'inserter', 'transform' ],
+	isActive: [ 'type' ],
+} ) );
+
 registerBlockType( stepMetadata, {
 	title: __( 'Automation step', 'pegwork' ),
 	description: __( 'One step of the automation.', 'pegwork' ),
@@ -100,17 +125,67 @@ registerBlockType( stepMetadata, {
 	save: () => null,
 	__experimentalLabel: ( attributes ) =>
 		`${ typeShort( attributes.type ) } ${ attributes.id || '' }`.trim(),
-	variations: STEP_TYPES.map( ( type ) => ( {
-		name: type,
-		title: typeLabel( type ),
-		description: DESCRIPTIONS[ type ],
-		icon: ICONS[ type ],
-		attributes: type === 'wait' ? { type, for: 'P1D' } : { type },
-		isDefault: type === 'send_email',
-		scope: [ 'inserter', 'transform' ],
-		isActive: [ 'type' ],
-	} ) ),
+	variations: VARIATIONS,
 } );
+
+registerBlockType( loopMetadata, {
+	title: typeLabel( 'loop' ),
+	description: __(
+		'Runs its steps once for each record a Find records step loaded, then continues below.',
+		'pegwork'
+	),
+	edit: LoopEdit,
+	save: () => <InnerBlocks.Content />,
+	__experimentalLabel: ( attributes ) =>
+		/* translators: %s: loop step id. */ sprintf(
+			__( 'Repeat %s', 'pegwork' ),
+			attributes.id || ''
+		).trim(),
+} );
+
+/*
+ * Inserter rules inside a loop body (AutomationRules loop_wait, loop_nested): a loop is never
+ * offered there, and the Wait variation is withdrawn while the selection is a loop or inside one
+ * (inserters and the block switcher list variations, which no filter can drop per location; a
+ * focused appender selects its loop or branch). A wait pasted in anyway is refused at its card.
+ */
+addFilter(
+	'blockEditor.__unstableCanInsertBlockType',
+	'pegwork/automation-builder/no-nested-loop',
+	(
+		can,
+		blockType,
+		rootClientId,
+		{ getBlock, getBlockParentsByBlockName }
+	) =>
+		can &&
+		! (
+			blockType.name === LOOP &&
+			rootClientId &&
+			( getBlock( rootClientId )?.name === LOOP ||
+				getBlockParentsByBlockName( rootClientId, LOOP ).length )
+		)
+);
+let waitHidden = false;
+subscribe( () => {
+	const editor = select( blockEditorStore );
+	const id = editor.getSelectedBlockClientId();
+	const hide =
+		!! id &&
+		( editor.getBlockName( id ) === LOOP ||
+			editor.getBlockParentsByBlockName( id, LOOP ).length > 0 );
+	if ( hide !== waitHidden ) {
+		waitHidden = hide;
+		if ( hide ) {
+			unregisterBlockVariation( STEP, 'wait' );
+		} else {
+			registerBlockVariation(
+				STEP,
+				VARIATIONS.find( ( item ) => item.name === 'wait' )
+			);
+		}
+	}
+}, blockEditorStore );
 
 const branch = ( label ) => [ BRANCH, { label } ];
 

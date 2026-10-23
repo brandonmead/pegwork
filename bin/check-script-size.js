@@ -4,8 +4,12 @@
  *
  * Usage: node bin/check-script-size.js <file> <max gzipped bytes>
  * (npm run check:size: the filters view module, at most 10 KB gzipped, the automation builder
- * script, at most 25 KB gzipped, and the record editor's automation actions script, at most 3 KB
+ * script, at most 26.5 KB gzipped, and the record editor's automation actions script, at most 3 KB
  * gzipped; WordPress packages are external and not counted.)
+ * The builder budget was 25 KB until Automation v3 PR 7 (loops and lists): the loop block, its
+ * Move to and inserter rules, list insertion and Test run item headings took it to 26,994 bytes,
+ * so it was raised by the minimum, to 27,136 (26.5 KB). Lazy loading was ruled out: a split chunk
+ * needs its own script translations and a runtime public path.
  */
 const { readFileSync } = require( 'fs' );
 const { gzipSync } = require( 'zlib' );

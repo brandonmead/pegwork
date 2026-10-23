@@ -29,16 +29,25 @@ import { __, sprintf } from '@wordpress/i18n';
  * Internal dependencies
  */
 import ConditionBuilder from './condition-builder';
-import { DurationControl, Errors, TemplateControl, wire } from './controls';
-import { stepSummary, typeLabel } from './labels';
+import {
+	DurationControl,
+	Errors,
+	Refused,
+	TemplateControl,
+	wire,
+} from './controls';
+import { conditionLabel, stepSummary, typeLabel } from './labels';
 import { ON_ERROR_TYPES, assignId, flatten, toNumber } from './logic';
 import MoveToBranch from './move';
 import { PreviewPanel } from './preview';
 import { ReadFields, RelateFields } from './read-edit';
 import {
 	binding,
+	collections,
 	conditionFields,
+	loopsAround,
 	mergeTags,
+	stepsBefore,
 	typeFields,
 	typedReference,
 } from './scope';
@@ -370,6 +379,8 @@ function TypeFields( {
 		/>
 	);
 	const { binds, type } = binding( definition.trigger, config );
+	const lists = collections( stepsBefore( definition.steps, pointer ) );
+	const inLoop = loopsAround( definition.steps, pointer ).length > 0;
 
 	switch ( attributes.type ) {
 		case 'send_email':
@@ -388,12 +399,15 @@ function TypeFields( {
 					{ template( 'subject', __( 'Subject', 'pegwork' ) ) }
 					{ template( 'text', __( 'Text body', 'pegwork' ), {
 						multiline: true,
+						lists,
 					} ) }
 					{ template(
 						'html',
 						__( 'HTML body (optional)', 'pegwork' ),
 						{
 							multiline: true,
+							lists,
+							html: true,
 							help: __(
 								'Sent beside the text body. Without the unfiltered HTML capability, unsafe markup is removed on save.',
 								'pegwork'
@@ -617,11 +631,18 @@ function TypeFields( {
 		case 'condition':
 			return (
 				<ConditionBuilder
-					label={ __( 'Continue only if', 'pegwork' ) }
-					empty={ __(
-						'Add the condition the run needs to go on. When it is false, the run stops here.',
-						'pegwork'
-					) }
+					label={ conditionLabel( inLoop ) }
+					empty={
+						inLoop
+							? __(
+									'Add the condition this item needs. When it is false, the loop goes on with the next item.',
+									'pegwork'
+								)
+							: __(
+									'Add the condition the run needs to go on. When it is false, the run stops here.',
+									'pegwork'
+								)
+					}
 					value={ attributes.when }
 					onChange={ ( value ) => set( 'when', value ) }
 					fields={ conditionFields(
@@ -799,24 +820,32 @@ export default function StepEdit( {
 	const pointer = pointers[ clientId ] || '/steps/0';
 	const errors = useErrorOwners().blocks[ clientId ] || {};
 	const messages = Object.values( errors );
+	const inLoop = loopsAround( definition.steps, pointer ).length > 0;
 	const summary = stepSummary(
 		attributes,
 		conditionFields( definition, pointer, config ),
 		config,
-		binding( definition.trigger, config ).type
+		binding( definition.trigger, config ).type,
+		inLoop
 	);
-	const set = ( name, value ) =>
+	const name =
+		attributes.type === 'condition'
+			? conditionLabel( inLoop )
+			: typeLabel( attributes.type );
+	// A wait pasted or moved into a loop body (the inserter never offers one there).
+	const refused = inLoop && attributes.type === 'wait';
+	const set = ( key, value ) =>
 		setAttributes( {
-			[ name ]: value === '' || value === null ? undefined : value,
+			[ key ]: value === '' || value === null ? undefined : value,
 		} );
 
 	const blockProps = useBlockProps( {
-		className: `pegwork-automation-step${ messages.length ? ' has-error' : '' }`,
+		className: `pegwork-automation-step${ messages.length || refused ? ' has-error' : '' }`,
 	} );
 
 	const inspector = (
 		<>
-			<PanelBody title={ typeLabel( attributes.type ) }>
+			<PanelBody title={ name }>
 				<TypeFields
 					attributes={ attributes }
 					set={ set }
@@ -860,9 +889,17 @@ export default function StepEdit( {
 				<Dashicon
 					icon={ ICONS[ attributes.type ] || 'controls-play' }
 				/>
-				<strong>{ typeLabel( attributes.type ) }</strong>{ ' ' }
-				<code>{ attributes.id }</code>
+				<strong>{ name }</strong> <code>{ attributes.id }</code>
 			</p>
+			{ refused && (
+				<Refused
+					message={ __(
+						'A loop cannot hold a wait, at any depth: per-record timing belongs in per-record runs (a record event or a schedule with "for_each").',
+						'pegwork'
+					) }
+					focus={ isSelected }
+				/>
+			) }
 			{ summary && (
 				<p className="pegwork-automation-step__summary">{ summary }</p>
 			) }

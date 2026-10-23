@@ -8,9 +8,17 @@ import { describe, expect, it } from 'vitest';
  * Internal dependencies
  */
 import stepMetadata from '../../../../modules/automation/blocks/automation-step/block.json';
+import loopMetadata from '../../../../modules/automation/blocks/automation-loop/block.json';
 import { toJSON, toModel } from '../conditions';
 import { fieldName, groupLabel, stepSummary } from '../labels';
-import { BRANCH, DECISION, STEP, compileBlocks, parseConfig } from '../logic';
+import {
+	BRANCH,
+	DECISION,
+	LOOP,
+	STEP,
+	compileBlocks,
+	parseConfig,
+} from '../logic';
 import {
 	conditionToFilter,
 	filterFields,
@@ -85,6 +93,11 @@ const readFixtures = automations().filter(
 		)
 );
 
+// And the loops (Automation v3 PR 7).
+const loopFixtures = automations().filter( ( [ , definition ] ) =>
+	walk( definition.steps ).some( ( step ) => step.type === 'loop' )
+);
+
 const TYPES = {
 	string: ( value ) => typeof value === 'string',
 	number: ( value ) => typeof value === 'number',
@@ -98,14 +111,13 @@ const TYPES = {
  * A step's attributes as the block editor parses them: only attributes block.json declares, in its
  * order, and only values of a declared type (core drops the rest).
  *
- * @param {Object} step Step.
+ * @param {Object} step       Step.
+ * @param {Object} [metadata] block.json (the step block's by default).
  * @return {Object} Attributes.
  */
-function parsed( step ) {
+function parsed( step, metadata = stepMetadata ) {
 	const attributes = {};
-	for ( const [ name, schema ] of Object.entries(
-		stepMetadata.attributes
-	) ) {
+	for ( const [ name, schema ] of Object.entries( metadata.attributes ) ) {
 		const types = [].concat( schema.type );
 		if (
 			name in step &&
@@ -125,6 +137,13 @@ function parsed( step ) {
  */
 function blocks( steps ) {
 	return steps.map( ( step ) => {
+		if ( step.type === 'loop' ) {
+			return {
+				name: LOOP,
+				attributes: parsed( step, loopMetadata ),
+				innerBlocks: blocks( step.steps ),
+			};
+		}
 		if ( step.type !== 'decision' ) {
 			return { name: STEP, attributes: parsed( step ), innerBlocks: [] };
 		}
@@ -171,15 +190,26 @@ describe( 'read fixtures round trip', () => {
 		expect( readFixtures.length ).toBeGreaterThanOrEqual( 10 );
 	} );
 
-	// Loop blocks come with the loop editor (Automation v3 PR 7); their read steps are checked below.
-	it.each(
-		readFixtures.filter(
-			( [ , definition ] ) =>
-				! walk( definition.steps ).some(
-					( step ) => step.type === 'loop'
-				)
-		)
-	)(
+	it( 'finds the loop fixtures, and every loop property is a block attribute', () => {
+		expect( loopFixtures.length ).toBeGreaterThanOrEqual( 5 );
+		for ( const [ , definition ] of loopFixtures ) {
+			for ( const loop of walk( definition.steps ).filter(
+				( step ) => step.type === 'loop'
+			) ) {
+				const { type, steps: body, ...rest } = loop;
+				expect( [ type, body.length > 0 ] ).toEqual( [ 'loop', true ] );
+				expect( parsed( loop, loopMetadata ) ).toEqual( rest );
+			}
+		}
+	} );
+
+	it.each( [
+		...readFixtures,
+		...loopFixtures.filter(
+			( [ path ] ) =>
+				! readFixtures.some( ( [ other ] ) => other === path )
+		),
+	] )(
 		'%s: the blocks compile back to the same steps',
 		( name, definition ) => {
 			expect(

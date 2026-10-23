@@ -186,6 +186,40 @@ class AutomationBuilderRoundTripTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A loop is a loop block (`id`, `over`) whose inner blocks are its body, decisions included; a
+	 * branch directly in a loop is reported at the body's pointer.
+	 */
+	public function test_loop_blocks() {
+		$file       = dirname( __DIR__, 3 ) . '/tests/fixtures/valid/reads/automations/reads_manual_list.json';
+		$definition = json_decode( (string) file_get_contents( $file ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+		$generated  = Builder::generate( $definition );
+		$blocks     = array_values( array_filter( parse_blocks( $generated['content'] ), fn( $block ) => null !== $block['blockName'] ) );
+		$this->assertSame( array( Builder::STEP, Builder::STEP, Builder::LOOP, Builder::STEP ), array_column( $blocks, 'blockName' ) );
+		$this->assertSame(
+			array(
+				'id'   => 'each',
+				'over' => 'steps.overdue.records',
+			),
+			$blocks[2]['attrs']
+		);
+		$body = array_values( array_filter( $blocks[2]['innerBlocks'], fn( $block ) => null !== $block['blockName'] ) );
+		$this->assertSame( array( Builder::STEP, Builder::STEP, Builder::DECISION, Builder::STEP ), array_column( $body, 'blockName' ) );
+
+		$branch = '<!-- wp:pegwork/automation-branch {"label":"X","when":{"var":"trigger.a","op":"eq","value":1}} /-->';
+		$result = Builder::compile( 'T', '<!-- wp:pegwork/automation-loop {"id":"each","over":"steps.f.records"} -->' . "\n" . $branch . "\n" . '<!-- /wp:pegwork/automation-loop -->', '{}' );
+		$this->assertSame( array( '/steps/0/steps' ), array_keys( $result['errors'] ) );
+		$this->assertSame(
+			array(
+				'id'    => 'each',
+				'type'  => 'loop',
+				'over'  => 'steps.f.records',
+				'steps' => array(),
+			),
+			$result['definition']['steps'][0]
+		);
+	}
+
+	/**
 	 * Misplaced blocks, a missing title and unreadable settings are reported by pointer.
 	 */
 	public function test_compile_errors_by_pointer() {

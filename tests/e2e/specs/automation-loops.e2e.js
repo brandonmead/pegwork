@@ -158,6 +158,16 @@ test( 'run detail groups loop attempts by item; axe clean at 1280 and 782 px', a
 	await page.setViewportSize( { width: 782, height: 1000 } );
 	await page.reload();
 	await checkLayout( page );
+	// Step ids stay on one line at 782 px (has_site wrapped before PR 7).
+	const ids = header( 'has_site' ).locator( 'code' );
+	const box = await ids.boundingBox();
+	const line = await ids.evaluate(
+		( el ) =>
+			parseFloat(
+				el.ownerDocument.defaultView.getComputedStyle( el ).lineHeight
+			) || 20
+	);
+	expect( box.height ).toBeLessThan( line * 1.5 );
 	await page.screenshot( {
 		path: 'test-results/automation-run-loop-782.png',
 		fullPage: true,

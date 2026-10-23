@@ -90,6 +90,8 @@ final class Screen {
 		wp_add_inline_style(
 			self::STYLE,
 			'.pegwork-automations .pegwork-table code{overflow-wrap:anywhere;}'
+			// A step id in the Step column widens the column instead of breaking mid-word (anywhere, and core's word-break:break-word, shrink min-content).
+			. '.pegwork-automations .pegwork-table th[scope=row] code{overflow-wrap:break-word;word-break:normal;}'
 			. '.pegwork-automations .pegwork-table a{text-decoration:underline;}'
 			. '.pegwork-automations .pegwork-table td,.pegwork-automations .pegwork-table th{vertical-align:top;}'
 			. '.pegwork-automations .pegwork-meta{display:block;margin-top:4px;color:#50575e;}'
