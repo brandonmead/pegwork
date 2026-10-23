@@ -104,4 +104,26 @@ class FixturesTest extends TestCase {
 		$this->assertCount( 4, $result->registry->content_types() );
 		$this->assertSame( array(), $result->registry->automations() );
 	}
+
+	/**
+	 * The E2E BarnCRM reads package holds the reads fixture's types, relationships, taxonomy and options
+	 * page byte for byte, and no automations (the reads editor E2E builds barn_lifetime_milestone).
+	 */
+	public function test_e2e_barn_reads_package_matches_the_fixture() {
+		$root    = dirname( __DIR__, 3 );
+		$fixture = $root . '/tests/fixtures/valid/reads';
+		$e2e     = $root . '/tests/e2e/packages/barn-reads';
+		$objects = fn( $dir ) => array_map( fn( $file ) => substr( $file, strlen( $dir ) + 1 ), glob( $dir . '/*/*.json' ) );
+
+		$expected = array_values( array_filter( $objects( $fixture ), fn( $file ) => ! str_starts_with( $file, 'automations/' ) ) );
+		$this->assertSame( $expected, $objects( $e2e ) );
+		foreach ( $expected as $file ) {
+			$this->assertFileEquals( "$fixture/$file", "$e2e/$file" );
+		}
+
+		$result = Loader::load( array( $e2e ) );
+		$this->assertSame( array(), array_map( 'strval', $result->errors ) );
+		$this->assertCount( 2, $result->registry->relationships() );
+		$this->assertSame( array(), $result->registry->automations() );
+	}
 }
