@@ -4,4 +4,4 @@ The Phase 6 worked examples from `docs/phase-6-design.md` ("Worked examples: Bar
 
 Phase 5 stand-ins: on `barn_gift`, `donor_id` (number holding the contact's post ID), `donor_name` and `donor_email` (private) stand in for a gift-to-contact relationship. BarnCRM does not exist yet and a run reads only its bound record (design open questions 2 and 3), so the gift carries copies of the contact's name and email, and `stamp_donor` writes the contact by ID. Phase 5 replaces these three fields with the relationship and Records link reads.
 
-`tests/e2e/packages/barn` holds the same types, form and options page without the automations, for the editor E2E that builds both flows by keyboard; `FixturesTest` checks the two copies stay identical.
+`tests/e2e/packages/barn` holds the same types, form and options page without the automations, for the editor E2E `tests/e2e/specs/automation-barn-flows.e2e.js` (registered by `tests/e2e/mu-plugins/pegwork-e2e-barn.php`), which builds the three automations by keyboard and compares each saved one with its file here; `FixturesTest` checks the two copies stay identical.
