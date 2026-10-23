@@ -6,7 +6,10 @@
 /**
  * WordPress dependencies
  */
-import { BlockControls, store as blockEditorStore } from '@wordpress/block-editor';
+import {
+	BlockControls,
+	store as blockEditorStore,
+} from '@wordpress/block-editor';
 import { ToolbarDropdownMenu, ToolbarGroup } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
@@ -27,7 +30,14 @@ import { BRANCH, DECISION, MAX_LEVELS } from './logic';
  * @return {Array<{rootClientId: string, label: string, count: number}>} Targets.
  */
 export function moveTargets( blocks, clientId, height ) {
-	const targets = [ { rootClientId: '', label: __( 'Main steps', 'pegwork' ), count: blocks.length, level: 1 } ];
+	const targets = [
+		{
+			rootClientId: '',
+			label: __( 'Main steps', 'pegwork' ),
+			count: blocks.length,
+			level: 1,
+		},
+	];
 	const walk = ( list, level ) => {
 		for ( const block of list ) {
 			if ( block.clientId === clientId || block.name !== DECISION ) {
@@ -39,11 +49,16 @@ export function moveTargets( blocks, clientId, height ) {
 				}
 				const name = branch.attributes.otherwise
 					? __( 'Otherwise', 'pegwork' )
-					: branch.attributes.label || __( '(unnamed branch)', 'pegwork' );
+					: branch.attributes.label ||
+						__( '(unnamed branch)', 'pegwork' );
 				targets.push( {
 					rootClientId: branch.clientId,
-					/* translators: 1: decision id, 2: branch label. */
-					label: sprintf( __( '%1$s: %2$s', 'pegwork' ), block.attributes.id || __( 'decision', 'pegwork' ), name ),
+					label: sprintf(
+						/* translators: 1: decision id, 2: branch label. */
+						__( '%1$s: %2$s', 'pegwork' ),
+						block.attributes.id || __( 'decision', 'pegwork' ),
+						name
+					),
 					count: branch.innerBlocks.length,
 					level: level + 1,
 				} );
@@ -52,7 +67,9 @@ export function moveTargets( blocks, clientId, height ) {
 		}
 	};
 	walk( blocks, 1 );
-	return targets.filter( ( target ) => target.level + height - 1 <= MAX_LEVELS );
+	return targets.filter(
+		( target ) => target.level + height - 1 <= MAX_LEVELS
+	);
 }
 
 /**
@@ -105,9 +122,19 @@ export default function MoveToBranch( { clientId } ) {
 						title: target.label,
 						isDisabled: target.rootClientId === parent,
 						onClick: () => {
-							moveBlocksToPosition( [ clientId ], parent, target.rootClientId, target.count );
-							/* translators: %s: branch name. */
-							speak( sprintf( __( 'Moved to %s.', 'pegwork' ), target.label ) );
+							moveBlocksToPosition(
+								[ clientId ],
+								parent,
+								target.rootClientId,
+								target.count
+							);
+							speak(
+								sprintf(
+									/* translators: %s: branch name. */
+									__( 'Moved to %s.', 'pegwork' ),
+									target.label
+								)
+							);
 						},
 					} ) ) }
 				/>

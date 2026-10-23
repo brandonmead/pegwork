@@ -63,11 +63,15 @@ export function opLabel( op, type ) {
 		ne: __( 'is not', 'pegwork' ),
 		in: __( 'is one of', 'pegwork' ),
 		not_in: __( 'is none of', 'pegwork' ),
-		lt: date ? __( 'is before', 'pegwork' ) : __( 'is less than', 'pegwork' ),
+		lt: date
+			? __( 'is before', 'pegwork' )
+			: __( 'is less than', 'pegwork' ),
 		lte: date
 			? __( 'is on or before', 'pegwork' )
 			: __( 'is at most', 'pegwork' ),
-		gt: date ? __( 'is after', 'pegwork' ) : __( 'is more than', 'pegwork' ),
+		gt: date
+			? __( 'is after', 'pegwork' )
+			: __( 'is more than', 'pegwork' ),
 		gte: date
 			? __( 'is on or after', 'pegwork' )
 			: __( 'is at least', 'pegwork' ),
@@ -117,8 +121,12 @@ export function fieldName( field ) {
 		/* translators: %s: form field label. */
 		name = sprintf( __( '%s (as submitted)', 'pegwork' ), name );
 	}
-	/* translators: %s: field name. */
-	return field.private ? sprintf( __( '%s (private)', 'pegwork' ), name ) : name;
+	return field.private
+		? /* translators: %s: field name. */ sprintf(
+				__( '%s (private)', 'pegwork' ),
+				name
+			)
+		: name;
 }
 
 /**
@@ -133,20 +141,26 @@ export function durationText( value ) {
 		return value || '';
 	}
 	const n = parts.amount;
-	const words = {
-		/* translators: %d: number of years. */
-		years: _n( '%d year', '%d years', n, 'pegwork' ),
-		/* translators: %d: number of months. */
-		months: _n( '%d month', '%d months', n, 'pegwork' ),
-		/* translators: %d: number of weeks. */
-		weeks: _n( '%d week', '%d weeks', n, 'pegwork' ),
-		/* translators: %d: number of days. */
-		days: _n( '%d day', '%d days', n, 'pegwork' ),
-		/* translators: %d: number of hours. */
-		hours: _n( '%d hour', '%d hours', n, 'pegwork' ),
-	};
-	return sprintf( words[ parts.unit ], n );
+	switch ( parts.unit ) {
+		case 'years':
+			/* translators: %d: number of years. */
+			return sprintf( _n( '%d year', '%d years', n, 'pegwork' ), n );
+		case 'months':
+			/* translators: %d: number of months. */
+			return sprintf( _n( '%d month', '%d months', n, 'pegwork' ), n );
+		case 'weeks':
+			/* translators: %d: number of weeks. */
+			return sprintf( _n( '%d week', '%d weeks', n, 'pegwork' ), n );
+		case 'hours':
+			/* translators: %d: number of hours. */
+			return sprintf( _n( '%d hour', '%d hours', n, 'pegwork' ), n );
+		default:
+			/* translators: %d: number of days. */
+			return sprintf( _n( '%d day', '%d days', n, 'pegwork' ), n );
+	}
 }
+
+const LIST_SEPARATOR = ', ';
 
 /**
  * A literal or operand in words, with option labels for choices.
@@ -160,19 +174,24 @@ function valueText( value, field, fields ) {
 	if ( Array.isArray( value ) ) {
 		return value
 			.map( ( item ) => valueText( item, field, fields ) )
-			.join( __( ', ', 'pegwork' ) );
+			.join( LIST_SEPARATOR );
 	}
 	if ( value && typeof value === 'object' ) {
 		if ( 'var' in value ) {
 			const other = fields.find( ( item ) => item.path === value.var );
 			return other ? fieldName( other ) : String( value.var );
 		}
-		const base = value.date === 'now' ? __( 'now', 'pegwork' ) : __( 'today', 'pegwork' );
+		const base =
+			value.date === 'now'
+				? __( 'now', 'pegwork' )
+				: __( 'today', 'pegwork' );
 		if ( ! value.offset ) {
 			return base;
 		}
 		const parts = parseDuration( value.offset );
-		const amount = durationText( String( value.offset ).replace( /^[-+]/, '' ) );
+		const amount = durationText(
+			String( value.offset ).replace( /^[-+]/, '' )
+		);
 		return parts?.sign === '-'
 			? /* translators: 1: today or now, 2: duration such as "12 months". */ sprintf(
 					__( '%1$s minus %2$s', 'pegwork' ),
@@ -218,11 +237,16 @@ export function conditionText( node, fields ) {
 		return join( node.any, __( 'or', 'pegwork' ) );
 	}
 	if ( 'not' in node ) {
-		/* translators: %s: a condition in words. */
-		return sprintf( __( 'not (%s)', 'pegwork' ), conditionText( node.not, fields ) );
+		return sprintf(
+			/* translators: %s: a condition in words. */
+			__( 'not (%s)', 'pegwork' ),
+			conditionText( node.not, fields )
+		);
 	}
 	const field = fields.find( ( item ) => item.path === node.var ) || null;
-	const name = field ? fieldName( field ) : pathName( String( node.var || '' ) );
+	const name = field
+		? fieldName( field )
+		: pathName( String( node.var || '' ) );
 	const op = opLabel( node.op, field?.type );
 	return 'value' in node
 		? `${ name } ${ op } ${ valueText( node.value, field, fields ) }`
@@ -249,7 +273,8 @@ function hostOf( url ) {
  * @return {string} Summary ('' when there is nothing to say yet).
  */
 export function stepSummary( step, fields, config ) {
-	const keys = Object.keys( step.values || {} ).join( __( ', ', 'pegwork' ) );
+	const keysOf = () =>
+		Object.keys( step.values || {} ).join( LIST_SEPARATOR );
 	switch ( step.type ) {
 		case 'send_email':
 			return step.to || step.subject
@@ -259,7 +284,8 @@ export function stepSummary( step, fields, config ) {
 						step.subject || __( '(no subject)', 'pegwork' )
 					)
 				: '';
-		case 'update_record':
+		case 'update_record': {
+			const keys = keysOf();
 			if ( ! keys ) {
 				return '';
 			}
@@ -273,6 +299,7 @@ export function stepSummary( step, fields, config ) {
 						__( 'Update this record: %s', 'pegwork' ),
 						keys
 					);
+		}
 		case 'create_record': {
 			const type = config.types.find(
 				( item ) => item.key === step.content_type
@@ -281,7 +308,7 @@ export function stepSummary( step, fields, config ) {
 				? /* translators: 1: content type label, 2: field keys. */ sprintf(
 						__( 'Create %1$s: %2$s', 'pegwork' ),
 						type?.label || step.content_type,
-						keys || __( '(no values)', 'pegwork' )
+						keysOf() || __( '(no values)', 'pegwork' )
 					)
 				: '';
 		}

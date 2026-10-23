@@ -65,8 +65,7 @@ export function parseConfig( raw ) {
 		optionsPages: list( config.optionsPages ).filter(
 			( page ) => page && typeof page.key === 'string'
 		),
-		rest:
-			config.rest && typeof config.rest === 'object' ? config.rest : {},
+		rest: config.rest && typeof config.rest === 'object' ? config.rest : {},
 		lockedKey: text( config.lockedKey ),
 		readOnly: config.readOnly === true,
 		package: text( config.package ),
@@ -75,7 +74,6 @@ export function parseConfig( raw ) {
 		webhookUrl: text( config.webhookUrl ),
 		override: text( config.override ),
 		openRuns: Number.isInteger( config.openRuns ) ? config.openRuns : 0,
-		testAvailable: config.testAvailable === true,
 	};
 }
 
@@ -380,8 +378,13 @@ export function needsId( blocks, clientId, id ) {
  * @return {number} Level.
  */
 export function levelOf( pointer ) {
-	return ( String( pointer || '' ).match( /\/(branches\/\d+\/steps|otherwise)\//g ) || [] )
-		.length + 1;
+	return (
+		(
+			String( pointer || '' ).match(
+				/\/(branches\/\d+\/steps|otherwise)\//g
+			) || []
+		).length + 1
+	);
 }
 
 const UNITS = { Y: 'years', M: 'months', W: 'weeks', D: 'days', H: 'hours' };
@@ -419,10 +422,49 @@ export function formatDuration( amount, unit, sign = '' ) {
 	if ( ! Number.isInteger( amount ) || amount < 1 ) {
 		return '';
 	}
-	const letter = Object.keys( UNITS ).find( ( key ) => UNITS[ key ] === unit );
+	const letter = Object.keys( UNITS ).find(
+		( key ) => UNITS[ key ] === unit
+	);
 	return unit === 'hours'
 		? `${ sign }PT${ amount }H`
 		: `${ sign }P${ amount }${ letter || 'D' }`;
+}
+
+/**
+ * Test run report steps as nested lists: a new level opens at each branch heading ("If High",
+ * "Otherwise").
+ *
+ * @param {Array} steps Report steps (`depth`, `branch`, `message`, `result`).
+ * @return {Array} Tree of `{ entry }` and `{ heading, children }`.
+ */
+export function reportTree( steps ) {
+	const root = { children: [] };
+	const stack = [ root ];
+	for ( const entry of list( steps ) ) {
+		const depth = Math.max( 0, Number( entry.depth ) || 0 );
+		while ( stack.length - 1 > depth ) {
+			stack.pop();
+		}
+		if (
+			entry.branch !== null &&
+			entry.branch !== undefined &&
+			depth > 0
+		) {
+			while ( stack.length > depth ) {
+				stack.pop();
+			}
+			const node = { heading: entry.branch, children: [] };
+			stack[ stack.length - 1 ].children.push( node );
+			stack.push( node );
+		}
+		while ( stack.length - 1 < depth ) {
+			const node = { heading: null, children: [] };
+			stack[ stack.length - 1 ].children.push( node );
+			stack.push( node );
+		}
+		stack[ stack.length - 1 ].children.push( { entry } );
+	}
+	return root.children;
 }
 
 /**

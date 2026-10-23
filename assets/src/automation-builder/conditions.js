@@ -87,7 +87,7 @@ export function toJSON( model ) {
 /**
  * Depth and node count of a model, as the validator counts them (the root is depth 1).
  *
- * @param {?Object} model Model.
+ * @param {?Object} model   Model.
  * @param {number}  [level] Level of this node.
  * @return {{depth: number, nodes: number}} Size.
  */
@@ -95,10 +95,7 @@ export function size( model, level = 1 ) {
 	if ( ! model ) {
 		return { depth: 0, nodes: 0 };
 	}
-	const children =
-		model.kind === 'not'
-			? [ model.item ]
-			: model.items || [];
+	const children = model.kind === 'not' ? [ model.item ] : model.items || [];
 	let depth = level;
 	let nodes = 1;
 	for ( const child of children ) {

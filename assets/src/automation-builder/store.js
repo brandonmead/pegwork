@@ -46,7 +46,9 @@ export function useSettings() {
 	const settings = useMemo( () => parseSettings( json ), [ json ] );
 	const setSettings = useCallback(
 		( next ) =>
-			editPost( { meta: { [ SETTINGS_META ]: serializeSettings( next ) } } ),
+			editPost( {
+				meta: { [ SETTINGS_META ]: serializeSettings( next ) },
+			} ),
 		[ editPost ]
 	);
 	return [ settings, setSettings ];
@@ -75,7 +77,10 @@ export function useSaveErrors() {
  * @return {Array} Blocks.
  */
 export function useBlocks() {
-	return useSelect( ( select ) => select( blockEditorStore ).getBlocks(), [] );
+	return useSelect(
+		( select ) => select( blockEditorStore ).getBlocks(),
+		[]
+	);
 }
 
 /**

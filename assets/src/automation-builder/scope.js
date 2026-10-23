@@ -86,7 +86,8 @@ export function stepsBefore( steps, pointer ) {
 			);
 		const step = current[ index ];
 		if ( parts[ at + 1 ] === 'branches' && parts[ at + 3 ] === 'steps' ) {
-			current = step?.branches?.[ Number( parts[ at + 2 ] ) ]?.steps || [];
+			current =
+				step?.branches?.[ Number( parts[ at + 2 ] ) ]?.steps || [];
 			at += 4;
 		} else if ( parts[ at + 1 ] === 'otherwise' ) {
 			current = step?.otherwise || [];

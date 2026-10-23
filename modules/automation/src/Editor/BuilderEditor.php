@@ -171,17 +171,15 @@ final class BuilderEditor {
 		}
 
 		return array(
-			'lockedKey'     => $key,
-			'readOnly'      => $file,
-			'package'       => $file ? substr( (string) $source, 5 ) : '',
-			'duplicateUrl'  => $file ? self::duplicate_url( $key ) : '',
-			'listUrl'       => Screen::url(),
-			'webhookUrl'    => null !== $source ? Inbound::url( $key ) : '',
-			'override'      => null !== $source ? (string) Overrides::get( $key ) : '',
-			'openRuns'      => $open,
-			'rest'          => (object) $rest,
-			// The preview and test routes (PreviewRoutes) ship separately; the panels say so when they are missing.
-			'testAvailable' => class_exists( PreviewRoutes::class ),
+			'lockedKey'    => $key,
+			'readOnly'     => $file,
+			'package'      => $file ? substr( (string) $source, 5 ) : '',
+			'duplicateUrl' => $file ? self::duplicate_url( $key ) : '',
+			'listUrl'      => Screen::url(),
+			'webhookUrl'   => null !== $source ? Inbound::url( $key ) : '',
+			'override'     => null !== $source ? (string) Overrides::get( $key ) : '',
+			'openRuns'     => $open,
+			'rest'         => (object) $rest,
 		) + self::registry_config( pegwork_registry() );
 	}
 
@@ -196,12 +194,12 @@ final class BuilderEditor {
 	 */
 	public static function registry_config( Registry $registry ): array {
 		$taxonomies = $registry->taxonomies();
-		$options    = static fn( $list ) => array_map(
+		$options    = static fn( $choices ) => array_map(
 			static fn( $option ) => array(
 				'value' => (string) $option['value'],
 				'label' => (string) ( $option['label'] ?? $option['value'] ),
 			),
-			is_array( $list ) ? array_values( $list ) : array()
+			is_array( $choices ) ? array_values( $choices ) : array()
 		);
 		$field      = static fn( array $definition ) => array_filter(
 			array(

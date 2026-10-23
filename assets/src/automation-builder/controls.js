@@ -16,7 +16,6 @@ import {
 	TextControl,
 	TextareaControl,
 } from '@wordpress/components';
-import { useInstanceId } from '@wordpress/compose';
 import { useEffect, useRef, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { addQueryArgs } from '@wordpress/url';
@@ -234,7 +233,11 @@ export function TemplateControl( {
 				{ ...props }
 			/>
 			{ ! disabled && tags?.length > 0 && (
-				<MergeTagInserter tags={ tags } label={ label } onInsert={ insert } />
+				<MergeTagInserter
+					tags={ tags }
+					label={ label }
+					onInsert={ insert }
+				/>
 			) }
 			<Errors messages={ messages } id={ `${ id }-errors` } />
 		</div>
@@ -254,7 +257,14 @@ const UNITS = [ 'hours', 'days', 'weeks', 'months', 'years' ];
  * @param {Object}   props.errors   Errors by pointer.
  * @param {string}   [props.help]   Help text.
  */
-export function DurationControl( { label, value, onChange, pointer, errors, help } ) {
+export function DurationControl( {
+	label,
+	value,
+	onChange,
+	pointer,
+	errors,
+	help,
+} ) {
 	const parts = parseDuration( value );
 	const [ raw, setRaw ] = useState( ! value || parts ? '' : value );
 	const { id, messages, props } = wire( errors, pointer );
@@ -267,7 +277,10 @@ export function DurationControl( { label, value, onChange, pointer, errors, help
 	};
 
 	return (
-		<fieldset className="pegwork-automation__fieldset" aria-describedby={ help ? `${ id }-help` : undefined }>
+		<fieldset
+			className="pegwork-automation__fieldset"
+			aria-describedby={ help ? `${ id }-help` : undefined }
+		>
 			<legend>{ label }</legend>
 			{ help && (
 				<p className="pegwork-automation__help" id={ `${ id }-help` }>
@@ -315,7 +328,9 @@ export function DurationControl( { label, value, onChange, pointer, errors, help
 							label: unitLabels[ unit ],
 						} ) ) }
 						onChange={ ( unit ) =>
-							onChange( formatDuration( parts?.amount || 1, unit ) )
+							onChange(
+								formatDuration( parts?.amount || 1, unit )
+							)
 						}
 					/>
 				</div>
@@ -384,8 +399,17 @@ export function SampleControl( { type, binds, payload } ) {
 					value={ sample.recordId ? String( sample.recordId ) : null }
 					options={
 						sample.recordId &&
-						! options.some( ( option ) => option.value === String( sample.recordId ) )
-							? [ ...options, { value: String( sample.recordId ), label: sample.recordLabel } ]
+						! options.some(
+							( option ) =>
+								option.value === String( sample.recordId )
+						)
+							? [
+									...options,
+									{
+										value: String( sample.recordId ),
+										label: sample.recordLabel,
+									},
+								]
 							: options
 					}
 					onFilterValueChange={ setSearch }
@@ -393,7 +417,9 @@ export function SampleControl( { type, binds, payload } ) {
 						setSample( {
 							recordId: value ? Number( value ) : null,
 							recordLabel:
-								options.find( ( option ) => option.value === value )?.label || '',
+								options.find(
+									( option ) => option.value === value
+								)?.label || '',
 						} )
 					}
 				/>
@@ -407,7 +433,10 @@ export function SampleControl( { type, binds, payload } ) {
 					label={ __( 'Sample record ID', 'pegwork' ) }
 					value={ sample.recordId ? String( sample.recordId ) : '' }
 					onChange={ ( value ) =>
-						setSample( { recordId: Number( value ) || null, recordLabel: '' } )
+						setSample( {
+							recordId: Number( value ) || null,
+							recordLabel: '',
+						} )
 					}
 				/>
 			) }
@@ -415,7 +444,10 @@ export function SampleControl( { type, binds, payload } ) {
 				<TextareaControl
 					__nextHasNoMarginBottom
 					label={ __( 'Sample payload (JSON)', 'pegwork' ) }
-					help={ __( 'Such as {"kind": "a"}. Read as trigger.payload.* (webhooks) or trigger.* (other events).', 'pegwork' ) }
+					help={ __(
+						'Such as {"kind": "a"}. Read as trigger.payload.* (webhooks) or trigger.* (other events).',
+						'pegwork'
+					) }
 					value={ sample.payload }
 					onChange={ ( value ) => setSample( { payload: value } ) }
 					rows={ 4 }
@@ -441,27 +473,23 @@ export function sampleParams( sample, binds, payload ) {
 	if ( payload && sample.payload.trim() !== '' ) {
 		try {
 			const value = JSON.parse( sample.payload );
-			if ( ! value || typeof value !== 'object' || Array.isArray( value ) ) {
+			if (
+				! value ||
+				typeof value !== 'object' ||
+				Array.isArray( value )
+			) {
 				throw new Error();
 			}
 			params.payload = value;
 		} catch {
 			return {
 				params,
-				error: __( 'The sample payload is not a JSON object.', 'pegwork' ),
+				error: __(
+					'The sample payload is not a JSON object.',
+					'pegwork'
+				),
 			};
 		}
 	}
 	return { params, error: '' };
-}
-
-/**
- * Useful for components that need an instance-unique ID prefix.
- *
- * @param {Function} component Component.
- * @param {string}   prefix    Prefix.
- * @return {string} ID.
- */
-export function useId( component, prefix ) {
-	return useInstanceId( component, prefix );
 }
