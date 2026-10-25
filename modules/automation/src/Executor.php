@@ -29,8 +29,8 @@ use Throwable;
  * A step with `on_error: continue` that fails after its retries is logged `failed`, outputs `failed: true`
  * and `error: "<code>"`, and the run continues; such a run completes with outcome
  * `completed_with_errors:<ids>`. Steps with `on_error` output `failed: false` on success. The run's read
- * count (`context.reads`) and start count (`context.starts`) are restored on each wake-up and stored with
- * the outputs.
+ * count (`context.reads`), trash count (`context.trashed`) and start count (`context.starts`) are restored
+ * on each wake-up and stored with the outputs.
  *
  * Loops: the cursor arriving at a loop id with no `context.loops.<id>` starts the loop (snapshot of the
  * collection's IDs, one logged row `{ items, ids }`, counted as an attempt), else advances it (no row, no
@@ -119,6 +119,7 @@ final class Executor {
 		$context = new Context( $this->engine->clock(), $record, (array) ( $stored['trigger'] ?? array() ), (array) ( $stored['steps'] ?? array() ), $id, (string) $run['automation'] );
 		$context->use_plan( $plan );
 		$context->restore_reads( (int) ( $stored['reads'] ?? 0 ) );
+		$context->restore_trashed( (int) ( $stored['trashed'] ?? 0 ) );
 		$context->restore_starts( (int) ( $stored['starts'] ?? 0 ) );
 		$context->restore_loops( (array) ( $stored['loops'] ?? array() ) );
 		$moved = self::loop_mismatch( $plan, $step_id, $context );
@@ -480,6 +481,9 @@ final class Executor {
 		$stored['steps'] = $context->outputs();
 		if ( $context->reads() > 0 ) {
 			$stored['reads'] = $context->reads();
+		}
+		if ( $context->trashed() > 0 ) {
+			$stored['trashed'] = $context->trashed();
 		}
 		if ( $context->starts() > 0 ) {
 			$stored['starts'] = $context->starts();

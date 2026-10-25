@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "tr_volunteer",
+  "labels": { "singular": "Volunteer", "plural": "Volunteers" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "stage", "type": "text", "label": "Stage" }
+  ]
+}

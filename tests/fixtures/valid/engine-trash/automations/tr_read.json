@@ -1,0 +1,6 @@
+{ "format": 1, "key": "tr_read", "label": "Remove the volunteer called Read me",
+  "trigger": { "type": "manual", "button": "Remove Read me" },
+  "steps": [
+    { "id": "one", "type": "get_record", "content_type": "tr_volunteer",
+      "filter": { "all": [ { "field": "name", "op": "eq", "value": "Read me" } ] } },
+    { "id": "remove", "type": "trash_record", "content_type": "tr_volunteer", "record": "{{steps.one.record_id}}" } ] }

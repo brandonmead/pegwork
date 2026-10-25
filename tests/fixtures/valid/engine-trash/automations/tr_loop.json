@@ -1,0 +1,16 @@
+{ "format": 1, "key": "tr_loop", "label": "Remove old volunteers, then try the rest",
+  "trigger": { "type": "manual", "button": "Remove old volunteers" },
+  "steps": [
+    { "id": "old", "type": "find_records", "content_type": "tr_volunteer", "limit": 50,
+      "filter": { "all": [ { "field": "stage", "op": "eq", "value": "old" } ] }, "sort": { "field": "id", "order": "asc" } },
+    { "id": "each_old", "type": "loop", "over": "steps.old.records",
+      "steps": [
+        { "id": "remove", "type": "trash_record", "content_type": "tr_volunteer", "record": "{{steps.each_old.item.id}}" } ] },
+    { "id": "rest", "type": "find_records", "content_type": "tr_volunteer", "limit": 10,
+      "filter": { "all": [ { "field": "stage", "op": "eq", "value": "old" } ] }, "sort": { "field": "id", "order": "asc" } },
+    { "id": "each_rest", "type": "loop", "over": "steps.rest.records",
+      "steps": [
+        { "id": "remove_rest", "type": "trash_record", "content_type": "tr_volunteer", "record": "{{steps.each_rest.item.id}}", "on_error": "continue" } ] },
+    { "id": "report", "type": "send_email", "to": "office@example.org",
+      "subject": "{{steps.each_old.count}} volunteers moved to the trash",
+      "text": "{{steps.rest.count}} more are waiting for tomorrow." } ] }
