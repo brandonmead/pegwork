@@ -162,7 +162,7 @@ final class Manual {
 	 * @param string      $key     Automation key.
 	 * @param int|null    $record  Record ID.
 	 * @param int         $user    User who started it.
-	 * @param string      $source  `editor`, `list` or `cli`.
+	 * @param string      $source  `editor`, `list`, `bulk` or `cli`.
 	 * @param string|null $request Request ID for double-submit deduplication, or null.
 	 * @return array{run: int, duplicate: bool}|WP_Error
 	 */

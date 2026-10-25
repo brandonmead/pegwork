@@ -306,10 +306,9 @@ final class Engine {
 	 * Why this module version cannot run a definition, or null when it can. The registry accepts shapes before
 	 * the engine runs them all, so the executor refuses such a run before its first step instead of acting on
 	 * part of it: a step type without a handler, at any depth (`loop` has none because the executor's cursor
-	 * runs it). Until the Automation v4 engine PRs land (docs/automation-v4-design.md section 11), also the v4
-	 * shape of an existing step type: a read `created` (a wait `until` a date runs since v4 PR 3 and
-	 * `{role:<slug>}` recipients since v4 PR 6). The new step types trash_record (v4 PR 4) and
-	 * start_automation (v4 PR 5) run.
+	 * runs it). Every Automation v4 shape runs (docs/automation-v4-design.md section 11): a wait `until` a date
+	 * (v4 PR 3), trash_record (v4 PR 4), start_automation (v4 PR 5), `{role:<slug>}` recipients (v4 PR 6) and a
+	 * read `created` (v4 PR 7).
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */
@@ -339,9 +338,6 @@ final class Engine {
 			$type = (string) ( $step['type'] ?? '' );
 			if ( null === $this->step( $type ) && 'loop' !== $type ) { // The executor's cursor runs loops itself.
 				return sprintf( 'step "%1$s" has type "%2$s", which this version of the automation module cannot run.', $id, $type );
-			}
-			if ( in_array( $type, array( 'get_record', 'find_records' ), true ) && isset( $step['created'] ) ) {
-				return sprintf( 'step "%s" reads by creation time ("created"), which this version of the automation module cannot do.', $id );
 			}
 			$children = array_merge(
 				array_map( fn( $branch ) => (array) ( ( (array) $branch )['steps'] ?? array() ), (array) ( $step['branches'] ?? array() ) ),
