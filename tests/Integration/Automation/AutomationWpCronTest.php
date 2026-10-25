@@ -238,6 +238,48 @@ class AutomationWpCronTest extends AutomationTestCase {
 	}
 
 	/**
+	 * A wait until a date on real WP-Cron (Automation v4 PR 3): the run waits on a WP-Cron event at the
+	 * target; moving the date earlier moves that event to now (Waits::nudge), and firing it as wp-cron.php
+	 * does decides again and sends the reminder.
+	 */
+	public function test_date_wait_wakes_on_wp_cron() {
+		add_action( 'pegwork_register', fn( RegistryBuilder $b ) => $b->add_package( dirname( __DIR__, 2 ) . '/fixtures/valid/v4' ) );
+		Plugin::init();
+		$this->assertNotNull( pegwork_registry()->automation( 'barn_task_due_reminder' ) );
+		reset_phpmailer_instance();
+
+		$task = \Pegwork\Api\Records::create(
+			'barn_task',
+			array(
+				'name'           => 'Call the barn',
+				'due_on'         => wp_date( 'Y-m-d', strtotime( '+30 days' ) ),
+				'assignee_email' => 'staff@example.org',
+			),
+			'publish'
+		);
+		$this->run_due_cron( Engine::RUN_HOOK );
+		$run = $this->only_run( 'barn_task_due_reminder' );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'before_due', $run['current_step'] );
+		$at = wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) );
+		$this->assertSame( strtotime( $run['resume_at'] . ' UTC' ), $at );
+		$this->assertGreaterThan( time() + 25 * DAY_IN_SECONDS, $at, 'About 27 days out.' );
+		$this->assertSame( 0, $this->run_due_cron( Engine::RUN_HOOK ), 'Nothing is due yet.' );
+
+		// Due in two days: three days before has passed, so the nudged wake-up reminds at once.
+		\Pegwork\Api\Records::update( $task, array( 'due_on' => wp_date( 'Y-m-d', strtotime( '+2 days' ) ) ) );
+		$at = wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) );
+		$this->assertNotFalse( $at );
+		$this->assertLessThanOrEqual( time(), $at, 'The wake-up moved to now.' );
+		$this->assertSame( 'waiting', $this->run_row( $run['id'] )['status'], 'No step ran in the saving request.' );
+
+		$this->assertGreaterThanOrEqual( 1, $this->run_due_cron( Engine::RUN_HOOK ) );
+		$this->assertSame( 'completed', $this->run_row( $run['id'] )['status'] );
+		$this->assertSame( 'staff@example.org', tests_retrieve_phpmailer_instance()->get_sent()->to[0][0] );
+		$this->assertFalse( wp_next_scheduled( Engine::RUN_HOOK, array( $run['id'] ) ), 'No wake-up left.' );
+	}
+
+	/**
 	 * The scheduler keeps one pending event per hook and args, and spawn honours the filter.
 	 */
 	public function test_wp_cron_scheduler() {

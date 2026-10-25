@@ -14,8 +14,8 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
 
 /**
  * Automation v4 PR 2 (registry, docs/automation-v4-design.md section 11): the `v4` fixture loads, and a run of
- * an automation with a v4 shape (a wait until a date, start_automation) fails `unsupported_step` before its
- * first step, so nothing half-runs until the engine PRs land.
+ * an automation with a v4 shape that has no engine yet (start_automation) fails `unsupported_step` before its
+ * first step, so nothing half-runs until the engine PRs land. A wait until a date runs since v4 PR 3.
  */
 class AutomationV4GuardTest extends AutomationTestCase {
 
@@ -64,12 +64,15 @@ class AutomationV4GuardTest extends AutomationTestCase {
 		$this->assertIsInt( $gift );
 		$this->drain();
 
-		foreach ( array( 'barn_task_due_reminder', 'barn_gift_receipt_start' ) as $key ) {
-			$run = $this->only_run( $key );
-			$this->assertSame( 'failed', $run['status'], $key );
-			$this->assertStringStartsWith( 'unsupported_step: step "', $run['error'], $key );
-			$this->assertSame( array(), $this->steps( $run['id'] ), "$key ran no step." );
-		}
+		$run = $this->only_run( 'barn_gift_receipt_start' );
+		$this->assertSame( 'failed', $run['status'] );
+		$this->assertStringStartsWith( 'unsupported_step: step "', $run['error'] );
+		$this->assertSame( array(), $this->steps( $run['id'] ), 'barn_gift_receipt_start ran no step.' );
+
+		// Since v4 PR 3 the date wait runs: the reminder waits at its first step.
+		$run = $this->only_run( 'barn_task_due_reminder' );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'before_due', $run['current_step'] );
 		$this->assertSame( array(), $this->runs( 'barn_gift_receipt' ), 'No receipt run was started.' );
 		$this->assertSame( array(), tests_retrieve_phpmailer_instance()->mock_sent, 'No mail.' );
 		$this->assertSame( '', (string) Records::get( $task )['values']['reminded_on'], 'No stamp.' );

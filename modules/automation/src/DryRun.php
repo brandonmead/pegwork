@@ -567,6 +567,10 @@ final class DryRun {
 				break;
 
 			case 'wait':
+				if ( is_array( $step['until'] ?? null ) ) {
+					$entry = self::wait_until( $step, $context ) + $entry;
+					break;
+				}
 				$entry['result']  = 'waits';
 				$entry['detail']  = array( 'for' => (string) ( $step['for'] ?? '' ) );
 				$entry['message'] = sprintf(
@@ -745,6 +749,72 @@ final class DryRun {
 			'detail'  => $detail,
 			/* translators: 1: step ID, 2: recipients, 3: subject. */
 			'message' => sprintf( __( 'Send email %1$s: to %2$s, subject "%3$s" (not sent).', 'pegwork' ), $id, implode( ', ', $detail['to'] ), $subject ),
+		);
+	}
+
+	/**
+	 * A date wait's entry: when it would wake for the sample record's date, that the date is empty (it would
+	 * wait for one), or that the time has passed (it continues at once). The walk continues past it.
+	 *
+	 * @param array<string, mixed> $step    Wait step with `until`.
+	 * @param Context              $context Context.
+	 * @return array{result: string, detail: array<string, mixed>, message: string}
+	 */
+	private static function wait_until( array $step, Context $context ): array {
+		$id     = (string) $step['id'];
+		$until  = (array) $step['until'];
+		$var    = (string) ( $until['var'] ?? '' );
+		$label  = $context->field_label( $var ) ?? WaitUntil::key( $var );
+		$value  = $context->resolve( $var );
+		$target = WaitUntil::target( $value, (string) ( $until['at'] ?? WaitUntil::AT_DEFAULT ), (string) ( $until['offset'] ?? '' ) );
+		$detail = array(
+			'until'  => $var,
+			'target' => null === $target ? null : $target->format( 'Y-m-d H:i:s' ),
+		);
+
+		if ( null === $target ) {
+			return array(
+				'result'  => 'waits',
+				'detail'  => $detail + array( 'empty' => true ),
+				'message' => sprintf(
+					/* translators: 1: step ID, 2: field label. */
+					__( 'Wait %1$s: %2$s is empty: it would wait for a date (up to 2 years). The test continues as if it had passed.', 'pegwork' ),
+					$id,
+					$label
+				),
+			);
+		}
+
+		$day   = WaitUntil::target( $value, '00:00' );
+		$named = sprintf(
+			/* translators: 1: field label, 2: the field's date. */
+			__( '%1$s (%2$s)', 'pegwork' ),
+			$label,
+			(string) wp_date( (string) get_option( 'date_format' ), null === $day ? $target->getTimestamp() : $day->getTimestamp() )
+		);
+		$words = WaitUntil::describe( $until, $named );
+		if ( $target <= $context->clock()->now() ) {
+			return array(
+				'result'  => 'ok',
+				'detail'  => $detail + array( 'due' => true ),
+				'message' => sprintf(
+					/* translators: 1: step ID, 2: the wait in words, such as "3 days before Due on (March 20, 2027) at 09:00". */
+					__( 'Wait %1$s: until %2$s. That time has passed: it continues at once.', 'pegwork' ),
+					$id,
+					$words
+				),
+			);
+		}
+		return array(
+			'result'  => 'waits',
+			'detail'  => $detail + array( 'due' => false ),
+			'message' => sprintf(
+				/* translators: 1: step ID, 2: the wait in words, such as "3 days before Due on (March 20, 2027) at 09:00", 3: date and time it wakes. */
+				__( 'Wait %1$s: until %2$s, that is %3$s. When it wakes it checks the date again. The test continues as if it had passed.', 'pegwork' ),
+				$id,
+				$words,
+				(string) wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $target->getTimestamp() )
+			),
 		);
 	}
 
