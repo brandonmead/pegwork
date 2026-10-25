@@ -1113,10 +1113,11 @@ final class DryRun {
 		}
 		$context->set_output( $id, $result->output + ( 'continue' === ( $step['on_error'] ?? null ) ? array( 'failed' => false ) : array() ) );
 
-		$note = '';
+		$created = isset( $result->summary['created'] ) ? (array) $result->summary['created'] : null;
+		$note    = self::created_note( $created );
 		if ( $state['wrote'] && ! $state['noted'] ) {
 			$state['noted'] = true;
-			$note           = ' ' . __( 'Reads in a test see the site as it is now: the writes before them are not applied.', 'pegwork' );
+			$note          .= ' ' . __( 'Reads in a test see the site as it is now: the writes before them are not applied.', 'pegwork' );
 		}
 
 		if ( $get ) {
@@ -1126,7 +1127,7 @@ final class DryRun {
 				'found'        => $record_id > 0,
 				'record_id'    => $record_id > 0 ? $record_id : null,
 				'title'        => $record_id > 0 ? self::title( $record_id ) : null,
-			);
+			) + ( null === $created ? array() : array( 'created' => $created ) );
 			$pending   = isset( $step['record'] ) ? self::pending( (string) $step['record'], $context ) : null;
 			if ( $record_id > 0 ) {
 				/* translators: 1: step ID, 2: content type label, 3: record ID, 4: record title. */
@@ -1179,9 +1180,36 @@ final class DryRun {
 				'count'        => (int) $result->output['count'],
 				'records'      => $records,
 				'sum'          => (array) $result->output['sum'],
-			),
+			) + ( null === $created ? array() : array( 'created' => $created ) ),
 			'message' => $message . $note,
 		);
+	}
+
+	/**
+	 * The sentence a read line adds for its `created` bounds (resolved site days), or '' without any.
+	 *
+	 * @param array<string, string>|null $created Resolved bounds (Reads::created_summary()).
+	 */
+	private static function created_note( ?array $created ): string {
+		if ( null === $created || array() === $created ) {
+			return '';
+		}
+		if ( in_array( '', $created, true ) ) {
+			return ' ' . __( 'Its Created date is empty, so it matches nothing.', 'pegwork' );
+		}
+		$day = static function ( string $value ): string {
+			$time = date_create_immutable( $value, wp_timezone() );
+			return $time instanceof \DateTimeImmutable ? wp_date( (string) get_option( 'date_format' ), $time->getTimestamp(), wp_timezone() ) : $value;
+		};
+		if ( isset( $created['before'], $created['after'] ) ) {
+			/* translators: 1: day such as "October 25, 2024", 2: day. */
+			return ' ' . sprintf( __( 'Created after %1$s and before %2$s.', 'pegwork' ), $day( $created['after'] ), $day( $created['before'] ) );
+		}
+		return isset( $created['before'] )
+			/* translators: %s: day such as "October 25, 2024". */
+			? ' ' . sprintf( __( 'Created before %s.', 'pegwork' ), $day( $created['before'] ) )
+			/* translators: %s: day such as "October 25, 2024". */
+			: ' ' . sprintf( __( 'Created after %s.', 'pegwork' ), $day( (string) $created['after'] ) );
 	}
 
 	/**

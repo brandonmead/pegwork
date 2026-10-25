@@ -12,6 +12,7 @@ namespace PegworkAutomation\Admin;
 use PegworkAutomation\Editor\AutomationPost;
 use PegworkAutomation\Editor\BuilderEditor;
 use PegworkAutomation\Engine;
+use PegworkAutomation\Manual;
 use PegworkAutomation\Overrides;
 use PegworkAutomation\Webhooks\Inbound;
 
@@ -98,9 +99,20 @@ final class AutomationList {
 	 */
 	private static function endpoint( string $key, array $definition ): string {
 		if ( 'manual' === $definition['trigger']['type'] ) {
-			return 'editors' === ( $definition['trigger']['allow'] ?? 'admins' )
+			$who  = 'editors' === ( $definition['trigger']['allow'] ?? 'admins' )
 				? '<span class="pegwork-meta">' . esc_html__( 'Editors can run', 'pegwork' ) . '</span>'
 				: '<span class="pegwork-meta">' . esc_html__( 'Administrators can run', 'pegwork' ) . '</span>';
+			$type = (string) ( $definition['trigger']['content_type'] ?? '' );
+			if ( '' !== $type && ! Manual::trashes( $key ) ) { // BulkRun::eligible() less the enabled state, which the row shows beside it.
+				$who .= '<span class="pegwork-meta">' . esc_html(
+					sprintf(
+						/* translators: %s: content type label (plural), such as "Gifts". */
+						__( 'Staff can also run it on selected %s', 'pegwork' ),
+						(string) ( pegwork_registry()->content_type( $type )['labels']['plural'] ?? $type )
+					)
+				) . '</span>';
+			}
+			return $who;
 		}
 		if ( 'webhook' !== $definition['trigger']['type'] ) {
 			return '';

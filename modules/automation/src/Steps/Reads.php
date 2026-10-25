@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace PegworkAutomation\Steps;
 
+use DateTimeImmutable;
 use Pegwork\Api\Records;
 use PegworkAutomation\Conditions;
 use PegworkAutomation\Context;
@@ -16,7 +17,7 @@ use PegworkAutomation\Templates;
 use WP_Error;
 
 /**
- * Turns a `get_record` or `find_records` step's `related`, `filter`, `status` and `sort` into a
+ * Turns a `get_record` or `find_records` step's `related`, `filter`, `status`, `sort` and `created` into a
  * Records::find() query with resolved operands (`{ var }` and `{ date, offset }` resolve here; core knows
  * nothing of run paths), and builds the parts of a read's log summary. Reads are pure: they write nothing,
  * so retrying them is safe.
@@ -76,7 +77,53 @@ final class Reads {
 		if ( isset( $step['sort'] ) ) {
 			$query['sort'] = (array) $step['sort'];
 		}
+		if ( isset( $step['created'] ) && is_array( $step['created'] ) ) {
+			$query['created'] = self::created( $step['created'], $context );
+		}
 		return $query;
+	}
+
+	/**
+	 * Resolves a read's `created` bounds to the site-time `Y-m-d` days core's query takes: a literal day stays,
+	 * `{ date, offset }` and `{ var }` resolve against the run (Conditions::operand()), and a resolved datetime
+	 * becomes its day in the site time zone. An empty operand stays '' (core then matches nothing); a value
+	 * that is not a date is passed on as is, so core refuses it (`read_invalid`).
+	 *
+	 * @param array<string, mixed> $created `{ before?, after? }`.
+	 * @param Context              $context Run context.
+	 * @return array<string, mixed>
+	 */
+	public static function created( array $created, Context $context ): array {
+		$out = array();
+		foreach ( array( 'before', 'after' ) as $bound ) {
+			if ( ! array_key_exists( $bound, $created ) ) {
+				continue;
+			}
+			$value = Conditions::operand( $created[ $bound ], $context );
+			if ( null === $value || '' === $value ) {
+				$out[ $bound ] = '';
+				continue;
+			}
+			if ( is_string( $value ) && 1 === preg_match( '/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/', $value ) ) {
+				$time  = date_create_immutable( $value, wp_timezone() );
+				$value = $time instanceof DateTimeImmutable ? $time->setTimezone( wp_timezone() )->format( 'Y-m-d' ) : $value; // Not a date after all: core refuses it.
+			}
+			$out[ $bound ] = $value;
+		}
+		return $out;
+	}
+
+	/**
+	 * The resolved `created` bounds of a query for a log summary or a test line, or null without any.
+	 *
+	 * @param array<string, mixed> $query Query (Reads::query()).
+	 * @return array<string, string>|null
+	 */
+	public static function created_summary( array $query ): ?array {
+		if ( ! isset( $query['created'] ) || ! is_array( $query['created'] ) ) {
+			return null;
+		}
+		return array_map( fn( $value ) => is_scalar( $value ) ? (string) $value : '', $query['created'] );
 	}
 
 	/**

@@ -18,7 +18,8 @@ use PegworkAutomation\Templates;
  * re-reads that record by ID (Context). Not finding a record is not a failure. A record of another type,
  * a status the step does not read, or the trash, is not found.
  *
- * Summary: `content_type`, `found`, `record_id`, and `empty_operand` when an empty operand matched nothing.
+ * Summary: `content_type`, `created` (the resolved days, when the query has it), `found`, `record_id`, and
+ * `empty_operand` when an empty operand matched nothing.
  */
 final class GetRecord implements Step {
 
@@ -51,6 +52,9 @@ final class GetRecord implements Step {
 			}
 			$id    = (int) ( $found['ids'][0] ?? 0 );
 			$empty = $found['empty_operand'] ?? Reads::empty_related( $query );
+			if ( null !== Reads::created_summary( $query ) ) {
+				$summary['created'] = Reads::created_summary( $query );
+			}
 		}
 
 		$summary += array(
