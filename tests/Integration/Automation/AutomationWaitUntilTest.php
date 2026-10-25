@@ -191,7 +191,13 @@ class AutomationWaitUntilTest extends AutomationTestCase {
 		$this->assertSame( 'completed', $run['status'] );
 		$this->assertCount( 1, $this->mail(), 'Reminded at 10:00 on 03-05.' );
 		$this->assertSame( '2027-03-05', Records::get( $task )['values']['reminded_on'] );
-		$this->assertSame( array( 'due' => true, 'late' => false ), array_intersect_key( $this->wait_rows( $run['id'] )[1][1], array_flip( array( 'due', 'late' ) ) ) );
+		$this->assertSame(
+			array(
+				'due'  => true,
+				'late' => false,
+			),
+			array_intersect_key( $this->wait_rows( $run['id'] )[1][1], array_flip( array( 'due', 'late' ) ) )
+		);
 	}
 
 	/**
@@ -392,8 +398,8 @@ class AutomationWaitUntilTest extends AutomationTestCase {
 	 */
 	public function test_listener_skips_unrelated_changes_without_queries() {
 		global $wpdb;
-		$task = $this->task( '2027-03-20' );
-		$run  = $this->run_of( $task );
+		$task                   = $this->task( '2027-03-20' );
+		$run                    = $this->run_of( $task );
 		$this->scheduler->fired = array();
 
 		$this->clock->set( '2027-03-05 10:00' );
@@ -511,8 +517,8 @@ class AutomationWaitUntilTest extends AutomationTestCase {
 	public function test_many_edits_reach_the_step_limit() {
 		$limit = fn() => 3;
 		add_filter( 'pegwork_automation_step_limit', $limit );
-		$task = $this->task( '2027-03-20' );
-		$run  = $this->run_of( $task );
+		$task  = $this->task( '2027-03-20' );
+		$run   = $this->run_of( $task );
 
 		$this->clock->set( '2027-03-05 10:00' );
 		foreach ( array( '2027-03-21', '2027-03-22', '2027-03-23' ) as $due ) {
@@ -531,9 +537,23 @@ class AutomationWaitUntilTest extends AutomationTestCase {
 	public function test_dry_run_lines() {
 		update_option( 'date_format', 'F j, Y' );
 		update_option( 'time_format', 'g:i a' );
-		$future = Records::create( 'barn_task', array( 'name' => 'A', 'due_on' => '2027-03-20' ), 'publish' );
+		$future = Records::create(
+			'barn_task',
+			array(
+				'name'   => 'A',
+				'due_on' => '2027-03-20',
+			),
+			'publish'
+		);
 		$empty  = Records::create( 'barn_task', array( 'name' => 'B' ), 'publish' );
-		$past   = Records::create( 'barn_task', array( 'name' => 'C', 'due_on' => '2027-03-02' ), 'publish' );
+		$past   = Records::create(
+			'barn_task',
+			array(
+				'name'   => 'C',
+				'due_on' => '2027-03-02',
+			),
+			'publish'
+		);
 		$runs   = count( $this->runs( self::KEY ) );
 		$sent   = 0;
 		$count  = function ( $value ) use ( &$sent ) {

@@ -144,11 +144,11 @@ final class Engine {
 	 */
 	public static function register(): void {
 		$hooks = array(
-			'pegwork_event'        => array( 'on_event', 2 ),
-			self::RUN_HOOK         => array( 'on_run', 1 ),
-			self::MAINTENANCE_HOOK => array( 'on_maintenance', 0 ),
-			self::SCHEDULE_HOOK    => array( 'on_schedule', 1 ),
-			self::SWEEP_HOOK       => array( 'on_sweep', 3 ),
+			'pegwork_event'                => array( 'on_event', 2 ),
+			self::RUN_HOOK                 => array( 'on_run', 1 ),
+			self::MAINTENANCE_HOOK         => array( 'on_maintenance', 0 ),
+			self::SCHEDULE_HOOK            => array( 'on_schedule', 1 ),
+			self::SWEEP_HOOK               => array( 'on_sweep', 3 ),
 			'pegwork_event_record_updated' => array( 'on_record_updated', 1 ),
 		);
 		foreach ( $hooks as $hook => [ $method, $args ] ) {

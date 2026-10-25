@@ -94,8 +94,26 @@ class WaitUntilTest extends WP_UnitTestCase {
 	 * The wording of a wait, and the key a var names.
 	 */
 	public function test_describe_and_key() {
-		$this->assertSame( '3 days before Due on at 09:00', WaitUntil::describe( array( 'offset' => '-P3D', 'at' => '09:00' ), 'Due on' ) );
-		$this->assertSame( '2 hours after due_on at 07:30', WaitUntil::describe( array( 'offset' => '+PT2H', 'at' => '07:30' ), 'due_on' ) );
+		$this->assertSame(
+			'3 days before Due on at 09:00',
+			WaitUntil::describe(
+				array(
+					'offset' => '-P3D',
+					'at'     => '09:00',
+				),
+				'Due on'
+			)
+		);
+		$this->assertSame(
+			'2 hours after due_on at 07:30',
+			WaitUntil::describe(
+				array(
+					'offset' => '+PT2H',
+					'at'     => '07:30',
+				),
+				'due_on'
+			)
+		);
 		$this->assertSame( '7 days before due_on at 09:00', WaitUntil::describe( array( 'offset' => '-P1W' ), 'due_on' ), 'Weeks read as days.' );
 		$this->assertSame( '1 day, 2 hours after due_on at 09:00', WaitUntil::describe( array( 'offset' => 'P1DT2H' ), 'due_on' ) );
 		$this->assertSame( 'due_on at 09:00', WaitUntil::describe( array(), 'due_on' ) );

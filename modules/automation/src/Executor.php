@@ -238,7 +238,7 @@ final class Executor {
 				$runs->finish( $id, 'completed', null, self::store( self::outcome( $stored ), $context ) );
 				return 'completed';
 			}
-			$next = 'decision' === ( $step['type'] ?? null ) ? $plan->after_branch( $step_id, $result->branch ) : $plan->next( $step_id );
+			$next   = 'decision' === ( $step['type'] ?? null ) ? $plan->after_branch( $step_id, $result->branch ) : $plan->next( $step_id );
 			$resume = $result->stay ? $step_id : $next; // A date wait decides again on every wake-up.
 			if ( null !== $result->resume_at && null !== $resume ) {
 				$runs->wait( $id, $resume, $result->resume_at, self::store( $stored, $context ) );
