@@ -31,7 +31,8 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 ## Automation v4 PRs (`docs/automation-v4-design.md` section 11)
 1. Core: `Records::trash()` and `created` reads, API 0.4.0: done, in review (branch `v4-core-trash`). Its leftover (`Records::get()`/`update()` still read trashed records) is handled in the engine by PR 4.
 2. Registry: v4 shapes: done, in review (branch `v4-registry`). Runs using v4 shapes fail `unsupported_step` before their first step until PRs 3 to 6. Left for Editor PR 9: refuse trashing an automation post whose definition is in use (the definition already stays); round-trip the `v4` package in `reads.test.js`.
-4. Engine: trash: done, in review (branch `v4-trash`). `trash_record` runs; `update_record` and `relate` on a trashed record fail in the engine (core unchanged). Open: no engine PR in section 11 lifts the read `created` guard in `Engine::unsupported()` (`Steps\Reads` does not pass `created` to core yet), so `barn_volunteer_retention` still fails `unsupported_step`; it needs an owner before PR 10. Left for Editor PR 9: round-trip `tests/fixtures/valid/engine-trash` in `reads.test.js`.
+4. Engine: trash: done, in review (branch `v4-trash`). `trash_record` runs; `update_record` and `relate` on a trashed record fail in the engine (core unchanged). The read `created` gap it found is closed by PR 7. Left for Editor PR 9: round-trip `tests/fixtures/valid/engine-trash` in `reads.test.js`.
+7. Bulk Run, plus the read `created` engine gap: in progress (branch `v4-bulk`). `Steps\Reads` resolves `created` operands to site days and passes them to core; `Engine::unsupported()` no longer refuses `created`, so `barn_volunteer_retention` runs.
 
 ## Phase 1 PRs
 1. Scaffold (merged)

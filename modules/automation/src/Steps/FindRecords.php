@@ -16,8 +16,9 @@ use PegworkAutomation\Context;
  * `sum` of number fields over every match, computed in SQL by core. Outputs `count`, `ids` (the
  * `steps.<id>.records` collection, for `{{#each}}` and loops) and `sum.<field>` (0 with no matches).
  *
- * Summary: `content_type`, `count`, `returned`, the IDs, sums of public fields only, and `empty_operand`
- * when an empty operand matched nothing. Never field values or titles.
+ * Summary: `content_type`, `created` (the resolved days, when the query has it), `count`, `returned`, the
+ * IDs, sums of public fields only, and `empty_operand` when an empty operand matched nothing. Never field
+ * values or titles.
  */
 final class FindRecords implements Step {
 
@@ -43,6 +44,9 @@ final class FindRecords implements Step {
 			'sum'   => $sum,
 		);
 
+		if ( null !== Reads::created_summary( $query ) ) {
+			$summary['created'] = Reads::created_summary( $query );
+		}
 		$found = Reads::find( $type, $query, $summary );
 		if ( $found instanceof StepResult ) {
 			return $found;

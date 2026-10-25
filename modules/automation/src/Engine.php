@@ -285,8 +285,9 @@ final class Engine {
 	 * the engine runs them all, so the executor refuses such a run before its first step instead of acting on
 	 * part of it: a step type without a handler, at any depth (`loop` has none because the executor's cursor
 	 * runs it). Until the Automation v4 engine PRs land (docs/automation-v4-design.md section 11), also the v4
-	 * shapes of existing step types: a wait `until` a date, a `{role:<slug>}` recipient, and a read `created`.
-	 * trash_record runs (v4 PR 4); start_automation has no handler yet, so the first rule refuses it.
+	 * shapes of existing step types: a wait `until` a date and a `{role:<slug>}` recipient. trash_record runs
+	 * (v4 PR 4) and so does a read `created` (v4 PR 7); start_automation has no handler yet, so the first rule
+	 * refuses it.
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */
@@ -322,9 +323,6 @@ final class Engine {
 			}
 			if ( 'send_email' === $type && str_contains( (string) ( $step['to'] ?? '' ), '{role:' ) ) {
 				return sprintf( 'step "%s" sends to a role ("{role:...}"), which this version of the automation module cannot do.', $id );
-			}
-			if ( in_array( $type, array( 'get_record', 'find_records' ), true ) && isset( $step['created'] ) ) {
-				return sprintf( 'step "%s" reads by creation time ("created"), which this version of the automation module cannot do.', $id );
 			}
 			$children = array_merge(
 				array_map( fn( $branch ) => (array) ( ( (array) $branch )['steps'] ?? array() ), (array) ( $step['branches'] ?? array() ) ),
