@@ -1932,7 +1932,7 @@ msgstr ""
 #. translators: %s: form label.
 #: modules/forms/src/FormsTable.php:130
 #, php-format
-msgid "Duplicate \"%s\" as a site form"
+msgid "Duplicate as site form: \"%s\""
 msgstr ""
 
 #: modules/forms/src/FormsTable.php:131
@@ -1954,7 +1954,7 @@ msgstr ""
 #. translators: %s: form label.
 #: modules/forms/src/FormsTable.php:187
 #, php-format
-msgid "Entries of \"%s\""
+msgid "View entries of \"%s\""
 msgstr ""
 
 #: modules/forms/src/FormsTable.php:188

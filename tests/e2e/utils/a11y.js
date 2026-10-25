@@ -6,12 +6,16 @@ const AxeBuilder = require( '@axe-core/playwright' ).default;
  * the rule still runs on everything else. Each entry names the core component and the axe version
  * that started reporting it.
  *
- * axe-core 4.14 enables label-content-name-mismatch (WCAG 2.5.3) by default. Two core editor
+ * axe-core 4.14 enables label-content-name-mismatch (WCAG 2.5.3) by default. These core
  * controls set an aria-label that does not contain their visible text:
  * - block-editor DefaultBlockAppender, in the editor canvas iframe:
  *   <p role="button" aria-label="Add default block">Type / to choose a block</p>
  * - editor PostTemplatePanel (block themes), in the Document sidebar: the DropdownMenu toggle
  *   labelled "Template options" whose text is the template name, such as "Single Posts".
+ * - components Snackbar: <div role="button" aria-label="Dismiss this notice"> around the
+ *   notice text (our text, such as "Form saved.", in core's markup).
+ * - admin menu collapse button (wp-admin/menu-header.php):
+ *   <button id="collapse-button" aria-label="Collapse Main menu">...Collapse Menu</button>
  */
 const CORE_KNOWN_FAILURES = [
 	{
@@ -23,6 +27,16 @@ const CORE_KNOWN_FAILURES = [
 		rule: 'label-content-name-mismatch',
 		inCanvas: false,
 		html: /^<button [^>]*class="[^"]*components-dropdown-menu__toggle[^"]*"[^>]*aria-label="Template options"/,
+	},
+	{
+		rule: 'label-content-name-mismatch',
+		inCanvas: false,
+		html: /^<div class="components-snackbar"[^>]*aria-label="Dismiss this notice"/,
+	},
+	{
+		rule: 'label-content-name-mismatch',
+		inCanvas: false,
+		html: /^<button [^>]*id="collapse-button"/,
 	},
 ];
 
