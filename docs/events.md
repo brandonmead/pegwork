@@ -87,10 +87,11 @@ array(
 | PHP `wp_insert_post`/`wp_update_post`, `wp_trash_post`, `wp_publish_post` | `pre_post_update` (or the status before, for `wp_publish_post`) | `wp_after_insert_post` |
 | `Records::create`/`update` | before writing | once, after post, meta, terms and links |
 | `Records::relate`/`unrelate` | before writing the link | once, `record.updated` on the "from" record (nothing when the link already existed or was already absent) |
+| `Records::trash` (API 0.4.0) | before `wp_trash_post()` | its `wp_after_insert_post`: `record.updated` then `record.status_changed`, with the caller's origin |
 | Permanent delete | `before_delete_post` | `deleted_post` |
 
 - Block editor "new post" inserts an auto-draft: nothing. Its first real save emits `record.created`.
-- Trash emits `record.updated` (`changed` = `status`) and `record.status_changed` to `trash`.
+- Trash emits `record.updated` (`changed` = `status`) and `record.status_changed` to `trash`. Through `Records::trash( $id, $origin )` both carry `source` `records_api` and the caller's `automation`, `run_id` and `depth` (or the dispatched event's depth plus 1 when higher); an automation passes its run depth plus 1. A record already in the trash, a refusal (`trash_disabled` when `EMPTY_TRASH_DAYS` is 0) and an error emit nothing.
 - Autosaves (`/autosaves` routes, autosave revisions) emit nothing, including a draft autosave that updates the post itself.
 - A save rejected by validation emits nothing.
 - A REST save that changes only the links of a "from" record (`meta._rel_{key}`) emits `record.updated` with the relationship key (before API 0.3.0 it emitted nothing).
@@ -133,9 +134,11 @@ Records::get( int $id ): ?array
 
 Records::create( string $type, array $values, string $status = 'draft', array $origin = [] ): int|WP_Error
 Records::update( int $id, array $values, array $origin = [] ): true|WP_Error
+Records::trash( int $id, array $origin = [] ): bool|WP_Error // API 0.4.0; never a permanent delete
 ```
 
 - Fields map to `post_title`/`post_content` (`wp.storage`) or meta; taxonomy values are slugs (a string or a list). Unknown keys, unknown term slugs (never created) and values the field sanitizer empties (bad email, date, select option) are rejected.
 - The merged record is validated like a REST save: completeness rules only when the resulting status is publish, pending or future; single-select term counts always. Errors: `pegwork_invalid_record`, status 400, `data.fields` = key => message. Also `pegwork_unknown_type`, `pegwork_invalid_status`, `pegwork_record_not_found`.
 - No capability check: callers (automation runs, link handlers) authorize by their own rules.
 - `update()` does not change the post status.
+- `trash()` returns true when moved and false when already trashed; errors `pegwork_record_not_found`, `trash_disabled` (`EMPTY_TRASH_DAYS` is 0, post left untouched) and `pegwork_trash_failed`. Details: `docs/extension-api.md`.

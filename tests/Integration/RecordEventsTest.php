@@ -530,6 +530,103 @@ class RecordEventsTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Records::trash() (API 0.4.0): record.updated (`changed` = status) and record.status_changed to trash, both
+	 * with the caller's origin; false when already trashed; restorable.
+	 */
+	public function test_records_api_trash() {
+		$id     = $this->create_project();
+		$origin = array(
+			'automation' => 'retention',
+			'run_id'     => 9,
+			'depth'      => 2,
+		);
+
+		$this->assertTrue( Records::trash( $id, $origin ) );
+		$this->assertSame( 'trash', get_post_status( $id ) );
+		$this->assertSame( array( 'record.updated', 'record.status_changed' ), $this->names() );
+		$expected = array( 'source' => 'records_api' ) + $origin;
+		$updated  = $this->only( 'record.updated' );
+		$this->assertSame( array( 'status' ), $updated['changed'] );
+		$this->assertSame( array( 'status' => 'publish' ), $updated['old'] );
+		$this->assertSame( $expected, $updated['origin'] );
+		$changed = $this->only( 'record.status_changed' );
+		$this->assertSame( 'publish', $changed['old_status'] );
+		$this->assertSame( 'trash', $changed['new_status'] );
+		$this->assertSame( $expected, $changed['origin'] );
+
+		$this->events = array();
+		$this->assertFalse( Records::trash( $id, $origin ), 'Already in the trash.' );
+		$this->assertSame( array(), $this->events );
+
+		wp_untrash_post( $id );
+		$this->assertSame( 'draft', get_post_status( $id ), 'Core restores to draft since WordPress 5.6.' );
+		$this->assertNotNull( Records::get( $id ) );
+	}
+
+	/**
+	 * A listener trashing through Records::trash() gets the dispatched event's depth plus 1.
+	 */
+	public function test_records_api_trash_from_listener_carries_depth() {
+		$id = $this->create_project();
+		add_action(
+			'pegwork_event_record_updated',
+			function ( $payload ) use ( $id ) {
+				if ( $id === $payload['id'] && 'trash' !== $payload['status'] ) {
+					Records::trash( $id, array( 'automation' => 'cleanup' ) );
+				}
+			}
+		);
+
+		$this->assertTrue( Records::update( $id, array( 'last_verified' => '2026-10-18' ) ) );
+		$this->assertSame( array( 'record.updated', 'record.updated', 'record.status_changed' ), $this->names() );
+		$this->assertSame(
+			array(
+				'source'     => 'records_api',
+				'automation' => 'cleanup',
+				'depth'      => 1,
+			),
+			$this->only( 'record.status_changed' )['origin']
+		);
+		$this->assertSame( 'trash', get_post_status( $id ) );
+	}
+
+	/**
+	 * Records::trash() refuses when the site keeps no trash (`trash_disabled`, the post untouched and no
+	 * event), and for anything that is not a registry record. EMPTY_TRASH_DAYS is a constant, so the test
+	 * turns trash off through the pegwork_records_trash_enabled filter, which Records::trash() checks together
+	 * with the constant; a filter returning true cannot turn trash on when the constant is 0.
+	 */
+	public function test_records_api_trash_refusals() {
+		$id = $this->create_project();
+
+		add_filter( 'pegwork_records_trash_enabled', '__return_false' );
+		$result = Records::trash( $id );
+		$this->assertWPError( $result );
+		$this->assertSame( 'trash_disabled', $result->get_error_code() );
+		$this->assertSame( 'publish', get_post_status( $id ), 'The post is left as it was.' );
+		$this->assertSame( '', get_post_meta( $id, '_wp_trash_meta_status', true ) );
+		$this->assertSame( array(), $this->events );
+		remove_filter( 'pegwork_records_trash_enabled', '__return_false' );
+
+		add_filter( 'pre_trash_post', '__return_false' );
+		$this->assertSame( 'pegwork_trash_failed', Records::trash( $id )->get_error_code() );
+		$this->assertSame( 'publish', get_post_status( $id ) );
+		remove_filter( 'pre_trash_post', '__return_false' );
+		$this->assertSame( array(), $this->events );
+
+		$auto_draft = self::factory()->post->create(
+			array(
+				'post_type'   => 'sifg_project',
+				'post_status' => 'auto-draft',
+			)
+		);
+		foreach ( array( 999999, self::factory()->post->create(), $auto_draft ) as $other ) {
+			$this->assertSame( 'pegwork_record_not_found', Records::trash( $other )->get_error_code() );
+		}
+		$this->assertSame( 'auto-draft', get_post_status( $auto_draft ) );
+	}
+
+	/**
 	 * A module listening on pegwork_event_record_updated writes through Records::update; the nested
 	 * event carries depth 1 and the module's origin.
 	 */
