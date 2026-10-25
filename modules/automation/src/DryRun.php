@@ -15,6 +15,7 @@ use PegworkAutomation\Steps\Decision;
 use PegworkAutomation\Steps\FindRecords;
 use PegworkAutomation\Steps\GetRecord;
 use PegworkAutomation\Steps\SendEmail;
+use PegworkAutomation\Steps\TrashRecord;
 use WP_Error;
 
 /**
@@ -654,6 +655,11 @@ final class DryRun {
 				}
 				break;
 
+			case 'trash_record':
+				$state['wrote'] = true;
+				$entry          = self::trash( $step, $context, $record ) + $entry;
+				break;
+
 			case 'call_webhook':
 				$url     = trim( Templates::render( (string) ( $step['url'] ?? '' ), $context, Templates::PREVIEW ) );
 				$host    = (string) wp_parse_url( $url, PHP_URL_HOST );
@@ -709,6 +715,77 @@ final class DryRun {
 		}
 
 		return $entry;
+	}
+
+	/**
+	 * What a trash step would do: the record it would move (type label, ID, title) or why it would fail.
+	 * Each record it would move counts toward the run's trash cap, so the report shows `trash_limit` where
+	 * a real run would hit it. Nothing is moved.
+	 *
+	 * @param array<string, mixed>      $step    Step.
+	 * @param Context                   $context Context.
+	 * @param array<string, mixed>|null $record  Sample record.
+	 * @return array{result: string, detail: array<string, mixed>, message: string}
+	 */
+	private static function trash( array $step, Context $context, ?array $record ): array {
+		$id      = (string) $step['id'];
+		$type    = (string) $step['content_type'];
+		$pending = isset( $step['record'] ) ? self::pending( (string) $step['record'], $context ) : null;
+		if ( null !== $pending ) {
+			return array(
+				'result'  => 'ok',
+				'detail'  => array(
+					'content_type' => $type,
+					'record_id'    => null,
+				),
+				/* translators: 1: step ID, 2: step ID. */
+				'message' => sprintf( __( 'Move to trash %1$s: the record from step %2$s, known only in a real run (not applied).', 'pegwork' ), $id, $pending ),
+			);
+		}
+
+		$target = isset( $step['record'] ) ? (int) trim( Templates::render( (string) $step['record'], $context ) ) : (int) ( $record['id'] ?? 0 );
+		$data   = $target > 0 ? Records::get( $target ) : null;
+		$detail = array(
+			'content_type' => $type,
+			'record_id'    => $target > 0 ? $target : null,
+		);
+		$error  = null;
+		if ( null === $data || 'auto-draft' === $data['status'] ) {
+			/* translators: %d: record ID. */
+			$error = array( 'pegwork_record_not_found', sprintf( __( 'no record with ID %d.', 'pegwork' ), $target ) );
+		} elseif ( $type !== $data['type'] ) {
+			/* translators: 1: record ID, 2: its content type, 3: the step's content type. */
+			$error = array( 'record_type', sprintf( __( 'record %1$d is a %2$s; this step moves only %3$s records.', 'pegwork' ), $target, (string) $data['type'], $type ) );
+		} elseif ( 'trash' !== $data['status'] && $context->trashed() >= TrashRecord::limit() ) {
+			/* translators: %d: per-run trash limit. */
+			$error = array( 'trash_limit', sprintf( __( 'the run would already have moved %d records to the trash, the most one run may move.', 'pegwork' ), TrashRecord::limit() ) );
+		}
+		if ( null !== $error ) {
+			return array(
+				'result'  => 'fails',
+				'detail'  => $detail + array( 'error' => $error[0] ),
+				/* translators: 1: step ID, 2: reason. */
+				'message' => sprintf( __( 'Move to trash %1$s: would fail: %2$s', 'pegwork' ), $id, $error[1] ),
+			);
+		}
+
+		$label = self::type_label( $type, false );
+		$title = self::title( $target );
+		if ( 'trash' === $data['status'] ) {
+			return array(
+				'result'  => 'ok',
+				'detail'  => $detail + array( 'changed' => false ),
+				/* translators: 1: step ID, 2: content type label, 3: record ID, 4: record title. */
+				'message' => sprintf( __( 'Move to trash %1$s: %2$s %3$d "%4$s" is already in the trash.', 'pegwork' ), $id, $label, $target, $title ),
+			);
+		}
+		$context->add_trashed();
+		return array(
+			'result'  => 'ok',
+			'detail'  => $detail + array( 'changed' => true ),
+			/* translators: 1: step ID, 2: content type label, 3: record ID, 4: record title. */
+			'message' => sprintf( __( 'Move to trash %1$s: %2$s %3$d "%4$s" (not applied).', 'pegwork' ), $id, $label, $target, $title ),
+		);
 	}
 
 	/**

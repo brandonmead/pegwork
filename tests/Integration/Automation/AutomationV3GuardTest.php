@@ -20,8 +20,8 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
  * is still refused before the first step. Manual triggers (PR 5) are covered by AutomationManualTest.
  *
  * Automation v4 PR 2 (registry): the `v4` fixture's shapes (wait until, trash_record, start_automation,
- * read `created`) are refused before the first step until the engine PRs land; role recipients run since
- * v4 PR 6.
+ * read `created`) are refused before the first step until the engine PRs land; trash_record runs since
+ * v4 PR 4 and role recipients since v4 PR 6.
  */
 class AutomationV3GuardTest extends AutomationTestCase {
 
@@ -78,6 +78,6 @@ class AutomationV3GuardTest extends AutomationTestCase {
 
 		$retention             = self::automations()[ $v4 . 'barn_volunteer_retention.json' ];
 		$retention['steps'][0] = array_diff_key( $retention['steps'][0], array( 'created' => true ) );
-		$this->assertSame( 'step "remove" has type "trash_record", which this version of the automation module cannot run.', Engine::instance()->unsupported( $retention ), 'A trash step inside a loop body is refused.' );
+		$this->assertNull( Engine::instance()->unsupported( $retention ), 'A trash step inside a loop body runs (v4 PR 4).' );
 	}
 }

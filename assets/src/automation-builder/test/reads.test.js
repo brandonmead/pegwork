@@ -84,11 +84,13 @@ function walk( steps ) {
 	] );
 }
 
-// The Automation v4 shapes package: the builder learns its shapes in v4 Editor PRs 8 and 9
-// (docs/automation-v4-design.md section 11), which round-trip it here.
+// The Automation v4 shapes package and the trash engine package: the builder learns their shapes in
+// v4 Editor PRs 8 and 9 (docs/automation-v4-design.md section 11), which round-trip them here.
 const v3Automations = () =>
 	automations().filter(
-		( [ path ] ) => ! path.startsWith( 'tests/fixtures/valid/v4/' )
+		( [ path ] ) =>
+			! path.startsWith( 'tests/fixtures/valid/v4/' ) &&
+			! path.startsWith( 'tests/fixtures/valid/engine-trash/' )
 	);
 
 // The definitions this PR's editor edits: a read, a link, an on_error step or a manual trigger.

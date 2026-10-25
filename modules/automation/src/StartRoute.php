@@ -117,6 +117,8 @@ final class StartRoute {
 	/**
 	 * Whether the current user may start an automation (on a record, for a trigger with a content type).
 	 * Unknown and non-manual automations are refused alike, so the route does not reveal which keys exist.
+	 * Editors also need `delete_post` on the record when the automation, or one it starts, can move records
+	 * to the trash (Manual::trashes()).
 	 *
 	 * @param string $key    Automation key.
 	 * @param int    $record Record ID, or 0.
@@ -132,7 +134,8 @@ final class StartRoute {
 		return 'editors' === ( $definition['trigger']['allow'] ?? 'admins' )
 			&& isset( $definition['trigger']['content_type'] )
 			&& $record > 0
-			&& current_user_can( 'edit_post', $record );
+			&& current_user_can( 'edit_post', $record )
+			&& ( ! Manual::trashes( $key ) || current_user_can( 'delete_post', $record ) );
 	}
 
 	/**
