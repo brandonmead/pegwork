@@ -497,4 +497,104 @@ class NormalizerTest extends TestCase {
 			$this->assertSame( wp_json_encode( $object ), wp_json_encode( Normalizer::normalize( 'automation', $object ) ) );
 		}
 	}
+
+	/**
+	 * Automation v4 defaults: a date wait gets `until.at` 09:00 and loses a zero offset (any sign or unit), a
+	 * non-zero offset and `created` operands stay as written; the result is idempotent, and the v4 fixture too.
+	 */
+	public function test_v4_defaults() {
+		$wait = fn( $until ) => array(
+			'id'    => 'w',
+			'type'  => 'wait',
+			'until' => $until,
+		);
+		$read = array(
+			'id'           => 'old',
+			'type'         => 'find_records',
+			'content_type' => 'barn_volunteer',
+			'created'      => array(
+				'before' => array(
+					'date'   => 'today',
+					'offset' => '-P2Y',
+				),
+				'after'  => '2020-01-01',
+			),
+		);
+		$data = Normalizer::normalize(
+			'automation',
+			array(
+				'format'  => 1,
+				'key'     => 'a',
+				'label'   => 'A',
+				'trigger' => array(
+					'type'         => 'event',
+					'event'        => 'record.created',
+					'content_type' => 'barn_task',
+				),
+				'steps'   => array(
+					$wait( array( 'var' => 'record.due_on' ) ),
+					$wait(
+						array(
+							'var'    => 'record.due_on',
+							'offset' => '-PT0S',
+						)
+					),
+					$wait(
+						array(
+							'var'    => 'record.due_on',
+							'offset' => '+P0Y0D',
+							'at'     => '17:00',
+						)
+					),
+					$wait(
+						array(
+							'var'    => 'record.due_on',
+							'offset' => '-P10D',
+						)
+					),
+					$read,
+				),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				array(
+					'at'  => '09:00',
+					'var' => 'record.due_on',
+				),
+				array(
+					'at'  => '09:00',
+					'var' => 'record.due_on',
+				),
+				array(
+					'at'  => '17:00',
+					'var' => 'record.due_on',
+				),
+				array(
+					'at'     => '09:00',
+					'offset' => '-P10D',
+					'var'    => 'record.due_on',
+				),
+			),
+			array_column( array_slice( $data['steps'], 0, 4 ), 'until' )
+		);
+		$this->assertSame(
+			array(
+				'after'  => '2020-01-01',
+				'before' => array(
+					'date'   => 'today',
+					'offset' => '-P2Y',
+				),
+			),
+			$data['steps'][4]['created']
+		);
+		$this->assertSame( wp_json_encode( $data ), wp_json_encode( Normalizer::normalize( 'automation', $data ) ) );
+
+		$result = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/v4' ) );
+		$this->assertTrue( $result->is_valid() );
+		foreach ( $result->registry->automations() as $object ) {
+			$this->assertSame( wp_json_encode( $object ), wp_json_encode( Normalizer::normalize( 'automation', $object ) ) );
+		}
+	}
 }

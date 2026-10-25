@@ -810,12 +810,20 @@
 			"type": "object",
 			"required": [ "id", "type" ],
 			"properties": {
-				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition", "decision", "get_record", "find_records", "loop", "relate" ] }
+				"type": { "enum": [ "update_record", "create_record", "send_email", "call_webhook", "wait", "condition", "decision", "get_record", "find_records", "loop", "relate", "trash_record", "start_automation" ] }
 			},
 			"allOf": [
 				{
 					"if": { "properties": { "type": { "const": "decision" } } },
 					"then": { "$ref": "#/$defs/decision" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "trash_record" } } },
+					"then": { "$ref": "#/$defs/trash_record" }
+				},
+				{
+					"if": { "properties": { "type": { "const": "start_automation" } } },
+					"then": { "$ref": "#/$defs/start_automation" }
 				},
 				{
 					"if": { "properties": { "type": { "const": "get_record" } } },
@@ -874,7 +882,7 @@
 							"type": true,
 							"retry": { "$ref": "#/$defs/retry" },
 							"on_error": { "$ref": "#/$defs/on_error" },
-							"to": { "$ref": "#/$defs/text" },
+							"to": { "description": "1 to 5 recipient parts separated by commas: addresses, merge tags, {option:<page>.<field>} and {role:<slug>} (Bcc, staff roles, at most 25 members). Part count and role tokens (refused in every other template) are PHP only.", "$ref": "#/$defs/text" },
 							"subject": { "$ref": "#/$defs/text" },
 							"text": { "$ref": "#/$defs/text" },
 							"html": { "$ref": "#/$defs/text" },
@@ -904,14 +912,15 @@
 				{
 					"if": { "properties": { "type": { "const": "wait" } } },
 					"then": {
-						"required": [ "for" ],
 						"additionalProperties": false,
 						"properties": {
 							"id": { "$ref": "#/$defs/key" },
 							"type": true,
 							"retry": { "$ref": "#/$defs/retry" },
-							"for": { "$ref": "#/$defs/duration" }
-						}
+							"for": { "$ref": "#/$defs/duration" },
+							"until": { "$ref": "#/$defs/wait_until" }
+						},
+						"oneOf": [ { "required": [ "for" ] }, { "required": [ "until" ] } ]
 					}
 				},
 				{
@@ -928,6 +937,45 @@
 					}
 				}
 			]
+		},
+		"wait_until": {
+			"description": "Waits until a date field of the bound record, at a time of day, moved by an offset; re-read on every wake-up. That the field is a date field of a bound, named content type, and the 2-year offset bound, are PHP only.",
+			"type": "object",
+			"required": [ "var" ],
+			"additionalProperties": false,
+			"properties": {
+				"var": { "type": "string", "pattern": "^record\\.[a-z0-9_]+$" },
+				"offset": { "description": "Signed ISO 8601 duration, at most P2Y either way; a zero offset is dropped by the normalizer.", "type": "string", "pattern": "^[-+]?P(?!$)([0-9]+Y)?([0-9]+M)?([0-9]+W)?([0-9]+D)?(T(?=[0-9])([0-9]+H)?([0-9]+M)?([0-9]+S)?)?$" },
+				"at": { "description": "Site time of day on the date, before the offset applies.", "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$", "default": "09:00" }
+			}
+		},
+		"trash_record": {
+			"description": "Moves one record to the trash (never a permanent delete). record is a typed reference whose type is content_type ({{record.id}}, {{steps.<id>.record_id}}, {{steps.<loop>.item.id}}); the default is the bound record. Typed targets and no trash in a schedule with for_each are PHP only.",
+			"type": "object",
+			"required": [ "id", "type", "content_type" ],
+			"additionalProperties": false,
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"retry": { "$ref": "#/$defs/retry" },
+				"on_error": { "$ref": "#/$defs/on_error" },
+				"content_type": { "$ref": "#/$defs/key" },
+				"record": { "$ref": "#/$defs/text" }
+			}
+		},
+		"start_automation": {
+			"description": "Starts a manual automation for a record, without waiting for it. Output started. Target, cycles, the file-to-site rule and record defaults are PHP only.",
+			"type": "object",
+			"required": [ "id", "type", "automation" ],
+			"additionalProperties": false,
+			"properties": {
+				"id": { "$ref": "#/$defs/key" },
+				"type": true,
+				"retry": { "$ref": "#/$defs/retry" },
+				"on_error": { "$ref": "#/$defs/on_error" },
+				"automation": { "$ref": "#/$defs/bounded_key" },
+				"record": { "description": "Template giving one record ID of the target's content type; default the bound record.", "$ref": "#/$defs/text" }
+			}
 		},
 		"decision": {
 			"description": "Runs the steps of the first branch whose \"when\" holds, else \"otherwise\", then continues after the decision. Unique branch labels, unique step ids across the tree, at most 3 nesting levels and the output scope rule are PHP only.",
@@ -1018,6 +1066,16 @@
 						}
 					]
 				},
+				"created": {
+					"description": "Creation time bounds (site days): before is strict, after starts the day after. Each is a Y-m-d date, { date, offset } or { var } (a date path; an empty value matches nothing). That a var reads a date is PHP only.",
+					"type": "object",
+					"minProperties": 1,
+					"additionalProperties": false,
+					"properties": {
+						"before": { "$ref": "#/$defs/created_operand" },
+						"after": { "$ref": "#/$defs/created_operand" }
+					}
+				},
 				"status": {
 					"type": "array",
 					"minItems": 1,
@@ -1036,6 +1094,26 @@
 					"default": { "field": "id", "order": "asc" }
 				}
 			}
+		},
+		"created_operand": {
+			"anyOf": [
+				{ "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+				{
+					"type": "object",
+					"required": [ "date" ],
+					"additionalProperties": false,
+					"properties": {
+						"date": { "enum": [ "today", "now" ] },
+						"offset": { "type": "string", "pattern": "^[-+]?P(?!$)([0-9]+Y)?([0-9]+M)?([0-9]+W)?([0-9]+D)?(T(?=[0-9])([0-9]+H)?([0-9]+M)?([0-9]+S)?)?$" }
+					}
+				},
+				{
+					"type": "object",
+					"required": [ "var" ],
+					"additionalProperties": false,
+					"properties": { "var": { "$ref": "#/$defs/var_path" } }
+				}
+			]
 		},
 		"read_leaf": {
 			"type": "object",
@@ -1078,12 +1156,13 @@
 				"record": { "description": "Template giving one record ID.", "$ref": "#/$defs/text" },
 				"related": true,
 				"filter": true,
+				"created": true,
 				"status": true,
 				"sort": true
 			},
-			"anyOf": [ { "required": [ "record" ] }, { "required": [ "related" ] }, { "required": [ "filter" ] } ],
+			"anyOf": [ { "required": [ "record" ] }, { "required": [ "related" ] }, { "required": [ "filter" ] }, { "required": [ "created" ] } ],
 			"if": { "required": [ "record" ] },
-			"then": { "not": { "anyOf": [ { "required": [ "related" ] }, { "required": [ "filter" ] } ] } }
+			"then": { "not": { "anyOf": [ { "required": [ "related" ] }, { "required": [ "filter" ] }, { "required": [ "created" ] } ] } }
 		},
 		"find_records": {
 			"description": "Reads up to limit records, plus count and sums over every match. Outputs count, records (loop over and {{#each}} only) and sum.<field>.",
@@ -1098,12 +1177,13 @@
 				"content_type": true,
 				"related": true,
 				"filter": true,
+				"created": true,
 				"status": true,
 				"sort": true,
-				"limit": { "description": "Records loaded; 0 loads none (totals only).", "type": "integer", "minimum": 0, "maximum": 50, "default": 10 },
+				"limit":{ "description": "Records loaded; 0 loads none (totals only).", "type": "integer", "minimum": 0, "maximum": 50, "default": 10 },
 				"sum": { "description": "Number fields to total over every match.", "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/key" } }
 			},
-			"anyOf": [ { "required": [ "related" ] }, { "required": [ "filter" ] } ]
+			"anyOf": [ { "required": [ "related" ] }, { "required": [ "filter" ] }, { "required": [ "created" ] } ]
 		},
 		"loop": {
 			"description": "Runs its steps once per record of a find_records result (at most 50). Inside: steps.<loop>.item.<key> and steps.<loop>.index; after: steps.<loop>.count. Body outputs stay inside the body, at most 10 steps counting nested ones, and the 500-attempt bound are PHP only.",

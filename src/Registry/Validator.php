@@ -266,15 +266,19 @@ final class Validator {
 	 * `$known` maps kind => key => the defined object in canonical form. A value that is not an array
 	 * (for example `true`) only proves the key exists; rules that need the object's contents are skipped for it.
 	 *
-	 * @param string                              $kind    Object kind; manifests and taxonomies have no references.
-	 * @param array<string, mixed>                $data    Object that passed validate().
-	 * @param string                              $file    Source file path for error context.
-	 * @param array<string, array<string, mixed>> $known   Defined objects by kind, then key (non-array values skip content checks).
-	 * @param string                              $pointer JSON pointer of the object within the source.
+	 * @param string                               $kind    Object kind; manifests and taxonomies have no references.
+	 * @param array<string, mixed>                 $data    Object that passed validate().
+	 * @param string                               $file    Source file path for error context.
+	 * @param array<string, array<string, mixed>>  $known   Defined objects by kind, then key (non-array values skip content checks).
+	 * @param string                               $pointer JSON pointer of the object within the source.
+	 * @param array<string, array<string, string>> $sources Source of each known object (kind => key => package id or
+	 *                                                      Loader::DB_SOURCE), when known: a package automation may
+	 *                                                      start only package automations.
 	 * @return ValidationError[] Empty when every reference resolves.
 	 */
-	public static function references( string $kind, array $data, string $file, array $known, string $pointer = '' ): array {
-		$validator = new self( $file );
+	public static function references( string $kind, array $data, string $file, array $known, string $pointer = '', array $sources = array() ): array {
+		$validator          = new self( $file );
+		$validator->sources = $sources;
 
 		if ( 'content_type' === $kind ) {
 			foreach ( $data['taxonomies'] ?? array() as $index => $usage ) {

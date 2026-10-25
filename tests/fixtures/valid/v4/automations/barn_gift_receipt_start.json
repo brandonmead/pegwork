@@ -1,0 +1,8 @@
+{ "format": 1, "key": "barn_gift_receipt_start", "label": "Gift received: send the receipt through the shared receipt automation",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "barn_gift" },
+  "steps": [
+    { "id": "receipt", "type": "start_automation", "automation": "barn_gift_receipt" },
+    { "id": "skipped", "type": "condition", "when": { "var": "steps.receipt.started", "op": "eq", "value": false } },
+    { "id": "tell", "type": "send_email", "to": "{option:barn_settings.development_email}",
+      "subject": "No receipt for gift {{record.id}}",
+      "text": "Gift {{record.id}} of ${{record.amount | number:2}} got no receipt (started: {{steps.receipt.started}})." } ] }

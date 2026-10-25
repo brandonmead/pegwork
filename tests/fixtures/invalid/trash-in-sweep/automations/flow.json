@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "schedule",
+    "every": "day",
+    "for_each": {
+      "content_type": "barn_task"
+    }
+  },
+  "steps": [
+    {
+      "id": "remove",
+      "type": "trash_record",
+      "content_type": "barn_task"
+    }
+  ]
+}

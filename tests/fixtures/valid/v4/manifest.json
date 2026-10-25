@@ -1,0 +1,1 @@
+{ "format": 1, "id": "v4", "version": "1.0.0", "label": "Automation v4 shapes: the BarnCRM worked examples and every new step shape", "requires": { "pegwork": ">=0.4.0" } }

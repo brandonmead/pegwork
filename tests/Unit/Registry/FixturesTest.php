@@ -57,7 +57,9 @@ class FixturesTest extends TestCase {
 	}
 
 	/**
-	 * An invalid package reports its rule's error at the expected file and pointer, and registers nothing.
+	 * An invalid package reports its rule's error at the expected file and pointer, and registers nothing. A
+	 * fixture whose rule involves site definitions holds them in `db.json` (the `pegwork_schema` option); those
+	 * still register.
 	 *
 	 * @dataProvider data_invalid_packages
 	 *
@@ -65,7 +67,8 @@ class FixturesTest extends TestCase {
 	 */
 	public function test_invalid_package_fails_for_its_rule( $dir ) {
 		$expected = json_decode( file_get_contents( $dir . '/expected.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
-		$result   = Loader::load( array( $dir ) );
+		$db       = is_file( $dir . '/db.json' ) ? json_decode( file_get_contents( $dir . '/db.json' ), true ) : array(); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+		$result   = Loader::load( array( $dir ), $db );
 
 		$matches = array_filter(
 			$result->errors,
@@ -78,8 +81,10 @@ class FixturesTest extends TestCase {
 			$matches,
 			sprintf( "Expected %s at %s#%s. Got:\n%s", $expected['code'], $expected['file'], $expected['pointer'], implode( "\n", array_map( 'strval', $result->errors ) ) )
 		);
-		foreach ( Loader::SECTIONS as $section ) {
-			$this->assertSame( array(), $result->registry->$section(), "No $section registered." );
+		foreach ( Loader::SECTIONS as $kind => $section ) {
+			$from_package = array_filter( $result->sources[ $kind ] ?? array(), fn( $source ) => Loader::DB_SOURCE !== $source );
+			$this->assertSame( array(), $from_package, "No $section registered from the package." );
+			$this->assertCount( count( $db[ $section ] ?? array() ), $result->registry->$section(), "Only the site's $section registered." );
 		}
 	}
 

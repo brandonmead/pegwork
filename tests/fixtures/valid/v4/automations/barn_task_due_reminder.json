@@ -1,0 +1,11 @@
+{ "format": 1, "key": "barn_task_due_reminder", "label": "Task: remind the assignee 3 days before it is due",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "barn_task" },
+  "steps": [
+    { "id": "before_due", "type": "wait", "until": { "var": "record.due_on", "offset": "-P3D", "at": "09:00" } },
+    { "id": "still_open", "type": "condition", "when": { "all": [
+      { "var": "record.done", "op": "ne", "value": true },
+      { "var": "record.due_on", "op": "gte", "value": { "date": "today" } } ] } },
+    { "id": "remind", "type": "send_email", "to": "{{record.assignee_email}}",
+      "subject": "Due {{record.due_on | date}}: {{record.name}}",
+      "text": "{{record.name}} is due {{record.due_on | date}}. Mark it done when finished: {{record.edit_url}}" },
+    { "id": "stamp", "type": "update_record", "values": { "reminded_on": "{{today}}" } } ] }

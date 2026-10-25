@@ -219,6 +219,63 @@ class AutomationBuilderTest extends AutomationTestCase {
 	}
 
 	/**
+	 * Automation v4: deleting a started automation, or saving it so it can no longer be started, is refused
+	 * with 409 `pegwork_automation_in_use` naming the callers, and changes nothing; without callers it works.
+	 */
+	public function test_started_automation_is_in_use() {
+		$target = array(
+			'format'  => 1,
+			'key'     => 'site_target',
+			'label'   => 'Site target',
+			'trigger' => array(
+				'type'   => 'manual',
+				'button' => 'Notify',
+			),
+			'steps'   => array(
+				array(
+					'id'      => 'tell',
+					'type'    => 'send_email',
+					'to'      => 'desk@example.org',
+					'subject' => 'Hello',
+					'text'    => 'Hello',
+				),
+			),
+		);
+		$caller = $this->definition(
+			array(
+				'key'   => 'site_caller',
+				'steps' => array(
+					array(
+						'id'         => 'notify',
+						'type'       => 'start_automation',
+						'automation' => 'site_target',
+					),
+				),
+			)
+		);
+		$this->assertTrue( pegwork_save_automation( $target ) );
+		$this->assertTrue( pegwork_save_automation( $caller ) );
+		$stored = get_option( Loader::DB_OPTION );
+
+		$error = pegwork_delete_automation( 'site_target' );
+		$this->assertSame( 'pegwork_automation_in_use', $error->get_error_code() );
+		$this->assertSame( 409, $error->get_error_data()['status'] );
+		$this->assertSame( array( 'site_caller' ), $error->get_error_data()['automations'] );
+		$this->assertSame( $stored, get_option( Loader::DB_OPTION ), 'Nothing was removed.' );
+		$this->assertNotNull( pegwork_registry()->automation( 'site_caller' ) );
+
+		$event = array_merge( $target, array( 'trigger' => $this->definition()['trigger'] ) );
+		$error = pegwork_save_automation( $event );
+		$this->assertSame( 'pegwork_automation_in_use', $error->get_error_code() );
+		$this->assertSame( $stored, get_option( Loader::DB_OPTION ), 'Nothing was saved.' );
+		$this->assertSame( 'manual', pegwork_registry()->automation( 'site_target' )['trigger']['type'] );
+
+		$this->assertTrue( pegwork_save_automation( array_merge( $target, array( 'label' => 'Site target v2' ) ) ), 'A change that keeps it startable saves.' );
+		$this->assertTrue( pegwork_delete_automation( 'site_caller' ) );
+		$this->assertTrue( pegwork_delete_automation( 'site_target' ) );
+	}
+
+	/**
 	 * The post type is private UI only; every capability maps to manage_options, with no filter.
 	 */
 	public function test_post_type_and_capabilities() {

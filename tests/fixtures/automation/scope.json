@@ -589,6 +589,238 @@
 					}
 				]
 			}
+		},
+		"v4": {
+			"dir": "tests/fixtures/valid/v4",
+			"config": {
+				"types": [
+					{
+						"key": "barn_contact",
+						"label": "Contact",
+						"plural": "Contacts",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "last_gift_on",
+								"label": "Last gift on",
+								"type": "date",
+								"private": true
+							},
+							{
+								"key": "milestone_1000_on",
+								"label": "Lifetime 1,000 reached on",
+								"type": "date",
+								"private": true
+							}
+						],
+						"taxonomies": []
+					},
+					{
+						"key": "barn_gift",
+						"label": "Gift",
+						"plural": "Gifts",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "amount",
+								"label": "Amount",
+								"type": "number"
+							},
+							{
+								"key": "received_on",
+								"label": "Received on",
+								"type": "date"
+							}
+						],
+						"taxonomies": []
+					},
+					{
+						"key": "barn_task",
+						"label": "Task",
+						"plural": "Tasks",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "due_on",
+								"label": "Due on",
+								"type": "date"
+							},
+							{
+								"key": "assignee_email",
+								"label": "Assignee email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "done",
+								"label": "Done",
+								"type": "boolean"
+							},
+							{
+								"key": "reminded_on",
+								"label": "Reminded on",
+								"type": "date"
+							}
+						],
+						"taxonomies": []
+					},
+					{
+						"key": "barn_volunteer",
+						"label": "Volunteer",
+						"plural": "Volunteers",
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name",
+								"type": "text",
+								"storage": "post_title"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"type": "email",
+								"private": true
+							},
+							{
+								"key": "interest",
+								"label": "Interest",
+								"type": "select",
+								"options": [
+									{
+										"value": "events",
+										"label": "Events"
+									},
+									{
+										"value": "garden",
+										"label": "Garden"
+									},
+									{
+										"value": "office",
+										"label": "Office"
+									}
+								]
+							},
+							{
+								"key": "stage",
+								"label": "Stage",
+								"type": "select",
+								"options": [
+									{
+										"value": "new",
+										"label": "New"
+									},
+									{
+										"value": "contacted",
+										"label": "Contacted"
+									},
+									{
+										"value": "placed",
+										"label": "Placed"
+									}
+								]
+							},
+							{
+								"key": "coordinator_email",
+								"label": "Coordinator email",
+								"type": "email",
+								"private": true
+							}
+						],
+						"taxonomies": []
+					}
+				],
+				"forms": [
+					{
+						"key": "barn_volunteer_signup",
+						"label": "Volunteer with us",
+						"target": "barn_volunteer",
+						"confirm": false,
+						"fields": [
+							{
+								"key": "name",
+								"label": "Name"
+							},
+							{
+								"key": "email",
+								"label": "Email",
+								"private": true
+							},
+							{
+								"key": "interest",
+								"label": "Interest"
+							}
+						]
+					}
+				],
+				"optionsPages": [
+					{
+						"key": "barn_settings",
+						"label": "BarnCRM settings",
+						"fields": [
+							{
+								"key": "development_email",
+								"label": "Development email",
+								"type": "email"
+							},
+							{
+								"key": "events_coordinator",
+								"label": "Events coordinator",
+								"type": "email"
+							},
+							{
+								"key": "garden_coordinator",
+								"label": "Garden coordinator",
+								"type": "email"
+							},
+							{
+								"key": "volunteer_manager",
+								"label": "Volunteer manager",
+								"type": "email"
+							},
+							{
+								"key": "donate_url",
+								"label": "Donate URL",
+								"type": "url"
+							}
+						]
+					}
+				],
+				"relationships": [
+					{
+						"key": "gift_donor",
+						"label": "Donor",
+						"from": "barn_gift",
+						"to": "barn_contact"
+					},
+					{
+						"key": "task_gift",
+						"label": "Gift",
+						"from": "barn_task",
+						"to": "barn_gift"
+					}
+				]
+			}
 		}
 	},
 	"tags": [
@@ -1174,6 +1406,71 @@
 				"steps.stamp.record_id",
 				"steps.close.failed"
 			]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_gift_receipt_start",
+			"at": "/steps/2/subject",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"steps.receipt.started",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.events_coordinator",
+				"option:barn_settings.garden_coordinator",
+				"option:barn_settings.volunteer_manager",
+				"option:barn_settings.donate_url"
+			],
+			"refuse": []
+		},
+		{
+			"package": "v4",
+			"automation": "barn_gift_receipt_start",
+			"at": "/steps/0/record",
+			"context": "private",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.permalink",
+				"record.edit_url",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"site.name",
+				"site.url",
+				"today",
+				"now",
+				"run.id",
+				"option:barn_settings.development_email",
+				"option:barn_settings.events_coordinator",
+				"option:barn_settings.garden_coordinator",
+				"option:barn_settings.volunteer_manager",
+				"option:barn_settings.donate_url"
+			],
+			"refuse": [
+				"steps.receipt.started"
+			]
 		}
 	],
 	"fields": [
@@ -1366,6 +1663,26 @@
 				"steps.each.item.done",
 				"steps.each.item.reminded_on",
 				"steps.each.index",
+				"site.name",
+				"site.url"
+			]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_gift_receipt_start",
+			"at": "/steps/1/when",
+			"expect": [
+				"record.id",
+				"record.status",
+				"record.type",
+				"record.name",
+				"record.amount",
+				"record.received_on",
+				"trigger.id",
+				"trigger.type",
+				"trigger.status",
+				"trigger.user_id",
+				"steps.receipt.started",
 				"site.name",
 				"site.url"
 			]
@@ -1774,6 +2091,21 @@
 			"automation": "reads_manual_list",
 			"at": "/steps/2/steps/1/when",
 			"var": "steps.each.item.done",
+			"sample": true,
+			"expect": [
+				"eq",
+				"ne",
+				"in",
+				"not_in",
+				"empty",
+				"not_empty"
+			]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_gift_receipt_start",
+			"at": "/steps/1/when",
+			"var": "steps.receipt.started",
 			"sample": true,
 			"expect": [
 				"eq",

@@ -14,7 +14,7 @@ Definitions are data only. Listings, forms, automations and options pages are va
 - [Relationships](#relationships)
 - [Options pages](#options-pages)
 - [Forms](#forms)
-- [Automations](#automations), with [reads](#reads), [loops](#loops) and [relate](#relate)
+- [Automations](#automations), with [reads](#reads), [loops](#loops), [relate](#relate), [date waits](#date-waits), [trash](#trash), [start another automation](#start-another-automation) and [role recipients](#role-recipients)
 - [Reading definitions](#reading-definitions)
 - [Error codes](#error-codes)
 
@@ -313,24 +313,28 @@ A run is bound to a record when the trigger is a `record.*` event, a schedule wi
 
 Automation v3 shapes (reads, loops, `relate`, `on_error`, `manual`, `call_webhook.record`, relationship `values`, `| add`, `| number`, `{{#each}}`) validate, normalize, export and import. The automation module runs reads, `relate`, `on_error`, `call_webhook.record`, relationship `values` and the new template filters (`docs/automation.md`); until it adds loops and the manual trigger (`docs/automation-v3-design.md` section 11, PRs 4 and 5), a run of an automation with a `loop` fails with `unsupported_step` before its first step, and a `manual` trigger starts no run. Packages that use them declare `requires.pegwork` `>=0.3.0`.
 
+Automation v4 shapes (a `wait` `until` a date field, `trash_record`, `start_automation`, `{role:<slug>}` recipients and a read's `created`; `docs/automation-v4-design.md`) validate, normalize, export and import. Until the automation module runs them (design section 11, PRs 3 to 6), a run of an automation that uses one fails with `unsupported_step` before its first step, so nothing half-runs. Packages that use them declare `requires.pegwork` `>=0.4.0`.
+
 Form binding: an `event` trigger on `form.confirmed`, or on `form.submitted` of a form without `confirm`, whose `form` has a `target`, binds the record the form wrote (`trigger.record_id`). Record paths and `update_record` without `record` then check against the target's `content_type`. Any other form trigger binds nothing: `form.submitted` of a `confirm` form (the record is written only on confirmation), a form without `target`, or a trigger without `form`. This check needs the form, so it runs with the references (`wp pegwork schema validate` reports it like `unknown_form`).
 
 ### Steps
 
-Every step has `id` (key pattern) and `type`, plus optional `retry` (`{ max: integer >= 0, backoff: duration or list of durations }`; no stored default; not on `decision` or `loop`). `update_record`, `create_record`, `send_email`, `call_webhook`, `relate`, `get_record` and `find_records` may set `"on_error": "continue"` (any other value `invalid_value`; on other types `unknown_property`): after its retries a failure is logged, the step's outputs `failed` (true) and `error` (the code) are set, and the run continues; on success `failed` is false.
+Every step has `id` (key pattern) and `type`, plus optional `retry` (`{ max: integer >= 0, backoff: duration or list of durations }`; no stored default; not on `decision` or `loop`). `update_record`, `create_record`, `send_email`, `call_webhook`, `relate`, `get_record`, `find_records`, `trash_record` and `start_automation` may set `"on_error": "continue"` (any other value `invalid_value`; on other types `unknown_property`): after its retries a failure is logged, the step's outputs `failed` (true) and `error` (the code) are set, and the run continues; on success `failed` is false.
 
 | `type` | Properties |
 |---|---|
 | `update_record` | `values` (required); `record`: template giving a record ID (default the bound record) |
 | `create_record` | `content_type` (required, defined), `values` (required), `status` (default `draft`; `draft`, `pending`, `publish`, `private`). Output `steps.<id>.record_id` |
-| `send_email` | `to`, `subject`, `text` (required), `html`, `reply_to` (templates; `text` and `html` may hold `{{#each}}` blocks) |
+| `send_email` | `to`, `subject`, `text` (required), `html`, `reply_to` (templates; `text` and `html` may hold `{{#each}}` blocks). `to` has 1 to 5 parts separated by `,` or `;` (`too_many_recipients`): addresses, merge tags, `{option:<page>.<field>}` and [`{role:<slug>}`](#role-recipients) |
 | `call_webhook` | `url` (required, template, public context), `fields` (record field or taxonomy keys sent in the body; private ones are `automation_private_field`), `timeout` (seconds, more than 0 and at most 15, default 10), `record` and `content_type` (both or neither, `missing_property`): send that record (a template giving its ID) instead of the bound record, with `fields` checked against `content_type`. Without `fields` every public field and taxonomy is sent. Body, headers and signature: `docs/automation.md#webhooks` |
-| `wait` | `for` (required): duration |
+| `wait` | exactly one of `for` (a duration) or `until` (see [Date waits](#date-waits)); both or neither is `wait_source` |
 | `condition` | `when` (required): condition; the run stops when it is false (inside a loop body: skips to the next item) |
 | `decision` | `branches` (required), `otherwise`: see [Decisions](#decisions) |
 | `get_record`, `find_records` | see [Reads](#reads) |
 | `loop` | see [Loops](#loops) |
 | `relate` | see [Relate](#relate) |
+| `trash_record` | see [Trash](#trash) |
+| `start_automation` | see [Start another automation](#start-another-automation) |
 
 `values` maps record field or taxonomy keys (`unknown_field`) to literals or templates; a literal must fit the field type (`automation_value_type`). Templates are rendered in a private context. A key may also be a relationship whose `from` end is the written type (`unknown_field` otherwise): a template rendering one ID or comma-separated IDs, comma-separated ID literals, or a list of integers (`automation_value_type` otherwise). It replaces the record's links; an empty value clears them. A list of strings is for multi-select taxonomies only.
 
@@ -383,11 +387,12 @@ A `decision` runs the steps of the first branch whose `when` holds, or `otherwis
 | `filter` | no | | `{ "all": [leaf...] }` or `{ "any": [leaf...] }` (`invalid_condition`), one level, 1 to 10 leaves (`condition_too_complex`). Leaf `{ field, op, value }`: `field` is a field or taxonomy key of `content_type`, or `id` (`unknown_field`); `rich_text`, `textarea` and `post_content` fields cannot be filtered (`filter_field`). `op` and `value` follow the [condition](#conditions) rules without `changed`; `value` is a literal, `{ var }` (any path in scope) or `{ date, offset }` |
 | `status` | no | `["private", "publish"]` | one or more of `publish`, `future`, `draft`, `pending`, `private`, each once (`invalid_value`); sorted in the canonical form. Trash and auto-drafts are never read |
 | `sort` | no | `{ "field": "id", "order": "asc" }` | `field` (required): `id`, or a `text`, `number`, `date`, `select` or `email` field, or a title-storage field (`filter_field`); `order`: `asc` (default) or `desc` |
-| `record` | no | | `get_record` only: a template giving one ID. Exclusive with `related` and `filter` (`read_source`) |
+| `created` | no | | Creation time (API 0.4.0): `{ before, after }`, at least one (`invalid_value`). Each bound is a `Y-m-d` date, `{ "date": "today" or "now", "offset" }` or `{ "var": "<path>" }` (a path in scope; one of a known type must read a date, else `invalid_value`); anything else is `invalid_value`. Days are site days: `before` matches records created before that day starts, `after` records created from the start of the next day. An empty `{ var }` matches nothing. Kept as written in the canonical form. A property of the query, not a filter field, because a type may define a field called `created` |
+| `record` | no | | `get_record` only: a template giving one ID. Exclusive with `related`, `filter` and `created` (`read_source`) |
 | `limit` | no | `10` | `find_records` only: integer 0 to 50 (`invalid_value`); 0 loads no records (totals only) |
 | `sum` | no | | `find_records` only: at most 5 `number` field keys (`invalid_value`, `filter_field`) |
 
-- `get_record` needs `record`, `related` or `filter`; `find_records` needs `related` or `filter`, so reading a whole type is never an accident (`read_source`).
+- `get_record` needs `record`, `related`, `filter` or `created`; `find_records` needs `related`, `filter` or `created`, so reading a whole type is never an accident (`read_source`).
 - Outputs. `get_record`: `steps.<id>.found` (boolean), `steps.<id>.record_id` (number), `steps.<id>.record.<key>` (a field or taxonomy of `content_type`, `id`, `status`, `type`; templates also `permalink`, `edit_url`). `find_records`: `steps.<id>.count` (all matches), `steps.<id>.sum.<field>` (a field listed in `sum`), `steps.<id>.records` (the loaded records: only a loop's `over` and `{{#each}}`; anywhere else `invalid_var`).
 - `steps.<id>.record.<key>` is checked as `record.<key>` is: the key exists (`unknown_field`), private fields stay out of public contexts (`automation_private_field`), and conditions type-check against the field. A sum over a private field is private too.
 
@@ -424,6 +429,67 @@ A `decision` runs the steps of the first branch whose `when` holds, or `otherwis
 | `from` | no | the bound record | template giving one ID. Without it the bound record must be of the relationship's `from` type (`missing_property`) |
 
 A `from` or `to` that is exactly a typed reference (as for `related.of`) must be of that end's type (`relationship_end`). No outputs.
+
+### Date waits
+
+A `wait` with `until` waits until a date field of the run's record (Automation v4). The engine re-reads the field on every wake-up, so a date moved later, earlier or cleared is honoured (`docs/automation-v4-design.md` section 3.2).
+
+```json
+{ "id": "before_due", "type": "wait", "until": { "var": "record.due_on", "offset": "-P3D", "at": "09:00" } }
+```
+
+| Property | Required | Default | Rules |
+|---|---|---|---|
+| `until.var` | yes | | `record.<key>`, a path (not a template), where `<key>` is a `date` field of the bound type; private date fields are allowed. A read or payload path is `wait_field`; a trigger that binds no record is `automation_no_record`; one that binds a record of no named type (a `record.*` event without `content_type`) is `wait_field` |
+| `until.offset` | no | `P0D` | signed ISO 8601 duration, at most `P2Y` either way (`invalid_value`); calendar units in site time. A zero offset is dropped from the canonical form |
+| `until.at` | no | `09:00` | `HH:MM` site time on the date, before the offset applies (`invalid_value`); filled by the normalizer |
+
+No outputs. As for `for`: no wait in a loop body (`loop_wait`) or in link steps (`automation_link_step`).
+
+### Trash
+
+`trash_record` moves one record to the trash (Automation v4). It never deletes permanently: the run fails `trash_disabled` when trash is off.
+
+```json
+{ "id": "remove", "type": "trash_record", "content_type": "barn_volunteer", "record": "{{steps.each_old.item.id}}" }
+```
+
+| Property | Required | Rules |
+|---|---|---|
+| `content_type` | yes | defined (`unknown_content_type`); the only type this step may trash |
+| `record` | no (default the bound record) | exactly one typed reference: `{{record.id}}`, `{{steps.<id>.record_id}}` of a `get_record` or `create_record` step, or `{{steps.<loop>.item.id}}` (`trash_target`; a payload or form value can never name the record). Its type must be `content_type` (`trash_type`). Without `record` the trigger must bind a record (`automation_no_record`) of `content_type` (`trash_type`) |
+
+- Not in a schedule with `for_each` (`trash_in_sweep`): use a schedule, `find_records` and a loop, which trash at most 50 records a run. Not in link steps (`automation_link_step`). Allowed in loop bodies and branches.
+- `retry` and `"on_error": "continue"` as for other steps. No outputs.
+
+### Start another automation
+
+`start_automation` starts a `manual` automation and does not wait for it (Automation v4): the child is a run of its own, at the parent's depth plus one.
+
+```json
+{ "id": "receipt", "type": "start_automation", "automation": "barn_gift_receipt" }
+```
+
+| Property | Required | Rules |
+|---|---|---|
+| `automation` | yes | key of a defined automation (`unknown_automation`) with a `manual` trigger (`start_target`). Not itself, and no chain of starts back to this automation (`start_cycle`). A package automation may start only package automations (`start_target`), because a package whose start target is missing does not load |
+| `record` | depends | when the target's trigger has a `content_type`: a template giving one record ID; the default is the bound record when it is of that type (else `missing_property`); a typed reference of another type is `start_target`. When the target has no `content_type`, `record` is `start_target` |
+
+- Output `steps.<id>.started` (boolean): false when the target's `when` is false for the record or the depth cap skipped it.
+- Allowed anywhere except link steps (`automation_link_step`), loop bodies included. `retry` and `"on_error": "continue"` as for other steps.
+- Deleting a site automation that another automation starts, or saving it so it can no longer be started, is refused with `pegwork_automation_in_use` (409, `docs/extension-api.md`).
+
+### Role recipients
+
+A `send_email` `to` part that is exactly `{role:<slug>}` (slug of lowercase letters, digits, `_` and `-`, at most 64) sends to the members of that WordPress role (Automation v4): in Bcc, staff roles only (the role has `edit_posts`), at most 25 members.
+
+```json
+{ "id": "notify", "type": "send_email", "to": "{role:editor}, {option:barn_settings.volunteer_manager}", "subject": "...", "text": "..." }
+```
+
+- Role tags are read from the template, never from rendered values, so record data cannot name a role. A malformed role part is `role_recipient`. A role counts as one of the 5 parts (`too_many_recipients`).
+- `{role:` anywhere else, `reply_to`, `subject`, `text`, `html` and every other template included, is `role_recipient`.
+- Roles live in the database, so the registry does not check that the role exists; an unknown role fails at run time.
 
 ### Signed links
 
@@ -469,7 +535,7 @@ Paths are dot-separated (`invalid_var`). Templates are `{{ path [| add:"<signed 
 |---|---|
 | `record` | `record.<field or taxonomy key>`, `record.id`, `record.status`, `record.type`; templates also `record.permalink`, `record.edit_url`. Keys must exist on the bound type (`unknown_field`) |
 | `trigger` | `record.created`, `record.deleted`: `id`, `type`, `status`, `user_id`, `origin`. `record.updated`: also `changed`, `old.<key>`. `record.status_changed`: `id`, `type`, `old_status`, `new_status`, `user_id`, `origin`. `form.*`: `form`, `entry_id`, `post_id`, `record_id`, `values.<item key>` (checked against the form when `form` is set). Webhook: `payload.*`. Manual: `user_id`, `source`. Schedules have no payload |
-| `steps` | `steps.<id>.<output>` of an earlier step that runs on every path to this point ([Decisions](#decisions), [Loops](#loops)): `create_record` `record_id`; [reads](#reads) `found`, `record_id`, `record.<key>`, `count`, `sum.<field>`; `loop` `item.<key>` and `index` inside, `count` after; `failed` and `error` of a step with `on_error`. Types: `found` and `failed` boolean, `record_id`, `count`, `index` and `sum.*` number, `error` text, so conditions type-check (`condition_type_mismatch`) |
+| `steps` | `steps.<id>.<output>` of an earlier step that runs on every path to this point ([Decisions](#decisions), [Loops](#loops)): `create_record` `record_id`; [reads](#reads) `found`, `record_id`, `record.<key>`, `count`, `sum.<field>`; `loop` `item.<key>` and `index` inside, `count` after; `start_automation` `started`; `failed` and `error` of a step with `on_error`. Types: `found`, `started` and `failed` boolean, `record_id`, `count`, `index` and `sum.*` number, `error` text, so conditions type-check (`condition_type_mismatch`) |
 | `item` | `item.<key>` inside an `{{#each}}` block only |
 | `site` | `site.name`, `site.url` |
 | `today`, `now`, `run.id`, `link.<name>` | templates only |
@@ -502,3 +568,4 @@ $page    = pegwork_registry()->options_page( 'sifg_settings' );
 | `form_fields_or_steps`, `form_bind_target`, `form_bind_without_target`, `form_unknown_bind`, `form_display`, `form_missing_required`, `form_condition_not_bound`, `form_access_required`, `form_confirm_field`, `form_confirm_url_missing`, `form_premature_mail`, `form_recipient_not_email`, `form_accept_denied`, `invalid_recipient`, `unknown_options_page` | forms |
 | `invalid_event`, `trigger_filter_mismatch`, `unknown_form`, `automation_no_record`, `automation_link_step`, `decision_too_deep`, `automation_unknown_link`, `automation_private_field`, `automation_value_type`, `invalid_duration`, `duration_out_of_range`, `invalid_condition`, `condition_operand`, `condition_type_mismatch`, `condition_too_complex`, `invalid_template`, `invalid_var` | automations |
 | `unknown_relationship`, `relationship_end`, `read_source`, `filter_field`, `loop_wait`, `loop_nested`, `automation_too_large` | automations (Automation v3; the read codes are the ones `Records::find()` returns) |
+| `wait_source`, `wait_field`, `trash_target`, `trash_type`, `trash_in_sweep`, `unknown_automation`, `start_target`, `start_cycle`, `role_recipient`, `too_many_recipients` | automations (Automation v4) |

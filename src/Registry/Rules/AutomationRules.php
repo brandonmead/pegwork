@@ -12,6 +12,7 @@ namespace Pegwork\Registry\Rules;
 use DateTimeImmutable;
 use DateTimeZone;
 use Pegwork\Content\RecordQuery;
+use Pegwork\Registry\Loader;
 
 /**
  * An automation: a trigger, ordered steps, optional signed links. Conditions are a JSON expression tree and
@@ -90,13 +91,13 @@ trait AutomationRules {
 	/**
 	 * Step types, and the subset allowed in signed links (they must finish within the click).
 	 */
-	public const STEP_TYPES      = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'wait', 'condition', 'decision', 'get_record', 'find_records', 'loop', 'relate' );
+	public const STEP_TYPES      = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'wait', 'condition', 'decision', 'get_record', 'find_records', 'loop', 'relate', 'trash_record', 'start_automation' );
 	public const LINK_STEP_TYPES = array( 'update_record', 'condition' );
 
 	/**
 	 * Step types that may set `"on_error": "continue"`, and the read steps.
 	 */
-	public const ON_ERROR_TYPES = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'relate', 'get_record', 'find_records' );
+	public const ON_ERROR_TYPES = array( 'update_record', 'create_record', 'send_email', 'call_webhook', 'relate', 'get_record', 'find_records', 'trash_record', 'start_automation' );
 	public const READ_TYPES     = array( 'get_record', 'find_records' );
 
 	/**
@@ -137,18 +138,19 @@ trait AutomationRules {
 	 * collection, only for a loop's `over` and `{{#each}}`.
 	 */
 	public const STEP_OUTPUTS = array(
-		'create_record' => array( 'record_id' => 'number' ),
-		'get_record'    => array(
+		'create_record'    => array( 'record_id' => 'number' ),
+		'get_record'       => array(
 			'found'     => 'boolean',
 			'record_id' => 'number',
 			'record'    => 'record',
 		),
-		'find_records'  => array(
+		'find_records'     => array(
 			'count'   => 'number',
 			'records' => 'records',
 			'sum'     => 'sum',
 		),
-		'loop'          => array( 'count' => 'number' ),
+		'loop'             => array( 'count' => 'number' ),
+		'start_automation' => array( 'started' => 'boolean' ),
 	);
 
 	/**
@@ -181,6 +183,21 @@ trait AutomationRules {
 	public const CREATE_STATUSES = array( 'draft', 'pending', 'publish', 'private' );
 
 	/**
+	 * A role recipient (Automation v4): `{role:<slug>}`, a whole part of send_email `to`.
+	 */
+	public const ROLE_TAG_PATTERN = '/^\{role:[a-z0-9_-]{1,64}\}$/';
+
+	/**
+	 * Recipient parts of send_email `to` (addresses, merge tags, option and role tokens), as SendEmail counts them.
+	 */
+	public const MAX_RECIPIENT_PARTS = 5;
+
+	/**
+	 * Default time of day of a date wait (`until.at`), site time; filled by the normalizer.
+	 */
+	public const WAIT_AT_DEFAULT = '09:00';
+
+	/**
 	 * Wait and link expiry bounds.
 	 */
 	public const DURATION_MIN = 'PT1H';
@@ -204,6 +221,14 @@ trait AutomationRules {
 	 * @var array<string, string>
 	 */
 	private array $loop_members = array();
+
+	/**
+	 * Source of each known object in the references pass (kind => key => package id or Loader::DB_SOURCE), when
+	 * the caller knows them (the loader); empty otherwise.
+	 *
+	 * @var array<string, array<string, string>>
+	 */
+	private array $sources = array();
 
 	/**
 	 * Validates an automation.
@@ -549,7 +574,27 @@ trait AutomationRules {
 				),
 				array( 'url' ),
 			),
-			'wait'          => array( array( 'for' => fn( $v, $p ) => $this->duration( $v, $p, true ) ), array( 'for' ) ),
+			'wait'          => array(
+				array(
+					'for'   => fn( $v, $p ) => $this->duration( $v, $p, true ),
+					'until' => fn( $v, $p ) => $this->wait_until( $v, $p ),
+				),
+				array(),
+			),
+			'trash_record'     => array(
+				array(
+					'content_type' => fn( $v, $p ) => $this->key( $v, $p ),
+					'record'       => $string,
+				),
+				array( 'content_type' ),
+			),
+			'start_automation' => array(
+				array(
+					'automation' => fn( $v, $p ) => $this->bounded_key( $v, $p ),
+					'record'     => $string,
+				),
+				array( 'automation' ),
+			),
 			'condition'     => array( array( 'when' => fn( $v, $p ) => $this->automation_condition( $v, $p ) ), array( 'when' ) ),
 			'decision'      => array(
 				array(
@@ -620,18 +665,97 @@ trait AutomationRules {
 		if ( 'call_webhook' === $type && isset( $step['record'] ) !== isset( $step['content_type'] ) ) {
 			$this->add( 'missing_property', $pointer, __( 'A webhook that sends a read record names both "record" and its "content_type".', 'pegwork' ) );
 		}
-		$query = isset( $step['related'] ) || isset( $step['filter'] );
+		if ( 'wait' === $type && isset( $step['for'] ) === isset( $step['until'] ) ) {
+			$this->add( 'wait_source', $pointer, __( 'A wait has exactly one of "for" (a duration) or "until" (a date field of the record).', 'pegwork' ) );
+		}
+		$query = isset( $step['related'] ) || isset( $step['filter'] ) || isset( $step['created'] );
 		if ( 'get_record' === $type && isset( $step['record'] ) && $query ) {
-			$this->add( 'read_source', $pointer . '/record', __( '"record" reads one record by ID, so it cannot be combined with "related" or "filter".', 'pegwork' ) );
+			$this->add( 'read_source', $pointer . '/record', __( '"record" reads one record by ID, so it cannot be combined with "related", "filter" or "created".', 'pegwork' ) );
 		}
 		if ( in_array( $type, self::READ_TYPES, true ) && ! $query && ! isset( $step['record'] ) ) {
 			$this->add(
 				'read_source',
 				$pointer,
 				'get_record' === $type
-					? __( 'Say which record to read: "record" (an ID), "related" or "filter".', 'pegwork' )
-					: __( 'Say which records to read: "related", "filter" or both (reading a whole content type is never implicit).', 'pegwork' )
+					? __( 'Say which record to read: "record" (an ID), "related", "filter" or "created".', 'pegwork' )
+					: __( 'Say which records to read: "related", "filter", "created" or a combination (reading a whole content type is never implicit).', 'pegwork' )
 			);
+		}
+	}
+
+	/**
+	 * Validates a date wait's `until`: `{ var, offset?, at? }`. That `var` is `record.<date field>` of a bound,
+	 * typed record is checked by the scan and the references pass.
+	 *
+	 * @param mixed  $until   Decoded until.
+	 * @param string $pointer JSON pointer of the until.
+	 */
+	private function wait_until( mixed $until, string $pointer ): void {
+		$this->props(
+			$until,
+			$pointer,
+			array(
+				'var'    => fn( $v, $p ) => $this->var_path( $v, $p ),
+				'offset' => function ( $v, $p ) {
+					if ( ! $this->type( $v, $p, 'string' ) ) {
+						return;
+					}
+					if ( ! preg_match( self::OFFSET_PATTERN, $v ) || self::seconds( ltrim( $v, '+-' ) ) > self::seconds( self::DURATION_MAX ) ) {
+						/* translators: %s: maximum duration. */
+						$this->add( 'invalid_value', $p, sprintf( __( '"offset" is an ISO 8601 duration with an optional sign, such as "-P3D", of at most %s either way.', 'pegwork' ), self::DURATION_MAX ) );
+					}
+				},
+				'at'     => function ( $v, $p ) {
+					if ( $this->type( $v, $p, 'string' ) && ! preg_match( self::TIME_PATTERN, $v ) ) {
+						$this->add( 'invalid_value', $p, __( '"at" is a site time of day, HH:MM (24-hour).', 'pegwork' ) );
+					}
+				},
+			),
+			array( 'var' )
+		);
+	}
+
+	/**
+	 * Validates a read's `created`: `{ before?, after? }`, at least one, each a `Y-m-d` date,
+	 * `{ "date": "today|now", "offset" }` or `{ "var": "<path>" }`.
+	 *
+	 * @param mixed  $created Decoded created.
+	 * @param string $pointer JSON pointer of the created.
+	 */
+	private function read_created( mixed $created, string $pointer ): void {
+		$operand   = function ( $v, $p ) {
+			if ( is_string( $v ) ) {
+				$day = DateTimeImmutable::createFromFormat( '!Y-m-d', $v, new DateTimeZone( 'UTC' ) );
+				if ( ! preg_match( self::DATE_PATTERN, $v ) || false === $day || $day->format( 'Y-m-d' ) !== $v ) {
+					$this->add( 'invalid_value', $p, __( 'A "created" date is a Y-m-d date, { "date": "today|now", "offset": "-P2Y" } or { "var": "<path>" }.', 'pegwork' ) );
+				}
+				return;
+			}
+			if ( is_array( $v ) && ! array_is_list( $v ) && array_key_exists( 'var', $v ) ) {
+				$this->props( $v, $p, array( 'var' => fn( $w, $q ) => $this->var_path( $w, $q ) ), array( 'var' ) );
+				return;
+			}
+			if ( is_array( $v ) && ! array_is_list( $v ) && array_key_exists( 'date', $v ) ) {
+				$this->props(
+					$v,
+					$p,
+					array(
+						'date'   => fn( $w, $q ) => $this->enum( $w, $q, array( 'today', 'now' ) ),
+						'offset' => function ( $w, $q ) {
+							if ( $this->type( $w, $q, 'string' ) && ! preg_match( self::OFFSET_PATTERN, $w ) ) {
+								$this->add( 'invalid_duration', $q, __( 'Offsets are ISO 8601 durations with an optional sign, such as "-P12M".', 'pegwork' ) );
+							}
+						},
+					),
+					array( 'date' )
+				);
+				return;
+			}
+			$this->add( 'invalid_value', $p, __( 'A "created" date is a Y-m-d date, { "date": "today|now", "offset": "-P2Y" } or { "var": "<path>" }.', 'pegwork' ) );
+		};
+		$is_object = $this->props( $created, $pointer, array_fill_keys( RecordQuery::CREATED_BOUNDS, $operand ) );
+		if ( $is_object && array() === $created ) {
+			$this->add( 'invalid_value', $pointer, __( '"created" needs "before", "after" or both.', 'pegwork' ) );
 		}
 	}
 
@@ -654,6 +778,7 @@ trait AutomationRules {
 				array( 'relationship', 'of' )
 			),
 			'filter'       => fn( $v, $p ) => $this->read_filter( $v, $p ),
+			'created'      => fn( $v, $p ) => $this->read_created( $v, $p ),
 			'status'       => function ( $v, $p ) {
 				$this->list_of( $v, $p, fn( $s, $q ) => $this->enum( $s, $q, RecordQuery::STATUSES ) );
 				if ( is_array( $v ) && array_is_list( $v ) && ( array() === $v || count( array_unique( array_filter( $v, 'is_string' ) ) ) !== count( $v ) ) ) {
@@ -1074,9 +1199,35 @@ trait AutomationRules {
 				case 'send_email':
 					foreach ( array( 'to', 'subject', 'text', 'html', 'reply_to' ) as $name ) {
 						if ( isset( $step[ $name ] ) ) {
-							$this->scan_template( $step[ $name ], $at . '/' . $name, 'private', $scope, $uses, in_array( $name, array( 'text', 'html' ), true ) );
+							$template = 'to' === $name ? $this->scan_recipients( $step['to'], $at . '/to' ) : $step[ $name ];
+							$this->scan_template( $template, $at . '/' . $name, 'private', $scope, $uses, in_array( $name, array( 'text', 'html' ), true ) );
 						}
 					}
+					break;
+				case 'wait':
+					if ( isset( $step['until'] ) ) {
+						$this->scan_wait_until( $step['until']['var'], $at . '/until/var', $scope, $uses );
+					}
+					break;
+				case 'trash_record':
+					if ( 'schedule' === $scope['trigger'] && $scope['binds'] ) {
+						$this->add( 'trash_in_sweep', $at . '/type', __( 'A schedule with "for_each" cannot trash records: use a schedule without "for_each", find_records and a loop, which trash at most 50 records a run.', 'pegwork' ) );
+					}
+					$this->scan_trash( $step, $at, $scope, $uses );
+					break;
+				case 'start_automation':
+					if ( isset( $step['record'] ) ) {
+						$this->scan_template( $step['record'], $at . '/record', 'private', $scope, $uses );
+					}
+					$uses[] = array(
+						'use'        => 'start',
+						'pointer'    => $at,
+						'automation' => $step['automation'],
+						'record'     => isset( $step['record'] ) ? $this->typed_reference( $step['record'], $scope ) : null,
+						'has_record' => isset( $step['record'] ),
+						'binds'      => $scope['binds'],
+						'bound'      => $scope['type'],
+					);
 					break;
 				case 'call_webhook':
 					$this->scan_template( $step['url'], $at . '/url', 'public', $scope, $uses );
@@ -1181,6 +1332,17 @@ trait AutomationRules {
 				);
 			}
 		}
+		foreach ( $step['created'] ?? array() as $bound => $operand ) {
+			if ( is_array( $operand ) && isset( $operand['var'] ) ) {
+				$bound_at = $at . '/created/' . $bound . '/var';
+				$uses[]   = array(
+					'use'     => 'created_var',
+					'pointer' => $bound_at,
+					'path'    => $operand['var'],
+					'ref'     => $this->scan_path( $operand['var'], $bound_at, 'condition', false, $scope, $uses ),
+				);
+			}
+		}
 		foreach ( $step['sum'] ?? array() as $index => $key ) {
 			$uses[] = array(
 				'use'     => 'read_field',
@@ -1264,21 +1426,124 @@ trait AutomationRules {
 	 * @return string|null Content type key, or null when the template is anything else (its type is known only at run time).
 	 */
 	private function typed_reference( string $template, array $scope ): ?string {
+		$type = $this->typed_reference_of( $template, $scope )['type'] ?? null;
+
+		return is_string( $type ) && '' !== $type ? $type : null;
+	}
+
+	/**
+	 * Whether a template is exactly a typed record reference in scope (see typed_reference()), with its type.
+	 *
+	 * @param string               $template Template.
+	 * @param array<string, mixed> $scope    Scan scope.
+	 * @return array{type: string|null}|null Null when the template is anything else; `type` is null for the bound
+	 *                                       record of a trigger that names no content type, '' when not known yet.
+	 */
+	private function typed_reference_of( string $template, array $scope ): ?array {
 		if ( ! preg_match( '/^\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)\s*\}\}$/', $template, $match ) ) {
 			return null;
 		}
 		$parts = explode( '.', $match[1] );
-		$type  = null;
 		if ( array( 'record', 'id' ) === $parts && $scope['binds'] ) {
-			$type = $scope['type'];
-		} elseif ( 3 === count( $parts ) && 'steps' === $parts[0] && 'record_id' === $parts[2] ) {
+			return array( 'type' => $scope['type'] );
+		}
+		if ( 3 === count( $parts ) && 'steps' === $parts[0] && 'record_id' === $parts[2] ) {
 			$step = $scope['steps'][ $parts[1] ] ?? null;
-			$type = is_array( $step ) && in_array( $step['type'], array( 'get_record', 'create_record' ), true ) ? $step['content_type'] : null;
-		} elseif ( 4 === count( $parts ) && 'steps' === $parts[0] && 'item' === $parts[2] && 'id' === $parts[3] ) {
-			$type = $scope['loops'][ $parts[1] ] ?? null;
+			return is_array( $step ) && in_array( $step['type'], array( 'get_record', 'create_record' ), true ) ? array( 'type' => (string) $step['content_type'] ) : null;
+		}
+		if ( 4 === count( $parts ) && 'steps' === $parts[0] && 'item' === $parts[2] && 'id' === $parts[3] && isset( $scope['loops'][ $parts[1] ] ) ) {
+			return array( 'type' => (string) $scope['loops'][ $parts[1] ] );
 		}
 
-		return is_string( $type ) && '' !== $type ? $type : null;
+		return null;
+	}
+
+	/**
+	 * Checks the parts of send_email `to`: at most MAX_RECIPIENT_PARTS, and a part that names a role is exactly
+	 * `{role:<slug>}` (role tags are read from the template, never from rendered values).
+	 *
+	 * @param string $to      `to` template.
+	 * @param string $pointer JSON pointer of `to`.
+	 * @return string The template without its role parts, for scan_template() (which refuses any other `{role:`).
+	 */
+	private function scan_recipients( string $to, string $pointer ): string {
+		$parts = array_values( array_filter( array_map( 'trim', (array) preg_split( '/\{\{.*?\}\}(*SKIP)(*FAIL)|[,;]/s', $to ) ), fn( $part ) => '' !== $part ) );
+		if ( count( $parts ) > self::MAX_RECIPIENT_PARTS ) {
+			/* translators: 1: recipient parts, 2: limit. */
+			$this->add( 'too_many_recipients', $pointer, sprintf( __( '"to" has %1$d recipients; at most %2$d per email (a role counts as one here, and its members are capped when the email is sent).', 'pegwork' ), count( $parts ), self::MAX_RECIPIENT_PARTS ) );
+		}
+
+		return implode( ', ', array_filter( $parts, fn( $part ) => ! preg_match( self::ROLE_TAG_PATTERN, $part ) ) );
+	}
+
+	/**
+	 * Checks a date wait's `until.var`: `record.<key>` of a bound record of a named content type. That the key is
+	 * a date field is checked in references().
+	 *
+	 * @param string                     $path    Var path.
+	 * @param string                     $pointer JSON pointer of the var.
+	 * @param array<string, mixed>       $scope   Scan scope.
+	 * @param list<array<string, mixed>> $uses    Uses, appended to.
+	 */
+	private function scan_wait_until( string $path, string $pointer, array $scope, array &$uses ): void {
+		$parts = explode( '.', $path );
+		if ( 2 !== count( $parts ) || 'record' !== $parts[0] ) {
+			/* translators: %s: path. */
+			$this->add( 'wait_field', $pointer, sprintf( __( 'A wait waits until a date field of the run\'s record: "record.<date field>", not "%s".', 'pegwork' ), $path ) );
+			return;
+		}
+		if ( ! $scope['binds'] ) {
+			$this->add( 'automation_no_record', $pointer, __( 'A wait until a date needs a record, but this trigger binds none (use a record.* event with "content_type", a schedule with "for_each", a manual trigger with "content_type", or a form event that binds).', 'pegwork' ) );
+			return;
+		}
+		if ( null === $scope['type'] ) {
+			$this->add( 'wait_field', $pointer, __( 'The trigger names no content type, so the date field cannot be checked: add the trigger\'s "content_type".', 'pegwork' ) );
+			return;
+		}
+		$uses[] = array(
+			'use'     => 'wait_field',
+			'pointer' => $pointer,
+			'key'     => $parts[1],
+			'type'    => $scope['type'],
+		);
+	}
+
+	/**
+	 * Checks a trash_record step's target: a typed reference of its `content_type`, or by default the bound record.
+	 *
+	 * @param array<string, mixed>       $step  Valid trash_record step.
+	 * @param string                     $at    JSON pointer of the step.
+	 * @param array<string, mixed>       $scope Scan scope.
+	 * @param list<array<string, mixed>> $uses  Uses, appended to.
+	 */
+	private function scan_trash( array $step, string $at, array $scope, array &$uses ): void {
+		$want = $step['content_type'];
+		if ( isset( $step['record'] ) ) {
+			$this->scan_template( $step['record'], $at . '/record', 'private', $scope, $uses );
+			$ref = $this->typed_reference_of( $step['record'], $scope );
+			if ( null === $ref ) {
+				$this->add( 'trash_target', $at . '/record', __( '"record" is exactly one typed reference: {{record.id}}, {{steps.<id>.record_id}} of a get_record or create_record step, or {{steps.<loop>.item.id}}.', 'pegwork' ) );
+				return;
+			}
+			$type = $ref['type'];
+			$at  .= '/record';
+		} elseif ( ! $scope['binds'] ) {
+			$this->add( 'automation_no_record', $at, __( 'This trigger binds no record; give trash_record a "record".', 'pegwork' ) );
+			return;
+		} else {
+			$type = $scope['type'];
+		}
+		if ( '' !== $type && $want !== $type ) {
+			$this->add(
+				'trash_type',
+				$at,
+				null === $type
+					/* translators: %s: content type key. */
+					? sprintf( __( 'The trigger names no content type, so the record may not be a "%s" record: add the trigger\'s "content_type".', 'pegwork' ), $want )
+					/* translators: 1: content type key, 2: content type key. */
+					: sprintf( __( 'The record is a "%1$s" record, but this step trashes "%2$s" records only.', 'pegwork' ), $type, $want )
+			);
+		}
 	}
 
 	/**
@@ -1396,6 +1661,9 @@ trait AutomationRules {
 	 * @param bool                       $blocks   Whether `{{#each}}` blocks are allowed (send_email text and html).
 	 */
 	private function scan_template( string $template, string $pointer, string $context, array $scope, array &$uses, bool $blocks = false ): void {
+		if ( str_contains( $template, '{role:' ) ) {
+			$this->add( 'role_recipient', $pointer, __( 'A role recipient is a whole part of send_email "to", written "{role:<slug>}" (lowercase letters, digits, "_" and "-"). Roles cannot appear in "reply_to" or any other template.', 'pegwork' ) );
+		}
 		preg_match_all( '/\{\{(.*?)\}\}/s', $template, $tags );
 		$rest = (string) preg_replace( '/\{\{.*?\}\}/s', '', $template );
 		if ( str_contains( $rest, '{{' ) || str_contains( $rest, '}}' ) ) {
@@ -1857,7 +2125,7 @@ trait AutomationRules {
 			$targets['/trigger/for_each/content_type'] = $trigger['for_each']['content_type'];
 		}
 		foreach ( self::step_tree( $data['steps'], '/steps' ) as $at => $step ) {
-			if ( isset( $step['content_type'] ) && in_array( $step['type'], array( 'create_record', 'get_record', 'find_records', 'call_webhook' ), true ) ) {
+			if ( isset( $step['content_type'] ) && in_array( $step['type'], array( 'create_record', 'get_record', 'find_records', 'call_webhook', 'trash_record' ), true ) ) {
 				$targets[ $at . '/content_type' ] = $step['content_type'];
 			}
 		}
@@ -1888,10 +2156,131 @@ trait AutomationRules {
 				'related'    => $this->check_related( $found, $known ),
 				'read_leaf'  => $this->check_read_leaf( $found, $known ),
 				'read_field' => $this->check_read_field( $found, $known ),
-				'relate'     => $this->check_relate( $found, $known ),
-				default      => null,
+				'relate'      => $this->check_relate( $found, $known ),
+				'wait_field'  => $this->check_wait_field( $found, $known ),
+				'created_var' => $this->check_created_var( $found, $known ),
+				'start'       => $this->check_start( $found, (string) $data['key'], $known ),
+				default       => null,
 			};
 		}
+	}
+
+	/**
+	 * Checks a date wait's field: a date field of the bound content type (private fields allowed).
+	 *
+	 * @param array<string, mixed>                $found Use from scan_wait_until().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_wait_field( array $found, array $known ): void {
+		$definition = $this->record_key_definition( $found['type'], $found['key'], $known );
+		if ( null !== $definition && 'date' !== ( $definition['type'] ?? null ) ) {
+			/* translators: 1: field key, 2: content type key. */
+			$this->add( 'wait_field', $found['pointer'], sprintf( __( '"%1$s" is not a date field of content type "%2$s".', 'pegwork' ), $found['key'], $found['type'] ) );
+		}
+	}
+
+	/**
+	 * Checks a `created` operand `{ var }`: its path reads a date when its type is known.
+	 *
+	 * @param array<string, mixed>                $found Use from scan_read().
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private function check_created_var( array $found, array $known ): void {
+		$definition = $this->ref_definition( $found['ref'], $known );
+		if ( null !== $definition && 'date' !== ( $definition['type'] ?? null ) ) {
+			/* translators: %s: path. */
+			$this->add( 'invalid_value', $found['pointer'], sprintf( __( 'Path "%s" is not a date, so it cannot bound "created".', 'pegwork' ), $found['path'] ) );
+		}
+	}
+
+	/**
+	 * Checks a start_automation step: the target is defined and has a manual trigger, a package automation starts
+	 * only package automations, no chain of starts leads back to this automation, and `record` suits the
+	 * target's content type.
+	 *
+	 * @param array<string, mixed>                $found  Use from scan_steps().
+	 * @param string                              $caller Key of the automation being checked.
+	 * @param array<string, array<string, mixed>> $known  Defined objects by kind, then key.
+	 */
+	private function check_start( array $found, string $caller, array $known ): void {
+		$key = $found['automation'];
+		$at  = $found['pointer'] . '/automation';
+		if ( ! isset( $known['automation'][ $key ] ) ) {
+			/* translators: %s: automation key. */
+			$this->add( 'unknown_automation', $at, sprintf( __( 'Automation "%s" is not defined.', 'pegwork' ), $key ) );
+			return;
+		}
+		$target = $known['automation'][ $key ];
+		if ( is_array( $target ) && 'manual' !== ( $target['trigger']['type'] ?? null ) ) {
+			/* translators: %s: automation key. */
+			$this->add( 'start_target', $at, sprintf( __( 'Automation "%s" cannot be started: only automations with a manual trigger can.', 'pegwork' ), $key ) );
+			return;
+		}
+		if ( Loader::DB_SOURCE !== $this->file && Loader::DB_SOURCE === ( $this->sources['automation'][ $key ] ?? null ) ) {
+			/* translators: %s: automation key. */
+			$this->add( 'start_target', $at, sprintf( __( 'A package automation cannot start a site automation ("%s"): the package would not load without it. Start a package automation, or save this one on the site.', 'pegwork' ), $key ) );
+			return;
+		}
+		$path = self::start_path( $key, $caller, $known );
+		if ( null !== $path ) {
+			/* translators: %s: chain of automation keys. */
+			$this->add( 'start_cycle', $at, sprintf( __( 'Starting it would start this automation again: %s.', 'pegwork' ), implode( ' > ', array_merge( array( $caller ), $path ) ) ) );
+			return;
+		}
+		if ( ! is_array( $target ) ) {
+			return;
+		}
+
+		$type = $target['trigger']['content_type'] ?? null;
+		if ( null === $type ) {
+			if ( $found['has_record'] ) {
+				/* translators: %s: automation key. */
+				$this->add( 'start_target', $found['pointer'] . '/record', sprintf( __( 'Automation "%s" names no content type, so it takes no "record".', 'pegwork' ), $key ) );
+			}
+			return;
+		}
+		if ( $found['has_record'] ) {
+			if ( null !== $found['record'] && $type !== $found['record'] ) {
+				/* translators: 1: content type key, 2: automation key, 3: content type key. */
+				$this->add( 'start_target', $found['pointer'] . '/record', sprintf( __( '"record" is a "%1$s" record, but automation "%2$s" runs on "%3$s" records.', 'pegwork' ), $found['record'], $key, $type ) );
+			}
+			return;
+		}
+		if ( ! $found['binds'] || ( '' !== $found['bound'] && $type !== $found['bound'] ) ) {
+			/* translators: 1: automation key, 2: content type key. */
+			$this->add( 'missing_property', $found['pointer'], sprintf( __( 'Missing "record": automation "%1$s" runs on a "%2$s" record, and "record" defaults to the bound record only when that is one.', 'pegwork' ), $key, $type ) );
+		}
+	}
+
+	/**
+	 * The chain of starts from an automation that reaches another, or null when none does.
+	 *
+	 * @param string                              $from  Automation key to start from.
+	 * @param string                              $to    Automation key to look for.
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 * @return string[]|null Keys from `$from` to `$to`, both included.
+	 */
+	private static function start_path( string $from, string $to, array $known ): ?array {
+		$paths = array( $from => array( $from ) );
+		$queue = array( $from );
+		while ( $queue ) {
+			$key = array_shift( $queue );
+			if ( $key === $to ) {
+				return $paths[ $key ];
+			}
+			$automation = $known['automation'][ $key ] ?? null;
+			if ( ! is_array( $automation ) ) {
+				continue;
+			}
+			foreach ( self::step_tree( (array) ( $automation['steps'] ?? array() ), '' ) as $step ) {
+				$next = 'start_automation' === ( $step['type'] ?? null ) && is_string( $step['automation'] ?? null ) ? $step['automation'] : null;
+				if ( null !== $next && ! isset( $paths[ $next ] ) ) {
+					$paths[ $next ] = array_merge( $paths[ $key ], array( $next ) );
+					$queue[]        = $next;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**

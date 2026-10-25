@@ -30,6 +30,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## Automation v4 PRs (`docs/automation-v4-design.md` section 11)
 1. Core: `Records::trash()` and `created` reads, API 0.4.0: done, in review (branch `v4-core-trash`). Left for the trash step (PR 4): `Records::get()`/`update()` still read trashed records (design section 3.3 assumes `update_record` on one fails).
+2. Registry: v4 shapes: done, in review (branch `v4-registry`). Runs using v4 shapes fail `unsupported_step` before their first step until PRs 3 to 6. Left for Editor PR 9: refuse trashing an automation post whose definition is in use (the definition already stays); round-trip the `v4` package in `reads.test.js`.
 
 ## Phase 1 PRs
 1. Scaffold (merged)

@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "key": "barn_settings",
+  "title": "BarnCRM settings",
+  "fields": [
+    { "key": "development_email", "type": "email", "label": "Development email" },
+    { "key": "events_coordinator", "type": "email", "label": "Events coordinator" },
+    { "key": "garden_coordinator", "type": "email", "label": "Garden coordinator" },
+    { "key": "volunteer_manager", "type": "email", "label": "Volunteer manager" },
+    { "key": "donate_url", "type": "url", "label": "Donate URL" }
+  ]
+}

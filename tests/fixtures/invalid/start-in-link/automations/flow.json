@@ -1,0 +1,31 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "event",
+    "event": "record.created",
+    "content_type": "barn_task"
+  },
+  "steps": [
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "a@example.org",
+      "subject": "Hi",
+      "text": "Done: {{link.done}}"
+    }
+  ],
+  "links": {
+    "done": {
+      "expires": "P7D",
+      "steps": [
+        {
+          "id": "go",
+          "type": "start_automation",
+          "automation": "note"
+        }
+      ]
+    }
+  }
+}

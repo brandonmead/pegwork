@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "event",
+    "event": "record.created",
+    "content_type": "barn_task"
+  },
+  "steps": [
+    {
+      "id": "gift",
+      "type": "get_record",
+      "content_type": "barn_gift",
+      "related": {
+        "relationship": "task_gift",
+        "of": "{{record.id}}"
+      }
+    },
+    {
+      "id": "w",
+      "type": "wait",
+      "until": {
+        "var": "steps.gift.record.received_on"
+      }
+    }
+  ]
+}

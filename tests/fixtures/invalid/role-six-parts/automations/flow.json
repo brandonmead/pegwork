@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "event",
+    "event": "record.created",
+    "content_type": "barn_task"
+  },
+  "steps": [
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "{role:editor}, a@example.org, b@example.org, c@example.org, d@example.org, e@example.org",
+      "subject": "Hi",
+      "text": "Hello"
+    }
+  ]
+}

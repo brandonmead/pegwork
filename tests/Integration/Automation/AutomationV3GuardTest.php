@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests: the registry accepts Automation v3 shapes before the engine runs them.
+ * Integration tests: the registry accepts new shapes before the engine runs them.
  *
  * @package Pegwork
  */
@@ -18,6 +18,9 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
  * Reads, relate, `on_error`, `call_webhook.record` and the new template filters run (Automation v3 PR 3),
  * and loops run (PR 4, tests/Integration/Automation/AutomationLoopTest.php). A step type without a handler
  * is still refused before the first step. Manual triggers (PR 5) are covered by AutomationManualTest.
+ *
+ * Automation v4 PR 2 (registry): the `v4` fixture's shapes (wait until, trash_record, start_automation,
+ * role recipients, read `created`) are refused before the first step until the engine PRs land.
  */
 class AutomationV3GuardTest extends AutomationTestCase {
 
@@ -45,8 +48,8 @@ class AutomationV3GuardTest extends AutomationTestCase {
 	}
 
 	/**
-	 * Every fixture runs, loops included; a step type without a handler, here inside a loop body, is still
-	 * refused with the reason naming it.
+	 * Every fixture runs, loops included, except the v4 shapes, each refused with a reason naming it; a step
+	 * type without a handler, here inside a loop body, is still refused with the reason naming it.
 	 */
 	public function test_every_fixture_runs_and_unknown_types_are_refused() {
 		$refused = array();
@@ -56,10 +59,26 @@ class AutomationV3GuardTest extends AutomationTestCase {
 				$refused[ $path ] = $reason;
 			}
 		}
-		$this->assertSame( array(), $refused );
+		$v4 = 'tests/fixtures/valid/v4/automations/';
+		$this->assertSame(
+			array(
+				$v4 . 'barn_gift_receipt_start.json'  => 'step "receipt" has type "start_automation", which this version of the automation module cannot run.',
+				$v4 . 'barn_task_due_reminder.json'   => 'step "before_due" waits until a date ("until"), which this version of the automation module cannot do.',
+				$v4 . 'barn_v4_shapes.json'           => 'step "due_soon" waits until a date ("until"), which this version of the automation module cannot do.',
+				$v4 . 'barn_volunteer_retention.json' => 'step "old" reads by creation time ("created"), which this version of the automation module cannot do.',
+				$v4 . 'barn_volunteer_review.json'    => 'step "notify" sends to a role ("{role:...}"), which this version of the automation module cannot do.',
+				$v4 . 'barn_weekly_note.json'         => 'step "note" sends to a role ("{role:...}"), which this version of the automation module cannot do.',
+			),
+			$refused,
+			'Only the v4 shapes are refused (barn_gift_receipt has none).'
+		);
 
 		$definition                                 = pegwork_registry()->automation( 'barn_tasks_digest' );
 		$definition['steps'][1]['steps'][0]['type'] = 'send_sms';
 		$this->assertSame( 'step "remind" has type "send_sms", which this version of the automation module cannot run.', Engine::instance()->unsupported( $definition ) );
+
+		$retention             = self::automations()[ $v4 . 'barn_volunteer_retention.json' ];
+		$retention['steps'][0] = array_diff_key( $retention['steps'][0], array( 'created' => true ) );
+		$this->assertSame( 'step "remove" has type "trash_record", which this version of the automation module cannot run.', Engine::instance()->unsupported( $retention ), 'A trash step inside a loop body is refused.' );
 	}
 }
