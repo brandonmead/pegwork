@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "st_gift",
+  "labels": { "singular": "Gift", "plural": "Gifts" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "amount", "type": "number", "label": "Amount" }
+  ]
+}

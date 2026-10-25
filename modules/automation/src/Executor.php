@@ -23,14 +23,15 @@ use Throwable;
  * (`definition_changed`); one that moved continues at its new position.
  *
  * Waits and retries share one mechanism: the run becomes `waiting` with `resume_at` and the step to run
- * next (the step after a wait, the same step for a retry), and a wake-up is scheduled for `resume_at`. The
- * claim takes a waiting run only once `resume_at` has passed.
+ * next (the step after a wait, the same step for a retry or a date wait, whose result has `stay`), and a
+ * wake-up is scheduled for `resume_at`. The claim takes a waiting run only once `resume_at` has passed.
+ * Date wait state (`context.until`) is restored and stored like the loop state.
  *
  * A step with `on_error: continue` that fails after its retries is logged `failed`, outputs `failed: true`
  * and `error: "<code>"`, and the run continues; such a run completes with outcome
  * `completed_with_errors:<ids>`. Steps with `on_error` output `failed: false` on success. The run's read
- * count (`context.reads`) and trash count (`context.trashed`) are restored on each wake-up and stored with
- * the outputs.
+ * count (`context.reads`), trash count (`context.trashed`) and start count (`context.starts`) are restored
+ * on each wake-up and stored with the outputs.
  *
  * Loops: the cursor arriving at a loop id with no `context.loops.<id>` starts the loop (snapshot of the
  * collection's IDs, one logged row `{ items, ids }`, counted as an attempt), else advances it (no row, no
@@ -120,7 +121,9 @@ final class Executor {
 		$context->use_plan( $plan );
 		$context->restore_reads( (int) ( $stored['reads'] ?? 0 ) );
 		$context->restore_trashed( (int) ( $stored['trashed'] ?? 0 ) );
+		$context->restore_starts( (int) ( $stored['starts'] ?? 0 ) );
 		$context->restore_loops( (array) ( $stored['loops'] ?? array() ) );
+		$context->restore_until( (array) ( $stored['until'] ?? array() ) );
 		$moved = self::loop_mismatch( $plan, $step_id, $context );
 		if ( null !== $moved ) {
 			$runs->finish( $id, 'failed', 'definition_changed: ' . $moved );
@@ -238,9 +241,10 @@ final class Executor {
 				$runs->finish( $id, 'completed', null, self::store( self::outcome( $stored ), $context ) );
 				return 'completed';
 			}
-			$next = 'decision' === ( $step['type'] ?? null ) ? $plan->after_branch( $step_id, $result->branch ) : $plan->next( $step_id );
-			if ( null !== $result->resume_at && null !== $next ) {
-				$runs->wait( $id, $next, $result->resume_at, self::store( $stored, $context ) );
+			$next   = 'decision' === ( $step['type'] ?? null ) ? $plan->after_branch( $step_id, $result->branch ) : $plan->next( $step_id );
+			$resume = $result->stay ? $step_id : $next; // A date wait decides again on every wake-up.
+			if ( null !== $result->resume_at && null !== $resume ) {
+				$runs->wait( $id, $resume, $result->resume_at, self::store( $stored, $context ) );
 				$this->wake( $id, $result->resume_at->getTimestamp() );
 				return 'waiting';
 			}
@@ -484,9 +488,16 @@ final class Executor {
 		if ( $context->trashed() > 0 ) {
 			$stored['trashed'] = $context->trashed();
 		}
+		if ( $context->starts() > 0 ) {
+			$stored['starts'] = $context->starts();
+		}
 		unset( $stored['loops'] );
 		if ( array() !== $context->loops() ) {
 			$stored['loops'] = $context->loops();
+		}
+		unset( $stored['until'] );
+		if ( array() !== $context->until_states() ) {
+			$stored['until'] = $context->until_states();
 		}
 		if ( isset( $stored['retries'] ) && array() === $stored['retries'] ) {
 			unset( $stored['retries'] );

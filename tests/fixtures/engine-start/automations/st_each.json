@@ -1,0 +1,11 @@
+{ "format": 1, "key": "st_each", "label": "Send the receipt for every gift",
+  "trigger": { "type": "manual", "button": "Send all receipts" },
+  "steps": [
+    { "id": "gifts", "type": "find_records", "content_type": "st_gift",
+      "filter": { "all": [ { "field": "amount", "op": "gte", "value": 0 } ] }, "sort": { "field": "id", "order": "asc" }, "limit": 10 },
+    { "id": "each", "type": "loop", "over": "steps.gifts.records",
+      "steps": [
+        { "id": "receipt", "type": "start_automation", "automation": "st_receipt", "record": "{{steps.each.item.id}}" } ] },
+    { "id": "done", "type": "send_email", "to": "team@example.org",
+      "subject": "Receipts for {{steps.each.count}} gifts",
+      "text": "Done." } ] }

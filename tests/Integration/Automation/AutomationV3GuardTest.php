@@ -20,8 +20,9 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
  * is still refused before the first step. Manual triggers (PR 5) are covered by AutomationManualTest.
  *
  * Automation v4 PR 2 (registry): the `v4` fixture's shapes (wait until, trash_record, start_automation,
- * role recipients, read `created`) are refused before the first step until the engine PRs land;
- * trash_record runs since v4 PR 4, role recipients since v4 PR 6, a read `created` since v4 PR 7.
+ * read `created`) were refused before the first step until the engine PRs landed; a wait until a date runs
+ * since v4 PR 3, trash_record since v4 PR 4, start_automation since v4 PR 5 (AutomationStartTest), role
+ * recipients since v4 PR 6 and a read `created` since v4 PR 7.
  */
 class AutomationV3GuardTest extends AutomationTestCase {
 
@@ -61,15 +62,7 @@ class AutomationV3GuardTest extends AutomationTestCase {
 			}
 		}
 		$v4 = 'tests/fixtures/valid/v4/automations/';
-		$this->assertSame(
-			array(
-				$v4 . 'barn_gift_receipt_start.json' => 'step "receipt" has type "start_automation", which this version of the automation module cannot run.',
-				$v4 . 'barn_task_due_reminder.json'  => 'step "before_due" waits until a date ("until"), which this version of the automation module cannot do.',
-				$v4 . 'barn_v4_shapes.json'          => 'step "due_soon" waits until a date ("until"), which this version of the automation module cannot do.',
-			),
-			$refused,
-			'Only the v4 shapes are refused (barn_gift_receipt has none; role recipients run since v4 PR 6, reads by creation time since v4 PR 7).'
-		);
+		$this->assertSame( array(), $refused, 'Every fixture runs, the v4 shapes included (v4 PRs 3 to 7).' );
 
 		$definition                                 = pegwork_registry()->automation( 'barn_tasks_digest' );
 		$definition['steps'][1]['steps'][0]['type'] = 'send_sms';

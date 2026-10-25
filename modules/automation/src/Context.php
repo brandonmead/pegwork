@@ -21,7 +21,8 @@ use PegworkAutomation\Clock\Clock;
  * `count`, `ids` and `sum`. `steps.<id>.record.<key>` and `{{#each}}` items re-read the record by ID
  * through a per-wake-up cache, which write steps invalidate by ID (forget()), so a later step sees written
  * values and a step after a wait sees current ones. The context also counts the records reads return
- * (`context.reads`, at most read_limit() per run).
+ * (`context.reads`, at most read_limit() per run) and the child runs its start_automation steps started
+ * (`context.starts`, at most start_limit() per run).
  *
  * Loops: the running loop's state (`context.loops.<id>`: the snapshot of item `ids` and the 0-based `index`
  * of the current item) lives here, so `steps.<loop>.item.<key>` reads the current item fresh by ID and
@@ -33,6 +34,11 @@ final class Context {
 	 * Default most records a run may read (IDs returned by reads, plus loop items).
 	 */
 	public const READ_LIMIT = 500;
+
+	/**
+	 * Default most child runs one run may start (start_automation).
+	 */
+	public const START_LIMIT = 50;
 
 	/**
 	 * Engine clock.
@@ -111,6 +117,21 @@ final class Context {
 	 * @var int
 	 */
 	private int $reads = 0;
+
+	/**
+	 * State of date waits the cursor is at, by step id (`context.until.<id>`): `since` (first arrival, UTC)
+	 * and `empty` (the date was empty at the last check).
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	private array $until = array();
+
+	/**
+	 * Child runs started so far in the run.
+	 *
+	 * @var int
+	 */
+	private int $starts = 0;
 
 	/**
 	 * Records the run moved to the trash so far (`context.trashed`).
@@ -236,6 +257,53 @@ final class Context {
 			return null;
 		}
 		return array_values( array_map( 'intval', (array) $this->steps[ $parts[1] ]['ids'] ) );
+	}
+
+	/**
+	 * Date wait state, for storage (`context.until`).
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function until_states(): array {
+		return $this->until;
+	}
+
+	/**
+	 * Restores the stored date wait state (`context.until`).
+	 *
+	 * @param array<mixed> $states Stored state.
+	 */
+	public function restore_until( array $states ): void {
+		$this->until = array();
+		foreach ( $states as $id => $state ) {
+			if ( is_array( $state ) && is_string( $state['since'] ?? null ) ) {
+				$this->until[ (string) $id ] = $state;
+			}
+		}
+	}
+
+	/**
+	 * State of a date wait, or null before its first arrival.
+	 *
+	 * @param string $step_id Wait step id.
+	 * @return array<string, mixed>|null
+	 */
+	public function until( string $step_id ): ?array {
+		return $this->until[ $step_id ] ?? null;
+	}
+
+	/**
+	 * Sets (or, with null, removes) the state of a date wait.
+	 *
+	 * @param string                    $step_id Wait step id.
+	 * @param array<string, mixed>|null $state   State.
+	 */
+	public function set_until( string $step_id, ?array $state ): void {
+		if ( null === $state ) {
+			unset( $this->until[ $step_id ] );
+			return;
+		}
+		$this->until[ $step_id ] = $state;
 	}
 
 	/**
@@ -395,6 +463,42 @@ final class Context {
 		 * @param int $limit Default 500.
 		 */
 		return max( 0, (int) apply_filters( 'pegwork_automation_read_limit', self::READ_LIMIT ) );
+	}
+
+	/**
+	 * Child runs started so far in the run.
+	 */
+	public function starts(): int {
+		return $this->starts;
+	}
+
+	/**
+	 * Restores the run's stored start count (`context.starts`).
+	 *
+	 * @param int $starts Count.
+	 */
+	public function restore_starts( int $starts ): void {
+		$this->starts = max( 0, $starts );
+	}
+
+	/**
+	 * Counts one child run started.
+	 */
+	public function count_start(): void {
+		++$this->starts;
+	}
+
+	/**
+	 * Most child runs one run may start.
+	 */
+	public static function start_limit(): int {
+		/**
+		 * Filters the most child runs one run may start with start_automation steps. A start past it fails
+		 * with `start_limit` (no retry; `on_error` applies).
+		 *
+		 * @param int $limit Default 50.
+		 */
+		return max( 0, (int) apply_filters( 'pegwork_automation_start_limit', self::START_LIMIT ) );
 	}
 
 	/**

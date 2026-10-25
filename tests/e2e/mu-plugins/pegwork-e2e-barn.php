@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E BarnCRM
- * Description: Test-only helpers for the BarnCRM browser tests: registers tests/e2e/packages/barn (types, relationships, form and options page, no automations), and exposes admin-only REST routes to create a sample gift (with a linked donor) or task, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample records). Not shipped.
+ * Description: Test-only helpers for the BarnCRM browser tests: registers tests/e2e/packages/barn (types, relationships, form and options page, no automations), and exposes admin-only REST routes to create a sample gift (with a linked donor) or task, to update a task, to save an Automation v4 fixture automation as an enabled site automation, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample records). Not shipped.
  *
  * @package Pegwork
  */
@@ -26,6 +26,15 @@ add_action(
  */
 function pegwork_e2e_barn_keys() {
 	return array( 'barn_gift_thanks', 'barn_volunteer_intake', 'barn_lifetime_milestone', 'barn_tasks_digest' );
+}
+
+/**
+ * Automation v4 keys the specs save from tests/fixtures/valid/v4/automations (reset deletes them too).
+ *
+ * @return string[]
+ */
+function pegwork_e2e_barn_v4_keys() {
+	return array( 'barn_task_due_reminder' );
 }
 
 /**
@@ -56,6 +65,41 @@ add_action(
 					$values = array_intersect_key( (array) $request->get_json_params(), array_flip( array( 'name', 'due_on', 'assignee_email', 'done' ) ) );
 					$id     = \Pegwork\Api\Records::create( 'barn_task', $values, 'publish' );
 					return is_wp_error( $id ) ? $id : rest_ensure_response( array( 'id' => $id ) );
+				},
+			)
+		);
+
+		// Updates a sample task (body: id, values with name, due_on, done); emits record.updated.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/barn/task-update',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$values = array_intersect_key( (array) $request['values'], array_flip( array( 'name', 'due_on', 'done' ) ) );
+					$done   = \Pegwork\Api\Records::update( (int) $request['id'], $values );
+					return is_wp_error( $done ) ? $done : rest_ensure_response( true );
+				},
+			)
+		);
+
+		// Saves a v4 fixture automation (body: key) as an enabled site automation.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/barn/v4-automation',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$key = sanitize_key( (string) $request['key'] );
+					if ( ! in_array( $key, pegwork_e2e_barn_v4_keys(), true ) || ! defined( 'PEGWORK_DIR' ) ) {
+						return new WP_Error( 'pegwork_e2e_barn_key', 'Unknown v4 automation.', array( 'status' => 404 ) );
+					}
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+					$definition = json_decode( (string) file_get_contents( PEGWORK_DIR . 'tests/fixtures/valid/v4/automations/' . $key . '.json' ), true );
+					$saved      = pegwork_save_automation( array( 'enabled' => true ) + (array) $definition );
+					return is_wp_error( $saved ) ? $saved : rest_ensure_response( true );
 				},
 			)
 		);
@@ -149,7 +193,7 @@ add_action(
 				'permission_callback' => $admin,
 				'callback'            => static function () {
 					global $wpdb;
-					$keys  = pegwork_e2e_barn_keys();
+					$keys  = array_merge( pegwork_e2e_barn_keys(), pegwork_e2e_barn_v4_keys() );
 					$posts = get_posts(
 						array(
 							'post_type'      => 'pegwork_automation',

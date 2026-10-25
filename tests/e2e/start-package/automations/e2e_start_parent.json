@@ -1,0 +1,7 @@
+{ "format": 1, "key": "e2e_start_parent", "label": "E2E start the note",
+  "description": "Browser tests of the run detail links between a parent run and the run it started.",
+  "trigger": { "type": "manual", "button": "Start the note" },
+  "steps": [
+    { "id": "note", "type": "start_automation", "automation": "e2e_start_note" },
+    { "id": "done", "type": "send_email", "to": "e2e-start@example.org",
+      "subject": "Note started: {{steps.note.started}}", "text": "Run {{run.id}}." } ] }

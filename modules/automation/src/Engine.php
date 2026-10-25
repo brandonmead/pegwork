@@ -21,6 +21,7 @@ use PegworkAutomation\Steps\FindRecords;
 use PegworkAutomation\Steps\GetRecord;
 use PegworkAutomation\Steps\Relate;
 use PegworkAutomation\Steps\SendEmail;
+use PegworkAutomation\Steps\StartAutomation;
 use PegworkAutomation\Steps\Step;
 use PegworkAutomation\Steps\TrashRecord;
 use PegworkAutomation\Steps\UpdateRecord;
@@ -99,17 +100,18 @@ final class Engine {
 		$this->scheduler = $scheduler;
 		$this->runs      = new Runs( $clock );
 		$this->steps     = array(
-			'update_record' => new UpdateRecord(),
-			'create_record' => new CreateRecord(),
-			'condition'     => new Condition(),
-			'send_email'    => new SendEmail(),
-			'call_webhook'  => new CallWebhook(),
-			'wait'          => new Wait(),
-			'decision'      => new Decision(),
-			'get_record'    => new GetRecord(),
-			'find_records'  => new FindRecords(),
-			'relate'        => new Relate(),
-			'trash_record'  => new TrashRecord(),
+			'update_record'    => new UpdateRecord(),
+			'create_record'    => new CreateRecord(),
+			'condition'        => new Condition(),
+			'send_email'       => new SendEmail(),
+			'call_webhook'     => new CallWebhook(),
+			'wait'             => new Wait(),
+			'decision'         => new Decision(),
+			'get_record'       => new GetRecord(),
+			'find_records'     => new FindRecords(),
+			'relate'           => new Relate(),
+			'trash_record'     => new TrashRecord(),
+			'start_automation' => new StartAutomation(),
 		);
 	}
 
@@ -146,11 +148,12 @@ final class Engine {
 	 */
 	public static function register(): void {
 		$hooks = array(
-			'pegwork_event'        => array( 'on_event', 2 ),
-			self::RUN_HOOK         => array( 'on_run', 1 ),
-			self::MAINTENANCE_HOOK => array( 'on_maintenance', 0 ),
-			self::SCHEDULE_HOOK    => array( 'on_schedule', 1 ),
-			self::SWEEP_HOOK       => array( 'on_sweep', 3 ),
+			'pegwork_event'                => array( 'on_event', 2 ),
+			self::RUN_HOOK                 => array( 'on_run', 1 ),
+			self::MAINTENANCE_HOOK         => array( 'on_maintenance', 0 ),
+			self::SCHEDULE_HOOK            => array( 'on_schedule', 1 ),
+			self::SWEEP_HOOK               => array( 'on_sweep', 3 ),
+			'pegwork_event_record_updated' => array( 'on_record_updated', 1 ),
 		);
 		foreach ( $hooks as $hook => [ $method, $args ] ) {
 			if ( ! has_action( $hook, array( self::class, $method ) ) ) {
@@ -170,6 +173,18 @@ final class Engine {
 	public static function on_event( $name, $payload ): void {
 		if ( is_string( $name ) && is_array( $payload ) ) {
 			self::instance()->triggers()->handle( $name, $payload );
+		}
+	}
+
+	/**
+	 * Date wait listener: wakes runs waiting on a changed date field (Waits). Hooked to
+	 * pegwork_event_record_updated.
+	 *
+	 * @param mixed $payload Event payload.
+	 */
+	public static function on_record_updated( $payload ): void {
+		if ( is_array( $payload ) ) {
+			self::instance()->waits()->nudge( $payload );
 		}
 	}
 
@@ -258,6 +273,13 @@ final class Engine {
 	}
 
 	/**
+	 * Date wait listener.
+	 */
+	public function waits(): Waits {
+		return new Waits( $this );
+	}
+
+	/**
 	 * Maintenance job.
 	 */
 	public function maintenance(): Maintenance {
@@ -284,10 +306,9 @@ final class Engine {
 	 * Why this module version cannot run a definition, or null when it can. The registry accepts shapes before
 	 * the engine runs them all, so the executor refuses such a run before its first step instead of acting on
 	 * part of it: a step type without a handler, at any depth (`loop` has none because the executor's cursor
-	 * runs it). Until the Automation v4 engine PRs land (docs/automation-v4-design.md section 11), also the v4
-	 * shapes of existing step types: a wait `until` a date. trash_record (v4 PR 4), `{role:<slug>}` recipients
-	 * (v4 PR 6) and a read `created` (v4 PR 7) run; start_automation has no handler yet, so the first rule
-	 * refuses it.
+	 * runs it). Every Automation v4 shape runs (docs/automation-v4-design.md section 11): a wait `until` a date
+	 * (v4 PR 3), trash_record (v4 PR 4), start_automation (v4 PR 5), `{role:<slug>}` recipients (v4 PR 6) and a
+	 * read `created` (v4 PR 7).
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */
@@ -317,9 +338,6 @@ final class Engine {
 			$type = (string) ( $step['type'] ?? '' );
 			if ( null === $this->step( $type ) && 'loop' !== $type ) { // The executor's cursor runs loops itself.
 				return sprintf( 'step "%1$s" has type "%2$s", which this version of the automation module cannot run.', $id, $type );
-			}
-			if ( 'wait' === $type && isset( $step['until'] ) ) {
-				return sprintf( 'step "%s" waits until a date ("until"), which this version of the automation module cannot do.', $id );
 			}
 			$children = array_merge(
 				array_map( fn( $branch ) => (array) ( ( (array) $branch )['steps'] ?? array() ), (array) ( $step['branches'] ?? array() ) ),
