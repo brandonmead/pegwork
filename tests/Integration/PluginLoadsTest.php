@@ -23,8 +23,8 @@ class PluginLoadsTest extends WP_UnitTestCase {
 		$this->assertTrue( defined( 'PEGWORK_FILE' ) );
 		$this->assertTrue( defined( 'PEGWORK_DIR' ) );
 		$this->assertSame( '0.3.0', PEGWORK_VERSION );
-		// Automation v3 moved the API to 0.3.0 and the plugin to the next minor at sign-off (docs/automation-v3-design.md section 3.6).
-		$this->assertSame( '0.3.0', \Pegwork\Api\VERSION );
+		// Automation v4 moved the API to 0.4.0 in its first PR; the plugin follows at sign-off (docs/automation-v4-design.md section 8).
+		$this->assertSame( '0.4.0', \Pegwork\Api\VERSION );
 		$this->assertSame( 'pegwork.php', basename( PEGWORK_FILE ) );
 		$this->assertFileExists( PEGWORK_DIR . 'pegwork.php' );
 	}

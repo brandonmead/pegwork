@@ -6,7 +6,7 @@ For add-on plugins and for Pegwork's own optional modules.
 
 Everything in the `Pegwork\Api` namespace (`src/Api/`) is public and follows semantic versioning: no breaking change without a major release. Everything else under `Pegwork\` is internal and may change in any release. Do not call it from an add-on.
 
-The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()`, the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive). 0.3.0 (Automation v3) adds `Records::find()`, `Records::relate()`, `Records::unrelate()` and relationship keys in `Records::create()` and `update()` values (before 0.3.0 they were rejected as unknown keys), and relationship keys in record event `changed` and `old`. Add-ons using them check `version_compare( Pegwork\Api\VERSION, '0.3.0', '>=' )`. The plugin version is 0.3.0 too (Automation v3 sign-off).
+The API version is `Pegwork\Api\VERSION` (0.2.0 adds `ADMIN_MENU`, `Events`, `Records`, `Registry::meta_key()`, `Registry::relationships_for()`, the registry section accessors below, `pegwork_get_field()`, `pegwork_get_option()`, the form functions `pegwork_sanitize_field()`, `pegwork_validate_fields()`, `pegwork_save_form()`, `pegwork_delete_form()`, `Throttle` and the `pegwork_client_ip` filter, and the automation functions `pegwork_save_automation()`, `pegwork_delete_automation()`, added in Phase 6 without a version change because they are additive). 0.3.0 (Automation v3) adds `Records::find()`, `Records::relate()`, `Records::unrelate()` and relationship keys in `Records::create()` and `update()` values (before 0.3.0 they were rejected as unknown keys), and relationship keys in record event `changed` and `old`. Add-ons using them check `version_compare( Pegwork\Api\VERSION, '0.3.0', '>=' )`. 0.4.0 (Automation v4) adds `Records::trash()`, the `pegwork_records_trash_enabled` filter and the `created` property of `Records::find()`; check `'0.4.0'`. The plugin version stays 0.3.0 until Automation v4 sign-off.
 
 CI enforces the same rule for bundled modules: PHP under `modules/` may not reference any `Pegwork\` namespace other than `Pegwork\Api` (`bin/check-module-boundary.sh`).
 
@@ -269,9 +269,20 @@ $giving = Pegwork\Api\Records::find(
 		'sum'     => array( 'amount' ),
 	)
 ); // { ids: [], count: 3, sums: { amount: 975.0 }, empty_operand: null } or WP_Error
+
+// API 0.4.0: move to the trash (never a permanent delete), and read by creation date.
+$moved  = Pegwork\Api\Records::trash( 42, array( 'automation' => 'my_flow', 'run_id' => 7, 'depth' => 1 ) ); // true, false when already trashed, or WP_Error
+$old    = Pegwork\Api\Records::find( 'barn_volunteer', array( 'created' => array( 'before' => '2025-06-01' ), 'count' => true ) );
 ```
 
 No capability check: the caller authorizes. Details: `docs/events.md`.
+
+### `Records::trash( $id, $origin )`
+
+- Moves a registry record to the trash with `wp_trash_post()`, restorable from the type's Trash view for `EMPTY_TRASH_DAYS` days. Emits `record.updated` (`changed` = `status`) and `record.status_changed` to `trash`, both with the caller's origin (`source` `records_api`).
+- Returns true when moved, false when the record was already in the trash (no event).
+- Errors: `pegwork_record_not_found` (404: no post, not a registry content type, or an auto-draft); `trash_disabled` (409: `EMPTY_TRASH_DAYS` is 0 or false, where `wp_trash_post()` would delete permanently; the post is left untouched); `pegwork_trash_failed` (409: another plugin stopped it through `pre_trash_post`).
+- Filter `pegwork_records_trash_enabled` (bool, default whether the site keeps a trash) can turn `Records::trash()` off, which then returns `trash_disabled`. It can never turn it on when `EMPTY_TRASH_DAYS` is 0.
 
 ### `Records::find( $type, $query )`
 
@@ -284,6 +295,7 @@ No capability check: the caller authorizes. Details: `docs/events.md`.
 | `limit` | 10 | Integer 0 to 50 (`invalid_value`). 0 returns no IDs, only totals. |
 | `count` | false | `count` is the number of every match (SQL `COUNT`), else null. |
 | `sum` | `[]` | Up to 5 meta-stored `number` field keys (`filter_field`, `invalid_value`). SQL `SUM( CAST( meta_value AS DECIMAL(20,4) ) )` over every match; 0 when nothing matches. |
+| `created` | | API 0.4.0. `{ before, after }`, at least one, each a `Y-m-d` day in site time (`invalid_value`). Compares the creation time (`post_date_gmt`; a never-published draft's zero GMT date falls back to its site-time `post_date`) with whole days: `before` matches records created before that day starts, `after` records created after that day ends. New York example: `before: 2027-03-01` matches up to 2027-02-28 23:59:59 local (04:59:59 UTC); `after: 2027-03-01` matches from 2027-03-02 00:00 local; both `after: 2027-02-28` and `before: 2027-03-02` match records created on 2027-03-01. Part of the same WHERE, so `count` and `sum` cover it. A null or `''` bound is an empty operand (`empty_operand` = `created`). A query property, not a filter field, so a content type may still have a field called `created`. |
 
 Operators (the automation condition operators, `changed` excluded):
 
