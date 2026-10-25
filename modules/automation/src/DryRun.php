@@ -212,9 +212,19 @@ final class DryRun {
 	 * @param array<string, mixed>      $trigger  Trigger payload.
 	 * @param array<int, mixed>         $steps    The edited steps, so a read's field renders as
 	 *                                            `[from step <id>: <Field label>]` (nothing runs).
+	 *                                            A `{role:<slug>}` part shows as `role:<slug> (N)`, or the
+	 *                                            error code in place of N; never a member address.
 	 */
 	public static function preview( string $template, bool $html, ?array $record, array $trigger, array $steps = array() ): string {
-		$context = self::context( $record, $trigger );
+		$template = (string) preg_replace_callback(
+			'/\{role:([a-z0-9_-]{1,64})\}/',
+			static function ( array $m ): string {
+				$members = SendEmail::role_members( $m[1] );
+				return sprintf( 'role:%1$s (%2$s)', $m[1], $members instanceof WP_Error ? (string) $members->get_error_code() : (string) count( $members ) );
+			},
+			$template
+		);
+		$context  = self::context( $record, $trigger );
 		if ( array() !== $steps ) {
 			$context->use_plan( new Plan( $steps ) );
 		}
@@ -452,6 +462,111 @@ final class DryRun {
 			);
 		}
 		return $plan->next( $id );
+	}
+
+	/**
+	 * What a start_automation step would do, with Manual::chain()'s checks and the target's `when` evaluated
+	 * against the record, at the test's depth (0) plus 1. Nothing is started and the child is not dry-run.
+	 * Its `started` output is stored for later steps.
+	 *
+	 * @param array<string, mixed>      $step    Step.
+	 * @param Context                   $context Context.
+	 * @param array<string, mixed>|null $record  Sample record.
+	 * @return array{result: string, detail: array<string, mixed>, message: string}
+	 */
+	private static function start( array $step, Context $context, ?array $record ): array {
+		$id         = (string) $step['id'];
+		$key        = (string) $step['automation'];
+		$definition = pegwork_registry()->automation( $key );
+		$type       = $definition['trigger']['content_type'] ?? null;
+		$button     = (string) ( $definition['trigger']['button'] ?? $definition['label'] ?? $key );
+
+		$target_id = null;
+		$pending   = null;
+		if ( null !== $type ) {
+			if ( isset( $step['record'] ) ) {
+				$pending   = self::pending( (string) $step['record'], $context );
+				$target_id = null === $pending ? (int) trim( Templates::render( (string) $step['record'], $context ) ) : null;
+			} else {
+				$target_id = (int) ( $record['id'] ?? 0 );
+			}
+		}
+		$detail = array(
+			'automation' => $key,
+			'record'     => $target_id,
+		);
+
+		if ( null !== $pending ) {
+			$context->set_output( $id, array( 'started' => true ) );
+			return array(
+				'result'  => 'ok',
+				'detail'  => $detail,
+				'message' => sprintf(
+					/* translators: 1: automation key, 2: its button label, 3: step ID. */
+					__( 'Start %1$s "%2$s" for the record from step %3$s, known only in a real run (not started). Test it from its own editor.', 'pegwork' ),
+					$key,
+					$button,
+					$pending
+				),
+			);
+		}
+
+		$target = Manual::target( $key, $target_id );
+		if ( $target instanceof WP_Error ) {
+			$detail['error'] = (string) $target->get_error_code();
+			return array(
+				'result'  => 'fails',
+				'detail'  => $detail,
+				'message' => sprintf(
+					/* translators: 1: step ID, 2: error message. */
+					__( 'Start %1$s: would fail: %2$s', 'pegwork' ),
+					$id,
+					$target->get_error_message()
+				),
+			);
+		}
+
+		if ( null === $type ) {
+			/* translators: 1: automation key, 2: its button label. */
+			$prefix = sprintf( __( 'Start %1$s "%2$s"', 'pegwork' ), $key, $button );
+		} elseif ( null !== $record && (int) $record['id'] === $target_id ) {
+			/* translators: 1: automation key, 2: its button label, 3: content type label (singular). */
+			$prefix = sprintf( __( 'Start %1$s "%2$s" for this %3$s', 'pegwork' ), $key, $button, self::type_label( (string) $type, false ) );
+		} else {
+			/* translators: 1: automation key, 2: its button label, 3: content type label (singular), 4: record ID. */
+			$prefix = sprintf( __( 'Start %1$s "%2$s" for %3$s %4$d', 'pegwork' ), $key, $button, self::type_label( (string) $type, false ), (int) $target_id );
+		}
+		$payload = array(
+			'user_id' => 0,
+			'source'  => 'automation',
+			'origin'  => array(
+				'source' => 'automation',
+				'depth'  => 1,
+			),
+		);
+		$when    = $target['definition']['trigger']['when'] ?? null;
+		$applies = null === $when || Conditions::evaluate( (array) $when, new Context( $context->clock(), $target['record'], $payload ) );
+		/** This filter is documented in modules/automation/src/Triggers.php */
+		$skipped = $applies && 1 >= (int) apply_filters( 'pegwork_automation_max_depth', Triggers::MAX_DEPTH );
+
+		$detail['applies'] = $applies;
+		if ( $skipped ) {
+			$detail['skipped'] = 'loop_depth';
+		}
+		$context->set_output( $id, array( 'started' => $applies && ! $skipped ) );
+
+		return array(
+			'result'  => 'ok',
+			'detail'  => $detail,
+			'message' => match ( true ) {
+				/* translators: %s: "Start <automation key> "<button>" for this <type>". */
+				$skipped => sprintf( __( '%s: it would be skipped (depth limit).', 'pegwork' ), $prefix ),
+				/* translators: %s: "Start <automation key> "<button>" for this <type>". */
+				$applies => sprintf( __( '%s: it applies (not started). Test it from its own editor.', 'pegwork' ), $prefix ),
+				/* translators: %s: "Start <automation key> "<button>" for this <type>". */
+				default  => sprintf( __( '%s: it does not apply (its Only when is false).', 'pegwork' ), $prefix ),
+			},
+		);
 	}
 
 	/**
@@ -702,6 +817,10 @@ final class DryRun {
 				);
 				break;
 
+			case 'start_automation':
+				$entry = self::start( $step, $context, $record ) + $entry;
+				break;
+
 			default: // Loops are walked by report() itself.
 				$entry['result'] = 'fails';
 				/* translators: 1: step ID, 2: step type. */
@@ -805,27 +924,35 @@ final class DryRun {
 		}
 
 		$template = (string) ( $step['to'] ?? '' );
+		$shown    = null;
 		if ( null !== self::pending( $template, $context ) ) {
 			// A recipient from the output of a step the test does not run is known only in a real run.
 			$detail['to'] = array( Templates::render( $template, $context, Templates::PREVIEW ) );
 		} else {
-			$to = ( new SendEmail() )->recipients( $template, $context );
-			if ( $to instanceof WP_Error ) {
+			$resolved = ( new SendEmail() )->resolve( $template, $context );
+			if ( $resolved instanceof WP_Error ) {
 				return array(
 					'result'  => 'fails',
-					'detail'  => $detail + array( 'error' => (string) $to->get_error_code() ),
+					'detail'  => $detail + array( 'error' => (string) $resolved->get_error_code() ),
 					/* translators: 1: step ID, 2: error message. */
-					'message' => sprintf( __( 'Send email %1$s: would fail: %2$s', 'pegwork' ), $id, $to->get_error_message() ),
+					'message' => sprintf( __( 'Send email %1$s: would fail: %2$s', 'pegwork' ), $id, $resolved->get_error_message() ),
 				);
 			}
-			$detail['to'] = array_map( array( SendEmail::class, 'mask' ), $to );
+			// Role members are counted, never listed: "to role editor (3 people), m***@example.org".
+			$detail['to'] = SendEmail::shown( $resolved );
+			$shown        = array();
+			foreach ( $resolved['roles'] as $slug => $count ) {
+				/* translators: 1: role slug, 2: number of members. */
+				$shown[] = sprintf( _n( 'role %1$s (%2$d person)', 'role %1$s (%2$d people)', $count, 'pegwork' ), $slug, $count );
+			}
+			$shown = array_merge( $shown, array_map( array( SendEmail::class, 'mask' ), $resolved['to'] ) );
 		}
 
 		return array(
 			'result'  => 'ok',
 			'detail'  => $detail,
 			/* translators: 1: step ID, 2: recipients, 3: subject. */
-			'message' => sprintf( __( 'Send email %1$s: to %2$s, subject "%3$s" (not sent).', 'pegwork' ), $id, implode( ', ', $detail['to'] ), $subject ),
+			'message' => sprintf( __( 'Send email %1$s: to %2$s, subject "%3$s" (not sent).', 'pegwork' ), $id, implode( ', ', $shown ?? $detail['to'] ), $subject ),
 		);
 	}
 

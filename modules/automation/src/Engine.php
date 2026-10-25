@@ -21,6 +21,7 @@ use PegworkAutomation\Steps\FindRecords;
 use PegworkAutomation\Steps\GetRecord;
 use PegworkAutomation\Steps\Relate;
 use PegworkAutomation\Steps\SendEmail;
+use PegworkAutomation\Steps\StartAutomation;
 use PegworkAutomation\Steps\Step;
 use PegworkAutomation\Steps\TrashRecord;
 use PegworkAutomation\Steps\UpdateRecord;
@@ -99,17 +100,18 @@ final class Engine {
 		$this->scheduler = $scheduler;
 		$this->runs      = new Runs( $clock );
 		$this->steps     = array(
-			'update_record' => new UpdateRecord(),
-			'create_record' => new CreateRecord(),
-			'condition'     => new Condition(),
-			'send_email'    => new SendEmail(),
-			'call_webhook'  => new CallWebhook(),
-			'wait'          => new Wait(),
-			'decision'      => new Decision(),
-			'get_record'    => new GetRecord(),
-			'find_records'  => new FindRecords(),
-			'relate'        => new Relate(),
-			'trash_record'  => new TrashRecord(),
+			'update_record'    => new UpdateRecord(),
+			'create_record'    => new CreateRecord(),
+			'condition'        => new Condition(),
+			'send_email'       => new SendEmail(),
+			'call_webhook'     => new CallWebhook(),
+			'wait'             => new Wait(),
+			'decision'         => new Decision(),
+			'get_record'       => new GetRecord(),
+			'find_records'     => new FindRecords(),
+			'relate'           => new Relate(),
+			'trash_record'     => new TrashRecord(),
+			'start_automation' => new StartAutomation(),
 		);
 	}
 
@@ -305,9 +307,9 @@ final class Engine {
 	 * the engine runs them all, so the executor refuses such a run before its first step instead of acting on
 	 * part of it: a step type without a handler, at any depth (`loop` has none because the executor's cursor
 	 * runs it). Until the Automation v4 engine PRs land (docs/automation-v4-design.md section 11), also the v4
-	 * shapes of existing step types: a `{role:<slug>}` recipient and a read `created` (a wait `until` a date
-	 * runs since v4 PR 3). trash_record runs (v4 PR 4); start_automation has no handler yet, so the first
-	 * rule refuses it.
+	 * shape of an existing step type: a read `created` (a wait `until` a date runs since v4 PR 3 and
+	 * `{role:<slug>}` recipients since v4 PR 6). The new step types trash_record (v4 PR 4) and
+	 * start_automation (v4 PR 5) run.
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */
@@ -337,9 +339,6 @@ final class Engine {
 			$type = (string) ( $step['type'] ?? '' );
 			if ( null === $this->step( $type ) && 'loop' !== $type ) { // The executor's cursor runs loops itself.
 				return sprintf( 'step "%1$s" has type "%2$s", which this version of the automation module cannot run.', $id, $type );
-			}
-			if ( 'send_email' === $type && str_contains( (string) ( $step['to'] ?? '' ), '{role:' ) ) {
-				return sprintf( 'step "%s" sends to a role ("{role:...}"), which this version of the automation module cannot do.', $id );
 			}
 			if ( in_array( $type, array( 'get_record', 'find_records' ), true ) && isset( $step['created'] ) ) {
 				return sprintf( 'step "%s" reads by creation time ("created"), which this version of the automation module cannot do.', $id );
