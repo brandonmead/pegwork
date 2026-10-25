@@ -37,8 +37,10 @@ final class SiteDefinitions {
 	 *
 	 * @param string               $kind       `form` or `automation`.
 	 * @param array<string, mixed> $definition Definition (format 1).
-	 * @return true|WP_Error `pegwork_invalid_<kind>` (400, messages by JSON pointer in data `fields`), or
-	 *                       `pegwork_<kind>_file_defined` (409) for a key a file package defines.
+	 * @return true|WP_Error `pegwork_invalid_<kind>` (400, messages by JSON pointer in data `fields`),
+	 *                       `pegwork_<kind>_file_defined` (409) for a key a file package defines, or
+	 *                       `pegwork_automation_in_use` (409, callers in data `automations`) when automations that
+	 *                       start this one would no longer load (for example after its trigger stops being manual).
 	 */
 	public static function save( string $kind, array $definition ): true|WP_Error {
 		$section = self::section( $kind );
@@ -85,9 +87,16 @@ final class SiteDefinitions {
 		}
 		$db[ $section ] = $entries;
 
+		$before = array_keys( $registry->automations() );
 		update_option( Loader::DB_OPTION, $db, true );
 		Plugin::init();
 
+		$lost = 'automation' === $kind ? self::lost( $before, $key ) : array();
+		if ( $lost ) {
+			update_option( Loader::DB_OPTION, $previous, true );
+			Plugin::init();
+			return self::in_use( $key, $lost );
+		}
 		if ( null === Plugin::registry()->{$kind}( $key ) ) {
 			update_option( Loader::DB_OPTION, $previous, true );
 			Plugin::init();
@@ -108,7 +117,9 @@ final class SiteDefinitions {
 	 *
 	 * @param string $kind `form` or `automation`.
 	 * @param string $key  Key.
-	 * @return true|WP_Error `pegwork_<kind>_file_defined` (409) for a file definition, `pegwork_<kind>_not_found` (404).
+	 * @return true|WP_Error `pegwork_<kind>_file_defined` (409) for a file definition, `pegwork_<kind>_not_found` (404),
+	 *                       `pegwork_automation_in_use` (409, callers in data `automations`) for an automation that
+	 *                       other automations start; nothing is removed then.
 	 */
 	public static function delete( string $kind, string $key ): true|WP_Error {
 		$section = self::section( $kind );
@@ -132,11 +143,51 @@ final class SiteDefinitions {
 			);
 		}
 
+		$previous       = $db;
+		$before         = array_keys( Plugin::registry()->automations() );
 		$db[ $section ] = $kept;
 		update_option( Loader::DB_OPTION, $db, true );
 		Plugin::init();
 
+		$lost = 'automation' === $kind ? self::lost( $before, $key ) : array();
+		if ( $lost ) {
+			update_option( Loader::DB_OPTION, $previous, true );
+			Plugin::init();
+			return self::in_use( $key, $lost );
+		}
+
 		return true;
+	}
+
+	/**
+	 * Automations that were registered before a change and no longer are, other than the changed key: they
+	 * start it (start_automation), and the loader drops an automation whose start target is gone or no
+	 * longer startable.
+	 *
+	 * @param string[] $before Automation keys registered before the change.
+	 * @param string   $key    Changed automation key.
+	 * @return string[]
+	 */
+	private static function lost( array $before, string $key ): array {
+		return array_values( array_diff( $before, array_keys( Plugin::registry()->automations() ), array( $key ) ) );
+	}
+
+	/**
+	 * The error for a change that other automations' start steps would not survive.
+	 *
+	 * @param string   $key     Automation key.
+	 * @param string[] $callers Automations that start it.
+	 */
+	private static function in_use( string $key, array $callers ): WP_Error {
+		return new WP_Error(
+			'pegwork_automation_in_use',
+			/* translators: 1: automation key, 2: comma-separated automation keys. */
+			sprintf( __( 'Automation "%1$s" is started by %2$s, which would stop loading. Remove or change those "Start another automation" steps first.', 'pegwork' ), $key, implode( ', ', $callers ) ),
+			array(
+				'status'      => 409,
+				'automations' => $callers,
+			)
+		);
 	}
 
 	/**

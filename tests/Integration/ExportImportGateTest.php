@@ -448,6 +448,72 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Automation v4 gate: the v4 shapes package (wait until, trash_record, start_automation with file-to-file
+	 * starts, role recipients, read `created`) exports, re-imports into the DB source and re-exports
+	 * byte-identically, with `until.at` filled, a zero offset dropped and `created` operands kept as written.
+	 */
+	public function test_v4_package_round_trip() {
+		$fixture       = dirname( __DIR__ ) . '/fixtures/valid/v4';
+		$this->package = fn( RegistryBuilder $builder ) => $builder->add_package( $fixture );
+		add_action( 'pegwork_register', $this->package );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		$sections = array( 'content_types', 'relationships', 'options_pages', 'forms', 'automations' );
+		$before   = array_map( fn( $section ) => Plugin::registry()->$section(), array_combine( $sections, $sections ) );
+		$this->assertSame( array( 4, 2, 1, 1, 7 ), array_values( array_map( 'count', $before ) ) );
+
+		$a    = $this->export();
+		$tree = $this->tree( $a );
+		$this->assertSame(
+			array_map( fn( $file ) => substr( $file, strlen( $fixture ) + 1 ), glob( $fixture . '/*/*.json' ) ),
+			array_values( array_diff( array_keys( $tree ), array( 'manifest.json' ) ) ),
+			'One exported file per fixture object.'
+		);
+		$shapes = json_decode( $tree['automations/barn_v4_shapes.json'], true );
+		$this->assertSame(
+			array(
+				'at'     => '07:30',
+				'offset' => '+PT2H',
+				'var'    => 'record.due_on',
+			),
+			$shapes['steps'][0]['until']
+		);
+		$this->assertSame(
+			array(
+				'at'  => '09:00',
+				'var' => 'record.reminded_on',
+			),
+			$shapes['steps'][1]['until'],
+			'until.at default; zero offset dropped.'
+		);
+		$this->assertSame(
+			array(
+				'after'  => array( 'var' => 'steps.gift.record.received_on' ),
+				'before' => '2030-01-01',
+			),
+			$shapes['steps'][4]['created']
+		);
+		$this->assertSame( 'barn_gift_receipt', $shapes['steps'][5]['steps'][0]['automation'] );
+		$this->assertSame( 'continue', $shapes['steps'][8]['branches'][0]['steps'][0]['on_error'] );
+		$review = json_decode( $tree['automations/barn_volunteer_review.json'], true );
+		$this->assertSame( '{role:editor}, {option:barn_settings.volunteer_manager}', $review['steps'][0]['to'] );
+
+		remove_action( 'pegwork_register', $this->package );
+		delete_option( Loader::DB_OPTION );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::registry()->automations() );
+
+		$this->assertTrue( Importer::import( $a )->is_valid() );
+		$this->reregister();
+		$this->assertSame( array(), Plugin::result()->errors );
+		foreach ( $sections as $section ) {
+			$this->assertSame( $before[ $section ], Plugin::registry()->$section(), "$section unchanged." );
+		}
+		$this->assertSame( $tree, $this->tree( $this->export() ) );
+		$this->assertSame( 0, Importer::import( $a )->count() );
+	}
+
+	/**
 	 * Import creates missing seed terms by slug and never deletes terms; dry run writes nothing.
 	 */
 	public function test_import_seeds_missing_terms_and_dry_run_writes_nothing() {

@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "manual",
+    "button": "Go"
+  },
+  "steps": [
+    {
+      "id": "go",
+      "type": "start_automation",
+      "automation": "note"
+    }
+  ]
+}

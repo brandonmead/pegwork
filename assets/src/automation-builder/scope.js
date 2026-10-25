@@ -34,6 +34,7 @@ const OUTPUTS = {
 	get_record: { found: 'boolean', record_id: 'number', record: 'record' },
 	find_records: { count: 'number', records: 'records', sum: 'sum' },
 	loop: { count: 'number' },
+	start_automation: { started: 'boolean' },
 };
 
 /**

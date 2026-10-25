@@ -1,0 +1,6 @@
+{ "format": 1, "key": "barn_weekly_note", "label": "Send the development team a note",
+  "trigger": { "type": "manual", "button": "Send note" },
+  "steps": [
+    { "id": "note", "type": "send_email", "to": "{role:editor}; {role:barn_reviewer}, {option:barn_settings.development_email}",
+      "subject": "Note from {{site.name}}",
+      "text": "Please review this week's gifts and tasks: {{site.url}}" } ] }

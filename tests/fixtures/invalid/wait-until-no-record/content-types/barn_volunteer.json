@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "key": "barn_volunteer",
+  "labels": { "singular": "Volunteer", "plural": "Volunteers" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "required": true, "visibility": "private" },
+    { "key": "interest", "type": "select", "label": "Interest", "required": true,
+      "options": [ { "value": "events", "label": "Events" }, { "value": "garden", "label": "Garden" }, { "value": "office", "label": "Office" } ] },
+    { "key": "stage", "type": "select", "label": "Stage", "default": "new",
+      "options": [ { "value": "new", "label": "New" }, { "value": "contacted", "label": "Contacted" }, { "value": "placed", "label": "Placed" } ] },
+    { "key": "coordinator_email", "type": "email", "label": "Coordinator email", "visibility": "private" }
+  ]
+}

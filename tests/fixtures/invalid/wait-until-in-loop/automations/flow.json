@@ -1,0 +1,39 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "schedule",
+    "every": "day"
+  },
+  "steps": [
+    {
+      "id": "old",
+      "type": "find_records",
+      "content_type": "barn_task",
+      "filter": {
+        "all": [
+          {
+            "field": "done",
+            "op": "eq",
+            "value": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "each",
+      "type": "loop",
+      "over": "steps.old.records",
+      "steps": [
+        {
+          "id": "w",
+          "type": "wait",
+          "until": {
+            "var": "record.due_on"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "webhook"
+  },
+  "steps": [
+    {
+      "id": "remove",
+      "type": "trash_record",
+      "content_type": "barn_task",
+      "record": "{{trigger.payload.id}}"
+    }
+  ]
+}

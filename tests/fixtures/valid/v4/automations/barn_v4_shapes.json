@@ -1,0 +1,25 @@
+{ "format": 1, "key": "barn_v4_shapes", "label": "Every Automation v4 step shape",
+  "trigger": { "type": "event", "event": "record.updated", "content_type": "barn_task" },
+  "steps": [
+    { "id": "due_soon", "type": "wait", "until": { "var": "record.due_on", "offset": "+PT2H", "at": "07:30" } },
+    { "id": "reminded", "type": "wait", "until": { "var": "record.reminded_on", "offset": "P0D" } },
+    { "id": "gift", "type": "get_record", "content_type": "barn_gift",
+      "related": { "relationship": "task_gift", "of": "{{record.id}}" } },
+    { "id": "latest", "type": "get_record", "content_type": "barn_gift",
+      "created": { "before": { "date": "now" } }, "sort": { "field": "id", "order": "desc" } },
+    { "id": "newer_gifts", "type": "find_records", "content_type": "barn_gift", "limit": 5,
+      "created": { "after": { "var": "steps.gift.record.received_on" }, "before": "2030-01-01" } },
+    { "id": "each_gift", "type": "loop", "over": "steps.newer_gifts.records",
+      "steps": [
+        { "id": "receipt", "type": "start_automation", "automation": "barn_gift_receipt", "record": "{{steps.each_gift.item.id}}", "on_error": "continue" } ] },
+    { "id": "again", "type": "start_automation", "automation": "barn_gift_receipt", "record": "{{steps.gift.record_id}}" },
+    { "id": "note", "type": "start_automation", "automation": "barn_weekly_note", "retry": { "max": 1, "backoff": "PT5M" } },
+    { "id": "started", "type": "decision",
+      "branches": [
+        { "label": "Receipt started", "when": { "var": "steps.again.started", "op": "eq", "value": true },
+          "steps": [
+            { "id": "remove_gift", "type": "trash_record", "content_type": "barn_gift", "record": "{{steps.gift.record_id}}", "on_error": "continue" } ] } ] },
+    { "id": "tell", "type": "send_email", "to": "{role:editor}, {{record.assignee_email}}",
+      "subject": "Task {{record.name}} closed",
+      "text": "Receipt started: {{steps.again.started}}. Gifts since: {{steps.newer_gifts.count}}." },
+    { "id": "remove", "type": "trash_record", "content_type": "barn_task", "retry": { "max": 1 } } ] }

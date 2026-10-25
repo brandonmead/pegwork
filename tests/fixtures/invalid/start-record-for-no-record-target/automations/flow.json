@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "event",
+    "event": "record.created",
+    "content_type": "barn_task"
+  },
+  "steps": [
+    {
+      "id": "go",
+      "type": "start_automation",
+      "automation": "note",
+      "record": "{{record.id}}"
+    }
+  ]
+}

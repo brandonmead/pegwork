@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "event",
+    "event": "record.created"
+  },
+  "steps": [
+    {
+      "id": "w",
+      "type": "wait",
+      "until": {
+        "var": "record.due_on"
+      }
+    }
+  ]
+}

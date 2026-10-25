@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "note",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "manual",
+    "button": "Go",
+    "content_type": "barn_gift"
+  },
+  "steps": [
+    {
+      "id": "mail",
+      "type": "send_email",
+      "to": "a@example.org",
+      "subject": "Hi",
+      "text": "Hello"
+    }
+  ]
+}

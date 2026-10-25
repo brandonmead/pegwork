@@ -8,6 +8,7 @@
 namespace Pegwork\Tests\Unit\Registry;
 
 use Pegwork\Registry\Loader;
+use Pegwork\Registry\Normalizer;
 use Pegwork\Registry\Validator;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
@@ -724,5 +725,120 @@ class ValidatorTest extends TestCase {
 			$kind = $kinds[ basename( dirname( $file ) ) ];
 			$this->assertSame( array(), $this->all_codes( $kind, json_decode( file_get_contents( $file ), true ) ), $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
 		}
+	}
+
+	/**
+	 * Codes and pointers from per-file and reference checks of an automation against the v4 fixture.
+	 *
+	 * @param array $data Automation.
+	 * @return string[]
+	 */
+	private function v4_codes( array $data ) {
+		$registry = Loader::load( array( dirname( __DIR__, 2 ) . '/fixtures/valid/v4' ) )->registry;
+		$known    = array();
+		foreach ( Loader::SECTIONS as $kind => $section ) {
+			$known[ $kind ] = $registry->$section();
+		}
+		$known['automation'][ $data['key'] ] = Normalizer::normalize( 'automation', $data );
+		$errors                              = Validator::validate( 'automation', $data, 'f' );
+		if ( ! $errors ) {
+			$errors = Validator::references( 'automation', $data, 'f', $known );
+		}
+		return array_map( fn( $e ) => $e->code . ' ' . $e->pointer, $errors );
+	}
+
+	/**
+	 * An automation of the v4 fixture.
+	 *
+	 * @param string $key Automation key.
+	 * @return array
+	 */
+	private function v4( $key ) {
+		return json_decode( file_get_contents( dirname( __DIR__, 2 ) . '/fixtures/valid/v4/automations/' . $key . '.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
+	}
+
+	/**
+	 * Automation v4 rules the invalid fixtures do not cover: offset bounds, form-bound date waits, start record
+	 * defaults and free templates, role parts, `created` sources and typed `{ var }` operands, and `started`.
+	 */
+	public function test_v4_shapes() {
+		$reminder = $this->v4( 'barn_task_due_reminder' );
+		$this->assertSame( array(), $this->v4_codes( $reminder ) );
+		foreach ( array( 'P2Y', '-P2Y', '+PT0S', '-P1Y11M30D' ) as $ok ) {
+			$reminder['steps'][0]['until']['offset'] = $ok;
+			$this->assertSame( array(), $this->v4_codes( $reminder ), $ok );
+		}
+		foreach ( array( '-P2YT1S', 'P3D-', '3 days' ) as $bad ) {
+			$reminder['steps'][0]['until']['offset'] = $bad;
+			$this->assertSame( array( 'invalid_value /steps/0/until/offset' ), $this->v4_codes( $reminder ), $bad );
+		}
+
+		// A form that binds its record gives the wait a typed record; a waited private date is allowed.
+		$review             = $this->v4( 'barn_volunteer_review' );
+		$review['steps'][0] = array(
+			'id'    => 'later',
+			'type'  => 'wait',
+			'until' => array( 'var' => 'record.stage' ),
+		);
+		$this->assertSame( array( 'wait_field /steps/0/until/var' ), $this->v4_codes( $review ), 'A select field is not a date.' );
+		$gift            = $this->v4( 'barn_gift_receipt_start' );
+		$gift['trigger'] = array(
+			'type'         => 'event',
+			'event'        => 'record.created',
+			'content_type' => 'barn_contact',
+		);
+		$gift['steps']   = array(
+			array(
+				'id'    => 'later',
+				'type'  => 'wait',
+				'until' => array( 'var' => 'record.last_gift_on' ),
+			),
+		);
+		$this->assertSame( array(), $this->v4_codes( $gift ), 'Private date fields are allowed.' );
+
+		// Start: the record defaults to a bound record of the target's type, else it is required; a free
+		// template is allowed (its type is checked at run time).
+		$start = $this->v4( 'barn_gift_receipt_start' );
+		$this->assertSame( array(), $this->v4_codes( $start ) );
+		$start['trigger']['content_type'] = 'barn_task';
+		$start['steps']                   = array_slice( $start['steps'], 0, 1 );
+		$this->assertSame( array( 'missing_property /steps/0' ), $this->v4_codes( $start ) );
+		$start['steps'][0]['record'] = '{{record.name}}';
+		$this->assertSame( array(), $this->v4_codes( $start ) );
+
+		// Roles: whole parts only, separated by commas or semicolons; five parts at most.
+		$note = $this->v4( 'barn_weekly_note' );
+		$this->assertSame( array(), $this->v4_codes( $note ) );
+		foreach ( array( '{role:editor}x', 'to {role:editor}', '{role:}', '{role:' . str_repeat( 'a', 65 ) . '}' ) as $bad ) {
+			$note['steps'][0]['to'] = $bad;
+			$this->assertSame( array( 'role_recipient /steps/0/to' ), $this->v4_codes( $note ), $bad );
+		}
+		$note['steps'][0]['to'] = '{role:a}; {role:b}, {role:c-d}, {role:e_f}, x@example.org';
+		$this->assertSame( array(), $this->v4_codes( $note ) );
+		$note['steps'][0]['text'] = 'Sent to {role:a}';
+		$this->assertSame( array( 'role_recipient /steps/0/text' ), $this->v4_codes( $note ) );
+
+		// created: a source of its own; not with "record"; a { var } reads a date.
+		$shapes = $this->v4( 'barn_v4_shapes' );
+		$this->assertSame( array(), $this->v4_codes( $shapes ) );
+		$shapes['steps'][3]['record'] = '{{record.id}}';
+		$this->assertSame( array( 'read_source /steps/3/record' ), $this->v4_codes( $shapes ) );
+		$shapes                                        = $this->v4( 'barn_v4_shapes' );
+		$shapes['steps'][4]['created']['after']['var'] = 'steps.gift.record.name';
+		$shapes['steps'][4]['created']['before']       = '2030-02-30';
+		$this->assertSame( array( 'invalid_value /steps/4/created/before' ), $this->v4_codes( $shapes ), 'Calendar dates only.' );
+		$shapes['steps'][4]['created']['before'] = '2030-02-28';
+		$this->assertSame( array( 'invalid_value /steps/4/created/after/var' ), $this->v4_codes( $shapes ), 'A text field is not a date.' );
+		$shapes['steps'][4]['created']['after'] = array( 'var' => 'steps.nope.record.received_on' );
+		$this->assertSame( array( 'invalid_var /steps/4/created/after/var' ), $this->v4_codes( $shapes ), 'Paths are in scope.' );
+
+		// started is a boolean output, and only after the step.
+		$shapes                       = $this->v4( 'barn_v4_shapes' );
+		$shapes['steps'][9]['text']   = '{{steps.again.started | number}}';
+		$shapes['steps'][0]['until']  = array( 'var' => 'record.due_on' );
+		$shapes['steps'][2]['status'] = array( 'publish' );
+		$this->assertSame( array( 'invalid_template /steps/9/text' ), $this->v4_codes( $shapes ) );
+		$shapes['steps'][9]['text'] = '{{steps.receipt.started}}';
+		$this->assertSame( array( 'invalid_var /steps/9/text' ), $this->v4_codes( $shapes ), 'A loop body output stays in the body.' );
 	}
 }

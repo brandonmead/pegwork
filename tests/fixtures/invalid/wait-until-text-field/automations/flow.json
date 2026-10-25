@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "key": "flow",
+  "label": "Invalid fixture",
+  "trigger": {
+    "type": "event",
+    "event": "record.created",
+    "content_type": "barn_task"
+  },
+  "steps": [
+    {
+      "id": "w",
+      "type": "wait",
+      "until": {
+        "var": "record.name"
+      }
+    }
+  ]
+}

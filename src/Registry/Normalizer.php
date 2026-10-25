@@ -182,7 +182,8 @@ final class Normalizer {
 
 	/**
 	 * Fills step defaults in a step list and, recursively, in its decisions' branches and loop bodies; drops
-	 * an empty `otherwise`. Reads get `status` (sorted) and `sort`, find_records `limit`, relate `action`.
+	 * an empty `otherwise`. Reads get `status` (sorted) and `sort`, find_records `limit`, relate `action`, a date
+	 * wait `until.at` (09:00) without a zero `until.offset`. A read's `created` operands stay as written.
 	 * List order is kept, except a read's `status`, which is a set.
 	 *
 	 * @param list<array<string, mixed>> $steps Valid steps.
@@ -206,6 +207,13 @@ final class Normalizer {
 				}
 				if ( 'relate' === $step['type'] ) {
 					return $step + array( 'action' => 'add' );
+				}
+				if ( 'wait' === $step['type'] && isset( $step['until'] ) ) {
+					$step['until'] += array( 'at' => Validator::WAIT_AT_DEFAULT );
+					if ( isset( $step['until']['offset'] ) && ! preg_match( '/[1-9]/', $step['until']['offset'] ) ) {
+						unset( $step['until']['offset'] ); // A zero offset, such as P0D or -PT0S, is the default.
+					}
+					return $step;
 				}
 				if ( 'loop' === $step['type'] ) {
 					$step['steps'] = self::steps( $step['steps'] );

@@ -154,8 +154,9 @@ function pegwork_delete_form( string $key ): bool|WP_Error {
  * @since 0.2.0
  *
  * @param array<string, mixed> $definition Automation definition (format 1).
- * @return true|WP_Error `pegwork_invalid_automation` (400, messages by JSON pointer in data `fields`) or
- *                       `pegwork_automation_file_defined` (409).
+ * @return true|WP_Error `pegwork_invalid_automation` (400, messages by JSON pointer in data `fields`),
+ *                       `pegwork_automation_file_defined` (409) or, since 0.4.0, `pegwork_automation_in_use` (409,
+ *                       callers in data `automations`) when automations that start it would no longer load.
  */
 function pegwork_save_automation( array $definition ): bool|WP_Error {
 	return Pegwork\Registry\SiteDefinitions::save( 'automation', $definition );
@@ -168,7 +169,9 @@ function pegwork_save_automation( array $definition ): bool|WP_Error {
  * @since 0.2.0
  *
  * @param string $key Automation key.
- * @return true|WP_Error `pegwork_automation_file_defined` (409) or `pegwork_automation_not_found` (404).
+ * @return true|WP_Error `pegwork_automation_file_defined` (409), `pegwork_automation_not_found` (404) or, since
+ *                       0.4.0, `pegwork_automation_in_use` (409, callers in data `automations`) when other
+ *                       automations start it (nothing is removed).
  */
 function pegwork_delete_automation( string $key ): bool|WP_Error {
 	return Pegwork\Registry\SiteDefinitions::delete( 'automation', $key );

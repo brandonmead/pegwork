@@ -128,17 +128,19 @@ final class Loader {
 
 		// Drop units with unresolved references until none remain; a dropped unit can break another.
 		do {
-			$known = array();
+			$known  = array();
+			$origin = array();
 			foreach ( $units as $unit ) {
 				foreach ( $unit['objects'] as $object ) {
-					$known[ $object['kind'] ][ $object['key'] ] = Normalizer::normalize( $object['kind'], $object['data'] );
+					$known[ $object['kind'] ][ $object['key'] ]  = Normalizer::normalize( $object['kind'], $object['data'] );
+					$origin[ $object['kind'] ][ $object['key'] ] = $unit['source'];
 				}
 			}
 			$dropped = false;
 			foreach ( $units as $index => $unit ) {
 				$found = array();
 				foreach ( $unit['objects'] as $object ) {
-					array_push( $found, ...Validator::references( $object['kind'], $object['data'], $object['file'], $known, $object['pointer'] ) );
+					array_push( $found, ...Validator::references( $object['kind'], $object['data'], $object['file'], $known, $object['pointer'], $origin ) );
 				}
 				if ( $found ) {
 					array_push( $errors, ...$found );

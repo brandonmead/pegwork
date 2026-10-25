@@ -1,0 +1,22 @@
+{
+  "automations": [
+    {
+      "format": 1,
+      "key": "site_note",
+      "label": "Site note",
+      "trigger": {
+        "type": "manual",
+        "button": "Go"
+      },
+      "steps": [
+        {
+          "id": "mail",
+          "type": "send_email",
+          "to": "a@example.org",
+          "subject": "Hi",
+          "text": "Hello"
+        }
+      ]
+    }
+  ]
+}

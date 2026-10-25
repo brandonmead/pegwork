@@ -1,0 +1,11 @@
+{ "format": 1, "key": "barn_gift_receipt", "label": "Send the receipt for a gift",
+  "trigger": { "type": "manual", "content_type": "barn_gift", "button": "Send receipt", "allow": "editors",
+    "when": { "var": "record.amount", "op": "gt", "value": 0 } },
+  "steps": [
+    { "id": "donor", "type": "get_record", "content_type": "barn_contact",
+      "related": { "relationship": "gift_donor", "of": "{{record.id}}" } },
+    { "id": "has_donor", "type": "condition", "when": { "var": "steps.donor.found", "op": "eq", "value": true } },
+    { "id": "send", "type": "send_email", "to": "{{steps.donor.record.email}}",
+      "reply_to": "{{option:barn_settings.development_email}}",
+      "subject": "Your receipt from {{site.name}}",
+      "text": "Dear {{steps.donor.record.name}},\n\nReceipt for your gift of ${{record.amount | number:2}} received on {{record.received_on | date}}.\n\nNo goods or services were provided in exchange for this gift.\n\n{{site.name}}" } ] }
