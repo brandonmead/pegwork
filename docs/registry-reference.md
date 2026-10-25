@@ -489,7 +489,7 @@ A `send_email` `to` part that is exactly `{role:<slug>}` (slug of lowercase lett
 
 - Role tags are read from the template, never from rendered values, so record data cannot name a role. A malformed role part is `role_recipient`. A role counts as one of the 5 parts (`too_many_recipients`).
 - `{role:` anywhere else, `reply_to`, `subject`, `text`, `html` and every other template included, is `role_recipient`.
-- Roles live in the database, so the registry does not check that the role exists; an unknown role fails at run time.
+- Roles live in the database, so the registry does not check that the role exists; an unknown role fails at run time (`unknown_role`). At run time a role without `edit_posts` fails `role_not_allowed` unless the `pegwork_automation_email_roles` filter allows it, more than 25 members fails `too_many_recipients`, and no member with an address fails `no_recipient`, none retried ([automation.md](automation.md#steps-email-wait-retries)).
 
 ### Signed links
 

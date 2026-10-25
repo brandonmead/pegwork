@@ -13,6 +13,7 @@ use Pegwork\Api\Registry;
 use PegworkAutomation\Admin\Screen;
 use PegworkAutomation\Engine;
 use PegworkAutomation\Overrides;
+use PegworkAutomation\Steps\SendEmail;
 use PegworkAutomation\Webhooks\Inbound;
 use WP_Block_Type_Registry;
 use WP_Post;
@@ -190,11 +191,12 @@ final class BuilderEditor {
 	 * (fields with type, options and privacy; taxonomies with single or multiple select and terms),
 	 * forms (target, confirm, items with privacy from the target type), options pages and relationships
 	 * (key, label, from and to types, for reads and Link records). Fields name their `storage` when it is
-	 * the title or the content (reads sort by a title and never filter post content). The shared fixture
-	 * tests/fixtures/automation/scope.json holds this shape for its fixture packages.
+	 * the title or the content (reads sort by a title and never filter post content). `roles` lists the
+	 * roles a `{role:<slug>}` recipient may name (slug and name only, never members); roles are site state,
+	 * not registry, so the shared fixture tests/fixtures/automation/scope.json holds this shape without them.
 	 *
 	 * @param Registry $registry Registry.
-	 * @return array{types: list<array<string, mixed>>, forms: list<array<string, mixed>>, optionsPages: list<array<string, mixed>>, relationships: list<array<string, string>>}
+	 * @return array{types: list<array<string, mixed>>, forms: list<array<string, mixed>>, optionsPages: list<array<string, mixed>>, relationships: list<array<string, string>>, roles: list<array{slug: string, name: string}>}
 	 */
 	public static function registry_config( Registry $registry ): array {
 		$taxonomies = $registry->taxonomies();
@@ -302,6 +304,7 @@ final class BuilderEditor {
 			'forms'         => $forms,
 			'optionsPages'  => $pages,
 			'relationships' => $relationships,
+			'roles'         => SendEmail::eligible_roles(),
 		);
 	}
 
