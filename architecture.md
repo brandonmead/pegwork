@@ -192,6 +192,16 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Gotcha: `Records::get()` and `update()` still read trashed records (only `find()` excludes trash). v4 design section 3.3 assumes `update_record` on a trashed record fails `pegwork_record_not_found`; that needs a change when the trash step lands. Resolved in the engine by v4 PR 4 (below); core stays as is.
 - Local runs: test DBs `pegwork_tests_v4core82`, `_v4core84`, `_v4core82_67`, `_v4core84_67`; site `~/wp-envs/v4core` (port 8240). Last verified 2026-10-25.
 
+## Automation v4 Editor A (PR 8, branch `v4-editor-a`)
+- `wait-edit.js` (Wait inspector), `dateFields()`, `takesRoles()`, `withRole()` in `scope.js`, `untilText()`, `recipientText()` in `labels.js`; `Picker` in `controls.js` serves both "Insert list of records" and "Add a role". Reference: `docs/automation.md#editor`.
+- Step block attribute `until` (object) in `automation-step/block.json` and `Builder::STEP_ATTRIBUTES` (after `for`); without it core drops `until` on parse.
+- Key order matters for the E2E compare (`Normalizer` keeps `until` keys as written and appends `at`), so the inspector always writes `until` as `var`, `offset`, `at`.
+- The "Until a date" radio is a native input (core's `RadioControl` cannot disable one option); its reason is its `aria-describedby`.
+- Scope fixture `dates` and `roles` sections: `AutomationBuilderScopeTest::test_wait_date_fields()` puts a wait until each path in place of the case's step; `test_role_templates()` appends `{role:editor}` to the template.
+- E2E mu-plugin: `barn/volunteer` (interest is required), `barn/editor` (user `e2e_barn_editor`, sets `barn_settings.volunteer_manager`; reset removes both); `barn/compare` reads `tests/fixtures/valid/v4` for `pegwork_e2e_barn_v4_keys()`.
+- Size: builder 28,475 bytes gzipped (27,024 on main before), budget 28,475.
+- Local runs: test DBs `pegwork_tests_v4eda82`, `_v4eda84`, `_v4eda82_67`, `_v4eda84_67`; site `~/wp-envs/v4eda` (port 8248). Last verified 2026-10-25.
+
 ## Automation v4 trash step (PR 4, branch `v4-trash`)
 - Handler `modules/automation/src/Steps/TrashRecord.php`; cap in `context.trashed` (`Context::trashed()`, restored and stored by `Executor` like `context.reads`); `TrashRecord::limit()` (filter `pegwork_automation_trash_limit`, at most 200); `TrashRecord::in_sweep()` (a `schedule` run with a `record_id`, or a definition with `for_each`).
 - Trashed records in later steps: engine, not core. `UpdateRecord` and `Relate` refuse a record whose status is `trash` (`pegwork_record_not_found`, no retry); `GetRecord` by ID was already not-found (statuses never include trash), loops skip it through `Context::record_by_id()`. Core `Records::get()`/`update()` unchanged because record events to the trash and `record.status_changed` to `trash` triggers bind trashed records (`Triggers::start()` reads them with `Records::get()`), and the forms module guards trash itself.

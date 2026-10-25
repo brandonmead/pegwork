@@ -632,7 +632,7 @@ Design: `docs/phase-6-design.md` section 6 and `docs/automation-v3-design.md` se
 - Errors: a refused save shows each message at its step card and its control (`aria-invalid`, `aria-describedby`), settings messages in their panel, and a notice with "Go to first error" (settings first, then blocks in document order). Open runs: a warning while there are unsaved changes, and in the Automation panel.
 - Preview (Send email steps, after "Show preview") and Test run call the routes under [Preview and test run](#preview-and-test-run), with one sample record or payload for the whole editor. The Test run result heading takes focus.
 - File automations: every control disabled, no appenders or inserter, the title read-only, "Duplicate as site automation" in the notice and the Automation panel.
-- Size: at most 26.5 KB gzipped (27,136 bytes, `npm run check:size`; the budget was 25 KB before loops and was raised by the minimum they needed); every dependency is a WordPress script.
+- Size: at most 28,475 bytes gzipped (`npm run check:size`; the budget was 25 KB before loops and 27,136 before Automation v4 Editor A, each time raised by the minimum measured; Automation v4 caps it at 30,720); every dependency is a WordPress script.
 
 Reads, relate, `on_error` and the manual trigger:
 

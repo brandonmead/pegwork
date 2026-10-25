@@ -85,7 +85,8 @@ function walk( steps ) {
 }
 
 // The Automation v4 shapes package and the trash engine package: the builder learns their shapes in
-// v4 Editor PRs 8 and 9 (docs/automation-v4-design.md section 11), which round-trip them here.
+// v4 Editor PRs 8 and 9 (docs/automation-v4-design.md section 11). PR 8's are round-tripped below
+// (editorAFixtures); PR 9 adds the rest.
 const v3Automations = () =>
 	automations().filter(
 		( [ path ] ) =>
