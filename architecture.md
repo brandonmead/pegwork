@@ -209,6 +209,13 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - The JS builder does not know the v4 shapes yet: `reads.test.js` skips the v4 package (Editor PRs 8 and 9 add it); `scope.js` knows `start_automation`'s `started` output for the shared scope fixture.
 - Local runs: test DBs `pegwork_tests_v4reg82`, `_v4reg84`, `_v4reg82_67`, `_v4reg84_67`; site `~/wp-envs/v4reg` (port 8242). Last verified 2026-10-25.
 
+## Automation v4 role recipients (PR 6, branch `v4-role-email`)
+- `SendEmail::resolve()` returns `{ to, bcc, roles }` (roles: slug to member count); `recipients()` keeps its v3 shape (To then Bcc addresses) for `AutomationEmailTest`. `shown()` is the one masking rule for summaries and `DryRun`; `DryRun::preview()` swaps `{role:<slug>}` for `role:<slug> (N)` before rendering.
+- Decision: a role with 0 members that have an address fails `no_recipient` even when other parts have addresses, matching an empty options field (a partial send hides the misconfiguration; `on_error` continues past it). The 25 cap is per email, all roles together after deduplication; `get_users()` asks for 26 so a role over the cap fails without loading every member.
+- `registry_config()` `roles` is site state: `AutomationBuilderScopeTest` drops it before comparing with `tests/fixtures/automation/scope.json`.
+- Test gotchas: changing a user's `user_email` sends core's "email changed" notice through the mock mailer (reset after); `add_role()` changes the in-memory `WP_Roles`, which the per-test transaction does not roll back, so tests `remove_role()` in `tear_down()`. The mock PHPMailer's header string includes `Bcc:` (PHPMailer's `mail` transport passes it to `mail()`, which strips it); assert on `mock_sent[n]['bcc']`.
+- Local runs: test DBs `pegwork_tests_v4role82`, `_v4role84`, `_v4role82_67`, `_v4role84_67`; site `~/wp-envs/v4role` (port 8246). Last verified 2026-10-25.
+
 ## Automation v3 registry (PR 2, branch `v3-registry`)
 - Rules in `src/Registry/Rules/AutomationRules.php`; the read query rules reuse `Content\RecordQuery` constants (`MAX_LIMIT`, `MAX_LEAVES`, `MAX_SUMS`, `STATUSES`, `OPS`, `UNFILTERABLE_TYPES`, `SORTABLE_TYPES`, `DEFAULT_STATUS`, `DEFAULT_LIMIT`) and its reason codes, so load-time and run-time checks cannot drift.
 - Scan scope: `scope.steps` maps id to the step itself (types and content types of outputs), `scope.loops` the loops enclosing a point (id to item type), `scope.each` the `{{#each}}` item type. `scan_path()` returns the path's type (`{ def: { type } }` or `{ ctype, key }`), which condition leaves, `| date`, `| add` and `| number` check in the references pass.
