@@ -127,7 +127,7 @@ final class FormsTable extends \WP_List_Table {
 				'<a href="%1$s" aria-label="%2$s">%3$s</a>',
 				esc_url( BuilderEditor::duplicate_url( $item['key'] ) ),
 				/* translators: %s: form label. */
-				esc_attr( sprintf( __( 'Duplicate "%s" as a site form', 'pegwork' ), $item['label'] ) ),
+				esc_attr( sprintf( __( 'Duplicate as site form: "%s"', 'pegwork' ), $item['label'] ) ),
 				esc_html__( 'Duplicate as site form', 'pegwork' )
 			);
 		}
@@ -184,7 +184,7 @@ final class FormsTable extends \WP_List_Table {
 			'<a href="%1$s" aria-label="%2$s">%3$s</a>',
 			esc_url( EntriesAdmin::url( array( 'form' => $item['key'] ) ) ),
 			/* translators: %s: form label. */
-			esc_attr( sprintf( __( 'Entries of "%s"', 'pegwork' ), $item['label'] ) ),
+			esc_attr( sprintf( __( 'View entries of "%s"', 'pegwork' ), $item['label'] ) ),
 			esc_html__( 'View entries', 'pegwork' )
 		);
 	}

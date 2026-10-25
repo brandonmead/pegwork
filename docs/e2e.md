@@ -71,7 +71,7 @@ The plugin clone is the checkout the script lives in (override with `PEGWORK_DIR
 
 - `const { test, expect } = require( '../utils/fixtures' )`: `test` adds the `sifg` fixture, which fails fast if `sifg_project` is not registered and deletes Projects made with `sifg.createProject( data )` after the test.
 - `utils/records.js`: `createRecord`, `deleteRecord` over REST (cookie plus nonce).
-- `utils/a11y.js`: `expectNoSeriousA11yViolations( page )` fails on serious or critical axe violations (WCAG 2 A and AA tags).
+- `utils/a11y.js`: `expectNoSeriousA11yViolations( page )` fails on serious or critical axe violations (WCAG 2 A and AA tags). It ignores only the core nodes listed in `CORE_KNOWN_FAILURES` (rule, frame and markup; each names the core component and the axe version), so add a core false positive there rather than disabling a rule.
 - `utils/no-js.js`: `test.use( noJs )` runs a file with JavaScript off and as a visitor; import `test` from `@playwright/test` there, since the `sifg` fixture needs a login.
 - `utils/listings.js`: `enableModule( page, 'Listings' )` (Modules screen; modules start disabled on a fresh site), `recordTracker( request )` (published Projects passing publish validation, pages, cleanup), `seedProjects`, `patternContent`, `cardTitles`, `publishedProjects`.
 - Specs share one site and run serially (one worker). Clean up what you create.

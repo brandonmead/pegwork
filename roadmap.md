@@ -50,7 +50,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 
 ## Open-source readiness PR (in review, branch `repo-hygiene`)
 - Community files, CI hardening, PHP 8.5, CodeQL, release zip, Plugin Check clean of errors (`changelog.md` 2026-10-22).
-- Left: 40 Plugin Check `UnescapedDBParameter` warnings (prepared queries; switching table names to `%i` is a runtime change for the security review). Dependabot alerts are all npm dev tooling; most need majors (`@wordpress/env` 12, `@wordpress/scripts` 37).
+- Left: 40 Plugin Check `UnescapedDBParameter` warnings (prepared queries; switching table names to `%i` is a runtime change for the security review). Dependabot alerts (all npm dev tooling) cleared by the deps PR (branch `deps-a11y-2026-10`, 2026-10-25): `@wordpress/env` 12, `@wordpress/scripts` 37, plus `overrides` (`architecture.md`, JS).
 - Owner settings to consider (not changed): branch ruleset on `main` (PR required, required checks, no force-push or deletion), Dependabot security updates, secret scanning and push protection, "Require actions pinned to a full SHA", delete branch on merge, a WordPress.org username for `Contributors:` in readme.txt.
 
 ## Security fixes PR (in review, branch `security-fixes`)
