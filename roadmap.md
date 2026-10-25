@@ -32,7 +32,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 1. Core: `Records::trash()` and `created` reads, API 0.4.0: done, in review (branch `v4-core-trash`). Its leftover (`Records::get()`/`update()` still read trashed records) is handled in the engine by PR 4.
 2. Registry: v4 shapes: done, in review (branch `v4-registry`). Runs using v4 shapes fail `unsupported_step` before their first step until PRs 3 to 6. Left for Editor PR 9: refuse trashing an automation post whose definition is in use (the definition already stays); round-trip the `v4` package in `reads.test.js`.
 4. Engine: trash: done, in review (branch `v4-trash`). `trash_record` runs; `update_record` and `relate` on a trashed record fail in the engine (core unchanged). The read `created` gap it found is closed by PR 7. Left for Editor PR 9: round-trip `tests/fixtures/valid/engine-trash` in `reads.test.js`.
-7. Bulk Run, plus the read `created` engine gap: in progress (branch `v4-bulk`). `Steps\Reads` resolves `created` operands to site days and passes them to core; `Engine::unsupported()` no longer refuses `created`, so `barn_volunteer_retention` runs.
+7. Bulk Run, plus the read `created` engine gap: done, in review (branch `v4-bulk`). `Admin\BulkRun` on core list tables (confirmation screen, 50 per request, one throttle hit, per-record keys, source `bulk`). Left for PR 10: bulk on Local in the runbook, and `barn_gift_receipt` ("Run: Send receipt") once the barn fixture gains it; the E2E uses `e2e_manual_thanks`. `Steps\Reads` resolves `created` operands to site days and passes them to core; `Engine::unsupported()` no longer refuses `created`, so `barn_volunteer_retention` runs.
 
 ## Phase 1 PRs
 1. Scaffold (merged)
