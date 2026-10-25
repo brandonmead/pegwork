@@ -160,6 +160,10 @@ final class RunLog {
 		);
 		self::detail( __( 'Status', 'pegwork' ), Format::badge( $run['status'], Format::run_status( $run['status'] ) ) );
 		self::detail( __( 'Trigger', 'pegwork' ), Format::run_trigger( $run ) );
+		$parent = Format::parent( $run );
+		if ( '' !== $parent ) {
+			self::detail( __( 'Started by', 'pegwork' ), $parent );
+		}
 		self::detail( __( 'Record', 'pegwork' ), Format::record( $run['record_id'] ) );
 		self::detail( __( 'Current step', 'pegwork' ), '' === (string) $run['current_step'] ? esc_html__( 'None', 'pegwork' ) : '<code>' . esc_html( (string) $run['current_step'] ) . '</code>' );
 		self::detail( 'failed' === $run['status'] ? __( 'Error', 'pegwork' ) : __( 'Outcome', 'pegwork' ), '' === $outcome ? esc_html__( 'None', 'pegwork' ) : esc_html( $outcome ) );
@@ -241,8 +245,13 @@ final class RunLog {
 			echo '<td>' . Format::time( (string) $step['started_at'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			/* translators: %s: duration in milliseconds. */
 			echo '<td>' . esc_html( sprintf( __( '%s ms', 'pegwork' ), number_format_i18n( (int) $step['duration_ms'] ) ) ) . '</td>';
-			$reads = in_array( $step['step_type'], array( 'get_record', 'find_records' ), true ) ? Format::read_records( (array) $step['summary'] ) : '';
-			echo '<td>' . ( 'decision' === $step['step_type'] ? Format::decision( (array) $step['summary'] ) : Format::summary( (array) $step['summary'] ) ) . $reads . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
+			$reads   = in_array( $step['step_type'], array( 'get_record', 'find_records' ), true ) ? Format::read_records( (array) $step['summary'] ) : '';
+			$summary = match ( (string) $step['step_type'] ) {
+				'decision'         => Format::decision( (array) $step['summary'] ),
+				'start_automation' => Format::start( (array) $step['summary'] ),
+				default            => Format::summary( (array) $step['summary'] ),
+			};
+			echo '<td>' . $summary . $reads . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			echo '<td>' . esc_html( (string) $step['error'] ) . '</td>';
 			echo '</tr>';
 		}

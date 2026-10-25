@@ -1,0 +1,5 @@
+{ "format": 1, "key": "e2e_start_note", "label": "E2E team note",
+  "trigger": { "type": "manual", "button": "Send the note" },
+  "steps": [
+    { "id": "send", "type": "send_email", "to": "e2e-start@example.org",
+      "subject": "Note from {{trigger.source}}", "text": "Run {{run.id}}." } ] }

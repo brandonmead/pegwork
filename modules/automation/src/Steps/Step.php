@@ -13,7 +13,7 @@ use PegworkAutomation\Context;
 
 /**
  * One step type (`update_record`, `create_record`, `condition`, `send_email`, `call_webhook`, `wait`,
- * `decision`, `get_record`, `find_records`, `relate`). A handler runs one attempt and reports a StepResult; the executor logs it, stores outputs
+ * `decision`, `get_record`, `find_records`, `relate`, `start_automation`). A handler runs one attempt and reports a StepResult; the executor logs it, stores outputs
  * and decides what happens next (continue, take a branch, stop, wait, retry or fail). Handlers never put private values in
  * summaries or errors and never call time() (use the context clock).
  */

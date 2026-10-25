@@ -167,6 +167,49 @@ final class Manual {
 	 * @return array{run: int, duplicate: bool}|WP_Error
 	 */
 	public function start( string $key, ?int $record, int $user, string $source, ?string $request = null ): array|WP_Error {
+		$target = self::target( $key, $record );
+		if ( $target instanceof WP_Error ) {
+			return $target;
+		}
+
+		$result = Engine::instance()->triggers()->staff( $key, $target['definition'], $target['record'], $user, $source, $request );
+		if ( null === $result ) {
+			return new WP_Error( 'automation_not_applicable', __( 'This automation does not apply to this record.', 'pegwork' ), array( 'status' => 409 ) );
+		}
+		return $result;
+	}
+
+	/**
+	 * Starts a run of a `manual` automation from a start_automation step of another run, with start()'s
+	 * checks (unknown or non-manual, disabled, the record), as Triggers::chained() describes: origin depth
+	 * of the parent plus 1 (a skipped run at the depth cap), idempotency key `start:<run>-<step>[-<iteration>]`.
+	 * The target's `allow` is not consulted: the system starts it.
+	 *
+	 * @param string               $key       Automation key.
+	 * @param int|null             $record    Record ID, or null when the target has no content type.
+	 * @param array<string, mixed> $starter   Parent run row (`id`, `automation`, `depth`, `context`).
+	 * @param string               $step      Step ID in the parent.
+	 * @param int|null             $iteration 1-based loop item number, or null outside loop bodies.
+	 * @return array{run: int, started: bool, skipped: string|null, duplicate: bool}|WP_Error
+	 */
+	public static function chain( string $key, ?int $record, array $starter, string $step, ?int $iteration = null ): array|WP_Error {
+		$target = self::target( $key, $record );
+		if ( $target instanceof WP_Error ) {
+			return $target;
+		}
+		return Engine::instance()->triggers()->chained( $key, $target['definition'], $target['record'], $starter, $step, $iteration );
+	}
+
+	/**
+	 * The checks start(), chain() and the dry run share: the automation exists, has a manual trigger and is
+	 * enabled, and the record exists (not trashed) and has the trigger's content type, or is absent when it
+	 * has none.
+	 *
+	 * @param string   $key    Automation key.
+	 * @param int|null $record Record ID.
+	 * @return array{definition: array<string, mixed>, record: array<string, mixed>|null}|WP_Error
+	 */
+	public static function target( string $key, ?int $record ): array|WP_Error {
 		$definition = pegwork_registry()->automation( $key );
 		if ( null === $definition || 'manual' !== $definition['trigger']['type'] ) {
 			/* translators: %s: automation key. */
@@ -200,11 +243,10 @@ final class Manual {
 			}
 		}
 
-		$result = Engine::instance()->triggers()->staff( $key, $definition, $data, $user, $source, $request );
-		if ( null === $result ) {
-			return new WP_Error( 'automation_not_applicable', __( 'This automation does not apply to this record.', 'pegwork' ), array( 'status' => 409 ) );
-		}
-		return $result;
+		return array(
+			'definition' => $definition,
+			'record'     => $data,
+		);
 	}
 
 	/**

@@ -264,6 +264,133 @@ final class Triggers {
 	}
 
 	/**
+	 * Starts a run of a `manual` automation from a start_automation step of a parent run (Manual::chain(),
+	 * which checked the automation and the record). Asynchronous: the child is queued and scheduled now.
+	 *
+	 * - Idempotency key `start:<parent run>-<step>`, plus `-<iteration>` inside loops, winning over the
+	 *   target's own `idempotency`: a parent that resumes or is retried at this step finds its earlier child
+	 *   (or skipped run) and starts no second one. A queued earlier child gets its wake-up again.
+	 * - The target's `when` is checked against the record: false starts nothing (`started: false`).
+	 * - Origin depth is the parent's depth plus 1; at or past `pegwork_automation_max_depth` a `skipped` run
+	 *   (`loop_depth: ...`) is logged instead, as events do.
+	 * - Payload: `user_id` (the parent's `trigger.user_id`, else 0), `source` `automation` and `origin`.
+	 *   `context.parent` `{ run, automation, step }` (plus `iteration`) is stored beside it, outside the
+	 *   payload, so the child's templates cannot read it.
+	 *
+	 * @param string                    $key        Automation key.
+	 * @param array<string, mixed>      $definition Canonical automation.
+	 * @param array<string, mixed>|null $record     Records::get() shape, or null when the trigger has no content_type.
+	 * @param array<string, mixed>      $starter    Parent run row.
+	 * @param string                    $step       Step ID in the parent.
+	 * @param int|null                  $iteration  1-based loop item number, or null.
+	 * @return array{run: int, started: bool, skipped: string|null, duplicate: bool} The child run (0 when
+	 *         `when` is false); `skipped` is `loop_depth` for a skipped run.
+	 */
+	public function chained( string $key, array $definition, ?array $record, array $starter, string $step, ?int $iteration = null ): array {
+		$parent_id = (int) $starter['id'];
+		$stored    = self::key( 'start:' . $parent_id . '-' . $step . ( null === $iteration ? '' : '-' . $iteration ) );
+
+		$earlier = $this->engine->runs()->find_key( $key, $stored );
+		if ( null !== $earlier ) {
+			return $this->earlier( $earlier );
+		}
+
+		$depth   = (int) $starter['depth'] + 1;
+		$user    = $starter['context']['trigger']['user_id'] ?? 0;
+		$payload = array(
+			'user_id' => is_numeric( $user ) ? max( 0, (int) $user ) : 0,
+			'source'  => 'automation',
+			'origin'  => array(
+				'source' => 'automation',
+				'depth'  => $depth,
+			),
+		);
+		$context = new Context( $this->engine->clock(), $record, $payload );
+		if ( isset( $definition['trigger']['when'] ) && ! Conditions::evaluate( $definition['trigger']['when'], $context ) ) {
+			return array(
+				'run'       => 0,
+				'started'   => false,
+				'skipped'   => null,
+				'duplicate' => false,
+			);
+		}
+
+		$origin = array(
+			'run'        => $parent_id,
+			'automation' => (string) $starter['automation'],
+			'step'       => $step,
+		);
+		if ( null !== $iteration ) {
+			$origin['iteration'] = $iteration;
+		}
+		$run = array(
+			'automation'      => $key,
+			'trigger_type'    => 'manual',
+			'record_id'       => null === $record ? null : (int) $record['id'],
+			'depth'           => $depth,
+			'definition_hash' => self::hash( $definition ),
+			'idempotency_key' => $stored, // Wins over the target's own idempotency, as a request ID does.
+			'context'         => array(
+				'trigger' => $payload,
+				'parent'  => $origin,
+			),
+		);
+
+		/** This filter is documented in modules/automation/src/Triggers.php */
+		$max = (int) apply_filters( 'pegwork_automation_max_depth', self::MAX_DEPTH );
+		if ( $depth >= $max ) {
+			$id = $this->engine->runs()->insert(
+				$run + array(
+					'status' => 'skipped',
+					'error'  => sprintf( 'loop_depth: trigger depth %1$d reached the limit of %2$d.', $depth, $max ),
+				)
+			);
+			if ( 0 === $id ) {
+				return $this->earlier( (array) $this->engine->runs()->find_key( $key, $stored ) );
+			}
+			return array(
+				'run'       => $id,
+				'started'   => false,
+				'skipped'   => 'loop_depth',
+				'duplicate' => false,
+			);
+		}
+
+		unset( $definition['idempotency'] );
+		$id = $this->enqueue( $run, $definition, $context );
+		if ( 0 === $id ) {
+			return $this->earlier( (array) $this->engine->runs()->find_key( $key, $stored ) );
+		}
+		return array(
+			'run'       => $id,
+			'started'   => true,
+			'skipped'   => null,
+			'duplicate' => false,
+		);
+	}
+
+	/**
+	 * What chained() reports for a child that an earlier attempt of the same step already created; a child
+	 * still queued gets its wake-up again (the attempt may have ended before scheduling it).
+	 *
+	 * @param array<string, mixed> $earlier Earlier run row (empty when it was pruned meanwhile).
+	 * @return array{run: int, started: bool, skipped: string|null, duplicate: bool}
+	 */
+	private function earlier( array $earlier ): array {
+		$id      = (int) ( $earlier['id'] ?? 0 );
+		$skipped = 'skipped' === ( $earlier['status'] ?? null );
+		if ( $id > 0 && 'queued' === $earlier['status'] ) {
+			$this->engine->scheduler()->schedule( Engine::RUN_HOOK, array( $id ), $this->engine->clock()->now()->getTimestamp() );
+		}
+		return array(
+			'run'       => $id,
+			'started'   => ! $skipped,
+			'skipped'   => $skipped ? 'loop_depth' : null,
+			'duplicate' => true,
+		);
+	}
+
+	/**
 	 * The stored idempotency key of a staff request ID.
 	 *
 	 * @param int    $user    User ID.
