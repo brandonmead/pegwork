@@ -2,8 +2,52 @@ const { expect } = require( '@playwright/test' );
 const AxeBuilder = require( '@axe-core/playwright' ).default;
 
 /**
+ * Core WordPress nodes that fail a rule we cannot fix, matched by rule id, frame and markup so
+ * the rule still runs on everything else. Each entry names the core component and the axe version
+ * that started reporting it.
+ *
+ * axe-core 4.14 enables label-content-name-mismatch (WCAG 2.5.3) by default. Two core editor
+ * controls set an aria-label that does not contain their visible text:
+ * - block-editor DefaultBlockAppender, in the editor canvas iframe:
+ *   <p role="button" aria-label="Add default block">Type / to choose a block</p>
+ * - editor PostTemplatePanel (block themes), in the Document sidebar: the DropdownMenu toggle
+ *   labelled "Template options" whose text is the template name, such as "Single Posts".
+ */
+const CORE_KNOWN_FAILURES = [
+	{
+		rule: 'label-content-name-mismatch',
+		inCanvas: true,
+		html: /^<p [^>]*class="block-editor-default-block-appender__content"/,
+	},
+	{
+		rule: 'label-content-name-mismatch',
+		inCanvas: false,
+		html: /^<button [^>]*class="[^"]*components-dropdown-menu__toggle[^"]*"[^>]*aria-label="Template options"/,
+	},
+];
+
+/**
+ * Whether an axe node is one of the core known failures for that rule.
+ *
+ * @param {string} rule Axe rule id.
+ * @param {Object} node Axe result node (target and html).
+ * @return {boolean} True to ignore the node.
+ */
+function isCoreKnownFailure( rule, node ) {
+	const inCanvas =
+		node.target.length === 2 &&
+		String( node.target[ 0 ] ).startsWith( 'iframe' );
+	return CORE_KNOWN_FAILURES.some(
+		( known ) =>
+			known.rule === rule &&
+			known.inCanvas === inCanvas &&
+			known.html.test( node.html )
+	);
+}
+
+/**
  * Runs axe on the current page and fails on serious or critical violations.
- * Moderate and minor ones are ignored.
+ * Moderate and minor ones are ignored, and so are the core known failures above.
  *
  * @param {import('@playwright/test').Page}               page
  * @param {{exclude?: string[], disableRules?: string[]}} options
@@ -22,12 +66,16 @@ async function expectNoSeriousA11yViolations( page, options = {} ) {
 		builder = builder.disableRules( options.disableRules );
 	}
 	const { violations } = await builder.analyze();
-	const serious = violations.filter(
-		( v ) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = violations
+		.filter( ( v ) => v.impact === 'serious' || v.impact === 'critical' )
+		.map( ( v ) => ( {
+			...v,
+			nodes: v.nodes.filter( ( n ) => ! isCoreKnownFailure( v.id, n ) ),
+		} ) )
+		.filter( ( v ) => v.nodes.length );
 	const summary = serious.map(
 		( v ) =>
-			`${ v.impact } ${ v.id }: ${ v.help } (${ v.nodes.length } nodes, first: ${ v.nodes[ 0 ]?.target })`
+			`${ v.impact } ${ v.id }: ${ v.help } (${ v.nodes.length } nodes, first: ${ v.nodes[ 0 ]?.target } ${ v.nodes[ 0 ]?.html })`
 	);
 	expect( summary, 'serious or critical axe violations' ).toEqual( [] );
 }
