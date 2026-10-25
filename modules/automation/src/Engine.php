@@ -22,6 +22,7 @@ use PegworkAutomation\Steps\GetRecord;
 use PegworkAutomation\Steps\Relate;
 use PegworkAutomation\Steps\SendEmail;
 use PegworkAutomation\Steps\Step;
+use PegworkAutomation\Steps\TrashRecord;
 use PegworkAutomation\Steps\UpdateRecord;
 use PegworkAutomation\Steps\Wait;
 
@@ -108,6 +109,7 @@ final class Engine {
 			'get_record'    => new GetRecord(),
 			'find_records'  => new FindRecords(),
 			'relate'        => new Relate(),
+			'trash_record'  => new TrashRecord(),
 		);
 	}
 
@@ -284,7 +286,7 @@ final class Engine {
 	 * part of it: a step type without a handler, at any depth (`loop` has none because the executor's cursor
 	 * runs it). Until the Automation v4 engine PRs land (docs/automation-v4-design.md section 11), also the v4
 	 * shapes of existing step types: a wait `until` a date, a `{role:<slug>}` recipient, and a read `created`.
-	 * The new step types trash_record and start_automation have no handler yet, so the first rule refuses them.
+	 * trash_record runs (v4 PR 4); start_automation has no handler yet, so the first rule refuses it.
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */

@@ -263,4 +263,49 @@ final class Manual {
 		}
 		return $out;
 	}
+
+	/**
+	 * Whether starting an automation can move records to the trash: one of its steps (in branches, loop
+	 * bodies and links too) is a trash_record, or one of the automations it starts (start_automation,
+	 * followed transitively) has one. A static closure over the definitions; cycles and unknown keys stop
+	 * the walk. Editors need `delete_post` on the record to start such an automation (StartRoute::can_run()).
+	 *
+	 * @param string                                   $key         Automation key.
+	 * @param array<string, array<string, mixed>>|null $automations Canonical automations by key (default: the registry's).
+	 */
+	public static function trashes( string $key, ?array $automations = null ): bool {
+		$automations = $automations ?? pegwork_registry()->automations();
+		$seen        = array();
+		$queue       = array( $key );
+		while ( array() !== $queue ) {
+			$current = (string) array_shift( $queue );
+			if ( isset( $seen[ $current ] ) || ! isset( $automations[ $current ] ) ) {
+				continue;
+			}
+			$seen[ $current ] = true;
+			$definition       = (array) $automations[ $current ];
+			$lists            = array( (array) ( $definition['steps'] ?? array() ) );
+			foreach ( (array) ( $definition['links'] ?? array() ) as $link ) {
+				$lists[] = (array) ( ( (array) $link )['steps'] ?? array() );
+			}
+			while ( array() !== $lists ) {
+				foreach ( (array) array_shift( $lists ) as $step ) {
+					$step = (array) $step;
+					$type = (string) ( $step['type'] ?? '' );
+					if ( 'trash_record' === $type ) {
+						return true;
+					}
+					if ( 'start_automation' === $type && is_string( $step['automation'] ?? null ) ) {
+						$queue[] = $step['automation'];
+					}
+					foreach ( (array) ( $step['branches'] ?? array() ) as $branch ) {
+						$lists[] = (array) ( ( (array) $branch )['steps'] ?? array() );
+					}
+					$lists[] = (array) ( $step['otherwise'] ?? array() );
+					$lists[] = (array) ( $step['steps'] ?? array() );
+				}
+			}
+		}
+		return false;
+	}
 }

@@ -1,0 +1,13 @@
+{ "format": 1, "key": "tr_bound", "label": "Remove this volunteer",
+  "trigger": { "type": "manual", "content_type": "tr_volunteer", "button": "Remove volunteer", "allow": "editors" },
+  "steps": [
+    { "id": "gift", "type": "get_record", "content_type": "tr_gift",
+      "filter": { "all": [ { "field": "name", "op": "eq", "value": "Gift" } ] } },
+    { "id": "remove", "type": "trash_record", "content_type": "tr_volunteer" },
+    { "id": "again", "type": "trash_record", "content_type": "tr_volunteer", "record": "{{record.id}}" },
+    { "id": "look", "type": "get_record", "content_type": "tr_volunteer", "record": "{{record.id}}" },
+    { "id": "stamp", "type": "update_record", "values": { "stage": "gone" }, "on_error": "continue" },
+    { "id": "link", "type": "relate", "relationship": "tr_volunteer_gift", "to": "{{steps.gift.record_id}}", "on_error": "continue" },
+    { "id": "note", "type": "send_email", "to": "office@example.org",
+      "subject": "Removed {{record.name}}",
+      "text": "Found again: {{steps.look.found}}. Stamp failed: {{steps.stamp.failed}}. Link failed: {{steps.link.failed}}." } ] }

@@ -1,0 +1,1 @@
+{ "format": 1, "key": "tr_volunteer_gift", "from": "tr_volunteer", "to": "tr_gift", "cardinality": "many_to_many", "label": "Gifts" }
