@@ -121,6 +121,13 @@ final class Context {
 	private array $until = array();
 
 	/**
+	 * Records the run moved to the trash so far (`context.trashed`).
+	 *
+	 * @var int
+	 */
+	private int $trashed = 0;
+
+	/**
 	 * State of the running loop by loop id: `ids` (the snapshot) and `index` (0-based current item).
 	 *
 	 * @var array<string, array{ids: int[], index: int}>
@@ -407,6 +414,29 @@ final class Context {
 		}
 		$this->reads += $count;
 		return true;
+	}
+
+	/**
+	 * Records the run moved to the trash so far.
+	 */
+	public function trashed(): int {
+		return $this->trashed;
+	}
+
+	/**
+	 * Restores the run's stored trash count (`context.trashed`).
+	 *
+	 * @param int $trashed Count.
+	 */
+	public function restore_trashed( int $trashed ): void {
+		$this->trashed = max( 0, $trashed );
+	}
+
+	/**
+	 * Counts one record moved to the trash (Steps\TrashRecord checks the cap first).
+	 */
+	public function add_trashed(): void {
+		++$this->trashed;
 	}
 
 	/**

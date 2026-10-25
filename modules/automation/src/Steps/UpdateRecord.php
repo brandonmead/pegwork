@@ -15,7 +15,8 @@ use PegworkAutomation\Templates;
 
 /**
  * Writes values to the bound record (or the record a `record` template names) through the Records API,
- * which sanitizes, validates and emits `record.updated` with origin depth = run depth + 1.
+ * which sanitizes, validates and emits `record.updated` with origin depth = run depth + 1. A record in the
+ * trash (moved there by an earlier trash_record step, or by anyone) fails `pegwork_record_not_found`.
  */
 final class UpdateRecord implements Step {
 
@@ -40,6 +41,10 @@ final class UpdateRecord implements Step {
 		$record = null !== $bound && $id === (int) $bound['id'] ? $bound : Records::get( $id );
 		if ( null === $record ) {
 			return StepResult::fail( 'pegwork_record_not_found', sprintf( 'No record with ID %d.', $id ), array( 'record_id' => $id ) );
+		}
+		if ( 'trash' === $record['status'] ) {
+			// Records::update() would still write a trashed post; a run treats the trash as gone (no retry).
+			return StepResult::fail( 'pegwork_record_not_found', sprintf( 'Record %d is in the trash.', $id ), array( 'record_id' => $id ), false );
 		}
 
 		$values  = Values::render( (array) ( $step['values'] ?? array() ), $context, (string) $record['type'] );

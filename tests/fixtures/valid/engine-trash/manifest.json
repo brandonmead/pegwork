@@ -1,0 +1,1 @@
+{ "format": 1, "id": "engine_trash", "version": "1.0.0", "label": "Automation v4 trash step: bound, read and loop targets, the per-run cap, later steps on a trashed record", "requires": { "pegwork": ">=0.4.0" } }
