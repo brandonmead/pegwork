@@ -212,9 +212,19 @@ final class DryRun {
 	 * @param array<string, mixed>      $trigger  Trigger payload.
 	 * @param array<int, mixed>         $steps    The edited steps, so a read's field renders as
 	 *                                            `[from step <id>: <Field label>]` (nothing runs).
+	 *                                            A `{role:<slug>}` part shows as `role:<slug> (N)`, or the
+	 *                                            error code in place of N; never a member address.
 	 */
 	public static function preview( string $template, bool $html, ?array $record, array $trigger, array $steps = array() ): string {
-		$context = self::context( $record, $trigger );
+		$template = (string) preg_replace_callback(
+			'/\{role:([a-z0-9_-]{1,64})\}/',
+			static function ( array $m ): string {
+				$members = SendEmail::role_members( $m[1] );
+				return sprintf( 'role:%1$s (%2$s)', $m[1], $members instanceof WP_Error ? (string) $members->get_error_code() : (string) count( $members ) );
+			},
+			$template
+		);
+		$context  = self::context( $record, $trigger );
 		if ( array() !== $steps ) {
 			$context->use_plan( new Plan( $steps ) );
 		}
@@ -801,27 +811,35 @@ final class DryRun {
 		}
 
 		$template = (string) ( $step['to'] ?? '' );
+		$shown    = null;
 		if ( null !== self::pending( $template, $context ) ) {
 			// A recipient from the output of a step the test does not run is known only in a real run.
 			$detail['to'] = array( Templates::render( $template, $context, Templates::PREVIEW ) );
 		} else {
-			$to = ( new SendEmail() )->recipients( $template, $context );
-			if ( $to instanceof WP_Error ) {
+			$resolved = ( new SendEmail() )->resolve( $template, $context );
+			if ( $resolved instanceof WP_Error ) {
 				return array(
 					'result'  => 'fails',
-					'detail'  => $detail + array( 'error' => (string) $to->get_error_code() ),
+					'detail'  => $detail + array( 'error' => (string) $resolved->get_error_code() ),
 					/* translators: 1: step ID, 2: error message. */
-					'message' => sprintf( __( 'Send email %1$s: would fail: %2$s', 'pegwork' ), $id, $to->get_error_message() ),
+					'message' => sprintf( __( 'Send email %1$s: would fail: %2$s', 'pegwork' ), $id, $resolved->get_error_message() ),
 				);
 			}
-			$detail['to'] = array_map( array( SendEmail::class, 'mask' ), $to );
+			// Role members are counted, never listed: "to role editor (3 people), m***@example.org".
+			$detail['to'] = SendEmail::shown( $resolved );
+			$shown        = array();
+			foreach ( $resolved['roles'] as $slug => $count ) {
+				/* translators: 1: role slug, 2: number of members. */
+				$shown[] = sprintf( _n( 'role %1$s (%2$d person)', 'role %1$s (%2$d people)', $count, 'pegwork' ), $slug, $count );
+			}
+			$shown = array_merge( $shown, array_map( array( SendEmail::class, 'mask' ), $resolved['to'] ) );
 		}
 
 		return array(
 			'result'  => 'ok',
 			'detail'  => $detail,
 			/* translators: 1: step ID, 2: recipients, 3: subject. */
-			'message' => sprintf( __( 'Send email %1$s: to %2$s, subject "%3$s" (not sent).', 'pegwork' ), $id, implode( ', ', $detail['to'] ), $subject ),
+			'message' => sprintf( __( 'Send email %1$s: to %2$s, subject "%3$s" (not sent).', 'pegwork' ), $id, implode( ', ', $shown ?? $detail['to'] ), $subject ),
 		);
 	}
 

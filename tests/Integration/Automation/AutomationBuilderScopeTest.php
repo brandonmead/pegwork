@@ -94,12 +94,15 @@ class AutomationBuilderScopeTest extends WP_UnitTestCase {
 
 	/**
 	 * The editor config of each package is what the fixture holds (so the Vitest suite tests the real shape).
+	 * `roles` is site state, not registry, so the fixture leaves it out (AutomationRoleEmailTest checks it).
 	 */
 	public function test_config_matches_registry() {
 		foreach ( self::fixture()['packages'] as $name => $package ) {
+			$config = BuilderEditor::registry_config( self::registry( $name ) );
+			unset( $config['roles'] );
 			$this->assertSame(
 				wp_json_encode( $package['config'] ),
-				wp_json_encode( BuilderEditor::registry_config( self::registry( $name ) ) ),
+				wp_json_encode( $config ),
 				$name
 			);
 		}

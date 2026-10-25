@@ -21,7 +21,7 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
  *
  * Automation v4 PR 2 (registry): the `v4` fixture's shapes (wait until, trash_record, start_automation,
  * role recipients, read `created`) are refused before the first step until the engine PRs land;
- * trash_record runs since v4 PR 4, a read `created` since v4 PR 7.
+ * trash_record runs since v4 PR 4, role recipients since v4 PR 6, a read `created` since v4 PR 7.
  */
 class AutomationV3GuardTest extends AutomationTestCase {
 
@@ -66,11 +66,9 @@ class AutomationV3GuardTest extends AutomationTestCase {
 				$v4 . 'barn_gift_receipt_start.json' => 'step "receipt" has type "start_automation", which this version of the automation module cannot run.',
 				$v4 . 'barn_task_due_reminder.json'  => 'step "before_due" waits until a date ("until"), which this version of the automation module cannot do.',
 				$v4 . 'barn_v4_shapes.json'          => 'step "due_soon" waits until a date ("until"), which this version of the automation module cannot do.',
-				$v4 . 'barn_volunteer_review.json'   => 'step "notify" sends to a role ("{role:...}"), which this version of the automation module cannot do.',
-				$v4 . 'barn_weekly_note.json'        => 'step "note" sends to a role ("{role:...}"), which this version of the automation module cannot do.',
 			),
 			$refused,
-			'Only the v4 shapes are refused (barn_gift_receipt has none).'
+			'Only the v4 shapes are refused (barn_gift_receipt has none; role recipients run since v4 PR 6, reads by creation time since v4 PR 7).'
 		);
 
 		$definition                                 = pegwork_registry()->automation( 'barn_tasks_digest' );
