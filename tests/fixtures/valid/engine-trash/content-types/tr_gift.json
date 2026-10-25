@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "key": "tr_gift",
+  "labels": { "singular": "Gift", "plural": "Gifts" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } }
+  ]
+}

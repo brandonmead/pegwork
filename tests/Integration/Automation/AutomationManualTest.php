@@ -427,4 +427,49 @@ class AutomationManualTest extends AutomationTestCase {
 		$this->assertSame( 'pegwork_no_record', ( new Manual() )->run( 'man_report', $gift )->get_error_code() );
 		$this->assertCount( 2, Engine::instance()->runs()->find( null, null, 100 ) );
 	}
+
+	/**
+	 * Automation v4 (docs/automation-v4-design.md section 3.3): an editor needs `delete_post` on the record,
+	 * besides `edit_post`, to start an automation that can trash (`tr_bound` of the engine-trash fixture);
+	 * without it can_run() is false, the route answers 403 and the record editor does not list it, while an
+	 * automation that trashes nothing still runs. Administrators pass.
+	 */
+	public function test_can_run_needs_delete_post_when_the_automation_trashes() {
+		add_action( 'pegwork_register', fn( $b ) => $b->add_package( dirname( __DIR__, 2 ) . '/fixtures/valid/engine-trash' ) );
+		\Pegwork\Plugin::init();
+		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Rebuild routes for the added types.
+
+		$sam  = Records::create( 'tr_volunteer', array( 'name' => 'Sam' ), 'private' );
+		$gift = $this->gift();
+		$this->assertIsInt( $sam );
+		$this->assertTrue( Manual::trashes( 'tr_bound' ) );
+		$this->assertFalse( Manual::trashes( 'man_thanks' ) );
+		$this->assertTrue( StartRoute::can_run( 'tr_bound', $sam ), 'An editor who may delete the record.' );
+
+		$caps = array( 'delete_posts', 'delete_others_posts', 'delete_private_posts', 'delete_published_posts' );
+		$role = get_role( 'editor' );
+		foreach ( $caps as $cap ) {
+			$role->remove_cap( $cap );
+		}
+		wp_set_current_user( 0 );
+		wp_set_current_user( $this->editor );
+		try {
+			$this->assertTrue( current_user_can( 'edit_post', $sam ) );
+			$this->assertFalse( current_user_can( 'delete_post', $sam ) );
+			$this->assertFalse( StartRoute::can_run( 'tr_bound', $sam ) );
+			$this->assertSame( 403, $this->start( 'tr_bound', $sam )->get_status() );
+			$this->assertSame( array(), RecordActions::automations( get_post( $sam ) ), 'Not offered in the record editor.' );
+			$this->assertTrue( StartRoute::can_run( 'man_thanks', $gift ), 'An automation that trashes nothing needs no delete_post.' );
+			$this->assertSame( 202, $this->start( 'man_thanks', $gift )->get_status() );
+
+			wp_set_current_user( $this->admin );
+			$this->assertTrue( StartRoute::can_run( 'tr_bound', $sam ), 'Administrators pass.' );
+		} finally {
+			foreach ( $caps as $cap ) {
+				$role->add_cap( $cap );
+			}
+		}
+		$this->assertSame( array(), $this->runs( 'tr_bound' ) );
+		$this->assertSame( 'private', get_post_status( $sam ) );
+	}
 }

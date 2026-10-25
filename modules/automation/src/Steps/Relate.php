@@ -18,7 +18,8 @@ use PegworkAutomation\Templates;
  * Records::unrelate(), which validate it as a save of the "from" record would (types, `one_to_many`,
  * `required`) and emit `record.updated` on the "from" record with origin depth = run depth + 1. `from`
  * defaults to the bound record when it is of the relationship's "from" type. A link that already existed
- * (or was already absent) is not a failure: the summary says `changed: false`. No output.
+ * (or was already absent) is not a failure: the summary says `changed: false`. A record in the trash at
+ * either end fails `pegwork_record_not_found` (no retry). No output.
  *
  * Summary: `relationship`, `action`, `from`, `to`, `changed`.
  */
@@ -51,6 +52,11 @@ final class Relate implements Step {
 
 		if ( $from <= 0 || $to <= 0 ) {
 			return StepResult::fail( 'invalid_id', sprintf( 'The link needs a record at both ends ("from" %1$d, "to" %2$d).', $from, $to ), $summary, false );
+		}
+		foreach ( array( $from, $to ) as $end ) {
+			if ( 'trash' === get_post_status( $end ) ) {
+				return StepResult::fail( 'pegwork_record_not_found', sprintf( 'Record %d is in the trash.', $end ), $summary, false );
+			}
 		}
 
 		$origin = UpdateRecord::origin( $run );
