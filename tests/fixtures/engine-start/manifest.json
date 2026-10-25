@@ -1,0 +1,1 @@
+{ "format": 1, "id": "engine_start", "version": "1.0.0", "label": "Automation v4 engine: start another automation (AutomationStartTest only)", "requires": { "pegwork": ">=0.4.0" } }

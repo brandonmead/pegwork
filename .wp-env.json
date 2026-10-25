@@ -9,7 +9,8 @@
 		"wp-content/mu-plugins/pegwork-e2e-links.php": "./tests/e2e/mu-plugins/pegwork-e2e-links.php",
 		"wp-content/mu-plugins/pegwork-e2e-webhooks.php": "./tests/e2e/mu-plugins/pegwork-e2e-webhooks.php",
 		"wp-content/mu-plugins/pegwork-e2e-barn.php": "./tests/e2e/mu-plugins/pegwork-e2e-barn.php",
-		"wp-content/mu-plugins/pegwork-e2e-manual.php": "./tests/e2e/mu-plugins/pegwork-e2e-manual.php"
+		"wp-content/mu-plugins/pegwork-e2e-manual.php": "./tests/e2e/mu-plugins/pegwork-e2e-manual.php",
+		"wp-content/mu-plugins/pegwork-e2e-start.php": "./tests/e2e/mu-plugins/pegwork-e2e-start.php"
 	},
 	"config": { "WP_DEBUG": true, "WP_DEBUG_LOG": true },
 	"lifecycleScripts": {

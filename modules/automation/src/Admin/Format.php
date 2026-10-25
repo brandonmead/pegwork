@@ -238,6 +238,55 @@ final class Format {
 	}
 
 	/**
+	 * A start_automation attempt's summary, with the child run linked ("Run 413") when the user may see the
+	 * run log (administrators).
+	 *
+	 * @param array<string, mixed> $summary Decoded summary.
+	 */
+	public static function start( array $summary ): string {
+		$child = (int) ( $summary['run'] ?? 0 );
+		$html  = self::summary( array_diff_key( $summary, array( 'run' => true ) ) );
+		if ( $child <= 0 ) {
+			return $html;
+		}
+		return $html . '<p class="pegwork-meta">' . self::run_link( $child ) . '</p>';
+	}
+
+	/**
+	 * The parent of a run a start_automation step started (`context.parent`): "Run 412 of Thank a donor
+	 * (step receipt)", the run linked for administrators; empty for other runs.
+	 *
+	 * @param array<string, mixed> $run Run.
+	 */
+	public static function parent( array $run ): string {
+		$parent = $run['context']['parent'] ?? null;
+		if ( ! is_array( $parent ) || (int) ( $parent['run'] ?? 0 ) <= 0 ) {
+			return '';
+		}
+		$key        = (string) ( $parent['automation'] ?? '' );
+		$automation = pegwork_registry()->automation( $key );
+		$label      = null === $automation ? $key : (string) $automation['label'];
+		$step       = '<code>' . esc_html( (string) ( $parent['step'] ?? '' ) ) . '</code>';
+		if ( isset( $parent['iteration'] ) ) {
+			/* translators: 1: step ID, 2: loop item number. */
+			$step = sprintf( esc_html__( '%1$s, item %2$s', 'pegwork' ), $step, esc_html( number_format_i18n( (int) $parent['iteration'] ) ) );
+		}
+		/* translators: 1: run link, 2: automation label, 3: step ID. */
+		return sprintf( esc_html__( '%1$s of %2$s (step %3$s)', 'pegwork' ), self::run_link( (int) $parent['run'] ), esc_html( $label ), $step );
+	}
+
+	/**
+	 * "Run 413", linked to the run's detail when the user may see the run log.
+	 *
+	 * @param int $id Run ID.
+	 */
+	private static function run_link( int $id ): string {
+		/* translators: %d: run ID. */
+		$text = esc_html( sprintf( __( 'Run %d', 'pegwork' ), $id ) );
+		return current_user_can( Screen::CAPABILITY ) ? '<a href="' . esc_url( RunLog::run_url( $id ) ) . '">' . $text . '</a>' : $text;
+	}
+
+	/**
 	 * Plain-text headings that group a run's loop rows by item, keyed by the index of the first row of each
 	 * item: "Item 2 of 12: Task #38 (Call Ada)". The item IDs come from the loop's start row (`{ items, ids }`);
 	 * a row's loop is its own id for a loop row, else Plan::loop_of() under the current definition, else the

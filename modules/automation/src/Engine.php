@@ -21,6 +21,7 @@ use PegworkAutomation\Steps\FindRecords;
 use PegworkAutomation\Steps\GetRecord;
 use PegworkAutomation\Steps\Relate;
 use PegworkAutomation\Steps\SendEmail;
+use PegworkAutomation\Steps\StartAutomation;
 use PegworkAutomation\Steps\Step;
 use PegworkAutomation\Steps\TrashRecord;
 use PegworkAutomation\Steps\UpdateRecord;
@@ -99,17 +100,18 @@ final class Engine {
 		$this->scheduler = $scheduler;
 		$this->runs      = new Runs( $clock );
 		$this->steps     = array(
-			'update_record' => new UpdateRecord(),
-			'create_record' => new CreateRecord(),
-			'condition'     => new Condition(),
-			'send_email'    => new SendEmail(),
-			'call_webhook'  => new CallWebhook(),
-			'wait'          => new Wait(),
-			'decision'      => new Decision(),
-			'get_record'    => new GetRecord(),
-			'find_records'  => new FindRecords(),
-			'relate'        => new Relate(),
-			'trash_record'  => new TrashRecord(),
+			'update_record'    => new UpdateRecord(),
+			'create_record'    => new CreateRecord(),
+			'condition'        => new Condition(),
+			'send_email'       => new SendEmail(),
+			'call_webhook'     => new CallWebhook(),
+			'wait'             => new Wait(),
+			'decision'         => new Decision(),
+			'get_record'       => new GetRecord(),
+			'find_records'     => new FindRecords(),
+			'relate'           => new Relate(),
+			'trash_record'     => new TrashRecord(),
+			'start_automation' => new StartAutomation(),
 		);
 	}
 
@@ -286,8 +288,7 @@ final class Engine {
 	 * part of it: a step type without a handler, at any depth (`loop` has none because the executor's cursor
 	 * runs it). Until the Automation v4 engine PRs land (docs/automation-v4-design.md section 11), also the v4
 	 * shapes of existing step types: a wait `until` a date and a read `created` (`{role:<slug>}` recipients run
-	 * since v4 PR 6). trash_record runs (v4 PR 4); start_automation has no handler yet, so the first rule
-	 * refuses it.
+	 * since v4 PR 6). The new step types trash_record (v4 PR 4) and start_automation (v4 PR 5) run.
 	 *
 	 * @param array<string, mixed> $definition Canonical automation.
 	 */

@@ -14,8 +14,9 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
 
 /**
  * Automation v4 PR 2 (registry, docs/automation-v4-design.md section 11): the `v4` fixture loads, and a run of
- * an automation with a v4 shape (a wait until a date, start_automation) fails `unsupported_step` before its
- * first step, so nothing half-runs until the engine PRs land.
+ * an automation with a v4 shape (a wait until a date) fails `unsupported_step` before its first step, so
+ * nothing half-runs until the engine PRs land. Since v4 PR 5, start_automation runs: the new gift's
+ * barn_gift_receipt_start starts barn_gift_receipt at depth 1.
  */
 class AutomationV4GuardTest extends AutomationTestCase {
 
@@ -64,13 +65,18 @@ class AutomationV4GuardTest extends AutomationTestCase {
 		$this->assertIsInt( $gift );
 		$this->drain();
 
-		foreach ( array( 'barn_task_due_reminder', 'barn_gift_receipt_start' ) as $key ) {
-			$run = $this->only_run( $key );
-			$this->assertSame( 'failed', $run['status'], $key );
-			$this->assertStringStartsWith( 'unsupported_step: step "', $run['error'], $key );
-			$this->assertSame( array(), $this->steps( $run['id'] ), "$key ran no step." );
-		}
-		$this->assertSame( array(), $this->runs( 'barn_gift_receipt' ), 'No receipt run was started.' );
+		$run = $this->only_run( 'barn_task_due_reminder' );
+		$this->assertSame( 'failed', $run['status'] );
+		$this->assertStringStartsWith( 'unsupported_step: step "', $run['error'] );
+		$this->assertSame( array(), $this->steps( $run['id'] ), 'barn_task_due_reminder ran no step.' );
+
+		// The gift has no donor, so the receipt stops at has_donor; the caller stops at its `skipped` condition.
+		$caller = $this->only_run( 'barn_gift_receipt_start' );
+		$this->assertSame( 'completed', $caller['status'] );
+		$this->assertSame( 'stopped_at:skipped', $caller['context']['outcome'] );
+		$receipt = $this->only_run( 'barn_gift_receipt' );
+		$this->assertSame( 1, (int) $receipt['depth'] );
+		$this->assertSame( 'stopped_at:has_donor', $receipt['context']['outcome'] );
 		$this->assertSame( array(), tests_retrieve_phpmailer_instance()->mock_sent, 'No mail.' );
 		$this->assertSame( '', (string) Records::get( $task )['values']['reminded_on'], 'No stamp.' );
 	}

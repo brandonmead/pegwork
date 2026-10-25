@@ -1,0 +1,8 @@
+{ "format": 1, "key": "st_resend", "label": "Resend the receipt and tell the team",
+  "trigger": { "type": "manual", "content_type": "st_gift", "button": "Resend receipt" },
+  "steps": [
+    { "id": "receipt", "type": "start_automation", "automation": "st_receipt", "record": "{{record.id}}", "retry": { "max": 1, "backoff": "PT5M" } },
+    { "id": "note", "type": "start_automation", "automation": "st_note" },
+    { "id": "done", "type": "send_email", "to": "team@example.org",
+      "subject": "Resent for gift {{record.id}}",
+      "text": "Receipt: {{steps.receipt.started}}. Note: {{steps.note.started}}." } ] }

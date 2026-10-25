@@ -1,0 +1,6 @@
+{ "format": 1, "key": "st_note", "label": "Send the team a note",
+  "trigger": { "type": "manual", "button": "Send note" },
+  "steps": [
+    { "id": "note", "type": "send_email", "to": "team@example.org",
+      "subject": "Note from user {{trigger.user_id}}",
+      "text": "Sent from {{trigger.source}}." } ] }

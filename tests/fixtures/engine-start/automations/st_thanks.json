@@ -1,0 +1,11 @@
+{ "format": 1, "key": "st_thanks", "label": "Thank the donor of a new gift",
+  "trigger": { "type": "event", "event": "record.created", "content_type": "st_gift" },
+  "steps": [
+    { "id": "receipt", "type": "start_automation", "automation": "st_receipt" },
+    { "id": "thank", "type": "send_email", "to": "thanks@example.org",
+      "subject": "Thanks for gift {{record.id}}",
+      "text": "Receipt started: {{steps.receipt.started}}." },
+    { "id": "later", "type": "wait", "for": "P30D" },
+    { "id": "follow_up", "type": "send_email", "to": "thanks@example.org",
+      "subject": "A month since gift {{record.id}}",
+      "text": "Thank you again." } ] }

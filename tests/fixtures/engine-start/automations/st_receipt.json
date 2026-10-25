@@ -1,0 +1,8 @@
+{ "format": 1, "key": "st_receipt", "label": "Send the receipt for a gift",
+  "trigger": { "type": "manual", "content_type": "st_gift", "button": "Send receipt", "allow": "editors",
+    "when": { "var": "record.amount", "op": "gt", "value": 0 } },
+  "idempotency": "receipt-{{record.id}}",
+  "steps": [
+    { "id": "send", "type": "send_email", "to": "receipts@example.org",
+      "subject": "Receipt for gift {{record.id}}",
+      "text": "Receipt for your gift of {{record.amount | number:2}}, started by user {{trigger.user_id}} from {{trigger.source}}." } ] }
