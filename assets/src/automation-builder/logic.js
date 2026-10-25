@@ -95,6 +95,10 @@ export function parseConfig( raw ) {
 			( relationship ) =>
 				relationship && typeof relationship.key === 'string'
 		),
+		// Roles a `{role:<slug>}` recipient may name (slug and name only, never members).
+		roles: list( config.roles ).filter(
+			( role ) => role && typeof role.slug === 'string'
+		),
 		rest: config.rest && typeof config.rest === 'object' ? config.rest : {},
 		lockedKey: text( config.lockedKey ),
 		readOnly: config.readOnly === true,

@@ -1,5 +1,5 @@
 {
-	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the condition at \"at\", the trigger condition when absent (exactly those validate with \"sample\").",
+	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the condition at \"at\", the trigger condition when absent (exactly those validate with \"sample\"). dates: the date fields \"Until a date\" offers for the step at \"at\" (a wait until each, put there, validates; each in \"refuse\" is refused; none when the trigger binds no record of a type with a date field). roles: whether \"Add a role\" is offered for the template at \"at\" (exactly then a {role:editor} part validates there).",
 	"packages": {
 		"branching": {
 			"dir": "tests/fixtures/valid/branching",
@@ -2115,6 +2115,91 @@
 				"empty",
 				"not_empty"
 			]
+		}
+	],
+	"dates": [
+		{
+			"package": "v4",
+			"automation": "barn_task_due_reminder",
+			"at": "/steps/0",
+			"expect": [
+				"record.due_on",
+				"record.reminded_on"
+			],
+			"refuse": [
+				"record.name",
+				"record.assignee_email",
+				"record.done"
+			]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_v4_shapes",
+			"at": "/steps/1",
+			"expect": [
+				"record.due_on",
+				"record.reminded_on"
+			],
+			"refuse": [
+				"record.name"
+			]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_volunteer_review",
+			"at": "/steps/0",
+			"expect": [],
+			"refuse": [
+				"record.name",
+				"record.stage"
+			]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_weekly_note",
+			"at": "/steps/0",
+			"expect": [],
+			"refuse": [
+				"record.due_on"
+			]
+		}
+	],
+	"roles": [
+		{
+			"package": "v4",
+			"automation": "barn_volunteer_review",
+			"at": "/steps/0/to",
+			"offered": true
+		},
+		{
+			"package": "v4",
+			"automation": "barn_task_due_reminder",
+			"at": "/steps/2/to",
+			"offered": true
+		},
+		{
+			"package": "v4",
+			"automation": "barn_task_due_reminder",
+			"at": "/steps/2/subject",
+			"offered": false
+		},
+		{
+			"package": "v4",
+			"automation": "barn_volunteer_review",
+			"at": "/steps/0/reply_to",
+			"offered": false
+		},
+		{
+			"package": "v4",
+			"automation": "barn_volunteer_review",
+			"at": "/steps/0/text",
+			"offered": false
+		},
+		{
+			"package": "v4",
+			"automation": "barn_task_due_reminder",
+			"at": "/steps/3/values/reminded_on",
+			"offered": false
 		}
 	]
 }

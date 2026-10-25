@@ -12,9 +12,12 @@ import { parseConfig } from '../logic';
 import {
 	binding,
 	conditionFields,
+	dateFields,
 	formatTag,
 	mergeTags,
 	stepsBefore,
+	takesRoles,
+	withRole,
 } from '../scope';
 
 const root = new URL( '../../../../', import.meta.url );
@@ -103,6 +106,46 @@ describe( 'operators (shared fixture)', () => {
 		expect(
 			opsFor( field, item.var, definition.trigger.event ?? null )
 		).toEqual( item.expect );
+	} );
+} );
+
+describe( 'wait date fields (shared fixture)', () => {
+	it.each(
+		fixture.dates.map( ( item ) => [
+			`${ item.automation }${ item.at }`,
+			item,
+		] )
+	)( '%s', ( name, item ) => {
+		const { definition, config } = load( item );
+		const paths = dateFields( definition, config ).map(
+			( field ) => field.path
+		);
+		expect( paths ).toEqual( item.expect );
+		for ( const refused of item.refuse ) {
+			expect( paths ).not.toContain( refused );
+		}
+	} );
+} );
+
+describe( 'role templates (shared fixture)', () => {
+	it.each(
+		fixture.roles.map( ( item ) => [
+			`${ item.automation }${ item.at }`,
+			item,
+		] )
+	)( '%s', ( name, item ) => {
+		const { definition } = load( item );
+		expect( takesRoles( definition, item.at ) ).toBe( item.offered );
+	} );
+
+	it( 'adds a role as the last part', () => {
+		expect( withRole( '', 'editor' ) ).toBe( '{role:editor}' );
+		expect( withRole( '{{record.email}}, ', 'editor' ) ).toBe(
+			'{{record.email}}, {role:editor}'
+		);
+		expect( withRole( 'a@example.org;', 'barn_reviewer' ) ).toBe(
+			'a@example.org, {role:barn_reviewer}'
+		);
 	} );
 } );
 

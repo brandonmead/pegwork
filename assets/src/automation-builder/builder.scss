@@ -162,6 +162,18 @@ $error: #cc1818;
 	font-size: 12px;
 }
 
+// The Wait choice: native radios (one can be disabled, with its reason as text).
+.pegwork-automation__radio {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 8px;
+
+	input {
+		margin: 0;
+	}
+}
+
 .pegwork-automation-settings .components-base-control,
 .pegwork-automation__template,
 .pegwork-automation__fieldset,

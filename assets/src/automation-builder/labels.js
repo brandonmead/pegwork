@@ -5,7 +5,7 @@
 /**
  * WordPress dependencies
  */
-import { __, _n, sprintf } from '@wordpress/i18n';
+import { __, _n, _x, sprintf } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -274,6 +274,75 @@ export function durationText( value ) {
 	}
 }
 
+/**
+ * A wait's `until` in words, as WaitUntil::describe() says it: "3 days before Due on at 09:00".
+ *
+ * @param {Object} until  `{ var, offset, at }`.
+ * @param {Array}  fields Fields in scope (paths and labels).
+ * @return {string} Words.
+ */
+export function untilText( until, fields ) {
+	const field =
+		fields.find( ( item ) => item.path === until.var )?.label ||
+		until.var ||
+		__( '(no date field)', 'pegwork' );
+	const at = until.at || '09:00';
+	const offset = String( until.offset ?? '' );
+	if ( ! /[1-9]/.test( offset ) ) {
+		/* translators: 1: field label, 2: time of day (HH:MM). */
+		return sprintf( __( '%1$s at %2$s', 'pegwork' ), field, at );
+	}
+	const amount = durationText( offset.replace( /^[-+]/, '' ) );
+	return offset.startsWith( '-' )
+		? /* translators: 1: amount of time such as "3 days", 2: field label, 3: time of day (HH:MM). */ sprintf(
+				__( '%1$s before %2$s at %3$s', 'pegwork' ),
+				amount,
+				field,
+				at
+			)
+		: /* translators: 1: amount of time such as "2 hours", 2: field label, 3: time of day (HH:MM). */ sprintf(
+				__( '%1$s after %2$s at %3$s', 'pegwork' ),
+				amount,
+				field,
+				at
+			);
+}
+
+/**
+ * Recipients in words: role parts as "everyone with role Editor" (names from the config), the other
+ * parts as written.
+ *
+ * @param {string} to     Recipients.
+ * @param {Object} config Parsed config.
+ * @return {string} Words.
+ */
+export function recipientText( to, config ) {
+	if ( ! to.includes( '{role:' ) ) {
+		return to;
+	}
+	const roles = [];
+	const others = [];
+	for ( const part of to.split( /[,;]/ ) ) {
+		const slug = /^\s*\{role:([a-z0-9_-]+)\}\s*$/.exec( part )?.[ 1 ];
+		if ( slug ) {
+			roles.push(
+				config.roles.find( ( role ) => role.slug === slug )?.name ||
+					slug
+			);
+		} else if ( part.trim() ) {
+			others.push( part.trim() );
+		}
+	}
+	return [
+		sprintf(
+			/* translators: %s: role names. */
+			__( 'everyone with role %s', 'pegwork' ),
+			roles.join( ` ${ _x( 'and', 'between role names', 'pegwork' ) } ` )
+		),
+		...others,
+	].join( LIST_SEPARATOR );
+}
+
 const LIST_SEPARATOR = ', ';
 
 /**
@@ -528,7 +597,9 @@ export function stepSummary( step, fields, config, bound = null, inLoop ) {
 			return step.to || step.subject
 				? /* translators: 1: recipient, 2: subject. */ sprintf(
 						__( 'Email to %1$s: %2$s', 'pegwork' ),
-						step.to || __( '(no recipient)', 'pegwork' ),
+						step.to
+							? recipientText( step.to, config )
+							: __( '(no recipient)', 'pegwork' ),
 						step.subject || __( '(no subject)', 'pegwork' )
 					)
 				: '';
@@ -568,6 +639,13 @@ export function stepSummary( step, fields, config, bound = null, inLoop ) {
 					)
 				: '';
 		case 'wait':
+			if ( step.until ) {
+				return sprintf(
+					/* translators: %s: target such as "3 days before Due on at 09:00". */
+					__( 'Wait until %s', 'pegwork' ),
+					untilText( step.until, fields )
+				);
+			}
 			return step.for
 				? /* translators: %s: duration such as "30 days". */ sprintf(
 						__( 'Wait %s, then continue', 'pegwork' ),

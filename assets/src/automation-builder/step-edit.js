@@ -29,13 +29,7 @@ import { __, sprintf } from '@wordpress/i18n';
  * Internal dependencies
  */
 import ConditionBuilder from './condition-builder';
-import {
-	DurationControl,
-	Errors,
-	Refused,
-	TemplateControl,
-	wire,
-} from './controls';
+import { Errors, Refused, TemplateControl, wire } from './controls';
 import { conditionLabel, stepSummary, typeLabel } from './labels';
 import { ON_ERROR_TYPES, assignId, flatten, toNumber } from './logic';
 import MoveToBranch from './move';
@@ -48,11 +42,13 @@ import {
 	loopsAround,
 	mergeTags,
 	stepsBefore,
+	takesRoles,
 	typeFields,
 	typedReference,
 	valueFields,
 } from './scope';
 import { config, useDefinition, useErrorOwners } from './store';
+import WaitFields from './wait-edit';
 
 export const ICONS = {
 	send_email: 'email',
@@ -376,6 +372,9 @@ function TypeFields( {
 			pointer={ at( name ) }
 			errors={ errors }
 			tags={ tags }
+			roles={
+				takesRoles( definition, at( name ) ) ? config.roles : undefined
+			}
 			{ ...extra }
 		/>
 	);
@@ -389,7 +388,7 @@ function TypeFields( {
 				<>
 					{ template( 'to', __( 'To', 'pegwork' ), {
 						help: __(
-							'Addresses separated by commas, a merge tag such as {{record.email}}, or {option:page.field} for a private options field.',
+							'Addresses separated by commas, a merge tag such as {{record.email}}, {option:page.field} for a private options field, or {role:editor} for everyone with a role.',
 							'pegwork'
 						),
 					} ) }
@@ -614,13 +613,12 @@ function TypeFields( {
 		}
 		case 'wait':
 			return (
-				<DurationControl
-					label={ __( 'Wait for', 'pegwork' ) }
-					help={ __( 'From 1 hour to 2 years.', 'pegwork' ) }
-					value={ attributes.for }
-					onChange={ ( value ) => set( 'for', value ) }
-					pointer={ at( 'for' ) }
+				<WaitFields
+					attributes={ attributes }
+					setAttributes={ setAttributes }
+					pointer={ pointer }
 					errors={ errors }
+					definition={ definition }
 				/>
 			);
 		case 'condition':
@@ -897,6 +895,14 @@ export default function StepEdit( {
 			) }
 			{ summary && (
 				<p className="pegwork-automation-step__summary">{ summary }</p>
+			) }
+			{ attributes.type === 'wait' && attributes.until && (
+				<p className="pegwork-automation-step__note">
+					{ __(
+						'Checks the date again when it wakes. Waits for a date if it is empty.',
+						'pegwork'
+					) }
+				</p>
 			) }
 			{ attributes.on_error === 'continue' && (
 				<p className="pegwork-automation-step__note">

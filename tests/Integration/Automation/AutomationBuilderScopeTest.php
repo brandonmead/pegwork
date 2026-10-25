@@ -147,6 +147,52 @@ class AutomationBuilderScopeTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A wait until each offered date field, put in place of the step at the case's pointer, validates; a
+	 * wait until each refused path does not (wait_field, automation_no_record).
+	 */
+	public function test_wait_date_fields() {
+		$cases = self::fixture()['dates'];
+		$this->assertGreaterThanOrEqual( 4, count( $cases ) );
+		foreach ( $cases as $case ) {
+			$data  = self::automation( $case['package'], $case['automation'] );
+			$label = $case['automation'] . ' ' . $case['at'];
+			$wait  = static fn( $path ) => array(
+				'id'    => 'probe_wait',
+				'type'  => 'wait',
+				'until' => array(
+					'var'    => $path,
+					'offset' => '-P3D',
+				),
+			);
+			$this->assertNotSame( array(), $case['refuse'], $label );
+			foreach ( $case['expect'] as $path ) {
+				$this->assertSame( array(), self::errors( $case['package'], self::with( $data, $case['at'], $wait( $path ) ) ), $label . ' ' . $path );
+			}
+			foreach ( $case['refuse'] as $path ) {
+				$this->assertNotSame( array(), self::errors( $case['package'], self::with( $data, $case['at'], $wait( $path ) ) ), $label . ' refuses ' . $path );
+			}
+		}
+	}
+
+	/**
+	 * A `{role:editor}` part validates exactly in the templates where the builder offers "Add a role".
+	 */
+	public function test_role_templates() {
+		$cases = self::fixture()['roles'];
+		$this->assertGreaterThanOrEqual( 2, count( array_filter( $cases, fn( $c ) => $c['offered'] ) ) );
+		foreach ( $cases as $case ) {
+			$data    = self::automation( $case['package'], $case['automation'] );
+			$current = $data;
+			foreach ( array_slice( explode( '/', $case['at'] ), 1 ) as $segment ) {
+				$current = is_array( $current ) ? ( $current[ $segment ] ?? '' ) : '';
+			}
+			$template = ( '' === $current ? '' : $current . ', ' ) . '{role:editor}';
+			$errors   = self::errors( $case['package'], self::with( $data, $case['at'], $template ) );
+			$this->assertSame( $case['offered'], array() === $errors, $case['automation'] . ' ' . $case['at'] . ' ' . implode( '; ', $errors ) );
+		}
+	}
+
+	/**
 	 * Exactly the offered operators pass the validator for a var in a condition (the trigger's unless the
 	 * case names another, as for typed read outputs).
 	 */

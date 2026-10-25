@@ -26,7 +26,7 @@ import { addQueryArgs } from '@wordpress/url';
  */
 import { errorsAt, formatDuration, parseDuration } from './logic';
 import { fieldName, groupLabel, listName } from './labels';
-import { eachBlock, formatTag } from './scope';
+import { eachBlock, formatTag, withRole } from './scope';
 import { config, useSample } from './store';
 
 /**
@@ -341,6 +341,7 @@ function MergeTagInserter( { tags, label, onInsert } ) {
  * @param {boolean}  [props.disabled]  Read-only.
  * @param {Array}    [props.lists]     Lists of records in scope (find steps): "Insert list of records".
  * @param {boolean}  [props.html]      An HTML template (the list is inserted as `<ul>`).
+ * @param {Array}    [props.roles]     Roles it takes (`slug`, `name`): "Add a role".
  */
 export function TemplateControl( {
 	label,
@@ -354,6 +355,7 @@ export function TemplateControl( {
 	disabled,
 	lists,
 	html,
+	roles,
 } ) {
 	const ref = useRef();
 	const { id, messages, props } = wire( errors, pointer, Boolean( help ) );
@@ -414,12 +416,58 @@ export function TemplateControl( {
 				/>
 			) }
 			{ ! disabled && lists?.length > 0 && (
-				<ListInserter
-					lists={ lists }
-					label={ label }
-					onInsert={ ( find ) =>
-						insert( eachBlock( find, config, html ) )
+				<Picker
+					toggle={ __( 'Insert list of records', 'pegwork' ) }
+					name={ sprintf(
+						/* translators: %s: field label. */
+						__( 'Insert list of records into %s', 'pegwork' ),
+						label
+					) }
+					label={ __( 'List', 'pegwork' ) }
+					help={ __(
+						'One line per record, with its first field. Inside the block, item tags read that record; text after {{else}} shows when the list is empty.',
+						'pegwork'
+					) }
+					options={ lists.map( ( item ) => ( {
+						value: item.id,
+						label: listName( item, config ),
+					} ) ) }
+					action={ __( 'Insert list', 'pegwork' ) }
+					onPick={ ( chosen ) =>
+						insert(
+							eachBlock(
+								lists.find( ( item ) => item.id === chosen ),
+								config,
+								html
+							)
+						)
 					}
+				/>
+			) }
+			{ ! disabled && roles?.length > 0 && (
+				<Picker
+					toggle={ __( 'Add a role', 'pegwork' ) }
+					name={ sprintf(
+						/* translators: %s: field label. */
+						__( 'Add a role to %s', 'pegwork' ),
+						label
+					) }
+					label={ __( 'Role', 'pegwork' ) }
+					help={ __(
+						'Everyone with the role when it sends, in Bcc. The log shows how many, never who.',
+						'pegwork'
+					) }
+					options={ roles.map( ( role ) => ( {
+						value: role.slug,
+						label: role.name,
+					} ) ) }
+					action={ __( 'Add role', 'pegwork' ) }
+					onPick={ ( slug ) => {
+						onChange( withRole( current, slug ) );
+						window.requestAnimationFrame( () =>
+							ref.current?.focus()
+						);
+					} }
 				/>
 			) }
 			<Errors messages={ messages } id={ `${ id }-errors` } />
@@ -428,17 +476,23 @@ export function TemplateControl( {
 }
 
 /**
- * "Insert list of records": picks a list in scope and inserts an `{{#each}}` block with its first
- * field (eachBlock()).
+ * A link button beside a template field that opens one select and an action button: "Insert list of
+ * records" (a list in scope) and "Add a role" (an eligible role).
  *
- * @param {Object}   props          Props.
- * @param {Array}    props.lists    Find steps in scope.
- * @param {string}   props.label    Name of the field it inserts into.
- * @param {Function} props.onInsert Called with the chosen find step.
+ * @param {Object}   props         Props.
+ * @param {string}   props.toggle  Visible text of the link button.
+ * @param {string}   props.name    Its accessible name (holds the visible text).
+ * @param {string}   props.label   Label of the select.
+ * @param {string}   [props.help]  Help of the select.
+ * @param {Array}    props.options Select options (`value`, `label`).
+ * @param {string}   props.action  Text of the action button.
+ * @param {Function} props.onPick  Called with the chosen value.
  */
-function ListInserter( { lists, label, onInsert } ) {
+function Picker( { toggle, name, label, help, options, action, onPick } ) {
 	const [ chosen, setChosen ] = useState( '' );
-	const find = lists.find( ( item ) => item.id === chosen ) || lists[ 0 ];
+	const value = options.some( ( item ) => item.value === chosen )
+		? chosen
+		: options[ 0 ].value;
 	return (
 		<Dropdown
 			className="pegwork-automation__tags"
@@ -449,13 +503,9 @@ function ListInserter( { lists, label, onInsert } ) {
 					variant="link"
 					onClick={ onToggle }
 					aria-expanded={ isOpen }
-					aria-label={ sprintf(
-						/* translators: %s: field label. */
-						__( 'Insert list of records into %s', 'pegwork' ),
-						label
-					) }
+					aria-label={ name }
 				>
-					{ __( 'Insert list of records', 'pegwork' ) }
+					{ toggle }
 				</Button>
 			) }
 			renderContent={ ( { onClose } ) => (
@@ -463,26 +513,20 @@ function ListInserter( { lists, label, onInsert } ) {
 					<SelectControl
 						__next40pxDefaultSize
 						__nextHasNoMarginBottom
-						label={ __( 'List', 'pegwork' ) }
-						help={ __(
-							'One line per record, with its first field. Inside the block, item tags read that record; text after {{else}} shows when the list is empty.',
-							'pegwork'
-						) }
-						value={ find.id }
-						options={ lists.map( ( item ) => ( {
-							value: item.id,
-							label: listName( item, config ),
-						} ) ) }
+						label={ label }
+						help={ help }
+						value={ value }
+						options={ options }
 						onChange={ setChosen }
 					/>
 					<Button
 						variant="primary"
 						onClick={ () => {
-							onInsert( find );
+							onPick( value );
 							onClose();
 						} }
 					>
-						{ __( 'Insert list', 'pegwork' ) }
+						{ action }
 					</Button>
 				</div>
 			) }
@@ -490,7 +534,7 @@ function ListInserter( { lists, label, onInsert } ) {
 	);
 }
 
-const UNITS = [ 'hours', 'days', 'weeks', 'months', 'years' ];
+export const UNITS = [ 'hours', 'days', 'weeks', 'months', 'years' ];
 
 /**
  * A duration unit's name.
@@ -498,7 +542,7 @@ const UNITS = [ 'hours', 'days', 'weeks', 'months', 'years' ];
  * @param {string} unit hours, days, weeks, months or years.
  * @return {string} Name.
  */
-function unitLabel( unit ) {
+export function unitLabel( unit ) {
 	return {
 		hours: __( 'Hours', 'pegwork' ),
 		days: __( 'Days', 'pegwork' ),
