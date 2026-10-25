@@ -447,7 +447,7 @@ test( 'Forms list by keyboard: counts, Entries link, Copy block; axe at 1280 and
 	} );
 	await page.setViewportSize( { width: 1280, height: 900 } );
 
-	await press( row.getByRole( 'link', { name: /Entries of/ } ) );
+	await press( row.getByRole( 'link', { name: /View entries of/ } ) );
 	await expect( page ).toHaveURL( /page=pegwork-entries.*form=e2e_built/ );
 } );
 
