@@ -18,7 +18,7 @@ use WP_Post;
 /**
  * The read query model of `Pegwork\Api\Records::find()` (docs/automation-v3-design.md section 4.1).
  *
- * One WHERE clause (type, status, relationship, filter) drives the ID list, the count and the sums,
+ * One WHERE clause (type, status, relationship, filter, created) drives the ID list, the count and the sums,
  * so totals cover every match, never a capped list. Filter leaves are EXISTS subqueries on post meta
  * and term relationships, or comparisons on `ID` and `post_title`, so `all` and `any` groups mix
  * them freely and no join duplicates a row. Relationship storage stays behind
@@ -26,6 +26,16 @@ use WP_Post;
  * literals: core knows nothing of run paths.
  */
 final class RecordQuery {
+
+	/**
+	 * Query properties (`created` since API 0.4.0).
+	 */
+	public const PROPERTIES = array( 'related', 'filter', 'status', 'sort', 'limit', 'count', 'sum', 'created' );
+
+	/**
+	 * Bounds of the `created` property.
+	 */
+	public const CREATED_BOUNDS = array( 'before', 'after' );
 
 	/**
 	 * Most records returned.
@@ -83,7 +93,8 @@ final class RecordQuery {
 	 * @param Registry             $registry Effective registry.
 	 * @param string               $type     Content type key of the records read.
 	 * @param array<string, mixed> $query    `related` { relationship, of }, `filter` { all|any: [ { field, op, value } ] },
-	 *                                       `status`, `sort` { field, order }, `limit`, `count` (bool), `sum` (field keys).
+	 *                                       `status`, `sort` { field, order }, `limit`, `count` (bool), `sum` (field keys),
+	 *                                       `created` { before, after }.
 	 * @return array{ids: int[], count: int|null, sums: array<string, float>, empty_operand: string|null}|WP_Error
 	 */
 	public static function run( Registry $registry, string $type, array $query ): array|WP_Error {
@@ -152,7 +163,7 @@ final class RecordQuery {
 			return self::error( 'unknown_content_type', sprintf( __( 'Unknown content type "%s".', 'pegwork' ), $type ) );
 		}
 
-		$unknown = array_diff( array_keys( $query ), array( 'related', 'filter', 'status', 'sort', 'limit', 'count', 'sum' ) );
+		$unknown = array_diff( array_keys( $query ), self::PROPERTIES );
 		if ( array() !== $unknown ) {
 			/* translators: %s: query property. */
 			return self::error( 'unknown_property', sprintf( __( 'Unknown query property "%s".', 'pegwork' ), (string) reset( $unknown ) ) );
@@ -240,6 +251,19 @@ final class RecordQuery {
 			}
 		}
 
+		if ( isset( $query['created'] ) ) {
+			$created = self::created( $query['created'] );
+			if ( is_wp_error( $created ) ) {
+				return $created;
+			}
+			if ( null === $created ) {
+				$empty = $empty ?? 'created';
+			} elseif ( null === $empty ) {
+				$where[] = $created[0];
+				$args    = array_merge( $args, $created[1] );
+			}
+		}
+
 		$order = self::order( $registry, $type, $query['sort'] ?? array() );
 		if ( is_wp_error( $order ) ) {
 			return $order;
@@ -253,6 +277,51 @@ final class RecordQuery {
 			'none'          => $none,
 			'empty_operand' => $empty,
 		);
+	}
+
+	/**
+	 * Builds the `created` condition (API 0.4.0) on the creation time. Each bound is a site-local `Y-m-d`
+	 * day: `before` matches records created before that day starts, `after` records created after that
+	 * day ends (from the next day's start). Day starts are converted to UTC for `post_date_gmt`; a draft
+	 * whose `post_date_gmt` is still zero is compared by its site-time `post_date`.
+	 *
+	 * @param mixed $created `{ before?, after? }`.
+	 * @return array{0: string, 1: array<int, string>}|null|WP_Error SQL and args; null when a bound is empty
+	 *                                                              (null or ''), which matches nothing.
+	 */
+	private static function created( mixed $created ): array|null|WP_Error {
+		$message = __( 'created is { "before": "YYYY-MM-DD" } or { "after": "YYYY-MM-DD" }, or both.', 'pegwork' );
+		if ( ! is_array( $created ) || array() === $created || array() !== array_diff( array_keys( $created ), self::CREATED_BOUNDS ) ) {
+			return self::error( 'invalid_value', $message );
+		}
+
+		$parts = array();
+		$args  = array();
+		$empty = false;
+		foreach ( self::CREATED_BOUNDS as $bound ) {
+			if ( ! array_key_exists( $bound, $created ) ) {
+				continue;
+			}
+			$value = $created[ $bound ];
+			if ( null === $value || '' === $value ) {
+				$empty = true;
+				continue;
+			}
+			$day = is_string( $value ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ? DateTimeImmutable::createFromFormat( '!Y-m-d', $value, wp_timezone() ) : false;
+			if ( ! $day instanceof DateTimeImmutable || $day->format( 'Y-m-d' ) !== $value ) {
+				return self::error( 'invalid_value', $message );
+			}
+
+			$start   = 'after' === $bound ? $day->modify( '+1 day' ) : $day;
+			$sql_op  = 'after' === $bound ? '>=' : '<';
+			$parts[] = "( ( p.post_date_gmt <> '0000-00-00 00:00:00' AND p.post_date_gmt {$sql_op} %s ) OR ( p.post_date_gmt = '0000-00-00 00:00:00' AND p.post_date {$sql_op} %s ) )";
+			array_push( $args, $start->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ), $start->format( 'Y-m-d H:i:s' ) );
+		}
+		if ( $empty ) {
+			return null;
+		}
+
+		return array( implode( ' AND ', $parts ), $args );
 	}
 
 	/**

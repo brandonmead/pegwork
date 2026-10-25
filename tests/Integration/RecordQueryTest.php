@@ -740,6 +740,166 @@ class RecordQueryTest extends RecordsTestCase {
 	}
 
 	/**
+	 * Sets a record's creation time.
+	 *
+	 * @param string $name  Gift name (g1 to g6).
+	 * @param string $gmt   `post_date_gmt`, or the zero date of a never-published draft.
+	 * @param string $local `post_date`.
+	 */
+	private function created_at( string $name, string $gmt, string $local ): void {
+		global $wpdb;
+		$dates = array(
+			'post_date_gmt' => $gmt,
+			'post_date'     => $local,
+		);
+		$wpdb->update( $wpdb->posts, $dates, array( 'ID' => $this->g[ $name ] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture.
+		clean_post_cache( $this->g[ $name ] );
+	}
+
+	/**
+	 * `created` compares the creation time with whole site-time days: `before` is strict, `after` starts at the
+	 * next day. New York; the boundaries are the first and last second of 2027-03-01 (EST, UTC-5).
+	 */
+	public function test_created_before_and_after_at_day_boundaries() {
+		update_option( 'timezone_string', 'America/New_York' );
+		$this->created_at( 'g1', '2027-03-01 04:59:59', '2027-02-28 23:59:59' );
+		$this->created_at( 'g2', '2027-03-01 05:00:00', '2027-03-01 00:00:00' );
+		$this->created_at( 'g3', '2027-03-02 04:59:59', '2027-03-01 23:59:59' );
+		$this->created_at( 'g4', '2027-03-02 05:00:00', '2027-03-02 00:00:00' );
+
+		$created = fn( array $bounds ) => $this->gifts( array( 'created' => $bounds ) );
+		$this->assertSame( $this->ids( 'g1' ), $created( array( 'before' => '2027-03-01' ) ) );
+		$this->assertSame( $this->ids( 'g1', 'g2', 'g3' ), $created( array( 'before' => '2027-03-02' ) ) );
+		$this->assertSame( $this->ids( 'g2', 'g3', 'g4' ), $created( array( 'after' => '2027-02-28' ) ) );
+		$this->assertSame( $this->ids( 'g4' ), $created( array( 'after' => '2027-03-01' ) ) );
+		$this->assertSame(
+			$this->ids( 'g2', 'g3' ),
+			$created(
+				array(
+					'after'  => '2027-02-28',
+					'before' => '2027-03-02',
+				)
+			),
+			'Both bounds: created on 2027-03-01.'
+		);
+		$this->assertSame(
+			array(),
+			$created(
+				array(
+					'after'  => '2027-03-01',
+					'before' => '2027-03-01',
+				)
+			)
+		);
+
+		// DST starts 2027-03-14: that day starts at 05:00 UTC (EST), the next at 04:00 UTC (EDT).
+		$this->created_at( 'g1', '2027-03-14 04:59:59', '2027-03-13 23:59:59' );
+		$this->created_at( 'g2', '2027-03-14 05:00:00', '2027-03-14 00:00:00' );
+		$this->created_at( 'g3', '2027-03-15 03:59:59', '2027-03-14 23:59:59' );
+		$this->created_at( 'g4', '2027-03-15 04:00:00', '2027-03-15 00:00:00' );
+		$this->assertSame( $this->ids( 'g1' ), $created( array( 'before' => '2027-03-14' ) ) );
+		$this->assertSame( $this->ids( 'g4' ), $created( array( 'after' => '2027-03-14' ) ) );
+
+		// A draft never published has a zero post_date_gmt: its site-time post_date is compared.
+		$this->created_at( 'g5', '0000-00-00 00:00:00', '2027-03-01 12:00:00' );
+		$drafts = fn( array $bounds ) => $this->gifts(
+			array(
+				'created' => $bounds,
+				'status'  => array( 'draft' ),
+			)
+		);
+		$this->assertSame( array(), $drafts( array( 'before' => '2027-03-01' ) ), 'A zero GMT date is not "before" every day.' );
+		$this->assertSame( $this->ids( 'g5' ), $drafts( array( 'before' => '2027-03-02' ) ) );
+		$this->assertSame( $this->ids( 'g5' ), $drafts( array( 'after' => '2027-02-28' ) ) );
+		$this->assertSame( array(), $drafts( array( 'after' => '2027-03-01' ) ) );
+	}
+
+	/**
+	 * `created` narrows the same WHERE as the filter, so counts and sums cover every match; an empty bound
+	 * matches nothing; bad shapes are invalid.
+	 */
+	public function test_created_with_count_sum_filter_and_validation() {
+		$this->created_at( 'g1', '2025-01-10 12:00:00', '2025-01-10 12:00:00' );
+		$this->created_at( 'g2', '2025-06-10 12:00:00', '2025-06-10 12:00:00' );
+		$this->created_at( 'g3', '2027-01-10 12:00:00', '2027-01-10 12:00:00' );
+		$this->created_at( 'g4', '2027-01-10 12:00:00', '2027-01-10 12:00:00' );
+
+		$result = Records::find(
+			'rq_gift',
+			array(
+				'created' => array( 'before' => '2026-01-01' ),
+				'limit'   => 0,
+				'count'   => true,
+				'sum'     => array( 'amount', 'fee' ),
+			)
+		);
+		$this->assertSame(
+			array(
+				'ids'           => array(),
+				'count'         => 2,
+				'sums'          => array(
+					'amount' => 109.0,
+					'fee'    => 2.75,
+				),
+				'empty_operand' => null,
+			),
+			$result
+		);
+
+		$result = Records::find(
+			'rq_gift',
+			array(
+				'created' => array( 'after' => '2025-01-10' ),
+				'filter'  => array(
+					'all' => array(
+						array(
+							'field' => 'amount',
+							'op'    => 'gt',
+							'value' => 1,
+						),
+					),
+				),
+				'count'   => true,
+				'sum'     => array( 'amount' ),
+			)
+		);
+		$this->assertSame( $this->ids( 'g2', 'g3' ), $result['ids'] );
+		$this->assertSame( 2, $result['count'] );
+		$this->assertEqualsWithDelta( 259.75, $result['sums']['amount'], 0.00001 );
+
+		foreach ( array( null, '' ) as $empty ) {
+			$this->assertSame(
+				array(
+					'ids'           => array(),
+					'count'         => 0,
+					'sums'          => array( 'amount' => 0.0 ),
+					'empty_operand' => 'created',
+				),
+				Records::find(
+					'rq_gift',
+					array(
+						'created' => array(
+							'after'  => '2020-01-01',
+							'before' => $empty,
+						),
+						'count'   => true,
+						'sum'     => array( 'amount' ),
+					)
+				)
+			);
+		}
+
+		$this->assertInvalid( 'invalid_value', array( 'created' => array() ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => '2026-01-01' ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => array( 'on' => '2026-01-01' ) ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => array( 'before' => 'tomorrow' ) ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => array( 'before' => '2026-02-30' ) ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => array( 'before' => '2026-01-01T00:00:00Z' ) ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => array( 'after' => 20260101 ) ) );
+		$this->assertInvalid( 'invalid_value', array( 'created' => array( 'after' => array( 'date' => 'today' ) ) ) );
+	}
+
+	/**
 	 * Reads see only registry content types and never write anything.
 	 */
 	public function test_reads_have_no_side_effects() {

@@ -25,6 +25,7 @@ use WP_Error;
  * (completeness rules only when the resulting status is publish, pending or future) and emit one
  * record event. Writes do not check the current user's capabilities: callers authorize by their own rules.
  * API 0.3.0 adds find(), relate(), unrelate() and relationship keys in create() and update() values.
+ * API 0.4.0 adds trash() and the `created` query property of find().
  */
 final class Records {
 
@@ -142,6 +143,59 @@ final class Records {
 	}
 
 	/**
+	 * Moves a record to the trash (API 0.4.0). Never deletes permanently: when trash is turned off
+	 * (`EMPTY_TRASH_DAYS` is 0 or false, where wp_trash_post() would delete), it refuses and leaves the post.
+	 * Emits record.updated (`changed` = `status`) and record.status_changed to `trash` with the caller's origin.
+	 *
+	 * @param int                  $id     Post ID.
+	 * @param array<string, mixed> $origin Optional `automation`, `run_id` and `depth` for the event's origin.
+	 * @return bool|WP_Error True when the record was moved, false when it was already in the trash; WP_Error
+	 *                       `pegwork_record_not_found` (not a registry record, or an auto-draft), `trash_disabled`,
+	 *                       or `pegwork_trash_failed` (another plugin stopped the trash through `pre_trash_post`).
+	 */
+	public static function trash( int $id, array $origin = array() ): bool|WP_Error {
+		$post = get_post( $id );
+		if ( ! $post instanceof \WP_Post || 'auto-draft' === $post->post_status || null === Plugin::registry()->content_type( $post->post_type ) ) {
+			/* translators: %d: post ID. */
+			return new WP_Error( 'pegwork_record_not_found', sprintf( __( 'No record with ID %d.', 'pegwork' ), $id ), array( 'status' => 404 ) );
+		}
+		if ( 'trash' === $post->post_status ) {
+			return false;
+		}
+		if ( ! self::trash_enabled() ) {
+			return new WP_Error( 'trash_disabled', __( 'Trash is turned off on this site (EMPTY_TRASH_DAYS is 0), so the record was not moved. Pegwork never deletes records permanently.', 'pegwork' ), array( 'status' => 409 ) );
+		}
+
+		$outer   = RecordEvents::claim( $id, $origin, true );
+		$trashed = wp_trash_post( $id );
+		RecordEvents::release( $id, $outer );
+
+		if ( ! $trashed || 'trash' !== get_post_status( $id ) ) {
+			/* translators: %d: post ID. */
+			return new WP_Error( 'pegwork_trash_failed', sprintf( __( 'Record %d could not be moved to the trash.', 'pegwork' ), $id ), array( 'status' => 409 ) );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Whether trash() may call wp_trash_post(): only when the site keeps a trash. The
+	 * `pegwork_records_trash_enabled` filter can turn it off but never on, because with
+	 * `EMPTY_TRASH_DAYS` 0 wp_trash_post() deletes permanently.
+	 */
+	private static function trash_enabled(): bool {
+		$enabled = defined( 'EMPTY_TRASH_DAYS' ) && (bool) EMPTY_TRASH_DAYS;
+
+		/**
+		 * Filters whether Records::trash() may move records to the trash. Returning true has no effect
+		 * when `EMPTY_TRASH_DAYS` is 0.
+		 *
+		 * @param bool $enabled Whether the site keeps a trash.
+		 */
+		return $enabled && (bool) apply_filters( 'pegwork_records_trash_enabled', $enabled );
+	}
+
+	/**
 	 * Finds records of a content type. Counts and sums are SQL over every match, not over the returned IDs.
 	 *
 	 * Operands are resolved literals. An operand that is empty (null, '' or an empty list) on any operator but
@@ -153,7 +207,8 @@ final class Records {
 	 *                                    { all|any: [ { field, op, value } ] } (1 to 10 leaves; `field` a field or
 	 *                                    taxonomy key or `id`), `status` (default private and publish), `sort`
 	 *                                    { field, order } (default id asc), `limit` (0 to 50, default 10), `count`
-	 *                                    (bool) and `sum` (up to 5 number field keys).
+	 *                                    (bool), `sum` (up to 5 number field keys) and `created` { before, after }
+	 *                                    (`Y-m-d` site dates compared with the creation time; API 0.4.0).
 	 * @return array{ids: int[], count: int|null, sums: array<string, float>, empty_operand: string|null}|WP_Error
 	 *         `count` is null unless asked; WP_Error `pegwork_invalid_query` (data `reason`, such as `unknown_field`) when invalid.
 	 */

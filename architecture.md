@@ -184,6 +184,14 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Record event snapshots and diffs include the linked IDs of relationships whose "from" end is the type (`RecordEvents::state()`); `Records::relate()` claims, writes rows and flushes with `RecordEvents::emit_claimed()` (no post save, `post_modified` unchanged). `Records::get()` values stay fields and taxonomies only.
 - Local runs: test DBs `pegwork_tests_v3rec82`, `_v3rec84`, `_v3rec82_67`, `_v3rec84_67`; site `~/wp-envs/v3rec` (port 8232, DB `wpenv_v3rec`). Last verified 2026-10-23.
 
+## Records trash and `created` reads (Automation v4 PR 1, branch `v4-core-trash`)
+- API 0.4.0 (`docs/automation-v4-design.md` sections 3.1 and 8); plugin stays 0.3.0 until v4 PR 10.
+- `Records::trash()`: `RecordEvents::claim()` then `wp_trash_post()`, so its own `wp_update_post()` emits `record.updated` and `record.status_changed` with the claim's origin. Checks `EMPTY_TRASH_DAYS` before calling: with 0, core's `wp_trash_post()` calls `wp_delete_post( $id, true )`.
+- Test seam: `EMPTY_TRASH_DAYS` is a constant fixed at bootstrap, so tests turn trash off with the `pegwork_records_trash_enabled` filter (ANDed with the constant; it cannot turn trash on).
+- `created` compiles to `post_date_gmt` comparisons against site-day starts converted to UTC. Gotcha: never-published drafts have `post_date_gmt` `0000-00-00 00:00:00`, which sorts before every date; those rows compare `post_date` (site time) instead.
+- Gotcha: `Records::get()` and `update()` still read trashed records (only `find()` excludes trash). v4 design section 3.3 assumes `update_record` on a trashed record fails `pegwork_record_not_found`; that needs a change when the trash step lands.
+- Local runs: test DBs `pegwork_tests_v4core82`, `_v4core84`, `_v4core82_67`, `_v4core84_67`; site `~/wp-envs/v4core` (port 8240). Last verified 2026-10-25.
+
 ## Automation v3 registry (PR 2, branch `v3-registry`)
 - Rules in `src/Registry/Rules/AutomationRules.php`; the read query rules reuse `Content\RecordQuery` constants (`MAX_LIMIT`, `MAX_LEAVES`, `MAX_SUMS`, `STATUSES`, `OPS`, `UNFILTERABLE_TYPES`, `SORTABLE_TYPES`, `DEFAULT_STATUS`, `DEFAULT_LIMIT`) and its reason codes, so load-time and run-time checks cannot drift.
 - Scan scope: `scope.steps` maps id to the step itself (types and content types of outputs), `scope.loops` the loops enclosing a point (id to item type), `scope.each` the `{{#each}}` item type. `scan_path()` returns the path's type (`{ def: { type } }` or `{ ctype, key }`), which condition leaves, `| date`, `| add` and `| number` check in the references pass.
