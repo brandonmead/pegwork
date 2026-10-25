@@ -246,12 +246,13 @@ final class RunLog {
 			/* translators: %s: duration in milliseconds. */
 			echo '<td>' . esc_html( sprintf( __( '%s ms', 'pegwork' ), number_format_i18n( (int) $step['duration_ms'] ) ) ) . '</td>';
 			$reads   = in_array( $step['step_type'], array( 'get_record', 'find_records' ), true ) ? Format::read_records( (array) $step['summary'] ) : '';
+			$wait    = 'wait' === $step['step_type'] ? Format::wait_label( (array) $step['summary'], (int) $step['attempt'] ) : '';
 			$summary = match ( (string) $step['step_type'] ) {
 				'decision'         => Format::decision( (array) $step['summary'] ),
 				'start_automation' => Format::start( (array) $step['summary'] ),
 				default            => Format::summary( (array) $step['summary'] ),
 			};
-			echo '<td>' . $summary . $reads . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
+			echo '<td>' . ( '' === $wait ? '' : '<p class="pegwork-wait-label">' . esc_html( $wait ) . '</p>' ) . $summary . $reads . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in Format.
 			echo '<td>' . esc_html( (string) $step['error'] ) . '</td>';
 			echo '</tr>';
 		}

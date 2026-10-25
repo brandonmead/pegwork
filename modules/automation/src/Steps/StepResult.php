@@ -14,7 +14,7 @@ use DateTimeImmutable;
 /**
  * What a step attempt did. `ok` continues with the next step, `stop` ends the run as completed (a false
  * condition), `branch` continues in the decision branch it names, `wait` pauses the run until a time
- * (status `waiting`, then the next step), `failed` ends it
+ * (status `waiting`, then the next step, or the same step with `stay`), `failed` ends it
  * as failed, or, when the failure is retryable and the step's retry policy has attempts left, pauses it
  * and runs the same step again after the backoff (run-step status `retrying`).
  */
@@ -40,6 +40,14 @@ final class StepResult {
 	 * @var DateTimeImmutable|null
 	 */
 	public ?DateTimeImmutable $resume_at = null;
+
+	/**
+	 * For a wait: whether the run resumes at this step rather than the next (a date wait decides again on
+	 * every wake-up). The executor stores this step as `current_step`, as it does for a retry.
+	 *
+	 * @var bool
+	 */
+	public bool $stay = false;
 
 	/**
 	 * For a decision: the branch taken (index, -1 for otherwise), or null when none matched (and for every
@@ -112,15 +120,18 @@ final class StepResult {
 	}
 
 	/**
-	 * The step succeeded and the run waits until a time before the next step.
+	 * The step succeeded and the run waits until a time before the next step (or, with `$stay`, before this
+	 * step runs again).
 	 *
 	 * @param DateTimeImmutable    $resume_at When to continue.
 	 * @param array<string, mixed> $summary   Log summary.
+	 * @param bool                 $stay      Resume at this step instead of the next.
 	 */
-	public static function wait( DateTimeImmutable $resume_at, array $summary = array() ): self {
+	public static function wait( DateTimeImmutable $resume_at, array $summary = array(), bool $stay = false ): self {
 		$result            = new self( 'ok' );
 		$result->resume_at = $resume_at;
 		$result->summary   = $summary;
+		$result->stay      = $stay;
 		return $result;
 	}
 

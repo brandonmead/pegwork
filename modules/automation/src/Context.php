@@ -119,6 +119,14 @@ final class Context {
 	private int $reads = 0;
 
 	/**
+	 * State of date waits the cursor is at, by step id (`context.until.<id>`): `since` (first arrival, UTC)
+	 * and `empty` (the date was empty at the last check).
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	private array $until = array();
+
+	/**
 	 * Child runs started so far in the run.
 	 *
 	 * @var int
@@ -249,6 +257,53 @@ final class Context {
 			return null;
 		}
 		return array_values( array_map( 'intval', (array) $this->steps[ $parts[1] ]['ids'] ) );
+	}
+
+	/**
+	 * Date wait state, for storage (`context.until`).
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function until_states(): array {
+		return $this->until;
+	}
+
+	/**
+	 * Restores the stored date wait state (`context.until`).
+	 *
+	 * @param array<mixed> $states Stored state.
+	 */
+	public function restore_until( array $states ): void {
+		$this->until = array();
+		foreach ( $states as $id => $state ) {
+			if ( is_array( $state ) && is_string( $state['since'] ?? null ) ) {
+				$this->until[ (string) $id ] = $state;
+			}
+		}
+	}
+
+	/**
+	 * State of a date wait, or null before its first arrival.
+	 *
+	 * @param string $step_id Wait step id.
+	 * @return array<string, mixed>|null
+	 */
+	public function until( string $step_id ): ?array {
+		return $this->until[ $step_id ] ?? null;
+	}
+
+	/**
+	 * Sets (or, with null, removes) the state of a date wait.
+	 *
+	 * @param string                    $step_id Wait step id.
+	 * @param array<string, mixed>|null $state   State.
+	 */
+	public function set_until( string $step_id, ?array $state ): void {
+		if ( null === $state ) {
+			unset( $this->until[ $step_id ] );
+			return;
+		}
+		$this->until[ $step_id ] = $state;
 	}
 
 	/**

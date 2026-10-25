@@ -209,6 +209,15 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - The JS builder does not know the v4 shapes yet: `reads.test.js` skips the v4 package (Editor PRs 8 and 9 add it); `scope.js` knows `start_automation`'s `started` output for the shared scope fixture.
 - Local runs: test DBs `pegwork_tests_v4reg82`, `_v4reg84`, `_v4reg82_67`, `_v4reg84_67`; site `~/wp-envs/v4reg` (port 8242). Last verified 2026-10-25.
 
+## Automation v4 wait until (PR 3, branch `v4-wait-until`)
+- `Steps\Wait::until()` decides on every arrival; arithmetic and wording in `WaitUntil` (`target()`, `clamp()`, `horizon()`, `describe()`). `StepResult::wait( $at, $summary, true )` (`stay`) makes the executor store the wait step itself as `current_step`. State `context.until.<id>` (`since`, `empty`) lives in `Context` (`until()`, `set_until()`, `restore_until()`) and is stored by `Executor::store()` like the loop state.
+- Deviation from design 3.2 rule 1: `Records::get()` still returns trashed records (PR 1 note above), so the wait treats `status` `trash` as no record itself.
+- Offsets: day to year units in site time (wall clock, as `Conditions::offset()`); hour to second units are elapsed time (PHP 8.2+ `DateTime` arithmetic in a DST zone), so `-PT2H` from 03:30 EDT on the DST start day is 00:30 EST.
+- Listener `Waits::nudge()` on `pegwork_event_record_updated` (registered in `Engine::register()` as `on_record_updated`). Index per registry object in a `WeakMap` (the registry is rebuilt by `Plugin::init()`); it holds every automation, and disabled ones are filtered per event (`Overrides::enabled()`, autoloaded option, no query). Zero queries when nothing waits on the type and changed fields; one query (`Runs::waiting_on()`, `record_id` index) when an enabled automation waits on a changed field, even if the record has no waiting run. `Runs::nudge()` is atomic (`status = 'waiting' AND current_step = %s`).
+- Run log: `Format::wait_label()` (row label, "Checked the date again" from attempt 2), `Format::outcome()` says "Stopped at wait <id>" and "Waiting for <field label>" (`Waits::field_label()`).
+- Guards: `Engine::unsupported()` no longer refuses `wait.until`; `AutomationV3GuardTest` and `AutomationV4GuardTest` updated (`barn_v4_shapes` is now refused at `latest`, its first `created` read).
+- Local runs: test DBs `pegwork_tests_v4wait82`, `_v4wait84`, `_v4wait82_67`, `_v4wait84_67`; site `~/wp-envs/v4wait` (port 8243). Last verified 2026-10-25.
+
 ## Automation v4 start (PR 5, branch `v4-start`)
 - `Steps\StartAutomation` -> `Manual::chain()` -> `Triggers::chained()`; `Manual::target()` holds the checks `start()`, `chain()` and `DryRun` share. Reference: `docs/automation.md#start-another-automation`.
 - The child key `start:<run>-<step>[-<iteration>]` is looked up before `when` and depth, so a resumed parent reports the earlier child even if `when` changed since; a still `queued` earlier child gets its wake-up again (the attempt that inserted it may have died before scheduling it). The depth-cap `skipped` run carries the key too.

@@ -11,6 +11,7 @@ namespace PegworkAutomation\Admin;
 
 use PegworkAutomation\Executor;
 use PegworkAutomation\Plan;
+use PegworkAutomation\Waits;
 
 /**
  * Labels and escaped HTML fragments. Every method returns escaped HTML or plain text for esc_html().
@@ -202,10 +203,22 @@ final class Format {
 	 * @param array<string, mixed> $run Run.
 	 */
 	public static function outcome( array $run ): string {
-		$outcome = $run['context']['outcome'] ?? null;
+		$outcome    = $run['context']['outcome'] ?? null;
+		$definition = pegwork_registry()->automation( (string) ( $run['automation'] ?? '' ) );
 		if ( is_string( $outcome ) && str_starts_with( $outcome, 'stopped_at:' ) ) {
+			$step = substr( $outcome, 11 );
+			$plan = null === $definition ? null : Plan::for_run( $run, $definition );
+			if ( 'wait' === ( $plan?->step( $step )['type'] ?? null ) ) {
+				/* translators: %s: step ID. */
+				return sprintf( __( 'Stopped at wait %s', 'pegwork' ), $step );
+			}
 			/* translators: %s: step ID. */
-			return sprintf( __( 'Stopped at condition %s', 'pegwork' ), substr( $outcome, 11 ) );
+			return sprintf( __( 'Stopped at condition %s', 'pegwork' ), $step );
+		}
+		$step = (string) ( $run['current_step'] ?? '' );
+		if ( 'waiting' === ( $run['status'] ?? null ) && null !== $definition && true === ( $run['context']['until'][ $step ]['empty'] ?? null ) ) {
+			/* translators: %s: field label. */
+			return sprintf( __( 'Waiting for %s', 'pegwork' ), (string) Waits::field_label( $definition, $step ) );
 		}
 		if ( is_string( $outcome ) && str_starts_with( $outcome, Executor::ERRORS_OUTCOME ) ) {
 			/* translators: %s: comma-separated step IDs. */
@@ -379,6 +392,34 @@ final class Format {
 		}
 		/* translators: %s: comma-separated records. */
 		return '<p class="pegwork-meta pegwork-read-records">' . esc_html( sprintf( __( 'Read: %s', 'pegwork' ), implode( ', ', $names ) ) ) . '</p>';
+	}
+
+	/**
+	 * The plain-text label of a date wait attempt, or '' for other steps: "Checked the date again" on every
+	 * attempt after the first, then what it decided.
+	 *
+	 * @param array<string, mixed> $summary Decoded summary.
+	 * @param int                  $attempt Attempt number.
+	 */
+	public static function wait_label( array $summary, int $attempt ): string {
+		if ( ! isset( $summary['until'] ) ) {
+			return '';
+		}
+		$parts = $attempt > 1 ? array( __( 'Checked the date again', 'pegwork' ) ) : array();
+		if ( ! empty( $summary['no_record'] ) ) {
+			$parts[] = __( 'the record is gone or in the trash, so the run stops', 'pegwork' );
+		} elseif ( ! empty( $summary['no_date'] ) ) {
+			$parts[] = __( 'still no date after 2 years, so the run stops', 'pegwork' );
+		} elseif ( ! empty( $summary['waiting_for_date'] ) ) {
+			$parts[] = __( 'the date is empty, so it waits for a date', 'pegwork' );
+		} elseif ( ! empty( $summary['due'] ) ) {
+			$parts[] = __( 'the time has come, so the run continues', 'pegwork' );
+		} elseif ( isset( $summary['resume_at'] ) ) {
+			/* translators: %s: date and time. */
+			$parts[] = sprintf( __( 'waits until %s', 'pegwork' ), (string) wp_date( get_option( 'date_format', 'Y-m-d' ) . ' ' . get_option( 'time_format', 'H:i' ), (int) strtotime( (string) $summary['resume_at'] . ' UTC' ) ) );
+		}
+		$text = implode( ': ', $parts );
+		return '' === $text ? '' : ucfirst( $text );
 	}
 
 	/**

@@ -14,9 +14,10 @@ require_once dirname( __DIR__, 2 ) . '/Support/AutomationTestCase.php';
 
 /**
  * Automation v4 PR 2 (registry, docs/automation-v4-design.md section 11): the `v4` fixture loads, and a run of
- * an automation with a v4 shape (a wait until a date) fails `unsupported_step` before its first step, so
- * nothing half-runs until the engine PRs land. Since v4 PR 5, start_automation runs: the new gift's
- * barn_gift_receipt_start starts barn_gift_receipt at depth 1.
+ * an automation with a v4 shape the engine cannot run yet fails `unsupported_step` before its first step, so
+ * nothing half-runs until the engine PRs land. Since v4 PR 3 a wait until a date runs (the reminder waits),
+ * and since v4 PR 5 start_automation runs: the new gift's barn_gift_receipt_start starts barn_gift_receipt
+ * at depth 1.
  */
 class AutomationV4GuardTest extends AutomationTestCase {
 
@@ -65,10 +66,10 @@ class AutomationV4GuardTest extends AutomationTestCase {
 		$this->assertIsInt( $gift );
 		$this->drain();
 
+		// Since v4 PR 3 the date wait runs: the reminder waits at its first step.
 		$run = $this->only_run( 'barn_task_due_reminder' );
-		$this->assertSame( 'failed', $run['status'] );
-		$this->assertStringStartsWith( 'unsupported_step: step "', $run['error'] );
-		$this->assertSame( array(), $this->steps( $run['id'] ), 'barn_task_due_reminder ran no step.' );
+		$this->assertSame( 'waiting', $run['status'] );
+		$this->assertSame( 'before_due', $run['current_step'] );
 
 		// The gift has no donor, so the receipt stops at has_donor; the caller stops at its `skipped` condition.
 		$caller = $this->only_run( 'barn_gift_receipt_start' );

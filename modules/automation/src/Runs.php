@@ -343,6 +343,47 @@ final class Runs {
 	}
 
 	/**
+	 * Waiting runs bound to a record (one query on the `record_id` index): `id`, `automation`, `current_step`.
+	 *
+	 * @param int $record_id Record ID.
+	 * @return array<int, array{id: int, automation: string, current_step: string}>
+	 */
+	public function waiting_on( int $record_id ): array {
+		global $wpdb;
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, automation, current_step FROM %i WHERE record_id = %d AND status = 'waiting'", $this->runs, $record_id ), ARRAY_A );
+		return array_map(
+			fn( $row ) => array(
+				'id'           => (int) $row['id'],
+				'automation'   => (string) $row['automation'],
+				'current_step' => (string) $row['current_step'],
+			),
+			$rows
+		);
+	}
+
+	/**
+	 * Moves a waiting run's `resume_at` to now, only while it still waits at a step. Atomic, so a run that
+	 * woke or moved on meanwhile is left alone.
+	 *
+	 * @param int    $id   Run ID.
+	 * @param string $step Step the run must still wait at.
+	 * @return bool Whether the run was moved.
+	 */
+	public function nudge( int $id, string $step ): bool {
+		global $wpdb;
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE %i SET resume_at = %s WHERE id = %d AND status = 'waiting' AND current_step = %s",
+				$this->runs,
+				$this->stamp(),
+				$id,
+				$step
+			)
+		);
+		return 1 === (int) $wpdb->rows_affected;
+	}
+
+	/**
 	 * Runs, newest first.
 	 *
 	 * @param string|null $automation Automation key filter.
