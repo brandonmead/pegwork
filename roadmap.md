@@ -33,6 +33,7 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 2. Registry: v4 shapes: done, in review (branch `v4-registry`). Runs using v4 shapes fail `unsupported_step` before their first step until PRs 3 to 6. Left for Editor PR 9: refuse trashing an automation post whose definition is in use (the definition already stays); round-trip the `v4` package in `reads.test.js`.
 4. Engine: trash: done, in review (branch `v4-trash`). `trash_record` runs; `update_record` and `relate` on a trashed record fail in the engine (core unchanged). Open: no engine PR in section 11 lifts the read `created` guard in `Engine::unsupported()` (`Steps\Reads` does not pass `created` to core yet), so `barn_volunteer_retention` still fails `unsupported_step`; it needs an owner before PR 10. Left for Editor PR 9: round-trip `tests/fixtures/valid/engine-trash` in `reads.test.js`.
 5. Engine: start another automation: done, in review (branch `v4-start`). Left for Editor PR 9: move `tests/e2e/start-package` into `tests/e2e/packages` once the builder round-trips `start_automation`. Left for PR 10: the `receipt` step in `barn_gift_thanks` and its gate timeline.
+6. Engine: role recipients: done, in review (branch `v4-role-email`). Left for Editor PR 8: read `registry_config().roles` for "Add a role" and the card text.
 
 ## Phase 1 PRs
 1. Scaffold (merged)
