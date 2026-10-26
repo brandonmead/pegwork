@@ -11,6 +11,7 @@ namespace PegworkFilters;
 
 use WP_Block;
 use WP_Block_Patterns_Registry;
+use WP_Block_Template;
 use WP_Post;
 use WP_Query;
 
@@ -19,7 +20,8 @@ use WP_Query;
  *
  * - On the archive of the type (`/projects/`), the main query's `found_posts`.
  * - Otherwise the bound Query Loop: the first core/query with `pegwork.filters` for the type in the
- *   page content or the current block template (patterns referenced there included). Blocks render in
+ *   page content or the current block template (patterns, synced patterns and template parts referenced
+ *   there included, to a depth limit). Blocks render in
  *   order, so the filters block usually renders before the loop; it builds the loop's query the way core's
  *   post template does (build_query_vars_from_query_block(), with context `query`, `queryId` and
  *   `pegwork/listing`, so the listings pipeline applies). Core caches identical WP_Query runs, so the
@@ -144,6 +146,34 @@ final class Count {
 	}
 
 	/**
+	 * The block markup a reference block stands for: a registered pattern (`core/pattern`), a synced
+	 * pattern (`core/block`, a published `wp_block`) or a template part (`core/template-part`).
+	 *
+	 * @param string               $name  Block name.
+	 * @param array<string, mixed> $attrs Block attributes.
+	 * @return string Markup, or '' when the block is no reference or its target is missing.
+	 */
+	private static function referenced_content( string $name, array $attrs ): string {
+		if ( 'core/pattern' === $name && isset( $attrs['slug'] ) && is_string( $attrs['slug'] ) ) {
+			$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( $attrs['slug'] );
+			return is_array( $pattern ) && isset( $pattern['content'] ) && is_string( $pattern['content'] ) ? $pattern['content'] : '';
+		}
+
+		if ( 'core/block' === $name && isset( $attrs['ref'] ) && is_numeric( $attrs['ref'] ) ) {
+			$post = get_post( (int) $attrs['ref'] );
+			return $post instanceof WP_Post && 'wp_block' === $post->post_type && 'publish' === $post->post_status && '' === $post->post_password ? $post->post_content : '';
+		}
+
+		if ( 'core/template-part' === $name && isset( $attrs['slug'] ) && is_string( $attrs['slug'] ) && function_exists( 'get_block_template' ) ) {
+			$theme    = isset( $attrs['theme'] ) && is_string( $attrs['theme'] ) && '' !== $attrs['theme'] ? $attrs['theme'] : get_stylesheet();
+			$template = get_block_template( $theme . '//' . $attrs['slug'], 'wp_template_part' );
+			return $template instanceof WP_Block_Template && is_string( $template->content ) ? $template->content : '';
+		}
+
+		return '';
+	}
+
+	/**
 	 * Depth-first search of parsed blocks for a filterable loop of the type.
 	 *
 	 * @param array<int, array<string, mixed>> $blocks Parsed blocks.
@@ -163,10 +193,10 @@ final class Count {
 				}
 			}
 
-			if ( 'core/pattern' === $name && $depth < self::MAX_DEPTH && isset( $attrs['slug'] ) && is_string( $attrs['slug'] ) ) {
-				$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( $attrs['slug'] );
-				if ( is_array( $pattern ) && isset( $pattern['content'] ) && is_string( $pattern['content'] ) ) {
-					$found = self::find( parse_blocks( $pattern['content'] ), $type, $depth + 1 );
+			if ( $depth < self::MAX_DEPTH ) {
+				$referenced = self::referenced_content( (string) $name, $attrs );
+				if ( '' !== $referenced && str_contains( $referenced, '<!-- wp:' ) ) {
+					$found = self::find( parse_blocks( $referenced ), $type, $depth + 1 );
 					if ( null !== $found ) {
 						return $found;
 					}

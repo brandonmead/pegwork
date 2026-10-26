@@ -495,6 +495,17 @@ function enhance( form ) {
 		target.focus( { preventScroll: true } );
 	} );
 
+	// Turnstile: the widget writes its token to a hidden field. Until it has, sending would store the entry
+	// as spam, so the form waits and says so in a polite live region (without JavaScript the server decides).
+	const captcha = form.querySelector( '.pegwork-form__captcha' );
+	let captchaStatus = null;
+	if ( captcha ) {
+		captchaStatus = doc.createElement( 'p' );
+		captchaStatus.className = 'pegwork-form__captcha-status';
+		captchaStatus.setAttribute( 'role', 'status' );
+		captcha.after( captchaStatus );
+	}
+
 	// Submit: Enter on an earlier step means Next; on the last step check everything, then "Sending".
 	let submitting = false;
 	let submitLabel = '';
@@ -513,6 +524,20 @@ function enhance( form ) {
 			event.preventDefault();
 			renderSummary( true );
 			return;
+		}
+		if ( captchaStatus ) {
+			const token = form.querySelector(
+				'input[name="pegwork_form[captcha]"]'
+			);
+			captchaStatus.textContent = '';
+			if ( ! token || ! token.value ) {
+				event.preventDefault();
+				captchaStatus.textContent = __(
+					'The spam check is still running. Wait a moment, then send the form again.',
+					'pegwork'
+				);
+				return;
+			}
 		}
 		if ( submit ) {
 			submitting = true;

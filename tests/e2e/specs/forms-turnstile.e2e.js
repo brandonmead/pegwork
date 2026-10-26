@@ -226,7 +226,7 @@ test( 'test secret fails: stored as spam, the form asks to send again', async ( 
 	expect( await adminCall( 'GET', '/pegwork-e2e/v1/mail' ) ).toEqual( [] );
 } );
 
-test( 'the always-blocking site key gives no token: refused as spam', async ( {
+test( 'the always-blocking site key gives no token: the form waits, nothing is stored', async ( {
 	page,
 } ) => {
 	await mode( 'block' );
@@ -234,12 +234,12 @@ test( 'the always-blocking site key gives no token: refused as spam', async ( {
 	await fill( page );
 	// Give the widget time to run and fail; it never writes a token.
 	await page.waitForTimeout( 4000 );
-	await send( page );
-	await expect(
-		page.locator( '.pegwork-form__notice--problem[role="alert"]' )
-	).toContainText( 'The spam check did not pass.' );
-	const [ entry ] = await entries();
-	expect( entry.meta.spam ).toEqual( [ 'captcha_failed' ] );
+	await page.getByRole( 'button', { name: 'Send message' } ).click();
+	await expect( page.locator( '.pegwork-form__captcha-status' ) ).toHaveText(
+		'The spam check is still running. Wait a moment, then send the form again.'
+	);
+	await expect( page ).not.toHaveURL( /pegwork_sent|pegwork_held/ );
+	expect( await entries() ).toEqual( [] );
 } );
 
 test( 'siteverify unreachable: held as spam for review, the visitor is told', async ( {

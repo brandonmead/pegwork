@@ -28,6 +28,10 @@ tests/e2e/specs/                      *.e2e.js (not *.spec.js, which Vitest woul
 
 `npm run test:e2e` logs in once (global setup, cookies in `test-results/.auth/`) and runs every spec. Run one file with `npm run test:e2e -- tests/e2e/specs/no-js.e2e.js`. First time on a machine: `npx playwright install chromium`.
 
+## Screenshots
+
+The display and filters specs (`display-a11y`, `filters`, `filters-collapse`) write their screenshots to `test-results/screenshots/` (ignored by git), so a test run leaves the tracked PNGs in `docs/screenshots/` unchanged. To refresh the documented ones on purpose, set `PEGWORK_E2E_REFRESH_SCREENSHOTS=1` for the run and review the diff; the directory comes from `screenshotDir()` in `tests/e2e/utils/screenshots.js`. Other specs still write to `docs/screenshots/` or `test-results/` as noted in each file.
+
 ## CI
 
 The `E2E` job in `.github/workflows/ci.yml` runs as two parallel shards, `E2E (1/2)` and `E2E (2/2)` (`--shard=N/2`, whole spec files, 15 minute timeout each). Each shard builds the assets, starts its own wp-env (`npx wp-env start`, WordPress latest, PHP 8.2), and runs its share of the specs. Specs must stay independent of each other and of file order: each one creates and resets its own state in `beforeAll`/`afterAll`. On failure each shard uploads `playwright-report/` and `test-results/` (traces, screenshots) as the `playwright-report-shard-1` or `playwright-report-shard-2` artifact. View a trace with `npx playwright show-trace <trace.zip>`.

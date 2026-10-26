@@ -151,6 +151,36 @@ final class Notifications {
 	}
 
 	/**
+	 * Tells the site admin that a confirmation email could not be sent, so the submission waits in the
+	 * entries (status `failed`) for a person to follow up with the submitter.
+	 *
+	 * @param array<string, mixed> $form     Canonical form.
+	 * @param int                  $entry_id Entry ID.
+	 * @return string `sent` or `failed`.
+	 */
+	public static function confirm_failure( array $form, int $entry_id ): string {
+		$lines = array(
+			/* translators: %s: form label. */
+			sprintf( __( 'A submission to "%s" was stored, but its confirmation email could not be sent, so the visitor cannot confirm it.', 'pegwork' ), (string) $form['label'] ),
+			'',
+			__( 'Check that the site can send email, then contact the visitor.', 'pegwork' ),
+			'',
+			/* translators: %s: URL of the entry in the admin. */
+			sprintf( __( 'Entry: %s', 'pegwork' ), self::render( '{entry:admin_url}', $form, array( 'entry_id' => $entry_id ) ) ),
+		);
+
+		$subject = sprintf(
+			/* translators: 1: site name, 2: form label. */
+			__( '[%1$s] Confirmation email failed: %2$s', 'pegwork' ),
+			wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES ),
+			(string) $form['label']
+		);
+		$to = (string) get_option( 'admin_email' );
+
+		return is_email( $to ) && self::mail( $to, self::single_line( $subject ), implode( "\n", $lines ) ) ? 'sent' : 'failed';
+	}
+
+	/**
 	 * Resolves a `to` or `reply_to` value to one valid address, or ''.
 	 *
 	 * `{option:page.field}` reads the options page value through pegwork_get_option() when that exists;
@@ -263,7 +293,18 @@ final class Notifications {
 				}
 			}
 		}
-		return (string) $value;
+		return self::plain( (string) $value );
+	}
+
+	/**
+	 * Stored text as plain text. The text sanitizer keeps `<`, `>` and `&` as entities (every HTML output
+	 * escapes without doubling them), but mail, subjects and CSV are plain text, where `&lt;` would show
+	 * literally.
+	 *
+	 * @param string $text Stored text.
+	 */
+	public static function plain( string $text ): string {
+		return wp_specialchars_decode( $text, ENT_QUOTES );
 	}
 
 	/**

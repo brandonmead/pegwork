@@ -85,7 +85,8 @@ final class Entries {
 	}
 
 	/**
-	 * Whether a non-spam entry with this fingerprint was stored at or after a time.
+	 * Whether a non-spam entry with this fingerprint was stored at or after a time. An entry whose
+	 * confirmation email failed does not count: the visitor was told so and may send the same values again.
 	 *
 	 * @param string $fingerprint Fingerprint.
 	 * @param int    $since       Unix time.
@@ -95,7 +96,7 @@ final class Entries {
 
 		$table = Schema::table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
-		$found = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE fingerprint = %s AND status <> 'spam' AND created_at >= %s LIMIT 1", $table, $fingerprint, gmdate( 'Y-m-d H:i:s', $since ) ) );
+		$found = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE fingerprint = %s AND status <> 'spam' AND created_at >= %s AND meta NOT LIKE %s LIMIT 1", $table, $fingerprint, gmdate( 'Y-m-d H:i:s', $since ), '%' . $wpdb->esc_like( '"confirm_mail":"failed"' ) . '%' ) );
 
 		return null !== $found;
 	}
