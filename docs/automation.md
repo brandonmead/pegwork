@@ -620,7 +620,7 @@ Design: `docs/phase-6-design.md` section 6, "Surface". The registry stays the so
 
 ## Editor
 
-Design: `docs/phase-6-design.md` section 6 and `docs/automation-v3-design.md` section 6. Script `assets/src/automation-builder/`, config from `Editor\BuilderEditor::config()` (`window.pegworkAutomationBuilder`): the post's locked key, read-only state and package, the Duplicate and list URLs, the webhook URL, the site override, the number of open runs, REST bases by content type, and `registry_config()` (content types with fields, options, privacy and taxonomies; forms with target, confirm and fields; options pages; `roles`, the `{ slug, name }` of each role a `{role:<slug>}` recipient may name, never members; the builder reads it from Editor PR 8 of Automation v4).
+Design: `docs/phase-6-design.md` section 6 and `docs/automation-v3-design.md` section 6. Script `assets/src/automation-builder/`, config from `Editor\BuilderEditor::config()` (`window.pegworkAutomationBuilder`): the post's locked key, read-only state and package, the Duplicate and list URLs, the webhook URL, the site override, the number of open runs, REST bases by content type, and `registry_config()` (content types with fields, options, privacy and taxonomies; forms with target, confirm and fields; options pages; `roles`, the `{ slug, name }` of each role a `{role:<slug>}` recipient may name, never members; "Add a role" lists them).
 
 - Steps: the inserter offers Send email, Update record, Create record, Call webhook, Wait (one day to start) and "Continue only if" as variations of `pegwork/automation-step`, and decisions as "If / Otherwise" (one branch and Otherwise) and "Choose a path" (two branches and Otherwise). List View labels read "Email email_2", "Decision route", "Branch Named site". The otherwise branch is locked last (`lock: { move, remove }`, set by `Builder::generate()` and by the editor); the decision toolbar has Add otherwise and Remove otherwise.
 - Canvas cards: icon, type, id and a one-line summary ("Email to desk@example.org: Done"). Branch headings read "If <condition in words>" or "Otherwise", with the editable branch name beside them. Nesting is an indent, a left rule (dashed for Otherwise) and the heading text, never colour alone; "Then continue below" closes each decision. Appenders are named "Add step to <branch>" and "Add branch to <decision>".
@@ -632,7 +632,7 @@ Design: `docs/phase-6-design.md` section 6 and `docs/automation-v3-design.md` se
 - Errors: a refused save shows each message at its step card and its control (`aria-invalid`, `aria-describedby`), settings messages in their panel, and a notice with "Go to first error" (settings first, then blocks in document order). Open runs: a warning while there are unsaved changes, and in the Automation panel.
 - Preview (Send email steps, after "Show preview") and Test run call the routes under [Preview and test run](#preview-and-test-run), with one sample record or payload for the whole editor. The Test run result heading takes focus.
 - File automations: every control disabled, no appenders or inserter, the title read-only, "Duplicate as site automation" in the notice and the Automation panel.
-- Size: at most 26.5 KB gzipped (27,136 bytes, `npm run check:size`; the budget was 25 KB before loops and was raised by the minimum they needed); every dependency is a WordPress script.
+- Size: at most 28,475 bytes gzipped (`npm run check:size`; the budget was 25 KB before loops and 27,136 before Automation v4 Editor A, each time raised by the minimum measured; Automation v4 caps it at 30,720); every dependency is a WordPress script.
 
 Reads, relate, `on_error` and the manual trigger:
 
@@ -655,6 +655,24 @@ Loops and lists:
 - "Insert list of records" beside "Insert merge tag" on email bodies: choose a list ("Tasks from due") and it inserts `{{#each steps.due.records}}- {{item.name}}\n{{/each}}` (the first field; HTML bodies get `<ul>` and `<li>`).
 - Test run: loop body lines sit under item headings `Item 1 of 2: Task 20 "Call Ada"`; a skipped item or "and N more" closes its group.
 - Run detail (Admin): step ids in the Step column no longer break mid-word at 782 px (core's `word-break: break-word` is reset for row-header codes).
+
+Wait until a date and role recipients (Automation v4 Editor A):
+
+- Wait inspector (`wait-edit.js`): a "Wait" fieldset of two radios, "For a length of time" (`for`, the duration control) and "Until a date" (`until`). Until a date offers "Date field" (the bound type's date fields, `dateFields()` in `scope.js`; private ones read "Due on (private)"), "Before or after" (Before, On the day, After) with "How long" (amount and unit; Before writes `-P3D`, After `P3D`, a `+` already written stays, On the day writes no offset) and "At" (a time input, default 09:00, written as `at`). Choosing it starts `{ var: <first date field>, at: "09:00" }` and drops `for`; going back writes `for: P1D`. `until` keeps the order `var`, `offset`, `at`. When the trigger binds no record of a type with a date field, "Until a date" is disabled and described by the reason "Needs a trigger with a record of one content type that has a date field."
+- Wait card: "Wait until 3 days before Due on at 09:00" (the same words as `WaitUntil::describe()`), then "Checks the date again when it wakes. Waits for a date if it is empty."
+- "Add a role" beside "Insert merge tag" on a Send email step's To only (`takesRoles()`): a Role select of the config's eligible roles by name and "Add role", which appends `{role:<slug>}` as the last part and returns focus to To. Its accessible name is "Add a role to To". The card names roles: "Email to everyone with role Editor, {option:barn_settings.volunteer_manager}: ...".
+- Test run: the date wait line ("Wait before_due: until 3 days before Due on (November 24, 2026) at 09:00, that is November 21, 2026 9:00 am. When it wakes it checks the date again. ...") and the role line ("to role editor (1 person), m***@example.org") come from `DryRun`; member addresses never reach the editor.
+- Scope fixture: `dates` (the date fields offered at a wait; a wait until each validates, refused paths do not) and `roles` (exactly the templates offering "Add a role" accept a `{role:editor}` part), read by `scope.test.js` and `AutomationBuilderScopeTest`.
+
+![Wait until a date](screenshots/automation-wait-until-1280.png)
+
+![Until a date disabled on a schedule trigger](screenshots/automation-wait-until-disabled-1280.png)
+
+![Test run of a date wait](screenshots/automation-wait-until-test-run-1280.png)
+
+![Add a role](screenshots/automation-add-role-1280.png)
+
+![Test run with a role recipient](screenshots/automation-role-test-run-1280.png)
 
 ![Repeat for each with its body](screenshots/automation-loop-1280.png)
 

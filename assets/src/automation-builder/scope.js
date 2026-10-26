@@ -204,6 +204,52 @@ export function typeFields( config, type, prefix ) {
 }
 
 /**
+ * The date fields a wait can wait until (AutomationRules `wait_field`): `record.<key>` of the bound
+ * record's type, private ones included. Empty when the trigger binds no record of one known type.
+ *
+ * @param {Object} definition Edited definition.
+ * @param {Object} config     Parsed config.
+ * @return {Array<Object>} Fields (typeFields() shape).
+ */
+export function dateFields( definition, config ) {
+	const { binds, type } = binding( definition.trigger, config );
+	return binds && type
+		? typeFields( config, type, 'record.' ).filter(
+				( field ) => field.type === 'date'
+			)
+		: [];
+}
+
+/**
+ * Whether a template takes `{role:<slug>}` parts: only a send_email step's `to` (AutomationRules
+ * `role_recipient` refuses them everywhere else).
+ *
+ * @param {Object} definition Edited definition.
+ * @param {string} pointer    Pointer of the template.
+ * @return {boolean} Whether "Add a role" is offered there.
+ */
+export function takesRoles( definition, pointer ) {
+	const parts = String( pointer ).split( '/' ).slice( 1 );
+	let step = definition;
+	for ( const part of parts.slice( 0, -1 ) ) {
+		step = step?.[ part ];
+	}
+	return parts.at( -1 ) === 'to' && step?.type === 'send_email';
+}
+
+/**
+ * A recipient list with a role added as its last part.
+ *
+ * @param {string} to   Recipients.
+ * @param {string} slug Role slug.
+ * @return {string} Recipients.
+ */
+export function withRole( to, slug ) {
+	const rest = String( to ?? '' ).replace( /[\s,;]+$/, '' );
+	return `${ rest }${ rest ? ', ' : '' }{role:${ slug }}`;
+}
+
+/**
  * What a create_record or update_record step can write on a content type: its fields and taxonomies,
  * then the relationships whose "from" end it is (the value is the linked record's ID).
  *

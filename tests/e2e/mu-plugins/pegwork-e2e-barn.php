@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E BarnCRM
- * Description: Test-only helpers for the BarnCRM browser tests: registers tests/e2e/packages/barn (types, relationships, form and options page, no automations), and exposes admin-only REST routes to create a sample gift (with a linked donor) or task, to update a task, to save an Automation v4 fixture automation as an enabled site automation, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample records). Not shipped.
+ * Description: Test-only helpers for the BarnCRM browser tests: registers tests/e2e/packages/barn (types, relationships, form and options page, no automations), and exposes admin-only REST routes to create a sample gift (with a linked donor), task or volunteer and an editor user, to update a task, to save an Automation v4 fixture automation as an enabled site automation, to compare a saved site automation with its fixture in canonical form, and to reset (the BarnCRM site automations, their runs and the sample records). Not shipped.
  *
  * @package Pegwork
  */
@@ -34,7 +34,7 @@ function pegwork_e2e_barn_keys() {
  * @return string[]
  */
 function pegwork_e2e_barn_v4_keys() {
-	return array( 'barn_task_due_reminder' );
+	return array( 'barn_task_due_reminder', 'barn_volunteer_review' );
 }
 
 /**
@@ -64,6 +64,52 @@ add_action(
 				'callback'            => static function ( WP_REST_Request $request ) {
 					$values = array_intersect_key( (array) $request->get_json_params(), array_flip( array( 'name', 'due_on', 'assignee_email', 'done' ) ) );
 					$id     = \Pegwork\Api\Records::create( 'barn_task', $values, 'publish' );
+					return is_wp_error( $id ) ? $id : rest_ensure_response( array( 'id' => $id ) );
+				},
+			)
+		);
+
+		// Creates a published sample volunteer (body: name, email, interest); returns its ID and title.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/barn/volunteer',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$values = array_intersect_key( (array) $request->get_json_params(), array_flip( array( 'name', 'email', 'interest' ) ) );
+					$id     = \Pegwork\Api\Records::create( 'barn_volunteer', $values, 'publish' );
+					return is_wp_error( $id ) ? $id : rest_ensure_response(
+						array(
+							'id'    => $id,
+							'title' => get_the_title( $id ),
+						)
+					);
+				},
+			)
+		);
+
+		// For the role recipient tests: makes sure the editor user e2e_barn_editor exists and sets the volunteer
+		// manager address (barn_settings); returns the user's ID.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/barn/editor',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function () {
+					$user = get_user_by( 'login', 'e2e_barn_editor' );
+					$id   = $user ? $user->ID : wp_insert_user(
+						array(
+							'user_login' => 'e2e_barn_editor',
+							'user_email' => 'e2e-editor@example.org',
+							'user_pass'  => wp_generate_password(),
+							'role'       => 'editor',
+						)
+					);
+					$settings                      = (array) get_option( 'barn_settings', array() );
+					$settings['volunteer_manager'] = 'manager@example.org';
+					update_option( 'barn_settings', $settings );
 					return is_wp_error( $id ) ? $id : rest_ensure_response( array( 'id' => $id ) );
 				},
 			)
@@ -165,11 +211,12 @@ add_action(
 				'args'                => array( 'key' => array( 'required' => true ) ),
 				'callback'            => static function ( WP_REST_Request $request ) {
 					$key = sanitize_key( (string) $request->get_param( 'key' ) );
-					if ( ! in_array( $key, pegwork_e2e_barn_keys(), true ) || ! defined( 'PEGWORK_DIR' ) ) {
+					$v4  = in_array( $key, pegwork_e2e_barn_v4_keys(), true );
+					if ( ( ! $v4 && ! in_array( $key, pegwork_e2e_barn_keys(), true ) ) || ! defined( 'PEGWORK_DIR' ) ) {
 						return new WP_Error( 'pegwork_e2e_barn_key', 'Unknown BarnCRM automation.', array( 'status' => 404 ) );
 					}
 					$saved = pegwork_registry()->automation( $key );
-					$file  = PEGWORK_DIR . 'tests/fixtures/valid/barn/automations/' . $key . '.json';
+					$file  = PEGWORK_DIR . 'tests/fixtures/valid/' . ( $v4 ? 'v4' : 'barn' ) . '/automations/' . $key . '.json';
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
 					$fixture = json_decode( (string) file_get_contents( $file ), true );
 					return rest_ensure_response(
@@ -222,7 +269,7 @@ add_action(
 					}
 					$gifts = get_posts(
 						array(
-							'post_type'      => array( 'barn_gift', 'barn_task', 'barn_contact' ),
+							'post_type'      => array( 'barn_gift', 'barn_task', 'barn_contact', 'barn_volunteer' ),
 							'post_status'    => 'any',
 							'posts_per_page' => -1,
 							'fields'         => 'ids',
@@ -230,6 +277,16 @@ add_action(
 					);
 					foreach ( $gifts as $post_id ) {
 						wp_delete_post( (int) $post_id, true );
+					}
+					$editor = get_user_by( 'login', 'e2e_barn_editor' );
+					if ( $editor ) {
+						require_once ABSPATH . 'wp-admin/includes/user.php';
+						wp_delete_user( $editor->ID );
+					}
+					$settings = get_option( 'barn_settings' );
+					if ( is_array( $settings ) && isset( $settings['volunteer_manager'] ) ) {
+						unset( $settings['volunteer_manager'] );
+						update_option( 'barn_settings', $settings );
 					}
 					return rest_ensure_response( true );
 				},

@@ -24,6 +24,7 @@
 		"fields": { "type": "array" },
 		"timeout": { "type": "number" },
 		"for": { "type": "string" },
+		"until": { "type": "object" },
 		"when": { "type": "object" },
 		"retry": { "type": "object" },
 		"related": { "type": "object" },

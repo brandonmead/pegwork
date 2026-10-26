@@ -85,7 +85,8 @@ function walk( steps ) {
 }
 
 // The Automation v4 shapes package and the trash engine package: the builder learns their shapes in
-// v4 Editor PRs 8 and 9 (docs/automation-v4-design.md section 11), which round-trip them here.
+// v4 Editor PRs 8 and 9 (docs/automation-v4-design.md section 11). PR 8's are round-tripped below
+// (editorAFixtures); PR 9 adds the rest.
 const v3Automations = () =>
 	automations().filter(
 		( [ path ] ) =>
@@ -99,6 +100,20 @@ const readFixtures = v3Automations().filter(
 		definition.trigger?.type === 'manual' ||
 		walk( definition.steps ).some(
 			( step ) => READS.includes( step.type ) || 'on_error' in step
+		)
+);
+
+// Automation v4 Editor PR 8: the v4 definitions that use only waits until a date and role recipients
+// besides v3 shapes (trash, start and created reads arrive with Editor PR 9).
+const LATER = [ 'trash_record', 'start_automation' ];
+const editorAFixtures = automations().filter(
+	( [ path, definition ] ) =>
+		/^tests\/fixtures\/valid\/(v4|engine-trash)\//.test( path ) &&
+		walk( definition.steps ).every(
+			( step ) => ! LATER.includes( step.type ) && ! ( 'created' in step )
+		) &&
+		walk( definition.steps ).some(
+			( step ) => step.until || step.to?.includes( '{role:' )
 		)
 );
 
@@ -224,6 +239,45 @@ describe( 'read fixtures round trip', () => {
 			expect(
 				canonical( compileBlocks( blocks( definition.steps ) ) )
 			).toBe( canonical( definition.steps ) );
+		}
+	);
+
+	it( 'finds the wait until and role fixtures', () => {
+		expect( editorAFixtures.map( ( [ path ] ) => path ) ).toEqual(
+			expect.arrayContaining( [
+				'tests/fixtures/valid/v4/automations/barn_task_due_reminder.json',
+				'tests/fixtures/valid/v4/automations/barn_volunteer_review.json',
+				'tests/fixtures/valid/v4/automations/barn_weekly_note.json',
+			] )
+		);
+	} );
+
+	it.each( editorAFixtures )(
+		'%s: the blocks compile back to the same steps, byte for byte',
+		( name, definition ) => {
+			expect(
+				canonical( compileBlocks( blocks( definition.steps ) ) )
+			).toBe( canonical( definition.steps ) );
+			const own = walk( definition.steps ).filter(
+				( step ) => step.until || step.to?.includes( '{role:' )
+			);
+			// Each such step's properties are block attributes, `until` with its keys in order.
+			expect(
+				own.map( ( step ) => JSON.stringify( parsed( step ) ) )
+			).toEqual(
+				own.map( ( step ) =>
+					JSON.stringify(
+						Object.fromEntries(
+							Object.keys( stepMetadata.attributes )
+								.filter( ( key ) => key in step )
+								.map( ( key ) => [ key, step[ key ] ] )
+						)
+					)
+				)
+			);
+			expect(
+				own.map( ( step ) => Object.keys( parsed( step ) ).sort() )
+			).toEqual( own.map( ( step ) => Object.keys( step ).sort() ) );
 		}
 	);
 
