@@ -118,14 +118,24 @@ archive="$(wp eval 'echo wp_parse_url( (string) get_post_type_archive_link( "sif
 [[ -n "$archive" ]] || { echo "sifg_project has no archive (Listings module off or package missing)." >&2; exit 1; }
 
 page_id="$(wp post list --post_type=page --name=perf-directory --post_status=publish --field=ID | head -n1)"
-if [[ -z "$page_id" ]]; then
-	wp eval 'echo PegworkListings\Patterns::directory( "sifg_project" );' >"$dir/.perf-directory-pattern.html"
-	page_id="$(wp post create "$dir/.perf-directory-pattern.html" --post_type=page --post_status=publish --post_title='Perf directory' --post_name=perf-directory --porcelain)"
+# The registered pattern, not Patterns::directory(): the Filters module adds the filters block to the
+# registered one, and the page scenarios must run its count and controls too.
+wp eval 'echo (string) ( WP_Block_Patterns_Registry::get_instance()->get_registered( "pegwork/sifg_project-directory" )["content"] ?? "" );' >"$dir/.perf-directory-pattern.html"
+grep -q 'wp:pegwork/filters' "$dir/.perf-directory-pattern.html" || {
 	rm -f "$dir/.perf-directory-pattern.html"
+	echo "The registered Projects directory pattern has no filters block (Filters module off?)." >&2
+	exit 1
+}
+if [[ -z "$page_id" ]]; then
+	page_id="$(wp post create "$dir/.perf-directory-pattern.html" --post_type=page --post_status=publish --post_title='Perf directory' --post_name=perf-directory --porcelain)"
+elif [[ "$(wp post get "$page_id" --field=post_content)" != *'wp:pegwork/filters'* ]]; then
+	wp post update "$page_id" "$dir/.perf-directory-pattern.html" >/dev/null
 fi
+rm -f "$dir/.perf-directory-pattern.html"
 page="$(wp eval "echo wp_parse_url( get_permalink( $page_id ), PHP_URL_PATH );" 2>/dev/null || true)"
 [[ -n "$page" ]] || page="/perf-directory/"
-qid="$(wp eval '$b = parse_blocks( PegworkListings\Patterns::directory( "sifg_project" ) ); echo $b[0]["attrs"]["queryId"];')"
+qid="$(wp eval "preg_match( '/wp:query \{\"queryId\":(\d+)/', get_post( $page_id )->post_content, \$m ); echo \$m[1] ?? '';")"
+[[ -n "$qid" ]] || { echo "No Query Loop found in the Perf directory page." >&2; exit 1; }
 
 # The design scenario narrows to a few results; page 2 needs a wider filter or it would 404.
 filt='project_type=nonprofit&impact=sdg-04,sdg-13&volunteers=1&q=data'

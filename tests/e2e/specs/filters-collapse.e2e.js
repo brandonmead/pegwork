@@ -2,6 +2,7 @@ const { test, expect } = require( '@playwright/test' );
 const { authFile } = require( '../utils/env' );
 const { expectNoSeriousA11yViolations } = require( '../utils/a11y' );
 const { baseURL, patternContent } = require( '../utils/listings' );
+const { screenshotDir } = require( '../utils/screenshots' );
 const { TOKEN, setUpDirectory, withParams } = require( '../utils/filters' );
 
 // "Collapse on small screens" (docs/display.md "Filters"): the whole filter form in a native details,
@@ -9,7 +10,7 @@ const { TOKEN, setUpDirectory, withParams } = require( '../utils/filters' );
 test.use( { storageState: { cookies: [], origins: [] } } );
 test.describe.configure( { mode: 'serial' } );
 
-const SCREENSHOTS = 'docs/screenshots';
+const SCREENSHOTS = screenshotDir();
 const PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 900 };
 
@@ -66,7 +67,7 @@ test( 'off by default: no disclosure at 390 px', async ( { page } ) => {
 	} );
 } );
 
-test( 'closed at 390 px, open when a filter is active, count in the summary', async ( {
+test( 'closed at 390 px, also when a filter is active ("Filters, N active"), count above the fold', async ( {
 	page,
 } ) => {
 	await page.setViewportSize( PHONE );
@@ -83,12 +84,36 @@ test( 'closed at 390 px, open when a filter is active, count in the summary', as
 	} );
 
 	await open( page, collapsed, { q: TOKEN, volunteers: '1' } );
-	await expect( details( page ) ).toHaveAttribute( 'open', '' );
-	await expect( summary( page ) ).toHaveText( 'Filters, 2 active' );
-	await expect( search( page ) ).toBeVisible();
 	await page.screenshot( {
 		path: `${ SCREENSHOTS }/filters-collapse-active-390.png`,
 	} );
+	// QA D3: a filtered phone view stays closed; the count and the summary show first, so the results
+	// start within the first screen instead of after an open form.
+	await expect( details( page ) ).not.toHaveAttribute( 'open', '' );
+	await expect( summary( page ) ).toHaveText( 'Filters, 2 active' );
+	await expect( search( page ) ).toBeHidden();
+	const count = page.locator( '.pegwork-filters__count' );
+	await expect( count ).toBeVisible();
+	await expect( count ).toHaveText( /\d+ results?/ );
+	const boxes = await page.evaluate( () => {
+		const top = ( selector ) =>
+			document.querySelector( selector ).getBoundingClientRect().top +
+			window.scrollY;
+		return {
+			count: top( '.pegwork-filters__count' ),
+			summary: top( '.pegwork-filters__collapse-summary' ),
+			results: top( '[data-pegwork-directory] .wp-block-post-template' ),
+		};
+	} );
+	expect( boxes.count, 'count above the disclosure' ).toBeLessThan(
+		boxes.summary
+	);
+	expect( boxes.results, 'results within one phone screen' ).toBeLessThan(
+		PHONE.height
+	);
+	await summary( page ).click();
+	await expect( search( page ) ).toBeVisible();
+	await expect( search( page ) ).toHaveValue( TOKEN );
 	await expectNoSeriousA11yViolations( page, {
 		exclude: [ '#wpadminbar', '.wp-block-navigation' ],
 	} );
@@ -146,8 +171,11 @@ test( 'without JavaScript: closed at 390 px, opens natively, submits', async ( {
 	await search( page ).fill( TOKEN );
 	await page.getByRole( 'button', { name: 'Apply filters' } ).click();
 	await expect( page ).toHaveURL( new RegExp( `q=${ TOKEN }` ) );
-	await expect( details( page ) ).toHaveAttribute( 'open', '' );
+	// The reloaded page is filtered: closed, with the count showing and the summary naming the filters.
+	await expect( details( page ) ).not.toHaveAttribute( 'open', '' );
 	await expect( summary( page ) ).toHaveText( 'Filters, 1 active' );
+	await expect( page.locator( '.pegwork-filters__count' ) ).toBeVisible();
+	await expect( search( page ) ).toBeHidden();
 	await bare.close();
 } );
 
