@@ -4,7 +4,7 @@ Tags: custom post types, custom fields, forms, directory, automation
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -48,6 +48,9 @@ Deleting Pegwork from the Plugins screen removes, on every site of a multisite n
 WP-Cron only runs when someone visits the site. On a production site set `define( 'DISABLE_WP_CRON', true );` in wp-config.php and add a server cron that runs `wp cron event run --due-now` every 5 minutes. Tools > Site Health shows whether Pegwork's automations are on time (see docs/automation.md, Production scheduling).
 
 == Changelog ==
+
+= 0.4.1 =
+* QA pass fixes: 2 high, 12 medium and 24 low findings across the record editor, forms, display blocks, the automation builder and the automation engine. Security: an automation that staff with the editor role may run now acts with that user's capabilities on every record it touches, not the site's. Quick Edit and Bulk Edit validate records, so an incomplete record can no longer be published or scheduled from a list. Rewrite rules heal themselves when they go missing. No public API change (still 0.4.0).
 
 = 0.4.0 =
 * Automation v4: wait until a date field (re-checked when the date changes), move records to the trash (never deleted permanently), start another automation, email everyone in a staff role (in Bcc), find records by when they were created, and run a staff automation on selected records from a list screen (bulk Run); Records trash and created reads; public API 0.4.0.
