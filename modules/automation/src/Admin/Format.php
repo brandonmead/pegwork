@@ -224,6 +224,9 @@ final class Format {
 			/* translators: %s: comma-separated step IDs. */
 			return sprintf( __( 'Completed with errors in %s', 'pegwork' ), str_replace( ',', ', ', substr( $outcome, strlen( Executor::ERRORS_OUTCOME ) ) ) );
 		}
+		if ( Executor::NO_RECORD_OUTCOME === $outcome ) {
+			return __( 'Stopped: the record was deleted', 'pegwork' );
+		}
 		return is_string( $outcome ) && '' !== $outcome ? $outcome : (string) $run['error'];
 	}
 

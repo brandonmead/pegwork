@@ -117,8 +117,11 @@ final class StartRoute {
 	/**
 	 * Whether the current user may start an automation (on a record, for a trigger with a content type).
 	 * Unknown and non-manual automations are refused alike, so the route does not reveal which keys exist.
-	 * Editors also need `delete_post` on the record when the automation, or one it starts, can move records
-	 * to the trash (Manual::trashes()).
+	 * `editors` means users who hold the content type's `edit_others_posts` (editors of every record of the
+	 * type, not authors or contributors of their own) and can read and edit this record. They also need
+	 * `delete_post` on the record when the automation, or one it starts, can move records to the trash
+	 * (Manual::trashes()). The run then acts on other records only as far as the same user may
+	 * (Context::can()).
 	 *
 	 * @param string $key    Automation key.
 	 * @param int    $record Record ID, or 0.
@@ -131,9 +134,12 @@ final class StartRoute {
 		if ( current_user_can( Screen::CAPABILITY ) ) {
 			return true;
 		}
+		$object = get_post_type_object( (string) ( $definition['trigger']['content_type'] ?? '' ) );
 		return 'editors' === ( $definition['trigger']['allow'] ?? 'admins' )
-			&& isset( $definition['trigger']['content_type'] )
+			&& null !== $object
 			&& $record > 0
+			&& current_user_can( $object->cap->edit_others_posts )
+			&& current_user_can( 'read_post', $record )
 			&& current_user_can( 'edit_post', $record )
 			&& ( ! Manual::trashes( $key ) || current_user_can( 'delete_post', $record ) );
 	}

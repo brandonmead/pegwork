@@ -57,6 +57,9 @@ final class Relate implements Step {
 			if ( 'trash' === get_post_status( $end ) ) {
 				return StepResult::fail( 'pegwork_record_not_found', sprintf( 'Record %d is in the trash.', $end ), $summary, false );
 			}
+			if ( false !== get_post_status( $end ) && ! $context->can( 'edit_post', $end ) ) {
+				return StepResult::fail( 'record_forbidden', sprintf( 'The user who started this run (%1$d) cannot edit record %2$d.', $context->actor(), $end ), $summary, false );
+			}
 		}
 
 		$origin = UpdateRecord::origin( $run );

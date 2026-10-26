@@ -1,0 +1,5 @@
+{ "format": 1, "key": "act_two", "label": "Two emails",
+  "trigger": { "type": "manual", "button": "Send two" },
+  "steps": [
+    { "id": "one", "type": "send_email", "to": "office@example.org", "subject": "One", "text": "First." },
+    { "id": "two", "type": "send_email", "to": "office@example.org", "subject": "Two", "text": "Second." } ] }

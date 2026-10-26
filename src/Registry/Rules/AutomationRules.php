@@ -1227,6 +1227,7 @@ trait AutomationRules {
 						'has_record' => isset( $step['record'] ),
 						'binds'      => $scope['binds'],
 						'bound'      => $scope['type'],
+						'sweep'      => 'schedule' === $scope['trigger'] && $scope['binds'],
 					);
 					break;
 				case 'call_webhook':
@@ -2230,6 +2231,11 @@ trait AutomationRules {
 		if ( ! is_array( $target ) ) {
 			return;
 		}
+		if ( ! empty( $found['sweep'] ) && self::start_trashes( $key, $known ) ) {
+			/* translators: %s: automation key. */
+			$this->add( 'trash_in_sweep', $at, sprintf( __( 'A schedule with "for_each" cannot start automation "%s": it can move records to the trash. Use a schedule without "for_each", find_records and a loop, which trash at most 50 records a run.', 'pegwork' ), $key ) );
+			return;
+		}
 
 		$type = $target['trigger']['content_type'] ?? null;
 		if ( null === $type ) {
@@ -2250,6 +2256,42 @@ trait AutomationRules {
 			/* translators: 1: automation key, 2: content type key. */
 			$this->add( 'missing_property', $found['pointer'], sprintf( __( 'Missing "record": automation "%1$s" runs on a "%2$s" record, and "record" defaults to the bound record only when that is one.', 'pegwork' ), $key, $type ) );
 		}
+	}
+
+	/**
+	 * Whether starting an automation can move records to the trash: it, or an automation it starts (followed
+	 * transitively), has a trash_record step at any depth, links included. The module's Manual::trashes()
+	 * walks the registry the same way.
+	 *
+	 * @param string                              $key   Automation key.
+	 * @param array<string, array<string, mixed>> $known Defined objects by kind, then key.
+	 */
+	private static function start_trashes( string $key, array $known ): bool {
+		$seen  = array();
+		$queue = array( $key );
+		while ( $queue ) {
+			$current = (string) array_shift( $queue );
+			$data    = $known['automation'][ $current ] ?? null;
+			if ( isset( $seen[ $current ] ) || ! is_array( $data ) ) {
+				continue;
+			}
+			$seen[ $current ] = true;
+			$lists            = array( (array) ( $data['steps'] ?? array() ) );
+			foreach ( (array) ( $data['links'] ?? array() ) as $link ) {
+				$lists[] = (array) ( ( (array) $link )['steps'] ?? array() );
+			}
+			foreach ( $lists as $list ) {
+				foreach ( self::step_tree( $list, '' ) as $step ) {
+					if ( 'trash_record' === ( $step['type'] ?? null ) ) {
+						return true;
+					}
+					if ( 'start_automation' === ( $step['type'] ?? null ) && is_string( $step['automation'] ?? null ) ) {
+						$queue[] = $step['automation'];
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	/**

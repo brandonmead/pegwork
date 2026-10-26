@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "sweep",
+  "label": "Invalid fixture",
+  "trigger": { "type": "schedule", "every": "day", "for_each": { "content_type": "barn_task" } },
+  "steps": [
+    { "id": "start", "type": "start_automation", "automation": "remover" }
+  ]
+}

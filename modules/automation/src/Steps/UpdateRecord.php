@@ -42,6 +42,9 @@ final class UpdateRecord implements Step {
 		if ( null === $record ) {
 			return StepResult::fail( 'pegwork_record_not_found', sprintf( 'No record with ID %d.', $id ), array( 'record_id' => $id ) );
 		}
+		if ( ! $context->can( 'edit_post', $id ) ) {
+			return StepResult::fail( 'record_forbidden', sprintf( 'The user who started this run (%1$d) cannot edit record %2$d.', $context->actor(), $id ), array( 'record_id' => $id ), false );
+		}
 		if ( 'trash' === $record['status'] ) {
 			// Records::update() would still write a trashed post; a run treats the trash as gone (no retry).
 			return StepResult::fail( 'pegwork_record_not_found', sprintf( 'Record %d is in the trash.', $id ), array( 'record_id' => $id ), false );
