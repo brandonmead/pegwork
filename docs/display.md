@@ -134,7 +134,7 @@ A content type opts in to directories and filters with an optional `listing` in 
 ```
 
 - `search: true` enables the `q` parameter (core search, at most 100 characters).
-- Each filter has a URL `key` and exactly one target: a `taxonomy` of the type, or a public `boolean` or `select` `field`. `multiple` (taxonomies only) allows several values, combined as OR; filters combine as AND. `label` is optional.
+- Each filter has a URL `key` and exactly one target: a `taxonomy` of the type, or a public `boolean` or `select` `field`. `multiple` (taxonomies, and `select` fields set to `true`) allows several values, combined as OR; filters combine as AND. `label` is optional.
 - It is an allowlist: nothing outside it is read from the URL, and private fields cannot be named (the registry rejects them).
 - A type with a `listing` gets the generated patterns, the "<Plural> directory" variation, published-only archives and a filtered main query. A type without one is untouched by this module.
 
@@ -186,7 +186,7 @@ Registered per content type with a `listing`, in pattern category Pegwork:
 | Pattern | Content |
 |---|---|
 | `pegwork/<type>-card` | Linked title (h3), 20-word excerpt, then meta lines at font size `small`: terms of each taxonomy with its label, public boolean fields as a badge, select fields as "Label: value", date fields as month and year (`format: "M Y"`) with a prefix from the label: "Last X" becomes "X " ("Last verified" reads "Verified Oct 2026"), any other label "Label: ". |
-| `pegwork/<type>-details` | Every public field with its label, url fields as buttons, `show_when` fields inside a "Show if" block, then the taxonomies. Offered for `single-<type>` templates. |
+| `pegwork/<type>-details` | Every public field with its label, url fields as buttons (each in a "Show if" block that needs the url to be set, so an empty url leaves no empty Buttons wrapper), `show_when` fields inside a "Show if" block, then the taxonomies. Offered for `single-<type>` templates. |
 | `pegwork/<type>-directory` | The variation above as markup, with the card inline; the no-results message adds a "Clear all filters" link. With the filters module on, a wide `pegwork/filters` block comes first. |
 | `pegwork/<type>-featured` | One record: `where.post_in_option` on the first public options page `post` field for the type (else `pegwork: {"filters":false}`, the newest published record). No pagination. |
 | `pegwork/<type>-latest` | A plain core Query Loop (no `pegwork` attribute), 3 newest, card grid. |
@@ -233,7 +233,7 @@ bin/perf-directory.sh perf                     # seeds to 500 Projects if needed
 bin/perf-directory.sh --url http://127.0.0.1:8215 --path ~/wp-envs/perf --max-p95 300 --max-queries 35
 ```
 
-It prints p50, p95 and max time to first byte (5 warm-up and 20 timed requests per scenario, no page cache) and the full-request query count for the home page (baseline), and for the archive and a page holding the directory pattern ("Perf directory", created if missing), each on pages 1 and 2, unfiltered and filtered. Query counts come from a temporary mu-plugin that the script installs in the target's `wp-content/mu-plugins` and removes on exit. With a site name it seeds; with `--url` and `--path` it seeds only when you add `--seed`, so it never changes a real site by accident (do not point it at siforgood.local unless you mean to). `--max-p95` and `--max-queries` make it exit 1 when exceeded. `wp server` runs PHP without opcache, which adds about 170 ms of compile time to every request, baseline included; for design-budget numbers serve the site with `php -d zend_extension=opcache.so -S`.
+It prints p50, p95 and max time to first byte (5 warm-up and 20 timed requests per scenario, no page cache) and the full-request query count for the home page (baseline), and for the archive and a page holding the directory pattern ("Perf directory", created if missing), each on pages 1 and 2, unfiltered and filtered. Query counts come from a temporary mu-plugin that the script installs in the target's `wp-content/mu-plugins` and removes on exit. With a site name it seeds; with `--url` and `--path` it seeds only when you add `--seed`, so it never changes a real site by accident (do not point it at siforgood.local unless you mean to). `--max-p95` and `--max-queries` make it exit 1 when exceeded. `wp server` runs PHP without opcache, which adds about 170 ms of compile time to every request, baseline included; for design-budget numbers serve the site with opcache: `php -d zend_extension=opcache.so -S`. Local's PHP reports the extension directory of the machine that built it, so the bare name fails there ("Failed loading Zend extension"); give the absolute path of the `opcache.so` next to the binary, e.g. `"$HOME/Library/Application Support/Local/lightning-services/php-8.2.29+0/bin/darwin-arm64/lib/php/extensions/no-debug-non-zts-20220829/opcache.so"` (`find "$HOME/Library/Application Support/Local/lightning-services" -name opcache.so` lists them; Homebrew's PHP accepts the bare name). The "Perf directory" page holds the registered directory pattern, filters block included; a page from an older run without it is updated.
 
 Related sections: `tests/Integration/Listings/RelatedListingTest.php::test_query_budget` renders the generated related pattern (condition plus loop) on a Project with 24 Stories and on a Story with 24 Projects, with cold caches, and fails above 35 queries or when 6 and 24 per page differ.
 
@@ -252,7 +252,7 @@ Module `filters` (requires `listings`). One block per directory; it narrows ever
 | `showSearch` | `true` | The search box, when the `listing` has `search: true`. |
 | `collapseOnSmall` | `false` | "Collapse on small screens" in the inspector. Under 600 px wide the whole form sits in a native disclosure (below). Off: nothing changes. |
 
-Collapse on small screens: the fields and the Apply and Clear buttons are wrapped in `<details class="pegwork-filters__collapse">` inside the form, with a `<summary>` of "Filters", or "Filters, 2 active" (the search and each shown filter with a value count one each; the summary follows changes when the script runs). It is closed by default and rendered open when any shown control is active, so a visitor who arrives on a filtered URL sees the controls. The result count stays outside it, always visible. It is plain `details`: it works without JavaScript, by keyboard (Enter or Space on the summary, which has the same visible focus outline as the other disclosures), and uses no ARIA. From 600 px up the summary is hidden and the controls show as usual, even though the `details` is closed, through `::details-content` (Chrome 131, Safari 18.4, Firefox 143); in a browser without it the disclosure stays available at every width, so nothing is lost. Block markup: `<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->`.
+Collapse on small screens: the fields and the Apply and Clear buttons are wrapped in `<details class="pegwork-filters__collapse">` inside the form, with a `<summary>` of "Filters", or "Filters, 2 active" (the search and each shown filter with a value count one each; the summary follows changes when the script runs). It is always rendered closed, also on a filtered URL: the summary ("Filters, 2 active") says what is applied, and the result count is rendered before the disclosure, so a phone shows the count and the first results without scrolling past an open form. Opening it is the visitor's choice; with the script it then stays open while filters change (only the results are swapped), and a full page load (no script) starts closed again. It is plain `details`: it works without JavaScript, by keyboard (Enter or Space on the summary, which has the same visible focus outline as the other disclosures), and uses no ARIA. From 600 px up the summary is hidden and the controls show as usual, even though the `details` is closed, through `::details-content` (Chrome 131, Safari 18.4, Firefox 143); in a browser without it the disclosure stays available at every width, so nothing is lost. Block markup: `<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->`.
 
 Styles: Horizontal (default, wraps) and Vertical. Supports wide and full alignment, margin and padding. In the editor, the inspector picks the type, the search box and the filters, and the canvas shows a server render.
 
@@ -265,6 +265,7 @@ From the type's `listing` (`docs/registry-reference.md`), labels from the regist
 | taxonomy, `multiple: true` | a native `details` disclosure, open or closed, whose summary reads "Impact category" or "Impact category, 2 selected", with a chevron that turns when open and a visible focus outline, holding a fieldset of checkboxes, terms in registry order then by name, at most 200 | `impact=sdg-04,sdg-13` (also `impact[]=`) |
 | taxonomy, `multiple: false` | a fieldset of radios, "Any" first | `project_type=nonprofit` |
 | `select` field | a labelled `<select>`, "Any" first | `size=small` |
+| `select` field, `multiple: true` | the same disclosure of checkboxes as a multi-value taxonomy, with the field's options | `size=small,large` (also `size[]=`) |
 | `boolean` field | one checkbox | `volunteers=1` |
 | search | "Search projects", at most 100 characters | `q=data` |
 
@@ -278,7 +279,7 @@ The form is a GET form to the base URL: the type's archive on the archive, else 
 
 ### Result count
 
-The block renders before the grid, so it counts with the bound loop's own query: the first filterable `core/query` of the type in the page content or the block template (through `core/pattern` references), built with core's `build_query_vars_from_query_block()`. The loop then reuses the result from the `WP_Query` cache, so the count costs no query. On the archive it is the main query's `found_posts`. With no bound loop it runs a one-row ID query.
+The block renders before the grid, so it counts with the bound loop's own query: the first filterable `core/query` of the type in the page content or the block template (through `core/pattern`, synced pattern (`core/block`) and template part references, up to four levels deep), built with core's `build_query_vars_from_query_block()`. The loop then reuses the result from the `WP_Query` cache, so the count costs no query. On the archive it is the main query's `found_posts`. With no bound loop it runs a one-row ID query.
 
 ### With JavaScript
 
