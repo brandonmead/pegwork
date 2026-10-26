@@ -21,8 +21,10 @@ use PegworkAutomation\Templates;
  * item's `id`). A record already in the trash is not a failure: `changed: false`. No output.
  *
  * Limits: at most limit() records moved per run (`context.trashed`), else `trash_limit`; never in a
- * schedule sweep (`trash_in_sweep`, checked again here for a definition from a newer registry). These, a
- * record of another type (`record_type`), a missing record and `trash_disabled` are not retried.
+ * schedule sweep or a run its chain started (`trash_in_sweep`, checked again here for a definition from a
+ * newer registry); in a run a user started, another record needs that user's `delete_post`
+ * (`record_forbidden`). These, a record of another type (`record_type`), a missing record and
+ * `trash_disabled` are not retried.
  *
  * Summary: `content_type`, `record_id`, `changed`.
  */

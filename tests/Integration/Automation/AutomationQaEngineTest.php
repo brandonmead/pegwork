@@ -252,6 +252,7 @@ class AutomationQaEngineTest extends AutomationTestCase {
 	public function test_retry_after_step_limit_does_not_repeat_the_previous_step() {
 		$limit = fn() => 1;
 		add_filter( 'pegwork_automation_step_limit', $limit );
+
 		$run = $this->start( 'act_two', null, 0 );
 		$row = $this->run_row( $run );
 		$this->assertSame( 'failed', $row['status'] );
@@ -274,6 +275,7 @@ class AutomationQaEngineTest extends AutomationTestCase {
 		$this->contact( 'publish', 'loop', 'Ben' );
 		$limit = fn() => 3; // The find reads 2; the loop's snapshot 2 more.
 		add_filter( 'pegwork_automation_read_limit', $limit );
+
 		$run = $this->start( 'act_reads', null, 0 );
 		$row = $this->run_row( $run );
 		$this->assertSame( 'failed', $row['status'] );

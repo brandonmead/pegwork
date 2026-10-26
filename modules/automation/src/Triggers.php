@@ -338,6 +338,7 @@ final class Triggers {
 				'parent'  => $origin,
 			),
 		);
+
 		$actor = Context::actor_of( $starter );
 		if ( $actor > 0 ) {
 			$run['context']['actor'] = $actor; // The child acts with the starting user's capabilities too.

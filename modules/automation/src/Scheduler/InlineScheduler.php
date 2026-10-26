@@ -104,7 +104,7 @@ final class InlineScheduler implements Scheduler {
 		$fired = 0;
 		while ( $fired < $limit ) {
 			$until = null === $clock ? $until : max( $until, (int) $clock() );
-			$due = array_filter( $this->jobs, fn( array $job ) => $job['at'] <= $until );
+			$due   = array_filter( $this->jobs, fn( array $job ) => $job['at'] <= $until );
 			if ( array() === $due ) {
 				break;
 			}

@@ -156,4 +156,27 @@ final class Maintenance {
 			'failed' => max( 1, (int) ( $days['failed'] ?? self::RETENTION['failed'] ) ),
 		);
 	}
+
+	/**
+	 * Re-arms lost wake-ups right after a run wake-up (Engine::on_run()): queued runs, and waiting runs that
+	 * are due, with no pending wake-up get one for now. A cron pass that started before another process
+	 * scheduled a wake-up writes its stale copy of the `cron` option back when it unschedules its next
+	 * event, which drops that wake-up; the pass checks again after each run it fires, so the run is not left
+	 * for the daily job. One indexed query when nothing is open (at most 50 runs).
+	 *
+	 * @return int[] IDs of the runs scheduled.
+	 */
+	public function rearm(): array {
+		$runs      = $this->engine->runs();
+		$now       = $this->engine->clock()->now();
+		$scheduler = $this->engine->scheduler();
+		$armed     = array();
+		foreach ( $runs->orphans( $runs->stamp( $now->modify( '+1 second' ) ), 50 ) as $id ) {
+			if ( null === $scheduler->next( Engine::RUN_HOOK, array( $id ) ) ) {
+				$scheduler->schedule( Engine::RUN_HOOK, array( $id ), $now->getTimestamp() );
+				$armed[] = $id;
+			}
+		}
+		return $armed;
+	}
 }

@@ -120,8 +120,8 @@ final class Executor {
 			return 'failed';
 		}
 
-		$stored = $run['context'];
-		$record = null === $run['record_id'] ? null : Records::get( (int) $run['record_id'] );
+		$stored    = $run['context'];
+		$record    = null === $run['record_id'] ? null : Records::get( (int) $run['record_id'] );
 		$date_wait = null !== $step_id && isset( $plan->step( $step_id )['until'] );
 		if ( null !== $run['record_id'] && null === $record && ! $date_wait && 'record.deleted' !== ( $stored['event'] ?? null ) ) {
 			// The bound record was deleted for good (during a wait, a retry or a requeue): no step runs on an

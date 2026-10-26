@@ -318,4 +318,57 @@ class AutomationWpCronTest extends AutomationTestCase {
 		$scheduler->spawn();
 		$this->assertSame( array(), $requests );
 	}
+
+	/**
+	 * A cron pass holds its own copy of the `cron` option; when another process schedules a wake-up
+	 * meanwhile, the pass writes its stale copy back as it unschedules its next event and drops that
+	 * wake-up (QA: `wp cron event run --due-now` racing the site's own spawn). After the run it fires, the
+	 * pass re-arms it.
+	 */
+	public function test_wake_up_dropped_by_a_racing_cron_pass_is_rearmed() {
+		global $wpdb;
+		add_filter( 'wp_doing_cron', '__return_true' ); // wp-cron.php and `wp cron event run` define DOING_CRON.
+		$insert = fn( $job ) => Engine::instance()->runs()->insert(
+			array(
+				'automation'      => 'job_approved',
+				'trigger_type'    => 'event',
+				'record_id'       => $job,
+				'status'          => 'queued',
+				'depth'           => 0,
+				'definition_hash' => '',
+				'context'         => array(),
+			)
+		);
+		$first  = $insert( $this->job( 'pending' ) );
+		$second = $insert( $this->job( 'pending' ) );
+		$late   = $this->job( 'pending' );
+		$now    = time();
+		wp_schedule_single_event( $now, Engine::RUN_HOOK, array( $first ) );
+		wp_schedule_single_event( $now, Engine::RUN_HOOK, array( $second ) );
+
+		// The pass fires its first event as wp-cron.php does.
+		wp_unschedule_event( $now, Engine::RUN_HOOK, array( $first ) );
+		do_action( Engine::RUN_HOOK, $first );
+
+		// Meanwhile another process starts a third run: the database has its wake-up, the pass's copy does not.
+		$late  = $insert( $late );
+		$fresh = _get_cron_array();
+		$fresh[ $now ][ Engine::RUN_HOOK ][ md5( serialize( array( $late ) ) ) ] = array( // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Core's cron key.
+			'schedule' => false,
+			'args'     => array( $late ),
+		);
+		$wpdb->update( $wpdb->options, array( 'option_value' => maybe_serialize( $fresh ) ), array( 'option_name' => 'cron' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Another process's write, past this process's option cache.
+
+		// Unscheduling the second event writes the stale copy back.
+		wp_unschedule_event( $now, Engine::RUN_HOOK, array( $second ) );
+		wp_cache_delete( 'alloptions', 'options' );
+		$this->assertFalse( wp_next_scheduled( Engine::RUN_HOOK, array( $late ) ), 'The stale write dropped it.' );
+		$this->assertSame( 'queued', $this->run_row( $late )['status'] );
+
+		do_action( Engine::RUN_HOOK, $second );
+		wp_cache_delete( 'alloptions', 'options' );
+		$this->assertNotFalse( wp_next_scheduled( Engine::RUN_HOOK, array( $late ) ), 'Re-armed after the run.' );
+		$this->run_due_cron( Engine::RUN_HOOK );
+		$this->assertSame( 'completed', $this->run_row( $late )['status'] );
+	}
 }

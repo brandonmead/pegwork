@@ -57,7 +57,7 @@ final class FindRecords implements Step {
 		$unreadable = count( $ids ) - count( $readable );
 		$ids        = $readable; // In a run a user started, only the records that user can read.
 		$sums       = array();
-		$public = array_keys( pegwork_registry()->fields( $type, 'public' ) );
+		$public     = array_keys( pegwork_registry()->fields( $type, 'public' ) );
 		foreach ( $sum as $key ) {
 			$sums[ $key ] = (float) ( $found['sums'][ $key ] ?? 0 );
 		}

@@ -189,13 +189,17 @@ final class Engine {
 	}
 
 	/**
-	 * Run wake-up. Hooked to pegwork_automation_run.
+	 * Run wake-up; in a cron pass (wp-cron.php or `wp cron event run`), then re-arms wake-ups a racing pass
+	 * dropped (Maintenance::rearm()). Hooked to pegwork_automation_run.
 	 *
 	 * @param mixed $run_id Run ID.
 	 */
 	public static function on_run( $run_id ): void {
 		if ( is_numeric( $run_id ) ) {
 			self::instance()->executor()->execute( (int) $run_id );
+			if ( wp_doing_cron() ) {
+				self::instance()->maintenance()->rearm();
+			}
 		}
 	}
 
