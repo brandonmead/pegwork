@@ -9,11 +9,12 @@ declare( strict_types=1 );
 
 namespace Pegwork\Admin;
 
+use Pegwork\Content\RecordValidator;
 use Pegwork\Plugin;
 use Pegwork\Registry\Status;
 
 /**
- * Shows registry load errors to administrators.
+ * Shows registry load errors to administrators, and records a Bulk Edit could not publish to their editor.
  */
 final class Notices {
 
@@ -23,9 +24,11 @@ final class Notices {
 	private const MAX_LISTED = 10;
 
 	/**
-	 * Prints the schema error notice, if any. Hooked to admin_notices.
+	 * Prints the Bulk Edit held-records notice and the schema error notice, if any. Hooked to admin_notices.
 	 */
 	public static function render(): void {
+		RecordValidator::render_held_notice();
+
 		$errors = Plugin::result()->errors;
 		if ( ! $errors || ! current_user_can( 'manage_options' ) ) {
 			return;

@@ -26,11 +26,23 @@ final class Registrar {
 	public const HASH_OPTION = 'pegwork_registry_hash';
 
 	/**
+	 * Transient set for an hour after heal_rewrites() flushes, so missing rules never cause a flush on every request.
+	 */
+	public const HEAL_TRANSIENT = 'pegwork_rewrite_healed';
+
+	/**
 	 * Registry waiting for a deferred sync, null when none is pending.
 	 *
 	 * @var Registry|null
 	 */
 	private static ?Registry $pending = null;
+
+	/**
+	 * Registry registered last, null before the first register().
+	 *
+	 * @var Registry|null
+	 */
+	private static ?Registry $registered = null;
 
 	/**
 	 * Registers content and schedules a sync when the registry changed since the last one.
@@ -47,6 +59,11 @@ final class Registrar {
 		Pages::register( $registry );
 		BindingSource::register( $registry );
 
+		self::$registered = $registry;
+		if ( ! has_action( 'wp_loaded', array( self::class, 'heal_rewrites' ) ) ) {
+			add_action( 'wp_loaded', array( self::class, 'heal_rewrites' ), 20 );
+		}
+
 		if ( get_option( self::HASH_OPTION ) === self::hash( $registry ) ) {
 			return;
 		}
@@ -61,6 +78,65 @@ final class Registrar {
 			add_action( 'wp_loaded', array( self::class, 'run_pending' ) );
 		}
 		self::$pending = $registry;
+	}
+
+	/**
+	 * Flushes rewrite rules once when the saved rules lack the rules of a publicly queryable Pegwork post type or
+	 * taxonomy, as after a flush in a request where Pegwork's content was not registered (plugin deactivated, a
+	 * schema error, another plugin flushing early). Pretty permalinks only. After a flush it waits an hour
+	 * (HEAL_TRANSIENT) before flushing again, so rules that another plugin keeps removing cost one flush per
+	 * hour, not one per request. Hooked to wp_loaded, after run_pending().
+	 */
+	public static function heal_rewrites(): void {
+		global $wp_rewrite;
+
+		if ( ! $wp_rewrite instanceof \WP_Rewrite || ! $wp_rewrite->using_permalinks() ) {
+			return;
+		}
+		$rules = get_option( 'rewrite_rules' );
+		if ( ! is_array( $rules ) || array() === $rules ) {
+			return; // WordPress rebuilds empty rules itself on the next request it parses.
+		}
+
+		$queries = implode( "\n", array_filter( $rules, 'is_string' ) );
+		$missing = false;
+		foreach ( self::query_vars() as $var ) {
+			if ( ! str_contains( $queries, '?' . $var . '=' ) && ! str_contains( $queries, '&' . $var . '=' ) ) {
+				$missing = true;
+				break;
+			}
+		}
+		if ( ! $missing || false !== get_transient( self::HEAL_TRANSIENT ) ) {
+			return;
+		}
+
+		set_transient( self::HEAL_TRANSIENT, 1, HOUR_IN_SECONDS );
+		flush_rewrite_rules( false );
+	}
+
+	/**
+	 * Query vars of the registered, publicly queryable Pegwork post types and taxonomies that have rewrite rules.
+	 *
+	 * @return string[]
+	 */
+	private static function query_vars(): array {
+		$registry = self::$registered ?? new Registry();
+		$objects  = array();
+		foreach ( array_keys( $registry->content_types() ) as $key ) {
+			$objects[] = get_post_type_object( $key );
+		}
+		foreach ( array_keys( $registry->taxonomies() ) as $key ) {
+			$objects[] = get_taxonomy( $key );
+		}
+
+		$vars = array();
+		foreach ( $objects as $object ) {
+			if ( is_object( $object ) && ! empty( $object->publicly_queryable ) && false !== $object->rewrite && is_string( $object->query_var ) && '' !== $object->query_var ) {
+				$vars[] = $object->query_var;
+			}
+		}
+
+		return $vars;
 	}
 
 	/**

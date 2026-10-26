@@ -99,7 +99,7 @@ Retries: a failed attempt is retried when the failure is retryable and the step'
 ## Maintenance
 
 Daily `pegwork_automation_maintenance` at 03:00 site time (self-rescheduling; boot re-creates it if missing):
-- re-schedules `queued` runs idle for 10 minutes and `waiting` runs past `resume_at` that have no pending wake-up (lost WP-Cron events, or events that fired while the module was disabled); `tick` runs only this part, replacing pending wake-ups;
+- re-schedules `queued` runs idle for 10 minutes and `waiting` runs past `resume_at` that have no pending wake-up (lost WP-Cron events, or events that fired while the module or Pegwork was disabled); `tick` runs only this part, replacing pending wake-ups. The same part also runs on `pegwork_activated`, the first load after Pegwork is activated or a module is enabled, so wake-ups lost while it was off resume then instead of at 03:00;
 - marks `running` runs whose last claim is over 15 minutes old as `failed` (`interrupted: ...`), never repeating a side effect automatically;
 - prunes `completed`, `skipped` and `cancelled` runs after 90 days and `failed` after 180 (option `pegwork_automation_retention_days` `{ done, failed }`, filter of the same name), with their steps. `queued`, `running` and `waiting` runs are never pruned.
 

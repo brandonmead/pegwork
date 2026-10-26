@@ -176,6 +176,24 @@ class ValidatorTest extends TestCase {
 	}
 
 	/**
+	 * QA C7: keys starting `pegwork_` are Pegwork's own (pegwork_form, pegwork_automation), so a package cannot take them.
+	 */
+	public function test_pegwork_prefixed_keys_are_reserved() {
+		$this->assertSame( array( 'reserved_key' ), $this->codes( 'content_type', array( 'key' => 'pegwork_form' ) + $this->content_type() ) );
+		$this->assertSame( array( 'reserved_key' ), $this->codes( 'content_type', array( 'key' => 'pegwork_thing' ) + $this->content_type() ) );
+		$taxonomy = array(
+			'format' => 1,
+			'key'    => 'pegwork_topic',
+			'labels' => array(
+				'singular' => 'Topic',
+				'plural'   => 'Topics',
+			),
+		);
+		$this->assertSame( array( 'reserved_key' ), $this->codes( 'taxonomy', $taxonomy ) );
+		$this->assertSame( array(), $this->codes( 'content_type', array( 'key' => 'pegworks' ) + $this->content_type() ) );
+	}
+
+	/**
 	 * The reserved list covers every WordPress query var that a key could collide with.
 	 */
 	public function test_reserved_keys_cover_wordpress_query_vars() {

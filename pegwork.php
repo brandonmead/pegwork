@@ -98,4 +98,7 @@ require_once PEGWORK_DIR . 'vendor/autoload.php';
 require_once PEGWORK_DIR . 'src/Api/constants.php';
 require_once PEGWORK_DIR . 'includes/functions.php';
 
+register_activation_hook( __FILE__, array( 'Pegwork\Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'Pegwork\Plugin', 'deactivate' ) );
+
 Pegwork\Plugin::boot();

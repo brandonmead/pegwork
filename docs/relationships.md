@@ -64,6 +64,8 @@ A change of links on a "from" record is part of its `record.updated`: the relati
 - `_rel_{key}` appears in `meta` on the "from" type, read and written like any meta: `POST /wp/v2/stories` with `meta: { "_rel_story_projects": [ 24, 25 ] }`. An empty list clears.
 - Collection param `rel_{key}` (integer) on the "from" collection lists the records linked to one "to" record: `GET /wp/v2/stories?rel_story_projects=24`. Status visibility stays core's (anonymous readers see published records only).
 - Links are IDs only. No field of the linked record is exposed; there are no private relationships.
+- In view and embed context `_rel_{key}` lists only the linked records the reader may read (status `publish`, or `read_post`), so a public story does not reveal the IDs of private or draft projects it links to (`Relationships::rest_prepare()`). Edit context, which the editor uses, lists every link. Writes are unchanged: an editor may still link a record a reader cannot see.
+- A password-protected record leaves `_rel_*` and its Pegwork field meta out of `meta` until the reader passes the right `password` param (or holds the post password cookie), as core does for its content (`Meta::rest_prepare()`).
 
 ## Editor
 

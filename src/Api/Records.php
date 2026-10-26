@@ -59,7 +59,8 @@ final class Records {
 	 * @param string               $type   Content type key.
 	 * @param array<string, mixed> $values Field values by field key; term slug lists by taxonomy key; linked IDs by
 	 *                                     relationship key (from this type: one ID, comma-separated IDs or a list; API 0.3.0).
-	 * @param string               $status Post status.
+	 * @param string               $status Post status: a registered status that is not internal (so not trash,
+	 *                                     inherit or auto-draft; `pegwork_invalid_status` otherwise).
 	 * @param array<string, mixed> $origin Optional `automation`, `run_id` and `depth` for the event's origin.
 	 * @return int|WP_Error The new post ID, or WP_Error (`pegwork_invalid_record` with per-key messages in data `fields`).
 	 */
@@ -69,7 +70,8 @@ final class Records {
 			/* translators: %s: content type key. */
 			return new WP_Error( 'pegwork_unknown_type', sprintf( __( 'Unknown content type "%s".', 'pegwork' ), $type ), array( 'status' => 400 ) );
 		}
-		if ( null === get_post_status_object( $status ) ) {
+		$status_object = get_post_status_object( $status );
+		if ( null === $status_object || ! empty( $status_object->internal ) ) {
 			/* translators: %s: post status. */
 			return new WP_Error( 'pegwork_invalid_status', sprintf( __( 'Unknown status "%s".', 'pegwork' ), $status ), array( 'status' => 400 ) );
 		}
@@ -114,11 +116,12 @@ final class Records {
 	 * @param array<string, mixed> $values Field values by field key; term slug lists by taxonomy key; linked IDs by
 	 *                                     relationship key, replacing the record's links (empty clears; API 0.3.0).
 	 * @param array<string, mixed> $origin Optional `automation`, `run_id` and `depth` for the event's origin.
-	 * @return true|WP_Error WP_Error (`pegwork_invalid_record` with per-key messages in data `fields`) when invalid.
+	 * @return true|WP_Error WP_Error (`pegwork_invalid_record` with per-key messages in data `fields`) when invalid;
+	 *                       `pegwork_record_not_found` also for a trashed record or an auto-draft, which are never written.
 	 */
 	public static function update( int $id, array $values, array $origin = array() ): true|WP_Error {
 		$record = self::get( $id );
-		if ( null === $record ) {
+		if ( null === $record || in_array( $record['status'], array( 'trash', 'auto-draft' ), true ) ) {
 			/* translators: %d: post ID. */
 			return new WP_Error( 'pegwork_record_not_found', sprintf( __( 'No record with ID %d.', 'pegwork' ), $id ), array( 'status' => 404 ) );
 		}

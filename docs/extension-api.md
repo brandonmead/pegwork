@@ -169,6 +169,8 @@ interface Module {
 
 Timing: on `plugins_loaded` Pegwork resolves the enabled modules, checks requirements and includes each `module.php` (so top-level code in `module.php` runs then and must not need the registry). `boot()` runs later, on `pegwork_loaded` (`init` priority 5, after the registry is built), in dependency order, so `pegwork_registry()` is available inside it.
 
+`pegwork_activated` (action, no arguments) fires once, on `wp_loaded` of the first load after Pegwork is activated or a module is enabled, after modules have booted (the activation request itself loads no modules). Use it to recover state that went stale while the code was not running; the automation module reschedules lost run wake-ups with it. The pending flag is option `pegwork_activated` (`'1'` pending, `'0'` done).
+
 The manifest maps `slug => [ label, description, requires[], path ]`, where `path` is the absolute module directory. It ships `listings`, `filters` (requires `listings`), `automation` and `forms`; add entries with the `pegwork_module_manifest` filter. `label` and `description` are strings or closures returning strings; the shipped entries are closures around `__()`, resolved each time the manifest is read after `init` (before it, the slug is used), so they follow the current locale, and the filter always receives strings. Bundled modules use their own namespace outside `Pegwork\` (for example `PegworkListings\`) and register their own autoloader in `module.php`. A module that keeps its own tables or cron events ships `uninstall.php` in its directory; Pegwork's `uninstall.php` includes every `modules/*/uninstall.php` before deleting `pegwork_*` options.
 
 ## Automation hooks
@@ -276,6 +278,9 @@ $old    = Pegwork\Api\Records::find( 'barn_volunteer', array( 'created' => array
 ```
 
 No capability check: the caller authorizes. Details: `docs/events.md`.
+
+- `create()` takes a registered status that is not internal (`publish`, `future`, `draft`, `pending`, `private`; `trash`, `inherit` and `auto-draft` are `pegwork_invalid_status`). `update()` returns `pegwork_record_not_found` for a trashed record or an auto-draft and writes nothing; `get()` still reads them (with their `status`).
+- Values are sanitized for their field type and a value the sanitizer would blank is `pegwork_invalid_record` ("Website has an invalid value."): a `url` must be an http or https web address with a host and no user or password (`Meta::sanitize_url()`; `example.org` becomes `https://example.org`), a `date` a real `Y-m-d` date. REST saves apply the same check to `meta`.
 
 ### `Records::trash( $id, $origin )`
 

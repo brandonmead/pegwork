@@ -76,12 +76,58 @@ final class Relationships {
 			if ( ! has_filter( 'rest_' . $type . '_collection_params', array( self::class, 'collection_params' ) ) ) {
 				add_filter( 'rest_' . $type . '_collection_params', array( self::class, 'collection_params' ), 10, 2 );
 				add_filter( 'rest_' . $type . '_query', array( self::class, 'rest_query' ), 10, 2 );
+				add_filter( 'rest_prepare_' . $type, array( self::class, 'rest_prepare' ), 10, 3 );
 			}
 		}
 
 		if ( ! has_action( 'deleted_post', array( self::class, 'deleted_post' ) ) ) {
 			add_action( 'deleted_post', array( self::class, 'deleted_post' ), 10, 2 );
 		}
+	}
+
+	/**
+	 * In view and embed context, keeps only the linked IDs the reader may read (a record with a public status,
+	 * or read_post), so a public record does not reveal the IDs of private or draft records it links to. Edit
+	 * context, which the block editor uses, keeps every link. Hooked to rest_prepare_{post_type}.
+	 *
+	 * @param \WP_REST_Response|mixed $response Response.
+	 * @param WP_Post|mixed           $post     Post.
+	 * @param WP_REST_Request|mixed   $request  Request.
+	 * @return \WP_REST_Response|mixed
+	 */
+	public static function rest_prepare( $response, $post, $request ) {
+		if ( ! $response instanceof \WP_REST_Response || ! $post instanceof WP_Post || null === self::$registry
+			|| ( $request instanceof WP_REST_Request && 'edit' === $request['context'] ) ) {
+			return $response;
+		}
+		$data = $response->get_data();
+		if ( ! is_array( $data ) || ! is_array( $data['meta'] ?? null ) ) {
+			return $response;
+		}
+
+		foreach ( array_keys( self::from( self::$registry, $post->post_type ) ) as $key ) {
+			$meta_key = self::meta_key( $key );
+			if ( ! is_array( $data['meta'][ $meta_key ] ?? null ) || array() === $data['meta'][ $meta_key ] ) {
+				continue;
+			}
+			$ids = array_map( 'intval', $data['meta'][ $meta_key ] );
+			_prime_post_caches( $ids, false, false );
+			$data['meta'][ $meta_key ] = array_values( array_filter( $ids, array( self::class, 'readable' ) ) );
+		}
+		$response->set_data( $data );
+
+		return $response;
+	}
+
+	/**
+	 * Whether the current user may read a linked record: its status is public (publish), or read_post allows it.
+	 *
+	 * @param int $id Post ID.
+	 */
+	private static function readable( int $id ): bool {
+		$status = get_post_status_object( (string) get_post_status( $id ) );
+
+		return ( null !== $status && $status->public ) || current_user_can( 'read_post', $id );
 	}
 
 	/**

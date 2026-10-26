@@ -39,6 +39,9 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 8. Editor A: wait until and role recipients: done, in review (branch `v4-editor-a`). Wait inspector "For a length of time" or "Until a date" (date field, before or after, how long, at), card text, "Add a role" on To, `roles` config reader, scope fixture `dates` and `roles`, keyboard E2E building `barn_task_due_reminder` and `barn_volunteer_review`. Builder 28,475 bytes gzipped; budget raised to 28,475 (PR 9 has 2,245 bytes before the 30,720 cap). Closes PR 3's and PR 6's editor leftovers. Left for PR 9: round-trip `barn_v4_shapes`, `barn_gift_receipt_start`, `barn_volunteer_retention` and `engine-trash` in `reads.test.js` (the v4 files without trash, start or `created` are round-tripped now).
 9. Editor B: Move to trash, Start another automation, Created: done, in review (branch `v4-editor-b`). Move to trash inspector and card, withdrawn from the inserter and refused at its card in sweeps; Start another automation picker (`automations` config) and card; Created before/after in read More options; trashing a started automation's post refused with the in-use message. Every v4 fixture round-trips in `reads.test.js`; `engine-start` and the E2E start package moved into the normal fixture locations. Builder 30,147 bytes gzipped, budget raised to 30,147 (no lazy chunk). Closes the editor leftovers of PRs 2, 4, 5 and 8.
 
+## QA fix PRs (QA of main 962d91d, 2026-10-25)
+- Core (branch `qa-fix-core`): C1 to C9, D1, SEC-2, SEC-4 and the core half of E4 (`pegwork_activated`; the automation listener only): done, in review. Left: nothing for core; the other E items belong to the automation PR.
+
 ## Phase 1 PRs
 1. Scaffold (merged)
 2. Registry (merged)

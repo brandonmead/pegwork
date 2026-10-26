@@ -320,11 +320,14 @@ class FieldsTest extends WP_UnitTestCase {
 		$this->assertSame( '<p>ok</p>', \Pegwork\Content\Meta::sanitizer( array( 'type' => 'rich_text' ) )( '<p>ok</p><script></script>' ) );
 
 		$response = $this->rest( 'POST', "/wp/v2/projects/$id", array( 'meta' => array( '_sifg_project_contact_email' => 'bad' ) ) );
+		// Values the sanitizer would blank are rejected before the save, per field (QA C4).
 		$this->assertSame( 400, $response->get_status() );
-		$this->assertSame( 'rest_no_matching_schema', $response->get_data()['code'] );
+		$this->assertSame( 'pegwork_invalid_record', $response->get_data()['code'] );
+		$this->assertArrayHasKey( 'contact_email', $response->get_data()['data']['fields'] );
 		$response = $this->rest( 'POST', "/wp/v2/projects/$id", array( 'meta' => array( '_sifg_project_last_verified' => '17/10/2026' ) ) );
 		$this->assertSame( 400, $response->get_status() );
-		$this->assertSame( 'rest_invalid_pattern', $response->get_data()['code'] );
+		$this->assertSame( 'pegwork_invalid_record', $response->get_data()['code'] );
+		$this->assertArrayHasKey( 'last_verified', $response->get_data()['data']['fields'] );
 		$response = $this->rest( 'POST', "/wp/v2/projects/$id", array( 'meta' => array( '_sifg_project_contact_email' => '' ) ) );
 		$this->assertSame( 200, $response->get_status() );
 	}

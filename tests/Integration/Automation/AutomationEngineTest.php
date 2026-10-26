@@ -402,6 +402,39 @@ class AutomationEngineTest extends AutomationTestCase {
 	}
 
 	/**
+	 * QA E4: a wake-up consumed while Pegwork was deactivated is rescheduled on pegwork_activated (the first
+	 * load after activation or a module enable), not left until the 03:00 maintenance.
+	 */
+	public function test_activation_resumes_lost_wakeups() {
+		global $wpdb;
+		$runs    = Engine::instance()->runs();
+		$waiting = $runs->insert(
+			array(
+				'automation'      => 'job_approved',
+				'trigger_type'    => 'event',
+				'record_id'       => $this->job( 'publish' ),
+				'depth'           => 0,
+				'definition_hash' => '',
+				'context'         => array(),
+				'status'          => 'queued',
+			)
+		);
+		$wpdb->update(
+			Schema::runs(),
+			array(
+				'status'    => 'waiting',
+				'resume_at' => '2026-11-02 08:00:00',
+			),
+			array( 'id' => $waiting )
+		);
+		$this->assertNull( $this->scheduler->next( Engine::RUN_HOOK, array( $waiting ) ) );
+
+		do_action( 'pegwork_activated' );
+
+		$this->assertSame( $this->clock->now()->getTimestamp(), $this->scheduler->next( Engine::RUN_HOOK, array( $waiting ) ) );
+	}
+
+	/**
 	 * Boot schedules the daily maintenance job once, at the next 03:00 site time.
 	 */
 	public function test_boot_schedules_maintenance_in_site_time() {

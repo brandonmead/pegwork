@@ -44,6 +44,11 @@ final class Plugin {
 	private static array $packages = array();
 
 	/**
+	 * Option set to '1' when activation is pending for fire_activated(), '0' after.
+	 */
+	public const ACTIVATED_OPTION = 'pegwork_activated';
+
+	/**
 	 * Registers the plugin's WordPress hooks. Safe to call more than once.
 	 */
 	public static function boot(): void {
@@ -54,6 +59,7 @@ final class Plugin {
 
 		add_action( 'plugins_loaded', array( self::class, 'plugins_loaded' ) );
 		add_action( 'init', array( self::class, 'init' ), 5 );
+		add_action( 'wp_loaded', array( self::class, 'fire_activated' ) );
 		add_action( 'admin_notices', array( Notices::class, 'render' ) );
 		Admin\EditorPanel::register();
 		Admin\Menu::register();
@@ -65,6 +71,54 @@ final class Plugin {
 			\WP_CLI::add_command( 'pegwork relationship', Cli\RelationshipCommand::class );
 			\WP_CLI::add_command( 'pegwork options', Cli\OptionsCommand::class );
 		}
+	}
+
+	/**
+	 * Activation hook: clears the registry hash, so the next load syncs (seeds terms, flushes rewrite rules), and
+	 * marks activation pending for fire_activated(). Runs before Pegwork's content and modules are loaded.
+	 */
+	public static function activate(): void {
+		delete_option( Registrar::HASH_OPTION );
+		self::mark_activated();
+	}
+
+	/**
+	 * Deactivation hook: drops the saved rewrite rules, so WordPress rebuilds them without Pegwork's types (a
+	 * flush here would keep them, since they are registered in this request), and clears the registry hash.
+	 */
+	public static function deactivate(): void {
+		delete_option( 'rewrite_rules' );
+		delete_option( Registrar::HASH_OPTION );
+	}
+
+	/**
+	 * Marks activation pending: the next full load fires pegwork_activated. Called on plugin activation and
+	 * when a module is enabled.
+	 */
+	public static function mark_activated(): void {
+		update_option( self::ACTIVATED_OPTION, '1', true );
+	}
+
+	/**
+	 * Fires pegwork_activated once after activation or a module enable, when modules have booted. The option
+	 * stays (as '0') so the check costs no query. Hooked to wp_loaded.
+	 */
+	public static function fire_activated(): void {
+		$flag = get_option( self::ACTIVATED_OPTION );
+		if ( false === $flag ) {
+			add_option( self::ACTIVATED_OPTION, '0', '', true );
+			return;
+		}
+		if ( '1' !== (string) $flag ) {
+			return;
+		}
+		update_option( self::ACTIVATED_OPTION, '0', true );
+
+		/**
+		 * Fires once on the first load after Pegwork is activated or a module is enabled, after modules boot.
+		 * Modules recover state that went stale while they were not running (automation reschedules lost wake-ups).
+		 */
+		do_action( 'pegwork_activated' );
 	}
 
 	/**

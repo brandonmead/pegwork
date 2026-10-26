@@ -124,6 +124,16 @@ class StatusTest extends TestCase {
 	}
 
 	/**
+	 * QA C8: manual automations are listed as manual, with their content type when they have one.
+	 */
+	public function test_manual_automation_rows() {
+		$dir  = $this->fixtures() . '/valid/engine-start';
+		$rows = array_column( ( new Status( Loader::load( array( $dir ) ) ) )->sections(), 'details', 'key' );
+		$this->assertStringStartsWith( 'manual, ', $rows['st_note'] );
+		$this->assertStringNotContainsString( 'webhook', implode( ' ', $rows ) );
+	}
+
+	/**
 	 * Shadowed DB entries are listed; rejected errors are grouped by package directory, then the DB source.
 	 */
 	public function test_shadowed_and_rejected() {

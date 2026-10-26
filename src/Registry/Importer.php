@@ -18,7 +18,8 @@ use Pegwork\Plugin;
  *
  * The package passes the same validator as a file package. Entries are upserted by kind and key in canonical
  * form, so importing the same package twice changes nothing. With prune, DB entries the package does not
- * define are removed; file packages are never touched. Terms, posts and meta are never deleted.
+ * define are removed; file packages are never touched. Terms, posts and meta are never deleted. An import that
+ * would stop a kept DB entry from loading (`import_breaks_entry`) is rejected whole.
  */
 final class Importer {
 
@@ -115,7 +116,12 @@ final class Importer {
 			return $plan;
 		}
 
-		$next    = Loader::load( Plugin::packages(), $plan->option );
+		$next   = Loader::load( Plugin::packages(), $plan->option );
+		$broken = self::broken( Loader::load( Plugin::packages(), is_array( $db ) ? $db : array() ), $next, $plan );
+		if ( $broken ) {
+			return new ImportPlan( $broken );
+		}
+
 		$missing = self::missing_terms( $next->registry );
 		if ( $dry_run ) {
 			return $plan->with( $missing, $next->shadowed );
@@ -131,6 +137,51 @@ final class Importer {
 		$created = array_values( array_filter( $missing, fn( array $term ) => ! in_array( $term, $left, true ) ) );
 
 		return $plan->with( $created, Plugin::result()->shadowed );
+	}
+
+	/**
+	 * Errors for DB entries that load now, are kept by the plan (not updated away or pruned) and would stop
+	 * loading after it, such as a form bound to a field the package removes. Each names the entry, followed by
+	 * the new load errors that explain it. Empty when the import breaks nothing.
+	 *
+	 * @param Result     $before Load of the current option.
+	 * @param Result     $after  Load of the planned option.
+	 * @param ImportPlan $plan   Valid plan.
+	 * @return ValidationError[]
+	 */
+	private static function broken( Result $before, Result $after, ImportPlan $plan ): array {
+		$removed = array();
+		foreach ( $plan->changes as $change ) {
+			if ( 'remove' === $change['action'] ) {
+				$removed[ $change['kind'] ][ $change['key'] ] = true;
+			}
+		}
+
+		$errors = array();
+		foreach ( $before->sources as $kind => $keys ) {
+			foreach ( $keys as $key => $from ) {
+				if ( Loader::DB_SOURCE === $from && ! isset( $removed[ $kind ][ $key ] ) && ! isset( $after->sources[ $kind ][ $key ] ) ) {
+					$errors[] = new ValidationError(
+						'import_breaks_entry',
+						/* translators: 1: object kind, 2: key. */
+						sprintf( __( 'This import would stop DB entry %1$s "%2$s" from loading. Change the package, or import with --prune to remove the entry.', 'pegwork' ), $kind, $key ),
+						Loader::DB_SOURCE
+					);
+				}
+			}
+		}
+		if ( array() === $errors ) {
+			return array();
+		}
+
+		$known = array_map( 'strval', $before->errors );
+		foreach ( $after->errors as $error ) {
+			if ( Loader::DB_SOURCE === $error->file && ! in_array( (string) $error, $known, true ) ) {
+				$errors[] = $error;
+			}
+		}
+
+		return $errors;
 	}
 
 	/**

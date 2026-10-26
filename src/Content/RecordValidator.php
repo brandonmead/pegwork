@@ -40,7 +40,12 @@ final class RecordValidator {
 	private static ?Registry $registry = null;
 
 	/**
-	 * Hooks rest_pre_insert_{post_type} for every content type.
+	 * Transient prefix (plus the user ID) listing records a Bulk Edit kept at their old status.
+	 */
+	public const HELD_TRANSIENT = 'pegwork_bulk_held_';
+
+	/**
+	 * Hooks rest_pre_insert_{post_type} for every content type, and wp_insert_post_data for Quick Edit and Bulk Edit.
 	 *
 	 * @param Registry $registry Effective registry.
 	 */
@@ -51,6 +56,164 @@ final class RecordValidator {
 				add_filter( 'rest_pre_insert_' . $type, array( self::class, 'pre_insert' ), 10, 2 );
 			}
 		}
+		if ( ! has_filter( 'wp_insert_post_data', array( self::class, 'bulk_edit' ) ) ) {
+			add_filter( 'wp_insert_post_data', array( self::class, 'bulk_edit' ), 10, 2 );
+			add_action( 'wp_ajax_inline-save', array( self::class, 'quick_edit' ), 0 );
+		}
+	}
+
+	/**
+	 * Applies completeness rules to a Quick Edit (admin-ajax inline-save) that would make a record published,
+	 * pending or scheduled: stops before core saves anything, with the error, which the list table shows under
+	 * the row. Runs only when the request would pass core's own nonce and capability checks. Hooked to
+	 * wp_ajax_inline-save, priority 0 (core's handler runs at 1).
+	 */
+	public static function quick_edit(): void {
+		if ( null === self::$registry || false === check_ajax_referer( 'inlineeditnonce', '_inline_edit', false ) ) {
+			return;
+		}
+		$post = get_post( isset( $_POST['post_ID'] ) ? absint( $_POST['post_ID'] ) : 0 );
+		if ( ! $post instanceof \WP_Post || null === self::$registry->content_type( $post->post_type ) || ! current_user_can( 'edit_post', $post->ID ) ) {
+			return;
+		}
+
+		// Target status as wp_ajax_inline_save() and edit_post() derive it.
+		$status = isset( $_POST['keep_private'] ) && 'private' === $_POST['keep_private'] ? 'private' : ( isset( $_POST['_status'] ) ? sanitize_key( wp_unslash( $_POST['_status'] ) ) : $post->post_status );
+		if ( ! in_array( $status, self::COMPLETE_STATUSES, true ) ) {
+			return;
+		}
+
+		$data = array();
+		if ( isset( $_POST['post_title'] ) ) {
+			$data['post_title'] = sanitize_text_field( wp_unslash( $_POST['post_title'] ) );
+		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Term IDs or names, only counted.
+		$tax_input = isset( $_POST['tax_input'] ) && is_array( $_POST['tax_input'] ) ? wp_unslash( $_POST['tax_input'] ) : array();
+		foreach ( array_keys( $tax_input ) as $taxonomy ) {
+			$object = get_taxonomy( (string) $taxonomy );
+			// Core's filter, applied as wp_ajax_inline_save() does, so the same taxonomies count.
+			if ( ! $object || ! apply_filters( 'quick_edit_show_taxonomy', $object->show_in_quick_edit, $taxonomy, $post->post_type ) ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
+				unset( $tax_input[ $taxonomy ] );
+			}
+		}
+
+		$result = self::validate( self::$registry, $post->post_type, self::stored_values( $post->post_type, $post, $data, $tax_input ), true, $post->ID );
+		if ( true !== $result ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+	}
+
+	/**
+	 * Applies completeness rules to a Bulk Edit save that would make a record published, pending or scheduled:
+	 * keeps each failing record at its old status and lists it in an admin notice. Other saves (programmatic
+	 * inserts, the Records API, REST, Quick Edit) are left to their own checks. Hooked to wp_insert_post_data.
+	 *
+	 * @param array<string, mixed> $data    Slashed post data about to be saved.
+	 * @param array<string, mixed> $postarr Slashed post array given to wp_insert_post(), with `tax_input`.
+	 * @return array<string, mixed>
+	 */
+	public static function bulk_edit( $data, $postarr ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only tells which save is running; edit.php checked the bulk-posts nonce before bulk_edit_posts().
+		if ( ! is_admin() || wp_doing_ajax() || ! isset( $_REQUEST['bulk_edit'] ) || null === self::$registry || ! is_array( $data ) || ! is_array( $postarr ) ) {
+			return $data;
+		}
+
+		$type     = (string) ( $data['post_type'] ?? '' );
+		$existing = get_post( (int) ( $postarr['ID'] ?? 0 ) );
+		if ( null === self::$registry->content_type( $type ) || ! $existing instanceof \WP_Post
+			|| ! in_array( $data['post_status'] ?? '', self::COMPLETE_STATUSES, true ) ) {
+			return $data;
+		}
+
+		$tax_input = is_array( $postarr['tax_input'] ?? null ) ? wp_unslash( $postarr['tax_input'] ) : array();
+		$values    = self::stored_values( $type, $existing, wp_unslash( $data ), $tax_input );
+		$result    = self::validate( self::$registry, $type, $values, true, $existing->ID );
+		if ( true === $result ) {
+			return $data;
+		}
+
+		$data['post_status'] = $existing->post_status;
+		$key                 = self::HELD_TRANSIENT . get_current_user_id();
+		$held                = get_transient( $key );
+		$held                = is_array( $held ) ? $held : array();
+		$held[]              = $existing->ID;
+		set_transient( $key, array_values( array_unique( $held ) ), 5 * MINUTE_IN_SECONDS );
+
+		return $data;
+	}
+
+	/**
+	 * Prints, once, the records the current user's last Bulk Edit kept at their old status. Called from Notices::render().
+	 */
+	public static function render_held_notice(): void {
+		$key  = self::HELD_TRANSIENT . get_current_user_id();
+		$held = get_transient( $key );
+		if ( ! is_array( $held ) || array() === $held ) {
+			return;
+		}
+		delete_transient( $key );
+
+		$titles = array();
+		foreach ( $held as $id ) {
+			if ( current_user_can( 'edit_post', (int) $id ) ) {
+				$titles[] = self::title( get_post( (int) $id ) );
+			}
+		}
+		if ( array() === $titles ) {
+			return;
+		}
+
+		echo '<div class="notice notice-warning is-dismissible"><p>';
+		echo esc_html(
+			sprintf(
+				/* translators: 1: number of records, 2: comma-separated record titles. */
+				_n(
+					'%1$d record kept its status because it is not complete: %2$s. Open it in the editor to see what is missing.',
+					'%1$d records kept their status because they are not complete: %2$s. Open them in the editor to see what is missing.',
+					count( $titles ),
+					'pegwork'
+				),
+				count( $titles ),
+				implode( ', ', $titles )
+			)
+		);
+		echo '</p></div>';
+	}
+
+	/**
+	 * Field values and term lists of a stored record for an admin list table save: post columns from the save,
+	 * meta as stored, terms from `tax_input` where given (IDs, or comma-separated names), else as stored.
+	 * Relationship links are left out, so validate() reads the stored ones.
+	 *
+	 * @param string               $type      Content type key.
+	 * @param \WP_Post             $post      Stored record.
+	 * @param array<string, mixed> $data      Unslashed post columns being saved.
+	 * @param array<string, mixed> $tax_input Unslashed terms by taxonomy.
+	 * @return array<string, mixed>
+	 */
+	private static function stored_values( string $type, \WP_Post $post, array $data, array $tax_input ): array {
+		$values = array();
+		foreach ( self::$registry->fields( $type ) as $key => $field ) {
+			$storage = $field['wp']['storage'] ?? null;
+			if ( null !== $storage ) {
+				$values[ $key ] = $data[ $storage ] ?? $post->$storage;
+				continue;
+			}
+			$meta_key       = Meta::key( $type, $field );
+			$values[ $key ] = metadata_exists( 'post', $post->ID, $meta_key ) ? get_post_meta( $post->ID, $meta_key, true ) : ( $field['default'] ?? null );
+		}
+
+		foreach ( self::$registry->content_type( $type )['taxonomies'] as $usage ) {
+			$terms = $tax_input[ $usage['key'] ] ?? null;
+			if ( is_string( $terms ) ) {
+				$terms = array_map( 'trim', explode( ',', $terms ) );
+			} elseif ( null === $terms ) {
+				$terms = wp_get_object_terms( $post->ID, $usage['key'], array( 'fields' => 'ids' ) );
+			}
+			$values[ $usage['key'] ] = is_array( $terms ) ? array_values( array_filter( $terms ) ) : array();
+		}
+
+		return $values;
 	}
 
 	/**
@@ -76,6 +239,11 @@ final class RecordValidator {
 		$values   = self::merge( $type, $prepared, $request, $existing );
 
 		$result = self::validate( self::$registry, $type, $values, in_array( $status, self::COMPLETE_STATUSES, true ), (int) ( $prepared->ID ?? 0 ) );
+		$meta   = $request->get_param( 'meta' );
+		$typed  = self::type_errors( $type, is_array( $meta ) ? $meta : array() );
+		if ( array() !== $typed ) {
+			return self::invalid( $typed + ( true === $result ? array() : (array) ( $result->get_error_data()['fields'] ?? array() ) ) );
+		}
 
 		return true === $result ? $prepared : $result;
 	}
@@ -128,10 +296,15 @@ final class RecordValidator {
 			}
 		}
 
-		if ( array() === $errors ) {
-			return true;
-		}
+		return array() === $errors ? true : self::invalid( $errors );
+	}
 
+	/**
+	 * The invalid-record error for per-key messages.
+	 *
+	 * @param array<string, string> $errors Messages by key.
+	 */
+	private static function invalid( array $errors ): WP_Error {
 		return new WP_Error(
 			'pegwork_invalid_record',
 			/* translators: %s: per-field error messages. */
@@ -141,6 +314,32 @@ final class RecordValidator {
 				'fields' => $errors,
 			)
 		);
+	}
+
+	/**
+	 * Request meta values that their field's sanitizer would turn into an empty value (an impossible date such
+	 * as 2026-02-30, a URL that is not a web address), so the save is rejected instead of blanking the field.
+	 * Text types are left out: their sanitizers only clean. The REST schema already rejects wrong types.
+	 *
+	 * @param string               $type Content type key.
+	 * @param array<string, mixed> $meta Request meta by meta key.
+	 * @return array<string, string> Error message by field key.
+	 */
+	private static function type_errors( string $type, array $meta ): array {
+		$errors = array();
+		foreach ( self::$registry->fields( $type ) as $key => $field ) {
+			$meta_key = Meta::key( $type, $field );
+			if ( ! Meta::is_meta( $field ) || ! array_key_exists( $meta_key, $meta ) || in_array( $field['type'], array( 'text', 'textarea', 'rich_text', 'boolean' ), true ) ) {
+				continue;
+			}
+			$value = $meta[ $meta_key ];
+			if ( is_scalar( $value ) && '' !== $value && '' === call_user_func( Meta::sanitizer( $field ), $value ) ) {
+				/* translators: %s: field label. */
+				$errors[ $key ] = sprintf( __( '%s has an invalid value.', 'pegwork' ), $field['label'] );
+			}
+		}
+
+		return $errors;
 	}
 
 	/**
