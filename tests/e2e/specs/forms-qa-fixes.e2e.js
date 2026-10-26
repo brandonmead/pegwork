@@ -188,17 +188,19 @@ test( 'F2: the same confirm submission twice sends one email and says so', async
 test( 'F3: files over post_max_size give a too large notice and keep the form', async ( {
 	page,
 } ) => {
+	const limit = await adminCall( 'GET', '/pegwork-e2e/v1/post-max' );
+	test.skip( limit === 0 || limit > 256 * 1024 * 1024, 'No usable limit.' );
 	await page.setViewportSize( { width: 1280, height: 900 } );
 	await page.goto( pages.e2e_upload.url );
 	await page.getByRole( 'textbox', { name: /^Name/ } ).fill( 'Ada Lovelace' );
 	await page
 		.getByRole( 'textbox', { name: /^Email/ } )
 		.fill( 'ada@example.org' );
-	// Larger than any default post_max_size (8 MB); the server drops the whole body.
+	// Just over the server's post_max_size: PHP drops the whole body.
 	await page.getByLabel( /^Document/ ).setInputFiles( {
 		name: 'huge.txt',
 		mimeType: 'text/plain',
-		buffer: Buffer.alloc( 40 * 1024 * 1024, 'a' ),
+		buffer: Buffer.alloc( limit + 1024 * 1024, 'a' ),
 	} );
 	await page.waitForTimeout( HUMAN_PAUSE_MS );
 	await Promise.all( [

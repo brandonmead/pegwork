@@ -370,8 +370,76 @@ class FiltersModuleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A filterable loop of Projects that need volunteers (3 of the 5 fixtures), as block markup.
+	 */
+	private static function volunteer_loop(): string {
+		return '<!-- wp:query {"queryId":777,"query":{"perPage":10,"postType":"sifg_project","inherit":false},"pegwork":{"filters":true,"where":{"needs_volunteers":true}}} -->'
+			. '<div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-title /--><!-- /wp:post-template --></div><!-- /wp:query -->';
+	}
+
+	/**
+	 * The count follows a loop that sits in a synced pattern (core/block) or a template part, including its
+	 * `where` preset, and a reference cycle ends at the depth limit instead of looping.
+	 */
+	public function test_count_finds_loop_in_synced_pattern_and_template_part() {
+		$synced = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_block',
+				'post_status'  => 'publish',
+				'post_title'   => 'Volunteer directory',
+				'post_content' => self::volunteer_loop(),
+			)
+		);
+		$page   = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'Synced directory',
+				'post_content' => '<!-- wp:pegwork/filters /--><!-- wp:block {"ref":' . $synced . '} /-->',
+			)
+		);
+		$this->go_to( get_permalink( $page ) );
+		$this->assertSame( 777, Count::bound_loop( 'sifg_project' )['queryId'] );
+		$this->assertSame( FiltersBlock::count_text( 3 ), self::count_text( do_blocks( get_post( $page )->post_content ) ) );
+
+		// A template part (database copy), referenced from the current template.
+		$part = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_status'  => 'publish',
+				'post_name'    => 'volunteer-directory',
+				'post_title'   => 'Volunteer directory',
+				'post_content' => self::volunteer_loop(),
+			)
+		);
+		wp_set_object_terms( $part, get_stylesheet(), 'wp_theme' );
+		$GLOBALS['_wp_current_template_content'] = '<!-- wp:template-part {"slug":"volunteer-directory","theme":"' . get_stylesheet() . '"} /-->'; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's global for the template being rendered.
+		$this->go_to( home_url( '/' ) );
+		$this->assertSame( 777, Count::bound_loop( 'sifg_project' )['queryId'] );
+		$this->assertSame( 3, Count::for_type( 'sifg_project' ) );
+
+		// A synced pattern that contains itself: no loop, no endless recursion.
+		$cycle = self::factory()->post->create(
+			array(
+				'post_type'   => 'wp_block',
+				'post_status' => 'publish',
+				'post_title'  => 'Cycle',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'           => $cycle,
+				'post_content' => '<!-- wp:block {"ref":' . $cycle . '} /-->',
+			)
+		);
+		$GLOBALS['_wp_current_template_content'] = '<!-- wp:block {"ref":' . $cycle . '} /-->'; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's global for the template being rendered.
+		$this->assertNull( Count::bound_loop( 'sifg_project' ) );
+		unset( $GLOBALS['_wp_current_template_content'] );
+	}
+
+	/**
 	 * `collapseOnSmall` wraps the fields and actions in a details: off by default, closed with no filter,
-	 * open with the active count in the summary (the search and each shown filter with a value).
+	 * closed too with the active count in the summary (the search and each shown filter with a value), and
+	 * the result count before the disclosure so it shows on a phone without opening it.
 	 */
 	public function test_collapse_on_small_screens() {
 		$base = get_post_type_archive_link( 'sifg_project' );
@@ -381,7 +449,8 @@ class FiltersModuleTest extends WP_UnitTestCase {
 
 		$html = do_blocks( '<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->' );
 		$this->assertStringContainsString( '<details class="pegwork-filters__collapse"><summary class="pegwork-filters__collapse-summary" data-wp-text="context.collapseLabel">Filters</summary><div class="pegwork-filters__fields">', $html );
-		$this->assertMatchesRegularExpression( '#</div></details></form><p class="pegwork-filters__count"#', $html );
+		$this->assertMatchesRegularExpression( '#<p class="pegwork-filters__count"[^>]*>[^<]*</p><form [^>]*><details #', $html, 'the count comes before the disclosure' );
+		$this->assertStringEndsWith( '</div></details></form></div>', $html );
 
 		$params = array(
 			'q'          => 'data',
@@ -390,8 +459,10 @@ class FiltersModuleTest extends WP_UnitTestCase {
 		);
 		$this->go_to( add_query_arg( urlencode_deep( $params ), $base ) );
 		$html = do_blocks( '<!-- wp:pegwork/filters {"collapseOnSmall":true} /-->' );
-		$this->assertStringContainsString( '<details class="pegwork-filters__collapse" open>', $html );
+		$this->assertStringContainsString( '<details class="pegwork-filters__collapse">', $html, 'a filtered URL stays collapsed' );
+		$this->assertStringNotContainsString( ' open', $html );
 		$this->assertStringContainsString( '>Filters, 3 active</summary>', $html );
+		$this->assertLessThan( strpos( $html, '<details' ), strpos( $html, 'pegwork-filters__count' ) );
 
 		// Only shown controls count: no search box, and only the volunteers filter.
 		$html = do_blocks( '<!-- wp:pegwork/filters {"collapseOnSmall":true,"showSearch":false,"filters":["volunteers"]} /-->' );

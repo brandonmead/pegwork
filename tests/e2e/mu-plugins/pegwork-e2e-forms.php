@@ -131,6 +131,17 @@ add_action(
 			)
 		);
 
+		// The server's post_max_size in bytes (0 when unlimited), so a spec can post just over it.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/post-max',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin,
+				'callback'            => static fn() => rest_ensure_response( max( 0, (int) wp_convert_hr_to_bytes( (string) ini_get( 'post_max_size' ) ) ) ),
+			)
+		);
+
 		// Makes mail to anyone but the site admin fail (on) or work again (off).
 		register_rest_route(
 			'pegwork-e2e/v1',
