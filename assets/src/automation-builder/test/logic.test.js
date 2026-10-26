@@ -386,14 +386,27 @@ describe( 'step ids', () => {
 		expect( uniqueId( 'decision', new Set() ) ).toBe( 'decision' );
 	} );
 
-	it( 'renames a missing or later duplicate id only', () => {
+	it( 'renames a missing id or one another block uses, before or after it', () => {
 		const list = [
 			step( 'x', { id: 'mail' } ),
 			step( 'y', { id: 'mail' } ),
+			step( 'z', { id: 'other' } ),
 		];
-		expect( needsId( list, 'x', 'mail' ) ).toBe( false );
+		expect( needsId( list, 'x', 'mail' ) ).toBe( true );
 		expect( needsId( list, 'y', 'mail' ) ).toBe( true );
+		expect( needsId( list, 'z', 'other' ) ).toBe( false );
 		expect( needsId( list, 'x', '' ) ).toBe( true );
+	} );
+
+	it( 'renames a step pasted before its original (QA B-01)', () => {
+		// The pasted copy mounts; the original, later in the document, does not mount again.
+		const pasted = [
+			step( 'copy', { id: 'follow_up' } ),
+			step( 'original', { id: 'follow_up' } ),
+		];
+		expect( assignId( pasted, 'copy', 'follow_up', 'send_email' ) ).toBe(
+			'email'
+		);
 	} );
 
 	it( 'gives a new block one id, even when its mount effect runs twice', () => {
@@ -408,12 +421,11 @@ describe( 'step ids', () => {
 		// StrictMode's second run still has the mount props (no id), but the store has the id.
 		const twice = [ step( 'x', { id: 'decision' } ) ];
 		expect( assignId( twice, 'x', undefined, 'decision' ) ).toBeNull();
-		// A pasted duplicate later in the document is renamed; the original keeps its id.
+		// A pasted duplicate later in the document is renamed when it mounts.
 		const pasted = [
 			step( 'x', { id: 'mail' } ),
 			step( 'y', { id: 'mail' } ),
 		];
-		expect( assignId( pasted, 'x', 'mail', 'send_email' ) ).toBeNull();
 		expect( assignId( pasted, 'y', 'mail', 'send_email' ) ).toBe( 'email' );
 	} );
 

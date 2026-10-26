@@ -25,7 +25,7 @@ import { addQueryArgs } from '@wordpress/url';
  * Internal dependencies
  */
 import { errorsAt, formatDuration, parseDuration } from './logic';
-import { fieldName, groupLabel, listName } from './labels';
+import { fieldName, listName, tagGroups } from './labels';
 import { eachBlock, formatTag, withRole } from './scope';
 import { config, useSample } from './store';
 
@@ -136,16 +136,6 @@ function MergeTagInserter( { tags, label, onInsert } ) {
 	const [ number, setNumber ] = useState( '' );
 	const [ fallback, setFallback ] = useState( '' );
 	const chosen = tags.find( ( tag ) => tag.path === path ) || tags[ 0 ];
-	const groups = [];
-	for ( const tag of tags ) {
-		const heading = groupLabel( tag, config );
-		const last = groups[ groups.length - 1 ];
-		if ( last?.heading === heading ) {
-			last.tags.push( tag );
-		} else {
-			groups.push( { heading, tags: [ tag ] } );
-		}
-	}
 	const common = {
 		__next40pxDefaultSize: true,
 		__nextHasNoMarginBottom: true,
@@ -178,18 +168,20 @@ function MergeTagInserter( { tags, label, onInsert } ) {
 						value={ chosen?.path ?? '' }
 						onChange={ setPath }
 					>
-						{ groups.map( ( group ) => (
-							<optgroup
-								key={ group.heading }
-								label={ group.heading }
-							>
-								{ group.tags.map( ( tag ) => (
-									<option key={ tag.path } value={ tag.path }>
-										{ `${ fieldName( tag, false ) } {{${ tag.path }}}` }
-									</option>
-								) ) }
-							</optgroup>
-						) ) }
+						{ Object.entries( tagGroups( tags, config ) ).map(
+							( [ heading, list ] ) => (
+								<optgroup key={ heading } label={ heading }>
+									{ list.map( ( tag ) => (
+										<option
+											key={ tag.path }
+											value={ tag.path }
+										>
+											{ `${ fieldName( tag, false ) } {{${ tag.path }}}` }
+										</option>
+									) ) }
+								</optgroup>
+							)
+						) }
 					</SelectControl>
 					{ chosen?.date && (
 						<>

@@ -473,3 +473,5 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 
 ## Gotchas
 - Folder is under Mead Drive (synced), which creates "<name> 2.<ext>" duplicates, even inside .git. Stage with explicit paths, never `git add -A`.
+- A missing property has two pointers: `ValidationError::$pointer` is its object (as JSON Schema reports it; the invalid fixtures' `schema: true` parity depends on it) and `$field` is the property itself. Automation saves (`SiteDefinitions::invalid()`) report `$field` as "Required: <Name>." so the builder shows it at the control; keep both when changing `Validator::props()` or `type()` (QA B-06, 2026-10-25).
+- Builder step ids are assigned on mount only (`useStepId()`): a mounting block is renamed when any other block has its id, so a paste before or over the original renames the copy, never the original (QA B-01). Headless Chromium on macOS does fire the editor's Ctrl+C and Ctrl+V; a block selected without a text caret is replaced by the paste.

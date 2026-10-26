@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import stepMetadata from '../../../../modules/automation/blocks/automation-step/block.json';
 import loopMetadata from '../../../../modules/automation/blocks/automation-loop/block.json';
 import { toJSON, toModel } from '../conditions';
-import { fieldName, groupLabel, stepSummary } from '../labels';
+import { fieldName, groupLabel, stepSummary, tagGroups } from '../labels';
 import {
 	BRANCH,
 	DECISION,
@@ -616,5 +616,94 @@ describe( 'read words', () => {
 				( tag ) => tag.path
 			)
 		).not.toContain( 'steps.donor.record.email' );
+	} );
+} );
+
+describe( 'merge tag picker (QA B-02, B-03, B-04)', () => {
+	const definition = {
+		trigger,
+		steps: [
+			{
+				id: 'donor',
+				type: 'get_record',
+				content_type: 'contact',
+				related: { relationship: 'gift_donor', of: '{{record.id}}' },
+			},
+			{ id: 'mail', type: 'send_email' },
+		],
+	};
+	const tags = mergeTags( definition, '/steps/1/text', config, 'private' );
+	const byPath = ( list, path ) => list.find( ( tag ) => tag.path === path );
+
+	it( 'shows each group once, run.id under Site', () => {
+		const groups = tagGroups( tags, config );
+		const headings = Object.keys( groups );
+		expect( headings.filter( ( item ) => item === 'Site' ) ).toHaveLength(
+			1
+		);
+		expect( groups.Site.map( ( tag ) => tag.path ) ).toEqual( [
+			'site.name',
+			'site.url',
+			'run.id',
+		] );
+	} );
+
+	it( 'gives no two tags of a group the same name', () => {
+		for ( const list of Object.values( tagGroups( tags, config ) ) ) {
+			const names = list.map( ( tag ) => fieldName( tag, false ) );
+			expect( names ).toEqual( [ ...new Set( names ) ] );
+		}
+		expect(
+			fieldName( byPath( tags, 'steps.donor.record_id' ), false )
+		).toBe( 'Record ID' );
+		expect(
+			fieldName( byPath( tags, 'steps.donor.record.id' ), false )
+		).toBe( 'ID' );
+	} );
+
+	it( 'names trigger tags in words, Changed by on record events', () => {
+		const words = ( list ) =>
+			list
+				.filter( ( tag ) => tag.group === 'trigger' )
+				.map( ( tag ) => fieldName( tag ) );
+		expect( words( tags ) ).toEqual( [
+			'Record ID',
+			'Content type',
+			'Status',
+			'Changed by (user ID)',
+		] );
+		const changed = mergeTags(
+			{
+				trigger: {
+					type: 'event',
+					event: 'record.status_changed',
+					content_type: 'gift',
+				},
+				steps: [ { id: 'mail', type: 'send_email' } ],
+			},
+			'/steps/0/text',
+			config,
+			'private'
+		);
+		expect( words( changed ) ).toEqual( [
+			'Record ID',
+			'Content type',
+			'Status before',
+			'New status',
+			'Changed by (user ID)',
+		] );
+		const manual = mergeTags(
+			{
+				trigger: { type: 'manual', button: 'Go' },
+				steps: [ { id: 'mail', type: 'send_email' } ],
+			},
+			'/steps/0/text',
+			config,
+			'private'
+		);
+		expect( words( manual ) ).toEqual( [
+			'Started by (user ID)',
+			'Started from',
+		] );
 	} );
 } );

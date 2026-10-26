@@ -737,7 +737,7 @@ function TriggerPanel() {
 					<p>
 						<strong>
 							{ __(
-								'Signed links (edit them in the JSON file)',
+								'Signed links (read-only here, kept when you save)',
 								'pegwork'
 							) }
 						</strong>
