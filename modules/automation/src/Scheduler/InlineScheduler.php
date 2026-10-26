@@ -91,15 +91,19 @@ final class InlineScheduler implements Scheduler {
 	}
 
 	/**
-	 * Fires held wake-ups due at or before a time, in time order, including the ones they schedule.
+	 * Fires held wake-ups due at or before a time, in time order, including the ones they schedule. With a
+	 * clock, the time is read again before each firing (never earlier than `$until`), so a wake-up for "now"
+	 * that a run schedules after the clock has moved on (a slow email) still fires in this process.
 	 *
-	 * @param int $until Unix time.
-	 * @param int $limit Safety cap on firings.
+	 * @param int           $until Unix time.
+	 * @param int           $limit Safety cap on firings.
+	 * @param callable|null $clock Returns the current Unix time, or null to keep `$until`.
 	 * @return int Number fired.
 	 */
-	public function drain( int $until, int $limit = 10000 ): int {
+	public function drain( int $until, int $limit = 10000, ?callable $clock = null ): int {
 		$fired = 0;
 		while ( $fired < $limit ) {
+			$until = null === $clock ? $until : max( $until, (int) $clock() );
 			$due = array_filter( $this->jobs, fn( array $job ) => $job['at'] <= $until );
 			if ( array() === $due ) {
 				break;

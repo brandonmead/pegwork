@@ -1,0 +1,4 @@
+{ "format": 1, "key": "act_child", "label": "Remove this contact",
+  "trigger": { "type": "manual", "content_type": "act_contact", "button": "Remove contact" },
+  "steps": [
+    { "id": "remove", "type": "trash_record", "content_type": "act_contact" } ] }

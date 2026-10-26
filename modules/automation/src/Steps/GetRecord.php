@@ -24,6 +24,11 @@ use PegworkAutomation\Templates;
 final class GetRecord implements Step {
 
 	/**
+	 * Matches a query reads in a run a user started, so the first one that user can read is found.
+	 */
+	public const ACTOR_LIMIT = 20;
+
+	/**
 	 * Runs the step.
 	 *
 	 * @param array<string, mixed> $step    Step definition.
@@ -43,14 +48,21 @@ final class GetRecord implements Step {
 			$empty    = '' === $rendered ? 'record' : null;
 		} else {
 			$query = Reads::query( $step, $context ) + array(
-				'limit' => 1,
+				'limit' => $context->actor() > 0 ? self::ACTOR_LIMIT : 1, // Room to skip records the starting user cannot read.
 				'count' => false,
 			);
 			$found = Reads::find( $type, $query, $summary );
 			if ( $found instanceof StepResult ) {
 				return $found;
 			}
-			$id    = (int) ( $found['ids'][0] ?? 0 );
+			$id = 0;
+			foreach ( (array) $found['ids'] as $candidate ) {
+				if ( $context->can( 'read_post', (int) $candidate ) ) {
+					$id = (int) $candidate;
+					break;
+				}
+				$summary['unreadable'] = (int) ( $summary['unreadable'] ?? 0 ) + 1;
+			}
 			$empty = $found['empty_operand'] ?? Reads::empty_related( $query );
 			if ( null !== Reads::created_summary( $query ) ) {
 				$summary['created'] = Reads::created_summary( $query );

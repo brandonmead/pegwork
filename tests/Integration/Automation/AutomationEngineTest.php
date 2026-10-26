@@ -231,9 +231,10 @@ class AutomationEngineTest extends AutomationTestCase {
 	}
 
 	/**
-	 * A record deleted before the run wakes fails the step and the run with the Records API error code.
+	 * A record deleted for good before the run wakes stops the run before any step (QA E3): completed,
+	 * outcome `no_record`, no step rows.
 	 */
-	public function test_missing_record_fails_the_run() {
+	public function test_missing_record_stops_the_run() {
 		$id     = $this->job( 'draft' );
 		$run_id = Engine::instance()->runs()->insert(
 			array(
@@ -248,8 +249,10 @@ class AutomationEngineTest extends AutomationTestCase {
 		);
 		wp_delete_post( $id, true );
 
-		$this->assertSame( 'failed', Engine::instance()->executor()->execute( $run_id ) );
-		$this->assertStringStartsWith( 'pegwork_record_not_found:', $this->run_row( $run_id )['error'] );
+		$this->assertSame( 'completed', Engine::instance()->executor()->execute( $run_id ) );
+		$this->assertSame( 'no_record', $this->run_row( $run_id )['context']['outcome'] );
+		$this->assertNull( $this->run_row( $run_id )['error'] );
+		$this->assertSame( array(), $this->steps( $run_id ) );
 	}
 
 	/**

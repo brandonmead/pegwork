@@ -1,0 +1,9 @@
+{ "format": 1, "key": "act_reads", "label": "An email, then a loop over contacts",
+  "trigger": { "type": "manual", "button": "Loop contacts" },
+  "steps": [
+    { "id": "before", "type": "send_email", "to": "office@example.org", "subject": "Before", "text": "Before the loop." },
+    { "id": "find", "type": "find_records", "content_type": "act_contact", "limit": 10,
+      "filter": { "all": [ { "field": "stage", "op": "eq", "value": "loop" } ] } },
+    { "id": "each", "type": "loop", "over": "steps.find.records",
+      "steps": [
+        { "id": "item", "type": "send_email", "to": "office@example.org", "subject": "Item {{steps.each.item.name}}", "text": "Item." } ] } ] }

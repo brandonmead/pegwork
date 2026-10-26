@@ -60,6 +60,11 @@ final class Executor {
 	public const ERRORS_OUTCOME = 'completed_with_errors:';
 
 	/**
+	 * Outcome of a run that stopped because its bound record was deleted for good.
+	 */
+	public const NO_RECORD_OUTCOME = 'no_record';
+
+	/**
 	 * Engine.
 	 *
 	 * @var Engine
@@ -115,10 +120,20 @@ final class Executor {
 			return 'failed';
 		}
 
-		$stored  = $run['context'];
-		$record  = null === $run['record_id'] ? null : Records::get( (int) $run['record_id'] );
+		$stored = $run['context'];
+		$record = null === $run['record_id'] ? null : Records::get( (int) $run['record_id'] );
+		$date_wait = null !== $step_id && isset( $plan->step( $step_id )['until'] );
+		if ( null !== $run['record_id'] && null === $record && ! $date_wait && 'record.deleted' !== ( $stored['event'] ?? null ) ) {
+			// The bound record was deleted for good (during a wait, a retry or a requeue): no step runs on an
+			// empty record. A record.deleted run binds a record that is already gone, so it carries on; a date
+			// wait at the cursor stops the run itself (`stopped_at:<id>`, summary `no_record`).
+			$stored['outcome'] = self::NO_RECORD_OUTCOME;
+			$runs->finish( $id, 'completed', null, $stored );
+			return 'completed';
+		}
 		$context = new Context( $this->engine->clock(), $record, (array) ( $stored['trigger'] ?? array() ), (array) ( $stored['steps'] ?? array() ), $id, (string) $run['automation'] );
 		$context->use_plan( $plan );
+		$context->use_actor( Context::actor_of( $run ) );
 		$context->restore_reads( (int) ( $stored['reads'] ?? 0 ) );
 		$context->restore_trashed( (int) ( $stored['trashed'] ?? 0 ) );
 		$context->restore_starts( (int) ( $stored['starts'] ?? 0 ) );
@@ -155,12 +170,14 @@ final class Executor {
 				return 'queued';
 			}
 			if ( ! $advance && $attempts >= $limit ) {
+				$runs->progress( $id, $step_id, self::store( $stored, $context ) ); // Retry starts at this step, which did not run.
 				$runs->finish( $id, 'failed', sprintf( 'step_limit: more than %d step attempts.', $limit ), self::store( $stored, $context ) );
 				return 'failed';
 			}
 
 			if ( $is_loop ) {
-				$error = null;
+				$error   = null;
+				$loop_id = $step_id;
 				if ( $advance ) {
 					$context->advance_loop( $step_id ); // Not an attempt and no row: the wake-up's first step may still follow.
 					$step_id = $this->enter( $run, $step, $plan, $context, $attempts );
@@ -169,6 +186,7 @@ final class Executor {
 					$first   = false;
 				}
 				if ( null !== $error ) {
+					$runs->progress( $id, $loop_id, self::store( $stored, $context ) ); // Retry starts the loop again.
 					$runs->finish( $id, 'failed', $error, self::store( $stored, $context ) );
 					return 'failed';
 				}

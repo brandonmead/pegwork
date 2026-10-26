@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "key": "act_contact",
+  "labels": { "singular": "Contact", "plural": "Contacts" },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "wp": { "storage": "post_title" } },
+    { "key": "email", "type": "email", "label": "Email", "visibility": "private" },
+    { "key": "stage", "type": "text", "label": "Stage" }
+  ]
+}

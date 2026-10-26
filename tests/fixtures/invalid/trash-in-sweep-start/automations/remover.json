@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "remover",
+  "label": "Starts the trash",
+  "trigger": { "type": "manual", "content_type": "barn_task", "button": "Remove" },
+  "steps": [
+    { "id": "next", "type": "start_automation", "automation": "trasher" }
+  ]
+}
