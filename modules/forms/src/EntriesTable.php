@@ -110,7 +110,12 @@ final class EntriesTable extends \WP_List_Table {
 			)
 		);
 
-		$this->items           = $result['items'];
+		$this->items = $result['items'];
+		// The Post column reads each linked post: one query for the page, not one per row.
+		$post_ids = array_values( array_unique( array_filter( array_map( 'intval', array_column( $this->items, 'post_id' ) ) ) ) );
+		if ( array() !== $post_ids ) {
+			_prime_post_caches( $post_ids, false, false );
+		}
 		$this->_column_headers = array( $this->get_columns(), array(), $this->get_sortable_columns(), 'date' );
 		$this->set_pagination_args(
 			array(
