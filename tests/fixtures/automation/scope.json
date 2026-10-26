@@ -1,5 +1,5 @@
 {
-	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the condition at \"at\", the trigger condition when absent (exactly those validate with \"sample\"). dates: the date fields \"Until a date\" offers for the step at \"at\" (a wait until each, put there, validates; each in \"refuse\" is refused; none when the trigger binds no record of a type with a date field). roles: whether \"Add a role\" is offered for the template at \"at\" (exactly then a {role:editor} part validates there).",
+	"description": "Shared by assets/src/automation-builder/test/scope.test.js and tests/Integration/Automation/AutomationBuilderScopeTest.php. config: BuilderEditor::registry_config() of each package. tags: merge tags offered for the template at \"at\" (each validates there, as {{path}} or inside \"template\"; each in \"refuse\" is refused). fields: condition fields offered at \"at\" (each validates as a not_empty leaf there). operators: operators offered for \"var\" in the condition at \"at\", the trigger condition when absent (exactly those validate with \"sample\"). dates: the date fields \"Until a date\" offers for the step at \"at\" (a wait until each, put there, validates; each in \"refuse\" is refused; none when the trigger binds no record of a type with a date field). roles: whether \"Add a role\" is offered for the template at \"at\" (exactly then a {role:editor} part validates there). trash: the records \"Which record\" offers for a Move to trash step put at \"at\" (each, with its type as content_type, validates; with another type it is refused; each template in \"refuse\" is refused, \"\" meaning no record). created: the date paths a read's Created before and after offer as another value at the read at \"at\" (each as created.before { var } validates; each in \"refuse\" is refused).",
 	"packages": {
 		"branching": {
 			"dir": "tests/fixtures/valid/branching",
@@ -2200,6 +2200,62 @@
 			"automation": "barn_task_due_reminder",
 			"at": "/steps/3/values/reminded_on",
 			"offered": false
+		}
+	],
+	"trash": [
+		{
+			"package": "v4",
+			"automation": "barn_volunteer_retention",
+			"at": "/steps/2/steps/0",
+			"expect": [
+				{ "value": "{{steps.each_old.item.id}}", "type": "barn_volunteer" }
+			],
+			"refuse": [ "", "{{steps.old.count}}", "{{steps.each_old.item.name}}" ]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_v4_shapes",
+			"at": "/steps/8/branches/0/steps/0",
+			"expect": [
+				{ "value": "", "type": "barn_task" },
+				{ "value": "{{steps.gift.record_id}}", "type": "barn_gift" },
+				{ "value": "{{steps.latest.record_id}}", "type": "barn_gift" }
+			],
+			"refuse": [ "{{steps.gift.record.id}}", "{{trigger.id}}", "{{steps.each_gift.item.id}}" ]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_v4_shapes",
+			"at": "/steps/10",
+			"expect": [
+				{ "value": "", "type": "barn_task" },
+				{ "value": "{{steps.gift.record_id}}", "type": "barn_gift" },
+				{ "value": "{{steps.latest.record_id}}", "type": "barn_gift" }
+			],
+			"refuse": [ "{{steps.newer_gifts.count}}" ]
+		}
+	],
+	"created": [
+		{
+			"package": "v4",
+			"automation": "barn_v4_shapes",
+			"at": "/steps/4",
+			"expect": [
+				"record.due_on",
+				"record.reminded_on",
+				"trigger.old.due_on",
+				"trigger.old.reminded_on",
+				"steps.gift.record.received_on",
+				"steps.latest.record.received_on"
+			],
+			"refuse": [ "record.name", "steps.gift.record.amount" ]
+		},
+		{
+			"package": "v4",
+			"automation": "barn_volunteer_retention",
+			"at": "/steps/0",
+			"expect": [],
+			"refuse": [ "record.created_on" ]
 		}
 	]
 }

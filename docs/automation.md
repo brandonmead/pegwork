@@ -377,7 +377,7 @@ Design: `docs/automation-v4-design.md` sections 2.3, 3.4, 3.6 to 3.8 (shape and 
 - Output `started` (boolean): false when the target's `when` is false or the depth cap skipped it; neither is a failure. Summary `{ automation, record_id, started, run, skipped }` (`skipped` `not_applicable` or `loop_depth`; absent keys are left out).
 - Per-run limit: `context.starts` counts child runs (restored and stored by the executor like `context.reads`), 50 by default (filter `pegwork_automation_start_limit`); the next start fails `start_limit` without retry. A child found again by its key counts too, because the attempt that inserted it ended before counting.
 - Run detail (administrators only, the screen's capability): a start step's row links "Run 413", and the child's details have a "Started by" row: "Run 412 of Thank a donor (step `receipt`)", plus the loop item number when it was started inside a loop. Both read only IDs, keys and labels.
-- Tests: `AutomationStartTest` (fixture package `tests/fixtures/engine-start`, outside `valid/` so builder round trips skip it; `tests/Support/FailingScheduler.php` ends the request after the child's insert), and `tests/e2e/specs/automation-start.e2e.js` (package `tests/e2e/start-package`, mu-plugin `pegwork-e2e-start.php`).
+- Tests: `AutomationStartTest` (fixture package `tests/fixtures/valid/engine-start`; `tests/Support/FailingScheduler.php` ends the request after the child's insert), and `tests/e2e/specs/automation-start.e2e.js` (package `tests/e2e/packages/start`, mu-plugin `pegwork-e2e-start.php`).
 
 ![A run started by another run](screenshots/automation-run-started-by.png)
 
@@ -632,7 +632,7 @@ Design: `docs/phase-6-design.md` section 6 and `docs/automation-v3-design.md` se
 - Errors: a refused save shows each message at its step card and its control (`aria-invalid`, `aria-describedby`), settings messages in their panel, and a notice with "Go to first error" (settings first, then blocks in document order). Open runs: a warning while there are unsaved changes, and in the Automation panel.
 - Preview (Send email steps, after "Show preview") and Test run call the routes under [Preview and test run](#preview-and-test-run), with one sample record or payload for the whole editor. The Test run result heading takes focus.
 - File automations: every control disabled, no appenders or inserter, the title read-only, "Duplicate as site automation" in the notice and the Automation panel.
-- Size: at most 28,475 bytes gzipped (`npm run check:size`; the budget was 25 KB before loops and 27,136 before Automation v4 Editor A, each time raised by the minimum measured; Automation v4 caps it at 30,720); every dependency is a WordPress script.
+- Size: at most 30,147 bytes gzipped (`npm run check:size`; the budget was 25 KB before loops, 27,136 before Automation v4 Editor A and 28,475 before Editor B, each time raised by the minimum measured; Automation v4 caps it at 30,720); every dependency is a WordPress script.
 
 Reads, relate, `on_error` and the manual trigger:
 
@@ -663,6 +663,25 @@ Wait until a date and role recipients (Automation v4 Editor A):
 - "Add a role" beside "Insert merge tag" on a Send email step's To only (`takesRoles()`): a Role select of the config's eligible roles by name and "Add role", which appends `{role:<slug>}` as the last part and returns focus to To. Its accessible name is "Add a role to To". The card names roles: "Email to everyone with role Editor, {option:barn_settings.volunteer_manager}: ...".
 - Test run: the date wait line ("Wait before_due: until 3 days before Due on (November 24, 2026) at 09:00, that is November 21, 2026 9:00 am. When it wakes it checks the date again. ...") and the role line ("to role editor (1 person), m***@example.org") come from `DryRun`; member addresses never reach the editor.
 - Scope fixture: `dates` (the date fields offered at a wait; a wait until each validates, refused paths do not) and `roles` (exactly the templates offering "Add a role" accept a `{role:editor}` part), read by `scope.test.js` and `AutomationBuilderScopeTest`.
+
+Move to trash, Start another automation and Created (Automation v4 Editor B):
+
+- "Move to trash" (`trash_record`, id `trash`; inspector in `trash-start-edit.js`): Content type, then "Which record", a radio of the typed references in scope of that type (`recordTargets()` in `scope.js`): "This Gift" (the bound record, no `record` written), "Gift from gift" (a get_record or create_record step's `record_id`), "Each Volunteer (in each_old)" (a loop's item). Choosing one also sets the content type. Help: "Moves the record to the trash. WordPress deletes trashed items for good after 30 days (EMPTY_TRASH_DAYS). At most 50 per run." Card: "Move Each Volunteer (in each_old) to the trash" and the text note "Removes records".
+- Sweeps: while the trigger is a schedule with "Once for each record of a type", the Move to trash variation is withdrawn from the inserter (`index.js` subscribes to the editor and block-editor stores), and a trash step already there or pasted in shows the refusal at its card; the alert takes focus while the step is selected. The save is refused too (`trash_in_sweep`).
+- "Start another automation" (`start_automation`, id `start`): "Automation", a select of the config's `automations` (enabled manual automations other than this one, `BuilderEditor::startable()`: "Send receipt: on each Gift", "Team note: no record"; a key not listed, such as a disabled target, stays as its key). "For record" (a template with merge tags) when the target runs on a content type; help "Empty: this Gift." when the bound type matches. Card: `Start "Send receipt" for this Gift (runs separately)`. The picker gains "Started (from <id>)" for conditions. Cycle (`start_cycle`) and other start errors show at the Automation select and the card; an in-use refusal (`pegwork_automation_in_use`, on save or on Move to trash of a started automation) shows in core's notice with the callers.
+- Trashing the post of an automation that another one starts is refused (`AutomationPost::pre_trash()` deletes the definition first and refuses the trash when the registry refuses; REST answers 409 with the in-use message, other paths `wp_die()` with it), so the post and its definition never part.
+- Reads: "More options" gains "Created" with "Created before" and "Created after", each the condition rows' value control: a date (`Y-m-d`; empty means no bound), another value (date paths in scope, `{ var }`), or today or now plus or minus (`{ date, offset }`). "Find the records by" gains "Only when it was created" for reads with only `created`.
+- Scope fixture: `trash` (each offered record validates with its type, not with another; refused templates fail) and `created` (each offered date path validates as `created.before { var }`), read by `scope.test.js` and `AutomationBuilderScopeTest`.
+
+![Move to trash on a loop item](screenshots/automation-trash-1280.png)
+
+![Move to trash refused in a sweep](screenshots/automation-trash-refused-1280.png)
+
+![Created before](screenshots/automation-created-before-1280.png)
+
+![Start another automation](screenshots/automation-start-1280.png)
+
+![Trashing a started automation is refused](screenshots/automation-in-use-trash-1280.png)
 
 ![Wait until a date](screenshots/automation-wait-until-1280.png)
 

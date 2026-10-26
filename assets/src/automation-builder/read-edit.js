@@ -20,7 +20,7 @@ import { __, sprintf } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import ConditionBuilder from './condition-builder';
+import ConditionBuilder, { ValueControl } from './condition-builder';
 import { Errors, TemplateControl, wire } from './controls';
 import { blankValue } from './conditions';
 import { toNumber } from './logic';
@@ -34,6 +34,7 @@ import {
 	relationshipsFor,
 	sortFields,
 	statusesOf,
+	withCreated,
 	withSort,
 	withSource,
 	withStatus,
@@ -147,7 +148,15 @@ export function ReadFields( {
 			value: 'both',
 			label: __( 'A relationship and matching fields', 'pegwork' ),
 		},
+		{
+			value: 'created',
+			label: __( 'Only when it was created (More options)', 'pegwork' ),
+		},
 	];
+	const created = attributes.created;
+	const dates = conditionFields( definition, pointer, config ).filter(
+		( field ) => field.type === 'date'
+	);
 	const statuses = statusesOf( attributes.status );
 	const sortable = sortFields( fields );
 	const numbers = fields.filter( ( field ) => field.type === 'number' );
@@ -363,6 +372,7 @@ export function ReadFields( {
 				initialOpen={ Boolean(
 					attributes.sort ||
 					attributes.status ||
+					created ||
 					errors[ at( 'sort/field' ) ]
 				) }
 			>
@@ -417,6 +427,46 @@ export function ReadFields( {
 					/>
 				</div>
 				<Errors messages={ wire( errors, at( 'sort' ) ).messages } />
+				<fieldset className="pegwork-automation__fieldset">
+					<legend>{ __( 'Created', 'pegwork' ) }</legend>
+					{ [
+						[ 'before', __( 'Created before', 'pegwork' ) ],
+						[ 'after', __( 'Created after', 'pegwork' ) ],
+					].map( ( [ bound, label ] ) => (
+						<fieldset
+							key={ bound }
+							className="pegwork-automation__fieldset"
+						>
+							<legend>{ label }</legend>
+							<ValueControl
+								leaf={ { op: 'eq', value: created?.[ bound ] } }
+								field={ { type: 'date' } }
+								fields={ dates }
+								operands={ dates }
+								label={ label }
+								onChange={ ( leaf ) =>
+									set(
+										'created',
+										withCreated(
+											created,
+											bound,
+											leaf.value
+										)
+									)
+								}
+							/>
+						</fieldset>
+					) ) }
+					<p className="pegwork-automation__help">
+						{ __(
+							'A date, a date from the run, or today plus or minus. Before is before that day; after is from the next day on. Empty: any time.',
+							'pegwork'
+						) }
+					</p>
+					<Errors
+						messages={ wire( errors, at( 'created' ) ).messages }
+					/>
+				</fieldset>
 				<fieldset className="pegwork-automation__fieldset pegwork-automation__choices">
 					<legend>
 						{ __( 'Include records that are', 'pegwork' ) }

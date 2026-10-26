@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	conditionText,
 	recipientText,
+	recordName,
 	stepSummary,
 	untilText,
 } from '../labels';
@@ -44,6 +45,71 @@ describe( 'conditionText', () => {
 				fields
 			)
 		).toBe( 'Interest is Events' );
+	} );
+} );
+
+describe( 'move to trash and start another automation', () => {
+	const config = {
+		types: [
+			{ key: 'gift', label: 'Gift' },
+			{ key: 'volunteer', label: 'Volunteer' },
+		],
+		relationships: [],
+		roles: [],
+		automations: [
+			{ key: 'receipt', label: 'Send receipt', content_type: 'gift' },
+			{ key: 'note', label: 'Team note', content_type: null },
+		],
+	};
+	const scope = [
+		{ path: 'record.id', key: 'id', source: { content_type: 'gift' } },
+		{
+			path: 'steps.old.item.id',
+			key: 'id',
+			step: 'old',
+			source: { type: 'loop', content_type: 'volunteer', item: true },
+		},
+		{
+			path: 'steps.gift.record_id',
+			output: 'record_id',
+			step: 'gift',
+			source: { type: 'get_record', content_type: 'gift' },
+		},
+	];
+
+	it( 'names the record moved to the trash', () => {
+		const trash = ( record ) =>
+			stepSummary(
+				{ type: 'trash_record', content_type: 'gift', record },
+				scope,
+				config
+			);
+		expect( trash() ).toBe( 'Move this Gift to the trash' );
+		expect( trash( '{{steps.old.item.id}}' ) ).toBe(
+			'Move Each Volunteer (in old) to the trash'
+		);
+		expect( trash( '{{steps.gift.record_id}}' ) ).toBe(
+			'Move Gift from gift to the trash'
+		);
+		expect( trash( '{{trigger.id}}' ) ).toBe(
+			'Move {{trigger.id}} to the trash'
+		);
+		expect( recordName( '', [], config ) ).toBe( 'this record' );
+	} );
+
+	it( 'names the automation it starts, and that it runs separately', () => {
+		const start = ( step ) =>
+			stepSummary( { type: 'start_automation', ...step }, scope, config );
+		expect( start( { automation: 'receipt' } ) ).toBe(
+			'Start "Send receipt" for this Gift (runs separately)'
+		);
+		expect( start( { automation: 'note' } ) ).toBe(
+			'Start "Team note" (runs separately)'
+		);
+		expect(
+			start( { automation: 'off', record: '{{steps.gift.record_id}}' } )
+		).toBe( 'Start "off" for Gift from gift (runs separately)' );
+		expect( start( {} ) ).toBe( '' );
 	} );
 } );
 

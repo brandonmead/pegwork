@@ -34,7 +34,8 @@ function pegwork_e2e_barn_keys() {
  * @return string[]
  */
 function pegwork_e2e_barn_v4_keys() {
-	return array( 'barn_task_due_reminder', 'barn_volunteer_review' );
+	// Callers before the automations they start, so reset deletes them in an order the registry accepts.
+	return array( 'barn_task_due_reminder', 'barn_volunteer_review', 'barn_volunteer_retention', 'barn_gift_receipt_start', 'barn_gift_receipt' );
 }
 
 /**

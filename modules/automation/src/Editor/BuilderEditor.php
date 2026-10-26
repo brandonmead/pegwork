@@ -183,7 +183,31 @@ final class BuilderEditor {
 			'override'     => null !== $source ? (string) Overrides::get( $key ) : '',
 			'openRuns'     => $open,
 			'rest'         => (object) $rest,
+			'automations'  => self::startable( $key ),
 		) + self::registry_config( pegwork_registry() );
+	}
+
+	/**
+	 * The automations a start_automation step of this one may pick: enabled, with a manual trigger, other than
+	 * itself. Labels and content types only (the editor's own automation is always a site one, so the
+	 * file-to-site rule never applies here). Site state (enabled), so it is not part of registry_config().
+	 *
+	 * @param string $key Key of the edited automation ('' when new).
+	 * @return list<array{key: string, label: string, content_type: string|null}>
+	 */
+	public static function startable( string $key ): array {
+		$list = array();
+		foreach ( pegwork_registry()->automations() as $other => $automation ) {
+			if ( (string) $other === $key || 'manual' !== ( $automation['trigger']['type'] ?? null ) || ! Overrides::enabled( $automation ) ) {
+				continue;
+			}
+			$list[] = array(
+				'key'          => (string) $other,
+				'label'        => (string) ( $automation['label'] ?? $other ),
+				'content_type' => isset( $automation['trigger']['content_type'] ) ? (string) $automation['trigger']['content_type'] : null,
+			);
+		}
+		return $list;
 	}
 
 	/**

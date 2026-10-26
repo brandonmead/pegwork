@@ -69,6 +69,20 @@ final class AutomationPost {
 	private static array $saved = array();
 
 	/**
+	 * The in-use error of a trash pre_trash() refused in this REST request, for trash_refused().
+	 *
+	 * @var WP_Error|null
+	 */
+	private static ?WP_Error $refused = null;
+
+	/**
+	 * Whether a REST route callback is running (set by in_rest(), cleared by trash_refused()).
+	 *
+	 * @var bool
+	 */
+	private static bool $in_rest = false;
+
+	/**
 	 * Registers the post type, its meta and hooks. Safe to call more than once.
 	 */
 	public static function register(): void {
@@ -84,6 +98,9 @@ final class AutomationPost {
 		add_filter( 'wp_untrash_post_status', array( self::class, 'untrash_status' ), 10, 2 );
 		add_filter( 'rest_pre_insert_' . self::TYPE, array( self::class, 'pre_insert' ), 10, 2 );
 		add_action( 'rest_after_insert_' . self::TYPE, array( self::class, 'after_insert' ), 10, 2 );
+		add_filter( 'pre_trash_post', array( self::class, 'pre_trash' ), 10, 2 );
+		add_filter( 'rest_request_before_callbacks', array( self::class, 'in_rest' ) );
+		add_filter( 'rest_request_after_callbacks', array( self::class, 'trash_refused' ), 10, 3 );
 		add_action( 'trashed_post', array( self::class, 'trashed' ) );
 		add_action( 'before_delete_post', array( self::class, 'before_delete' ), 10, 2 );
 		add_action( 'untrashed_post', array( self::class, 'untrashed' ) );
@@ -393,6 +410,74 @@ final class AutomationPost {
 		update_post_meta( $post_id, self::META_KEY, $key );
 		update_post_meta( $post_id, self::META_HASH, Builder::hash( $automation ) );
 		update_post_meta( $post_id, self::META_SETTINGS, wp_slash( self::settings_json( Builder::generate( $automation )['settings'] ) ) );
+	}
+
+	/**
+	 * Before an automation post goes to the trash: deletes its site definition first, and refuses the trash when
+	 * the registry refuses the delete (`pegwork_automation_in_use`: other automations start it), so the post and
+	 * its definition never part. In a REST request the refusal is reported by trash_refused(); elsewhere (the
+	 * classic post.php trash link, WP-CLI) wp_die() shows the same message. Hooked to pre_trash_post.
+	 *
+	 * @param bool|null $trash Whether to go ahead (null: core decides).
+	 * @param WP_Post   $post  Post.
+	 * @return bool|null
+	 */
+	public static function pre_trash( $trash, $post ) {
+		if ( null !== $trash || ! $post instanceof WP_Post || self::TYPE !== $post->post_type ) {
+			return $trash;
+		}
+		$key = self::key_of( $post->ID );
+		if ( '' === $key || 'db' !== pegwork_registry()->automation_source( $key ) ) {
+			return $trash;
+		}
+		$deleted = pegwork_delete_automation( $key );
+		if ( ! is_wp_error( $deleted ) || 'pegwork_automation_in_use' !== $deleted->get_error_code() ) {
+			return $trash;
+		}
+		if ( self::$in_rest ) {
+			self::$refused = $deleted;
+			return false;
+		}
+		wp_die(
+			esc_html( $deleted->get_error_message() ),
+			esc_html__( 'Automation in use', 'pegwork' ),
+			array(
+				'response'  => 409,
+				'back_link' => true,
+			)
+		);
+	}
+
+	/**
+	 * Notes that a REST route callback runs, so pre_trash() reports a refusal through the response (core's
+	 * rest_request_before_callbacks, which runs inside every dispatch, including rest_do_request()).
+	 *
+	 * @param mixed $response Response so far (passed through).
+	 * @return mixed
+	 */
+	public static function in_rest( $response ) {
+		self::$in_rest = true;
+		return $response;
+	}
+
+	/**
+	 * Swaps core's "The post cannot be deleted." for the in-use error after pre_trash() refused a REST trash, so
+	 * the editor's notice lists the automations that start this one. Hooked to rest_request_after_callbacks.
+	 *
+	 * @param mixed           $response Response.
+	 * @param array           $handler  Route handler.
+	 * @param WP_REST_Request $request  Request.
+	 * @return mixed
+	 */
+	public static function trash_refused( $response, $handler, $request ) {
+		unset( $handler, $request );
+		self::$in_rest = false;
+		if ( null === self::$refused || ! is_wp_error( $response ) || 'rest_cannot_delete' !== $response->get_error_code() ) {
+			return $response;
+		}
+		$refused       = self::$refused;
+		self::$refused = null;
+		return $refused;
 	}
 
 	/**

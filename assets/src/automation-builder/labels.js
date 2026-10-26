@@ -33,6 +33,8 @@ export function typeLabel( type ) {
 		find_records: __( 'Find records', 'pegwork' ),
 		relate: __( 'Link records', 'pegwork' ),
 		loop: __( 'Repeat for each', 'pegwork' ),
+		trash_record: __( 'Move to trash', 'pegwork' ),
+		start_automation: __( 'Start another automation', 'pegwork' ),
 	};
 	return labels[ type ] || type || __( 'Step', 'pegwork' );
 }
@@ -55,6 +57,8 @@ export function typeShort( type ) {
 		find_records: __( 'Find', 'pegwork' ),
 		relate: __( 'Link', 'pegwork' ),
 		loop: __( 'Repeat', 'pegwork' ),
+		trash_record: __( 'Trash', 'pegwork' ),
+		start_automation: __( 'Start', 'pegwork' ),
 	};
 	return labels[ type ] || __( 'Step', 'pegwork' );
 }
@@ -146,6 +150,7 @@ function outputName( field ) {
 		index: __( 'Item number', 'pegwork' ),
 		failed: __( 'Failed', 'pegwork' ),
 		error: __( 'Error code', 'pegwork' ),
+		started: __( 'Started', 'pegwork' ),
 	};
 	return names[ parts[ 2 ] ] || parts.slice( 2 ).join( '.' );
 }
@@ -459,9 +464,46 @@ function hostOf( url ) {
  * @param {boolean} plural Plural label.
  * @return {string} Label (the key when unknown).
  */
-function typeName( config, key, plural = false ) {
+export function typeName( config, key, plural = false ) {
 	const type = typeOf( config, key );
 	return ( plural ? type?.plural : type?.label ) || type?.label || key;
+}
+
+/**
+ * A typed record reference in words, as the trash and start steps name it: "this Gift" (the bound
+ * record, also for an empty template), "Each Volunteer (in each_old)", "Gift from gift"; any other
+ * template as written.
+ *
+ * @param {string} template Template ('' or undefined for the bound record).
+ * @param {Array}  fields   Fields in scope at the step (conditionFields()).
+ * @param {Object} config   Parsed config.
+ * @return {string} Words.
+ */
+export function recordName( template, fields, config ) {
+	const path = /^\{\{\s*([a-z0-9_.]+)\s*\}\}$/.exec(
+		template || '{{record.id}}'
+	)?.[ 1 ];
+	const field = fields.find( ( item ) => item.path === path );
+	const type = field?.source?.content_type;
+	if ( ! type ) {
+		return template || __( 'this record', 'pegwork' );
+	}
+	const name = typeName( config, type );
+	if ( path === 'record.id' ) {
+		/* translators: %s: content type label. */
+		return sprintf( __( 'this %s', 'pegwork' ), name );
+	}
+	return field.source.item
+		? /* translators: 1: content type label, 2: loop step ID. */ sprintf(
+				__( 'Each %1$s (in %2$s)', 'pegwork' ),
+				name,
+				field.step
+			)
+		: /* translators: 1: content type label, 2: step ID. */ sprintf(
+				__( '%1$s from %2$s', 'pegwork' ),
+				name,
+				field.step
+			);
 }
 
 /**
@@ -659,6 +701,35 @@ export function stepSummary( step, fields, config, bound = null, inLoop ) {
 						fields
 					) }`
 				: '';
+		case 'trash_record':
+			return step.content_type
+				? /* translators: %s: record in words, such as "Each Volunteer (in each_old)". */ sprintf(
+						__( 'Move %s to the trash', 'pegwork' ),
+						recordName( step.record, fields, config )
+					)
+				: '';
+		case 'start_automation': {
+			const target = config.automations.find(
+				( item ) => item.key === step.automation
+			);
+			const name = target?.label || step.automation;
+			if ( ! name ) {
+				return '';
+			}
+			return target?.content_type || step.record
+				? /* translators: 1: automation label, 2: record in words, such as "this Gift". */ sprintf(
+						__(
+							'Start "%1$s" for %2$s (runs separately)',
+							'pegwork'
+						),
+						name,
+						recordName( step.record, fields, config )
+					)
+				: /* translators: %s: automation label. */ sprintf(
+						__( 'Start "%s" (runs separately)', 'pegwork' ),
+						name
+					);
+		}
 		default:
 			return '';
 	}

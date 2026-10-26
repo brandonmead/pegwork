@@ -25,6 +25,7 @@ import {
 	filterToCondition,
 	readSource,
 	sortFields,
+	withCreated,
 	withSort,
 	withSource,
 	withStatus,
@@ -84,15 +85,8 @@ function walk( steps ) {
 	] );
 }
 
-// The Automation v4 shapes package and the trash engine package: the builder learns their shapes in
-// v4 Editor PRs 8 and 9 (docs/automation-v4-design.md section 11). PR 8's are round-tripped below
-// (editorAFixtures); PR 9 adds the rest.
-const v3Automations = () =>
-	automations().filter(
-		( [ path ] ) =>
-			! path.startsWith( 'tests/fixtures/valid/v4/' ) &&
-			! path.startsWith( 'tests/fixtures/valid/engine-trash/' )
-	);
+// Every fixture, the Automation v4 shapes included (Editor PRs 8 and 9 taught the builder them).
+const v3Automations = automations;
 
 // The definitions this PR's editor edits: a read, a link, an on_error step or a manual trigger.
 const readFixtures = v3Automations().filter(
@@ -103,18 +97,16 @@ const readFixtures = v3Automations().filter(
 		)
 );
 
-// Automation v4 Editor PR 8: the v4 definitions that use only waits until a date and role recipients
-// besides v3 shapes (trash, start and created reads arrive with Editor PR 9).
-const LATER = [ 'trash_record', 'start_automation' ];
-const editorAFixtures = automations().filter(
-	( [ path, definition ] ) =>
-		/^tests\/fixtures\/valid\/(v4|engine-trash)\//.test( path ) &&
-		walk( definition.steps ).every(
-			( step ) => ! LATER.includes( step.type ) && ! ( 'created' in step )
-		) &&
-		walk( definition.steps ).some(
-			( step ) => step.until || step.to?.includes( '{role:' )
-		)
+// Automation v4 Editor PRs 8 and 9: the definitions with a v4 shape (a wait until a date, a role
+// recipient, Move to trash, Start another automation, a read's `created`).
+const V4_TYPES = [ 'trash_record', 'start_automation' ];
+const isV4Step = ( step ) =>
+	Boolean( step.until ) ||
+	Boolean( step.to?.includes( '{role:' ) ) ||
+	V4_TYPES.includes( step.type ) ||
+	'created' in step;
+const editorAFixtures = automations().filter( ( [ , definition ] ) =>
+	walk( definition.steps ).some( isV4Step )
 );
 
 // And the loops (Automation v3 PR 7).
@@ -242,12 +234,20 @@ describe( 'read fixtures round trip', () => {
 		}
 	);
 
-	it( 'finds the wait until and role fixtures', () => {
+	it( 'finds the v4 fixtures', () => {
 		expect( editorAFixtures.map( ( [ path ] ) => path ) ).toEqual(
 			expect.arrayContaining( [
 				'tests/fixtures/valid/v4/automations/barn_task_due_reminder.json',
 				'tests/fixtures/valid/v4/automations/barn_volunteer_review.json',
 				'tests/fixtures/valid/v4/automations/barn_weekly_note.json',
+				'tests/fixtures/valid/v4/automations/barn_v4_shapes.json',
+				'tests/fixtures/valid/v4/automations/barn_gift_receipt_start.json',
+				'tests/fixtures/valid/v4/automations/barn_volunteer_retention.json',
+				'tests/fixtures/valid/engine-trash/automations/tr_bound.json',
+				'tests/fixtures/valid/engine-trash/automations/tr_loop.json',
+				'tests/fixtures/valid/engine-trash/automations/tr_read.json',
+				'tests/fixtures/valid/engine-start/automations/st_thanks.json',
+				'tests/e2e/packages/start/automations/e2e_start_parent.json',
 			] )
 		);
 	} );
@@ -258,9 +258,7 @@ describe( 'read fixtures round trip', () => {
 			expect(
 				canonical( compileBlocks( blocks( definition.steps ) ) )
 			).toBe( canonical( definition.steps ) );
-			const own = walk( definition.steps ).filter(
-				( step ) => step.until || step.to?.includes( '{role:' )
-			);
+			const own = walk( definition.steps ).filter( isV4Step );
 			// Each such step's properties are block attributes, `until` with its keys in order.
 			expect(
 				own.map( ( step ) => JSON.stringify( parsed( step ) ) )
@@ -378,6 +376,25 @@ const trigger = {
 };
 
 describe( 'read helpers', () => {
+	it( 'edits created bounds and knows a created-only read', () => {
+		const old = { date: 'today', offset: '-P2Y' };
+		expect( withCreated( undefined, 'before', old ) ).toEqual( {
+			before: old,
+		} );
+		expect(
+			JSON.stringify(
+				withCreated( { after: '2030-01-01' }, 'before', old )
+			)
+		).toBe( JSON.stringify( { after: '2030-01-01', before: old } ) );
+		expect( withCreated( { before: old }, 'before', '' ) ).toBeUndefined();
+		expect(
+			readSource( { type: 'find_records', created: { before: old } } )
+		).toBe( 'created' );
+		expect(
+			withSource( { type: 'find_records' }, 'created', null ).created
+		).toEqual( { before: { date: 'today' } } );
+	} );
+
 	it( 'switches the source, keeping what stays and starting what is new', () => {
 		const step = { type: 'get_record', record: '{{record.id}}' };
 		expect( withSource( step, 'related', null ) ).toEqual( {
