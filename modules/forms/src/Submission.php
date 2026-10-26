@@ -46,6 +46,20 @@ final class Submission {
 	public const HELD = 'pegwork_held';
 
 	/**
+	 * Query arg added to SENT when a confirmation form got the same values again within the duplicate
+	 * window (no new email went out; the first one is on its way).
+	 */
+	public const AGAIN = 'pegwork_again';
+
+	/**
+	 * Whether this request's POST was dropped by PHP for exceeding post_max_size (no form data arrives
+	 * then, so the form cannot be told apart: every form with a file field shows the notice).
+	 *
+	 * @var bool
+	 */
+	private static bool $too_large = false;
+
+	/**
 	 * Window, in seconds, in which an identical submission is treated as a repeat (double click, back button).
 	 */
 	public const DUPLICATE_WINDOW = 600;
@@ -86,8 +100,23 @@ final class Submission {
 	 * Clears per-request state (tests).
 	 */
 	public static function reset(): void {
-		self::$state = array();
+		self::$state     = array();
+		self::$too_large = false;
 		Confirm::reset();
+	}
+
+	/**
+	 * Whether this request's POST exceeded post_max_size and was dropped (see handle()).
+	 */
+	public static function too_large(): bool {
+		return self::$too_large;
+	}
+
+	/**
+	 * The post_max_size limit in bytes (0 when unlimited).
+	 */
+	public static function max_post_bytes(): int {
+		return max( 0, (int) wp_convert_hr_to_bytes( (string) ini_get( 'post_max_size' ) ) );
 	}
 
 	/**
@@ -97,6 +126,14 @@ final class Submission {
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Anonymous forms cannot use nonces; process() verifies one for logged-in users and checks the signed token for everyone.
 		if ( 'POST' !== $method || ! isset( $_POST[ self::CONTROL ] ) || ! is_array( $_POST[ self::CONTROL ] ) ) {
+			// Over post_max_size, PHP drops the whole body: $_POST and $_FILES arrive empty.
+			$length = isset( $_SERVER['CONTENT_LENGTH'] ) ? (int) $_SERVER['CONTENT_LENGTH'] : 0;
+			$max    = self::max_post_bytes();
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Only tests that the body arrived empty; nothing is read or stored.
+			if ( 'POST' === $method && $max > 0 && $length > $max && array() === $_POST && array() === $_FILES ) {
+				self::$too_large = true;
+				nocache_headers();
+			}
 			return;
 		}
 
@@ -119,10 +156,12 @@ final class Submission {
 		if ( in_array( $result['outcome'], array( 'sent', 'spam', 'duplicate', 'held' ), true ) ) {
 			// No #fragment: browsers skip `autofocus` when the URL targets an element, and the focused
 			// success region scrolls itself into view.
-			$args   = 'held' === $result['outcome'] ? array(
-				self::SENT => $key,
-				self::HELD => '1',
-			) : array( self::SENT => $key );
+			$args = array( self::SENT => $key );
+			if ( 'held' === $result['outcome'] ) {
+				$args[ self::HELD ] = '1';
+			} elseif ( 'duplicate' === $result['outcome'] && isset( $form['confirm'] ) ) {
+				$args[ self::AGAIN ] = '1';
+			}
 			$target = add_query_arg( $args, self::current_url() );
 			wp_safe_redirect( $target, 303 );
 			exit;
@@ -149,7 +188,9 @@ final class Submission {
 	 *                              `held` (stored as spam `captcha_unverified`; redirects to the held state),
 	 *                              or `invalid`, `denied`, `expired`, `rate_limited`, `failed` (re-render, nothing
 	 *                              stored), `captcha_failed` (re-render; stored as spam), `captcha_missing` (no
-	 *                              token field at all, so no JavaScript: re-render; stored as spam), `record_failed` (re-render;
+	 *                              token field at all, so no JavaScript: re-render; stored as spam), `confirm_mail_failed`
+	 *                              (re-render; the confirmation email could not be sent, the entry is stored as `failed`
+	 *                              and the admin told), `record_failed` (re-render;
 	 *                              the entry is stored as `failed` and the admin told); plus `entry_id`, `record_id`,
 	 *                              `errors` (message by item key), `values` (posted text), `files` (names of the
 	 *                              files chosen, which a re-render cannot keep) and `issued` (render time of the
@@ -370,6 +411,11 @@ final class Submission {
 				'values'    => Uploads::without_paths( $values ),
 			)
 		);
+
+		if ( 'failed' === ( $meta['confirm_mail'] ?? '' ) ) {
+			// Kept for the admin (told by Confirm::start()), but the visitor must not wait for a mail that is not coming.
+			return $fail( 'confirm_mail_failed' ) + array( 'entry_id' => $entry_id );
+		}
 
 		return array(
 			'outcome'   => 'sent',
@@ -664,6 +710,6 @@ final class Submission {
 		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		$uri    = '' === $uri || '/' !== $uri[0] ? '/' : $uri;
 
-		return remove_query_arg( array( self::SENT, self::HELD, Confirm::QUERY, Confirm::DONE, Confirm::REVIEW ), $origin . $uri );
+		return remove_query_arg( array( self::SENT, self::HELD, self::AGAIN, Confirm::QUERY, Confirm::DONE, Confirm::REVIEW ), $origin . $uri );
 	}
 }
