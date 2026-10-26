@@ -51,6 +51,12 @@ final class StartAutomation implements Step {
 			return StepResult::fail( 'start_limit', sprintf( 'This run already started %d automations, the most one run may start.', Context::start_limit() ), $summary, false );
 		}
 
+		// The child acts on its record as its own bound record, so the starting user needs what starting it
+		// from the editor would need (StartRoute::can_run()): edit_post, plus delete_post when it can trash.
+		if ( null !== $record && $record > 0 && ( ! $context->can( 'edit_post', $record ) || ( Manual::trashes( $key ) && ! $context->can( 'delete_post', $record ) ) ) ) {
+			return StepResult::fail( 'record_forbidden', sprintf( 'The user who started this run (%1$d) cannot run automation %2$s on record %3$d.', $context->actor(), $key, $record ), $summary, false );
+		}
+
 		$step_id = (string) $step['id'];
 		$result  = Manual::chain( $key, $record, $run, $step_id, $context->iteration( $step_id ) );
 		if ( $result instanceof WP_Error ) {

@@ -298,7 +298,8 @@ final class Manual {
 			'handed' => 0,
 		);
 		if ( null !== $this->inline ) {
-			$out['fired']  = $this->inline->drain( Engine::instance()->clock()->now()->getTimestamp() );
+			$clock         = Engine::instance()->clock(); // A frozen clock (--now) returns the same time on every read.
+			$out['fired']  = $this->inline->drain( $clock->now()->getTimestamp(), 10000, fn() => $clock->now()->getTimestamp() );
 			$out['handed'] = $this->inline->flush();
 			Engine::use( $this->previous->clock(), $this->previous->scheduler() );
 			$this->inline = null;

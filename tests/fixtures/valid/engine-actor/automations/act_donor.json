@@ -1,0 +1,16 @@
+{ "format": 1, "key": "act_donor", "label": "Thank, stamp and remove the gift's donor",
+  "trigger": { "type": "manual", "content_type": "act_gift", "button": "Thank donor", "allow": "editors" },
+  "steps": [
+    { "id": "donor", "type": "get_record", "content_type": "act_contact",
+      "related": { "relationship": "act_gift_donor", "of": "{{record.id}}" } },
+    { "id": "all", "type": "find_records", "content_type": "act_contact",
+      "related": { "relationship": "act_gift_donor", "of": "{{record.id}}" } },
+    { "id": "mail", "type": "send_email", "to": "office@example.org",
+      "subject": "Donor found: {{steps.donor.found}}",
+      "text": "Email {{steps.donor.record.email}}. Listed: {{#each steps.all.records}}{{item.email}} {{/each}}" },
+    { "id": "stamp", "type": "update_record", "record": "{{steps.donor.record_id}}", "values": { "stage": "thanked" }, "on_error": "continue" },
+    { "id": "child", "type": "start_automation", "automation": "act_child", "record": "{{steps.donor.record_id}}", "on_error": "continue" },
+    { "id": "remove", "type": "trash_record", "content_type": "act_contact", "record": "{{steps.donor.record_id}}", "on_error": "continue" },
+    { "id": "report", "type": "send_email", "to": "office@example.org",
+      "subject": "Report",
+      "text": "stamp={{steps.stamp.error}} child={{steps.child.error}} remove={{steps.remove.error}}" } ] }

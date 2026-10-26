@@ -4,13 +4,15 @@
  *
  * Usage: node bin/check-script-size.js <file> <max gzipped bytes>
  * (npm run check:size: the filters view module, at most 10 KB gzipped, the automation builder
- * script, at most 30,147 bytes gzipped, and the record editor's automation actions script, at most
+ * script, at most 30,290 bytes gzipped, and the record editor's automation actions script, at most
  * 3 KB gzipped; WordPress packages are external and not counted.)
  * The builder budget was 25 KB until Automation v3 PR 7 (loops and lists): the loop block, its
  * Move to and inserter rules, list insertion and Test run item headings took it to 26,994 bytes,
  * so it was raised by the minimum, to 27,136 (26.5 KB). Automation v4 Editor A (wait until a date,
  * Add a role) took it from 27,024 to 28,475 bytes, and Editor B (Move to trash, Start another
- * automation, Created) to 30,147, each the new budget; Automation v4 caps it at 30,720
+ * automation, Created) to 30,147, each the new budget; the October 2026 QA builder fixes (paste ids,
+ * one group per merge tag heading, trigger tag names, one save notice) to 30,290. Automation v4
+ * caps it at 30,720
  * (docs/automation-v4-design.md section 5.6). Lazy loading was ruled out: a split chunk needs its
  * own script translations and a runtime public path.
  */

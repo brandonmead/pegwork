@@ -440,6 +440,7 @@ export function conditionFields( definition, pointer, config ) {
 		...triggerPaths( trigger, config ).map( ( field ) => ( {
 			...field,
 			group: 'trigger',
+			source: { type: trigger.type },
 		} ) )
 	);
 	for ( const step of stepsBefore( definition?.steps, pointer ) ) {

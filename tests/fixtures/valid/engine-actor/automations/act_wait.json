@@ -1,0 +1,6 @@
+{ "format": 1, "key": "act_wait", "label": "Email now and after a day",
+  "trigger": { "type": "manual", "content_type": "act_gift", "button": "Two notes" },
+  "steps": [
+    { "id": "now", "type": "send_email", "to": "office@example.org", "subject": "Now {{record.name}}", "text": "Now." },
+    { "id": "pause", "type": "wait", "for": "P1D" },
+    { "id": "later", "type": "send_email", "to": "office@example.org", "subject": "Later {{record.name}}", "text": "After the wait {{record.name}}." } ] }

@@ -25,12 +25,13 @@ use WP_Error;
  *
  * 1. The list's Bulk actions menu offers "Run: <button>" for each bulk-eligible automation (enabled, manual,
  *    with a `content_type`, nothing that can trash: Manual::trashes()) the user may run: administrators see
- *    all, other users the `allow: editors` ones if they hold the type's `edit_posts`. Applying it (core's
+ *    all, other users the `allow: editors` ones if they hold the type's `edit_others_posts`. Applying it (core's
  *    form and `bulk-posts` nonce) validates the IDs, at most 50, and redirects to the confirmation screen
  *    with a new random request ID, so reloading the screen, or Back to it, keeps the same request.
  * 2. The confirmation screen (hidden admin page `pegwork-automation-bulk`, the type's `edit_posts`) lists
- *    each record with "Will run", "Does not apply" (its `when`) or "You cannot run it on this record"
- *    (StartRoute::can_run()). Its GET changes nothing.
+ *    each record with "Will run", "Does not apply" (in the trash, or its `when`) or "You cannot run it on
+ *    this record" (StartRoute::can_run(); also every ID the user cannot read, missing ones included, with no
+ *    title or status, so the screen does not tell them apart). Its GET changes nothing.
  * 3. The POST (admin-post.php, nonce `pegwork_automation_bulk_<key>`) takes one hit of the user's
  *    `automation|manual|<user>` throttle bucket for the whole request, re-checks every record and starts
  *    each with Manual::start() (source `bulk`, request ID `<request>-<record>`, so the idempotency key is
@@ -116,7 +117,7 @@ final class BulkRun {
 			if ( ( $definition['trigger']['content_type'] ?? null ) !== $type || ! self::eligible( $key, $definition ) ) {
 				continue;
 			}
-			if ( $admin || ( 'editors' === ( $definition['trigger']['allow'] ?? 'admins' ) && current_user_can( $object->cap->edit_posts ) ) ) {
+			if ( $admin || ( 'editors' === ( $definition['trigger']['allow'] ?? 'admins' ) && current_user_can( $object->cap->edit_others_posts ) ) ) {
 				$out[ $key ] = $definition;
 			}
 		}
@@ -454,9 +455,10 @@ final class BulkRun {
 	}
 
 	/**
-	 * One row per selected ID for the confirmation table: title (or "<Singular> <id>" without `read_post`),
-	 * status label, and state `run`, `skip` (missing, in the trash, or its `when` is false) or `cannot`
-	 * (another type, or StartRoute::can_run() refuses).
+	 * One row per selected ID for the confirmation table: title (or "<Singular> <id>"), status label, and
+	 * state `run`, `skip` (in the trash, or its `when` is false) or `cannot` (another type, or
+	 * StartRoute::can_run() refuses). An ID the user cannot read, or that does not exist, gets the same row:
+	 * "<Singular> <id>", no status, `cannot` (the POST counts both as "You cannot run it" too).
 	 *
 	 * @param string               $key        Automation key.
 	 * @param array<string, mixed> $definition Canonical automation.
@@ -469,16 +471,17 @@ final class BulkRun {
 		$rows     = array();
 		foreach ( $ids as $id ) {
 			$of_type = self::of_type( $id, $type );
-			$post    = 'missing' === $of_type ? null : get_post( $id );
-			$status  = null === $post ? null : get_post_status_object( (string) $post->post_status );
-			$rows[]  = array(
+			// Without read_post the row looks like a missing record: no title, no status, "You cannot run it".
+			$post   = 'missing' !== $of_type && current_user_can( 'read_post', $id ) ? get_post( $id ) : null;
+			$status = null === $post ? null : get_post_status_object( (string) $post->post_status );
+			$rows[] = array(
 				'id'     => $id,
-				'title'  => null !== $post && 'post' === $of_type && current_user_can( 'read_post', $id ) && '' !== $post->post_title
+				'title'  => null !== $post && 'post' === $of_type && '' !== $post->post_title
 					? wp_specialchars_decode( $post->post_title, ENT_QUOTES )
 					/* translators: 1: content type label (singular), 2: record ID. */
 					: sprintf( __( '%1$s %2$d', 'pegwork' ), $singular, $id ),
 				'status' => null === $status ? '' : (string) $status->label,
-				'state'  => self::state( $key, $definition, $id, $of_type ),
+				'state'  => null === $post ? 'cannot' : self::state( $key, $definition, $id, $of_type ),
 			);
 		}
 		return $rows;
@@ -493,9 +496,6 @@ final class BulkRun {
 	 * @param string               $of_type    self::of_type() of the record.
 	 */
 	private static function state( string $key, array $definition, int $id, string $of_type ): string {
-		if ( 'missing' === $of_type ) {
-			return 'skip';
-		}
 		if ( 'post' !== $of_type || ! StartRoute::can_run( $key, $id ) ) {
 			return 'cannot';
 		}

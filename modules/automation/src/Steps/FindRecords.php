@@ -52,9 +52,12 @@ final class FindRecords implements Step {
 			return $found;
 		}
 
-		$ids    = array_values( array_map( 'intval', $found['ids'] ) );
-		$sums   = array();
-		$public = array_keys( pegwork_registry()->fields( $type, 'public' ) );
+		$ids        = array_values( array_map( 'intval', $found['ids'] ) );
+		$readable   = array_values( array_filter( $ids, fn( int $id ) => $context->can( 'read_post', $id ) ) );
+		$unreadable = count( $ids ) - count( $readable );
+		$ids        = $readable; // In a run a user started, only the records that user can read.
+		$sums       = array();
+		$public     = array_keys( pegwork_registry()->fields( $type, 'public' ) );
 		foreach ( $sum as $key ) {
 			$sums[ $key ] = (float) ( $found['sums'][ $key ] ?? 0 );
 		}
@@ -64,6 +67,9 @@ final class FindRecords implements Step {
 			'returned' => count( $ids ),
 			'ids'      => array_slice( $ids, 0, Reads::SUMMARY_IDS ),
 		);
+		if ( $unreadable > 0 ) {
+			$summary['unreadable'] = $unreadable;
+		}
 		if ( array() !== $sums ) {
 			$summary['sum'] = array_intersect_key( $sums, array_flip( $public ) ); // A sum over a private field stays out of the log.
 		}

@@ -361,6 +361,31 @@ class AutomationBuilderTest extends AutomationTestCase {
 	}
 
 	/**
+	 * A missing or empty required value is reported at its own pointer, in plain words (QA B-06):
+	 * the builder shows it at the control, not as schema wording on the step card.
+	 */
+	public function test_missing_fields_point_at_the_value() {
+		$definition = $this->definition();
+		unset( $definition['steps'][1]['to'], $definition['steps'][1]['subject'] );
+		$definition['steps'][1]['text']                              = '';
+		$definition['steps'][0]['branches'][0]['steps'][0]['values'] = '';
+
+		$response = $this->rest_save( $this->params( $definition ) );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame(
+			array(
+				'/steps/0/branches/0/steps/0/values' => 'Required: Values.',
+				'/steps/1/to'                        => 'Required: To.',
+				'/steps/1/subject'                   => 'Required: Subject.',
+				'/steps/1/text'                      => 'Required: Text.',
+			),
+			$response->get_data()['data']['fields']
+		);
+		$this->assertStringNotContainsString( 'Missing required property', (string) $response->get_data()['message'] );
+	}
+
+	/**
 	 * File keys are refused with 409, both on a new post and on the file automation's own post.
 	 */
 	public function test_file_keys_conflict() {

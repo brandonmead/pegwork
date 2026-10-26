@@ -1,0 +1,1 @@
+{ "format": 1, "id": "engine_actor", "version": "1.0.0", "label": "QA fixes: runs started by a user act with that user's capabilities; retries, deleted records and sweeps that start trashing automations", "requires": { "pegwork": ">=0.4.0" } }

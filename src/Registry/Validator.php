@@ -825,7 +825,7 @@ final class Validator {
 		foreach ( $required as $name ) {
 			if ( ! array_key_exists( $name, $value ) ) {
 				/* translators: %s: property name. */
-				$this->add( 'missing_property', $pointer, sprintf( __( 'Missing required property "%s".', 'pegwork' ), $name ) );
+				$this->add( 'missing_property', $pointer, sprintf( __( 'Missing required property "%s".', 'pegwork' ), $name ), self::pointer( $pointer, $name ) );
 			}
 		}
 
@@ -866,7 +866,7 @@ final class Validator {
 
 		if ( ! $ok ) {
 			/* translators: %s: expected type, such as "a non-empty string". */
-			$this->add( 'invalid_type', $pointer, sprintf( __( 'Expected %s.', 'pegwork' ), $expected ) );
+			$this->add( 'invalid_type', $pointer, sprintf( __( 'Expected %s.', 'pegwork' ), $expected ), '' === $value ? $pointer : '' );
 		}
 
 		return $ok;
@@ -1084,8 +1084,9 @@ final class Validator {
 	 * @param string $code    Machine code.
 	 * @param string $pointer JSON pointer.
 	 * @param string $message Readable message.
+	 * @param string $field   Pointer of a missing or empty required value, or ''.
 	 */
-	private function add( string $code, string $pointer, string $message ): void {
-		$this->errors[] = new ValidationError( $code, $message, $this->file, $pointer );
+	private function add( string $code, string $pointer, string $message, string $field = '' ): void {
+		$this->errors[] = new ValidationError( $code, $message, $this->file, $pointer, $field );
 	}
 }
