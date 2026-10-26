@@ -1,0 +1,16 @@
+{ "format": 1, "key": "barn_volunteer_retention", "label": "Remove volunteer applications older than two years",
+  "trigger": { "type": "schedule", "every": "day", "at": "03:30" },
+  "idempotency": "retention:{{today}}",
+  "steps": [
+    { "id": "old", "type": "find_records", "content_type": "barn_volunteer",
+      "status": [ "draft", "pending", "private", "publish" ],
+      "created": { "before": { "date": "today", "offset": "-P2Y" } },
+      "filter": { "all": [ { "field": "stage", "op": "ne", "value": "placed" } ] },
+      "sort": { "field": "id", "order": "asc" }, "limit": 50 },
+    { "id": "any_old", "type": "condition", "when": { "var": "steps.old.count", "op": "gt", "value": 0 } },
+    { "id": "each_old", "type": "loop", "over": "steps.old.records",
+      "steps": [
+        { "id": "remove", "type": "trash_record", "content_type": "barn_volunteer", "record": "{{steps.each_old.item.id}}" } ] },
+    { "id": "report", "type": "send_email", "to": "{option:barn_settings.volunteer_manager}",
+      "subject": "{{steps.each_old.count}} volunteer applications moved to the trash",
+      "text": "{{steps.each_old.count}} of {{steps.old.count}} applications older than two years (not placed) were moved to the trash today. At most 50 go each day. Restore one from Volunteers > Trash within 30 days if it was a mistake." } ] }

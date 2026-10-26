@@ -113,19 +113,34 @@ class FixturesTest extends TestCase {
 
 	/**
 	 * The test packages that carry BarnCRM automations for their own purposes (`reads`: every new step shape
-	 * and the editor scope fixture; `engine-loops`: the loop engine tests) hold them byte for byte as the
-	 * BarnCRM proof fixture does, so the worked examples have one text.
+	 * and the editor scope fixture; `engine-loops`: the loop engine tests; `v4`: the Automation v4 shapes)
+	 * hold them byte for byte as the BarnCRM proof fixture does, so the worked examples have one text. The
+	 * `v4` package's own shape automations are not worked examples and have no copy.
 	 */
 	public function test_barn_automation_copies_match_the_fixture() {
 		$root    = dirname( __DIR__, 3 ) . '/tests/fixtures/valid';
-		$copies  = array_merge( glob( $root . '/reads/automations/barn_*.json' ), glob( $root . '/engine-loops/automations/barn_*.json' ) );
+		$v4_only = array( 'barn_gift_receipt_start', 'barn_v4_shapes', 'barn_weekly_note' );
+		$v4      = array_filter( glob( $root . '/v4/automations/barn_*.json' ), fn( $file ) => ! in_array( basename( $file, '.json' ), $v4_only, true ) );
+		$copies  = array_merge( glob( $root . '/reads/automations/barn_*.json' ), glob( $root . '/engine-loops/automations/barn_*.json' ), $v4 );
 		$checked = array();
 		foreach ( $copies as $copy ) {
 			$this->assertFileEquals( $root . '/barn/automations/' . basename( $copy ), $copy );
 			$checked[] = basename( dirname( $copy, 2 ) ) . '/' . basename( $copy, '.json' );
 		}
 		$this->assertSame(
-			array( 'reads/barn_donation_inbound', 'reads/barn_gift_thanks', 'reads/barn_lifetime_milestone', 'reads/barn_resend_thanks', 'reads/barn_tasks_digest', 'engine-loops/barn_tasks_digest' ),
+			array(
+				'reads/barn_donation_inbound',
+				'reads/barn_gift_receipt',
+				'reads/barn_gift_thanks',
+				'reads/barn_lifetime_milestone',
+				'reads/barn_resend_thanks',
+				'reads/barn_tasks_digest',
+				'engine-loops/barn_tasks_digest',
+				'v4/barn_gift_receipt',
+				'v4/barn_task_due_reminder',
+				'v4/barn_volunteer_retention',
+				'v4/barn_volunteer_review',
+			),
 			$checked
 		);
 	}

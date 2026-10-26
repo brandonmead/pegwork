@@ -439,15 +439,42 @@ class AutomationBuilderTest extends AutomationTestCase {
 	 */
 	public function test_trash_and_restore() {
 		$post_id = $this->create();
+		$before  = pegwork_registry()->automation( 'site_ping' );
 
 		wp_trash_post( $post_id );
 		$this->assertNull( pegwork_registry()->automation( 'site_ping' ) );
 
 		wp_untrash_post( $post_id );
 		$this->assertSame( 'private', get_post_status( $post_id ) );
-		$this->assertNotNull( pegwork_registry()->automation( 'site_ping' ) );
+		$this->assertSame( $before, pegwork_registry()->automation( 'site_ping' ), 'Restored as it was.' );
 
 		wp_delete_post( $post_id, true );
+		$this->assertNull( pegwork_registry()->automation( 'site_ping' ) );
+	}
+
+	/**
+	 * A trash that does not happen (another plugin's pre_trash_post filter, after Pegwork's, refuses it; or
+	 * core's status update fails) leaves the post and its definition together: the definition is deleted only
+	 * once the post is in the trash.
+	 */
+	public function test_failed_trash_keeps_the_definition() {
+		$post_id = $this->create();
+		$before  = pegwork_registry()->automation( 'site_ping' );
+
+		add_filter( 'pre_trash_post', '__return_false', 20 );
+		$this->assertFalse( wp_trash_post( $post_id ) );
+		remove_filter( 'pre_trash_post', '__return_false', 20 );
+		$this->assertSame( 'private', get_post_status( $post_id ) );
+		$this->assertSame( $before, pegwork_registry()->automation( 'site_ping' ) );
+
+		$fail = fn( $maybe_empty, $postarr ) => 'trash' === ( $postarr['post_status'] ?? '' ) ? true : $maybe_empty;
+		add_filter( 'wp_insert_post_empty_content', $fail, 10, 2 );
+		$this->assertFalse( wp_trash_post( $post_id ) );
+		remove_filter( 'wp_insert_post_empty_content', $fail, 10 );
+		$this->assertSame( 'private', get_post_status( $post_id ) );
+		$this->assertSame( $before, pegwork_registry()->automation( 'site_ping' ) );
+
+		$this->assertInstanceOf( \WP_Post::class, wp_trash_post( $post_id ) );
 		$this->assertNull( pegwork_registry()->automation( 'site_ping' ) );
 	}
 

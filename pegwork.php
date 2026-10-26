@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Pegwork
  * Description:       Application builder for WordPress: content types, fields and taxonomies defined in versioned JSON, on one schema registry.
- * Version:           0.3.0
+ * Version:           0.4.0
  * Requires at least: 6.7
  * Requires PHP:      8.2
  * Author:            Brandon Mead
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PEGWORK_VERSION', '0.3.0' );
+define( 'PEGWORK_VERSION', '0.4.0' );
 define( 'PEGWORK_FILE', __FILE__ );
 define( 'PEGWORK_DIR', plugin_dir_path( __FILE__ ) );
 

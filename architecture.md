@@ -1,6 +1,6 @@
 # Pegwork architecture
 
-Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-23.
+Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisions, gotchas). Last verified: 2026-10-25.
 
 ## Product
 - Pegwork (full name "Pegwork Platform for WordPress"): one WordPress plugin, an application builder: content builder (JetEngine-like CPTs, fields, taxonomies, relationships), listings/templates, filters (JetSmartFilters-like), form builder (Gravity Forms-like), automation builder (Salesforce Flow-like), all on one schema registry.
@@ -185,7 +185,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Local runs: test DBs `pegwork_tests_v3rec82`, `_v3rec84`, `_v3rec82_67`, `_v3rec84_67`; site `~/wp-envs/v3rec` (port 8232, DB `wpenv_v3rec`). Last verified 2026-10-23.
 
 ## Records trash and `created` reads (Automation v4 PR 1, branch `v4-core-trash`)
-- API 0.4.0 (`docs/automation-v4-design.md` sections 3.1 and 8); plugin stays 0.3.0 until v4 PR 10.
+- API 0.4.0 (`docs/automation-v4-design.md` sections 3.1 and 8); plugin 0.4.0 since v4 PR 10.
 - `Records::trash()`: `RecordEvents::claim()` then `wp_trash_post()`, so its own `wp_update_post()` emits `record.updated` and `record.status_changed` with the claim's origin. Checks `EMPTY_TRASH_DAYS` before calling: with 0, core's `wp_trash_post()` calls `wp_delete_post( $id, true )`.
 - Test seam: `EMPTY_TRASH_DAYS` is a constant fixed at bootstrap, so tests turn trash off with the `pegwork_records_trash_enabled` filter (ANDed with the constant; it cannot turn trash on).
 - `created` compiles to `post_date_gmt` comparisons against site-day starts converted to UTC. Gotcha: never-published drafts have `post_date_gmt` `0000-00-00 00:00:00`, which sorts before every date; those rows compare `post_date` (site time) instead.
@@ -197,7 +197,7 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Step block attributes `automation` (after `record`) and `created` (after `filter`) in `automation-step/block.json` and `Builder::STEP_ATTRIBUTES`.
 - Inserter: one store subscription (all stores) withdraws Wait inside loops and Move to trash while the settings meta's trigger is a sweep; meta JSON is parsed only when it changes.
 - Config `automations` (`BuilderEditor::startable()`: enabled manual automations, not the edited one; key, label, content_type) is in `config()`, not `registry_config()`, because enabled is site state.
-- Trash refusal: `AutomationPost::pre_trash()` (`pre_trash_post`) calls `pegwork_delete_automation()` first and returns false on `pegwork_automation_in_use`. Gotcha: core REST answers that with `rest_cannot_delete` (500, generic text), so `trash_refused()` (`rest_request_after_callbacks`) swaps in the in-use error (409); REST is detected by a flag set in `rest_request_before_callbacks` (works under `rest_get_server()->dispatch()`, where `REST_REQUEST` is not defined). Outside REST it calls `wp_die()` with the message. Permanent delete without the trash (`force`) is unchanged.
+- Trash refusal: `AutomationPost::pre_trash()` (`pre_trash_post`) returns false when `starters()` finds a registered automation whose start step (branches, loop bodies, links included) names this one, with the same `pegwork_automation_in_use` error the registry gives; it deletes nothing. `trashed()` (`trashed_post`) deletes the definition after core moved the post, `untrashed()` saves it again (v4 PR 10: deleting in `pre_trash()` parted the two when a later `pre_trash_post` filter or core's status update stopped the trash). Gotcha: core REST answers that with `rest_cannot_delete` (500, generic text), so `trash_refused()` (`rest_request_after_callbacks`) swaps in the in-use error (409); REST is detected by a flag set in `rest_request_before_callbacks` (works under `rest_get_server()->dispatch()`, where `REST_REQUEST` is not defined). Outside REST it calls `wp_die()` with the message. Permanent delete without the trash (`force`) is unchanged.
 - Fixtures moved into the normal globs: `tests/fixtures/valid/engine-start`, `tests/e2e/packages/start`; `reads.test.js` round-trips every fixture (v4, engine-trash and engine-start included).
 - Scope fixture `trash` and `created` sections: `AutomationBuilderScopeTest::test_trash_targets()`, `test_created_operands()`.
 - E2E `automation-builder-v4-trash-start.e2e.js`; `pegwork_e2e_barn_v4_keys()` lists callers before targets (reset deletes in that order).
@@ -433,12 +433,14 @@ Purpose: durable reference facts for the Pegwork plugin (envs, packaging, decisi
 - Local runs: test DBs `pegwork_tests_p6s82`, `_p6s84`, `_p6s82_67`, `_p6s84_67`; site `~/wp-envs/p6save` (port 8227, DB `wpenv_p6save`). Last verified 2026-10-22.
 
 ## BarnCRM proof (Phase 6 PR 6a, branch `phase6-barn`)
-- Fixture `tests/fixtures/valid/barn` (rewritten to v3 flows in Automation v3 PR 8, see that section), E2E copy without automations `tests/e2e/packages/barn` (`FixturesTest` keeps the copies identical). Gate `BarnFlowsGateTest` (site time America/New York; volunteers through `Submission::process()` as user 0). Runbook `docs/automation.md#trying-the-barncrm-example-flows` (`wp pegwork schema import` of the fixture; needs a dev checkout).
+- Fixture `tests/fixtures/valid/barn` (rewritten to v3 flows in Automation v3 PR 8, see that section; 2.1.0 with the v4 worked examples in v4 PR 10, copies of the `v4` package's files), E2E copy without automations `tests/e2e/packages/barn` (`FixturesTest` keeps the copies identical). Gate `BarnFlowsGateTest` (site time America/New York; volunteers through `Submission::process()` as user 0). Runbook `docs/automation.md#trying-the-barncrm-example-flows` (`wp pegwork schema import` of the fixture; needs a dev checkout).
 - Gotcha: options page and content `url` fields share the network-free `Meta::valid_url()` (http/https, `esc_url_raw`), so an unresolvable domain such as `barn.example` is kept on save and saving needs no network. Never use `wp_http_validate_url()` (DNS lookup).
-- Local runs: test DBs `pegwork_tests_p6b82`, `_p6b84`, `_p6b82_67`, `_p6b84_67`; site `~/wp-envs/p6barn` (port 8229, DB `wpenv_p6barn`). Last verified 2026-10-22.
+- Local runs: test DBs `pegwork_tests_p6b82`, `_p6b84`, `_p6b82_67`, `_p6b84_67`; site `~/wp-envs/p6barn` (port 8229, DB `wpenv_p6barn`). Last verified 2026-10-22. v4 PR 10: test DBs `pegwork_tests_v4barn82`, `_v4barn84`, `_v4barn82_67`, `_v4barn84_67`; site `~/wp-envs/v4barn` (port 8251). Last verified 2026-10-25.
+- Gotcha: v3 timelines in `BarnFlowsGateTest` turn the unrelated v4 automations off (`only_v3()`): a call task's due reminder, the review email and retention would otherwise add mail to them. A major gift's call task (due in 2 days) is reminded at once by `barn_task_due_reminder`.
+- Gotcha: `wp cron event run --due-now` racing the site's own spawned WP-Cron can drop a just-scheduled wake-up (both write the cron option); the run stays `queued` until `tick` (10 minutes idle).
 
 ## Version
-- Plugin version 0.3.0 since Automation v3 sign-off (header, `PEGWORK_VERSION`, readme Stable tag, package.json, pot); `Pegwork\Api\VERSION` is 0.3.0 since Automation v3 PR 1 (`PluginLoadsTest` checks both). Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
+- Plugin version 0.4.0 since Automation v4 sign-off (PR 10: header, `PEGWORK_VERSION`, readme Stable tag and changelog, README, package.json and package-lock.json, pot version line); `Pegwork\Api\VERSION` is 0.4.0 since Automation v4 PR 1 (`PluginLoadsTest` checks both). Gotcha: the pot's strings were last regenerated 2026-10-23 (before v3 PR 5); each release so far moved only its version line. Regenerate with `npm run make-pot`. Manifest `requires` is informational: validated for shape, never compared (`docs/registry-reference.md`).
 - Module manifest `label` and `description` are closures around `__()`, resolved after `init` (WordPress 6.7 just-in-time textdomain loading warns on earlier calls).
 - Schema error paths in admin screens go through `Registry\Status::display_path()` (relative to `wp-content/` or the package); `wp pegwork schema` keeps absolute paths.
 

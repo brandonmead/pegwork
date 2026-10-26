@@ -1,0 +1,6 @@
+{ "format": 1, "key": "barn_volunteer_review", "label": "Volunteer application: tell every reviewer",
+  "trigger": { "type": "event", "event": "form.submitted", "form": "barn_volunteer_signup" },
+  "steps": [
+    { "id": "notify", "type": "send_email", "to": "{role:editor}, {option:barn_settings.volunteer_manager}",
+      "subject": "Volunteer application to review: {{record.name}}",
+      "text": "{{record.name}} applied to help with {{record.interest}}. Review it here: {{record.edit_url}}" } ] }
