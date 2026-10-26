@@ -508,6 +508,8 @@ class DirectoryQueryTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'href="https://river.example.org"', $html );
 		$this->assertStringNotContainsString( self::EMAIL, $html );
 		$this->assertStringNotContainsString( 'GitHub link', $html, 'empty url fields render nothing' );
+		$this->assertDoesNotMatchRegularExpression( '#<div class="wp-block-buttons[^"]*">\s*</div>#', $html, 'no empty Buttons wrapper for an empty url field' );
+		$this->assertSame( 2, preg_match_all( '#class="wp-block-buttons[ "]#', $html ), 'one wrapper per url field with a value' );
 
 		update_post_meta( $id, '_sifg_project_needs_volunteers', '' );
 		$this->assertStringNotContainsString( 'volunteer', do_blocks( Patterns::details( 'sifg_project' ) ) );

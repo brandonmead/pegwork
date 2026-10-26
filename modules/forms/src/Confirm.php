@@ -119,7 +119,8 @@ final class Confirm {
 	 * @param int                  $page_id  Page that held the form, 0 if none.
 	 * @param int                  $now      Unix time.
 	 * @param array<string, mixed> $meta     Entry meta so far.
-	 * @return array<string, mixed> Meta with `confirm_expires` and `confirm_mail` (`sent`, `failed`, `skipped`).
+	 * @return array<string, mixed> Meta with `confirm_expires` and `confirm_mail` (`sent`, `failed`, `skipped`); when the
+	 *                              mail failed, also `confirm_alert` (the admin alert's result) and the entry is `failed`.
 	 */
 	public static function start( array $form, int $entry_id, array $values, int $page_id, int $now, array $meta ): array {
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- base64url encoding of a random token.
@@ -136,6 +137,12 @@ final class Confirm {
 				'confirm_url' => self::url( $page_id, $entry_id, $token ),
 			)
 		);
+		if ( 'failed' === $meta['confirm_mail'] ) {
+			// Nobody can confirm this entry, so it must not age out as an abandoned one (the `unconfirmed`
+			// retention): `failed` entries stay until an admin or the form's retention removes them.
+			$meta['confirm_alert'] = Notifications::confirm_failure( $form, $entry_id );
+			EntryState::set( $entry_id, array( 'status' => 'failed' ) );
+		}
 
 		return $meta;
 	}

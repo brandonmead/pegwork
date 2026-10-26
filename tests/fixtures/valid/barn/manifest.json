@@ -1,1 +1,1 @@
-{ "format": 1, "id": "barn", "version": "2.0.0", "label": "BarnCRM proof: donor acknowledgment, lifetime milestone, tasks digest, manual and inbound gifts, volunteer intake", "requires": { "pegwork": ">=0.3.0" } }
+{ "format": 1, "id": "barn", "version": "2.1.0", "label": "BarnCRM proof: donor acknowledgment with a shared receipt, lifetime milestone, tasks digest and due reminders, manual and inbound gifts, volunteer intake, review and retention", "requires": { "pegwork": ">=0.4.0" } }

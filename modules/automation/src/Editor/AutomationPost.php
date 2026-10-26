@@ -413,10 +413,12 @@ final class AutomationPost {
 	}
 
 	/**
-	 * Before an automation post goes to the trash: deletes its site definition first, and refuses the trash when
-	 * the registry refuses the delete (`pegwork_automation_in_use`: other automations start it), so the post and
-	 * its definition never part. In a REST request the refusal is reported by trash_refused(); elsewhere (the
-	 * classic post.php trash link, WP-CLI) wp_die() shows the same message. Hooked to pre_trash_post.
+	 * Before an automation post goes to the trash: refuses the trash while other automations start it
+	 * (`pegwork_automation_in_use`, the error pegwork_delete_automation() would give), so the post and its
+	 * definition stay together. Nothing is deleted here: trashed() deletes the definition once core has moved the
+	 * post, so a trash that another filter refuses or that fails keeps both, and untrashed() saves it again on
+	 * restore. In a REST request the refusal is reported by trash_refused(); elsewhere (the classic post.php
+	 * trash link, WP-CLI) wp_die() shows the same message. Hooked to pre_trash_post.
 	 *
 	 * @param bool|null $trash Whether to go ahead (null: core decides).
 	 * @param WP_Post   $post  Post.
@@ -430,22 +432,64 @@ final class AutomationPost {
 		if ( '' === $key || 'db' !== pegwork_registry()->automation_source( $key ) ) {
 			return $trash;
 		}
-		$deleted = pegwork_delete_automation( $key );
-		if ( ! is_wp_error( $deleted ) || 'pegwork_automation_in_use' !== $deleted->get_error_code() ) {
+		$callers = self::starters( $key );
+		if ( array() === $callers ) {
 			return $trash;
 		}
+		$refused = new WP_Error(
+			'pegwork_automation_in_use',
+			/* translators: 1: automation key, 2: comma-separated automation keys. */
+			sprintf( __( 'Automation "%1$s" is started by %2$s, which would stop loading. Remove or change those "Start another automation" steps first.', 'pegwork' ), $key, implode( ', ', $callers ) ),
+			array(
+				'status'      => 409,
+				'automations' => $callers,
+			)
+		);
 		if ( self::$in_rest ) {
-			self::$refused = $deleted;
+			self::$refused = $refused;
 			return false;
 		}
 		wp_die(
-			esc_html( $deleted->get_error_message() ),
+			esc_html( $refused->get_error_message() ),
 			esc_html__( 'Automation in use', 'pegwork' ),
 			array(
 				'response'  => 409,
 				'back_link' => true,
 			)
 		);
+	}
+
+	/**
+	 * Registered automations with a start_automation step (in branches, loop bodies and links too) that starts
+	 * an automation: the ones the registry would drop if it were deleted.
+	 *
+	 * @param string $key Automation key.
+	 * @return string[] Caller keys, sorted.
+	 */
+	private static function starters( string $key ): array {
+		$callers = array();
+		foreach ( pegwork_registry()->automations() as $caller => $definition ) {
+			$lists = array( (array) ( $definition['steps'] ?? array() ) );
+			foreach ( (array) ( $definition['links'] ?? array() ) as $link ) {
+				$lists[] = (array) ( ( (array) $link )['steps'] ?? array() );
+			}
+			while ( array() !== $lists && (string) $caller !== $key ) {
+				foreach ( (array) array_shift( $lists ) as $step ) {
+					$step = (array) $step;
+					if ( 'start_automation' === ( $step['type'] ?? '' ) && ( $step['automation'] ?? null ) === $key ) {
+						$callers[] = (string) $caller;
+						continue 3;
+					}
+					foreach ( (array) ( $step['branches'] ?? array() ) as $branch ) {
+						$lists[] = (array) ( ( (array) $branch )['steps'] ?? array() );
+					}
+					$lists[] = (array) ( $step['otherwise'] ?? array() );
+					$lists[] = (array) ( $step['steps'] ?? array() );
+				}
+			}
+		}
+		sort( $callers );
+		return $callers;
 	}
 
 	/**

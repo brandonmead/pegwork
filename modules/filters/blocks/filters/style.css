@@ -208,6 +208,11 @@
 	margin: 1rem 0 0;
 }
 
+/* With "Collapse on small screens" the count sits above the form (FiltersBlock::render()). */
+.wp-block-pegwork-filters > .pegwork-filters__count:first-child {
+	margin: 0 0 0.5rem;
+}
+
 .wp-block-pegwork-filters .screen-reader-text {
 	border: 0;
 	clip-path: inset(50%);

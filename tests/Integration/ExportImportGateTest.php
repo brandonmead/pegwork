@@ -355,7 +355,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame( array(), Plugin::result()->errors );
 		$sections = array( 'content_types', 'taxonomies', 'relationships', 'options_pages', 'automations' );
 		$before   = array_map( fn( $section ) => Plugin::registry()->$section(), array_combine( $sections, $sections ) );
-		$this->assertSame( array( 3, 1, 2, 1, 7 ), array_values( array_map( 'count', $before ) ) );
+		$this->assertSame( array( 3, 1, 2, 1, 8 ), array_values( array_map( 'count', $before ) ) );
 
 		$a    = $this->export();
 		$tree = $this->tree( $a );
@@ -376,7 +376,8 @@ class ExportImportGateTest extends WP_UnitTestCase {
 			array_intersect_key( $thanks['steps'][0], array_flip( array( 'status', 'sort' ) ) ),
 			'get_record defaults.'
 		);
-		$this->assertSame( 0, $thanks['steps'][4]['limit'] );
+		$this->assertSame( 0, $thanks['steps'][5]['limit'] );
+		$this->assertSame( 'barn_gift_receipt', $thanks['steps'][4]['automation'] );
 		$shapes = json_decode( $tree['automations/reads_shapes.json'], true );
 		$this->assertSame( array( 'draft', 'private', 'publish' ), $shapes['steps'][0]['status'], 'Statuses are sorted.' );
 		$this->assertSame( 10, $shapes['steps'][4]['limit'], 'find_records limit default.' );
@@ -403,10 +404,11 @@ class ExportImportGateTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Phase 6 and Automation v3 gate: the BarnCRM proof package (four types, two relationships, an options page,
-	 * a form and six automations with decisions, reads, a loop, manual and webhook triggers, typed update_record
-	 * targets and a form-bound trigger) exports, re-imports into the DB source and re-exports byte-identically;
-	 * the export holds one file per fixture object.
+	 * Phase 6, Automation v3 and v4 gate: the BarnCRM proof package (four types, two relationships, an options
+	 * page, a form and ten automations with decisions, reads, a loop, manual and webhook triggers, typed
+	 * update_record targets, a form-bound trigger, a date wait, trash, a started automation and a role
+	 * recipient) exports, re-imports into the DB source and re-exports byte-identically; the export holds one
+	 * file per fixture object.
 	 */
 	public function test_barn_package_round_trip() {
 		$fixture       = dirname( __DIR__ ) . '/fixtures/valid/barn';
@@ -416,7 +418,7 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertSame( array(), Plugin::result()->errors );
 		$sections = array( 'content_types', 'relationships', 'options_pages', 'forms', 'automations' );
 		$before   = array_map( fn( $section ) => Plugin::registry()->$section(), array_combine( $sections, $sections ) );
-		$this->assertSame( array( 4, 2, 1, 1, 6 ), array_values( array_map( 'count', $before ) ) );
+		$this->assertSame( array( 4, 2, 1, 1, 10 ), array_values( array_map( 'count', $before ) ) );
 
 		$a    = $this->export();
 		$tree = $this->tree( $a );

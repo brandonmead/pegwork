@@ -79,7 +79,7 @@ final class EntryFields {
 			if ( is_bool( $value ) ) {
 				return $value ? __( 'Yes', 'pegwork' ) : __( 'No', 'pegwork' );
 			}
-			return is_scalar( $value ) ? (string) $value : '';
+			return is_scalar( $value ) ? Notifications::plain( (string) $value ) : '';
 		}
 		return Notifications::display( $item, $value );
 	}
