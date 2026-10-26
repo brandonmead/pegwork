@@ -22,6 +22,7 @@
           "text": "Dear {{steps.donor.record.name}},\n\nThank you for your gift of ${{record.amount | number}} on {{record.received_on | date}}.\n\nNo goods or services were provided in exchange for this gift.\n\n{{site.name}}" } ] },
     { "id": "stamp_donor", "type": "update_record", "record": "{{steps.donor.record_id}}",
       "values": { "last_gift_on": "{{record.received_on}}" } },
+    { "id": "receipt", "type": "start_automation", "automation": "barn_gift_receipt" },
     { "id": "gifts", "type": "find_records", "content_type": "barn_gift", "limit": 0,
       "related": { "relationship": "gift_donor", "of": "{{steps.donor.record_id}}" } },
     { "id": "first_gift", "type": "condition", "when": { "var": "steps.gifts.count", "op": "eq", "value": 1 } },
