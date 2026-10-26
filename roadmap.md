@@ -43,6 +43,9 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 9. Editor B: Move to trash, Start another automation, Created: done, in review (branch `v4-editor-b`). Move to trash inspector and card, withdrawn from the inserter and refused at its card in sweeps; Start another automation picker (`automations` config) and card; Created before/after in read More options; trashing a started automation's post refused with the in-use message. Every v4 fixture round-trips in `reads.test.js`; `engine-start` and the E2E start package moved into the normal fixture locations. Builder 30,147 bytes gzipped, budget raised to 30,147 (no lazy chunk). Closes the editor leftovers of PRs 2, 4, 5 and 8.
 10. BarnCRM proof v4 and release 0.4.0: done, in review (branch `v4-barn-proof`). Barn fixture 2.1.0 with the four v4 worked examples and the `receipt` step, `BarnFlowsGateTest` v4 timelines, `automation-barn-flows.e2e.js` with the receipt start, runbook checked by hand on a throwaway site, plugin 0.4.0. Closes the PR 10 leftovers of PRs 3, 5 and 7. Automation v4 is built; done when PRs 1 to 10 are merged. Open: `languages/pegwork.pot` was not regenerated (only its version line moved, as at 0.3.0), so it lacks the v3 and v4 strings added since 2026-10-23; regenerate with `npm run make-pot`. Known deviations kept from PR 9: plain select automation picker, forced permanent delete of an in-use automation not blocked, cycle error shown with the generic save-error display.
 
+## QA fix PRs (QA of main 962d91d, 2026-10-25)
+- Core (branch `qa-fix-core`): C1 to C9, D1, SEC-2, SEC-4 and the core half of E4 (`pegwork_activated`; the automation listener only): done, in review. Left: nothing for core; the other E items belong to the automation PR.
+
 ## Phase 1 PRs
 1. Scaffold (merged)
 2. Registry (merged)

@@ -43,6 +43,7 @@ wp pegwork schema import <dir> [--prune] [--dry-run]
 - Re-runs registration in the same request and creates missing seed terms by slug. Later requests pick up the new option on `init`; the registry hash changes, so rewrite rules are flushed once.
 - Never deletes terms, posts or meta, and never changes file packages.
 - `--prune`: also removes DB entries the package does not define (DB entries only).
+- Refuses an import that would stop a DB entry it keeps from loading, such as a site form bound to a field the package removes from its content type: one `import_breaks_entry` error per entry, followed by the load errors that explain it, exit status 1, nothing written (a dry run reports the same). Change the package, or use `--prune` to remove such entries on purpose.
 - `--dry-run`: lists the changes and the seed terms that would be created; writes nothing.
 - A key that a file package also defines is stored but shadowed (file wins); the command warns for each one.
 
@@ -55,10 +56,11 @@ Import compares canonical forms, so importing the same directory again reports `
 ## `pegwork_schema` option shape
 
 ```
-{ "content_types": [ ... ], "taxonomies": [ ... ], "relationships": [ ... ], "manifest": { ... } }
+{ "content_types": [ ... ], "taxonomies": [ ... ], "relationships": [ ... ], "forms": [ ... ],
+  "automations": [ ... ], "options_pages": [ ... ], "manifest": { ... } }
 ```
 
-Each list holds objects in the file format. `manifest` is written by import and read only by export.
+Each list holds objects in the file format (`Loader::SECTIONS`); a missing list counts as empty. Forms saved in the form builder and automations saved in the automation editor are entries of these lists too. `manifest` is written by import and read only by export.
 
 ## LocalWP runbook (mirrors the gate test)
 

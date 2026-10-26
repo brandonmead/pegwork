@@ -1,0 +1,5 @@
+{ "format": 1, "key": "imp_item", "labels": { "singular": "Item", "plural": "Items" }, "public": false,
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "wp": { "storage": "post_title" } },
+    { "key": "note", "type": "text", "label": "Note" }
+  ] }

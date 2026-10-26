@@ -40,7 +40,7 @@ A package is a directory with `manifest.json` and one JSON file per object:
 
 - `format`: integer `1`, required on every object file.
 - Keys: `^[a-z][a-z0-9_]*$`. Content type keys at most 20 characters, taxonomy keys at most 32, options page, form and automation keys at most 64 (`key_too_long`).
-- Content type and taxonomy keys become query vars, so WordPress query vars (`type`, `status`, `name`, `author`, ...: `Validator::RESERVED_KEYS`) and `wp_*` are rejected (`reserved_key`).
+- Content type and taxonomy keys become query vars, so WordPress query vars (`type`, `status`, `name`, `author`, ...: `Validator::RESERVED_KEYS`) and `wp_*` are rejected (`reserved_key`). So is `pegwork_*`, which belongs to Pegwork's own post types (`pegwork_form`, `pegwork_automation`).
 - Unknown properties are errors (`unknown_property`), at every depth except `automations.ui`.
 - No PHP callables: a property ending in `callback`, `_cb` or `_class`, or a PHP object in a DB entry, is `callable_not_allowed`.
 - Decoded PHP cannot tell `{}` from `[]`, so the PHP validator accepts an empty array as either; the JSON Schema does not. The canonical (normalized) form never holds an empty optional object.
@@ -60,7 +60,7 @@ A package is a directory with `manifest.json` and one JSON file per object:
 | `label` | yes | non-empty string |
 | `requires` | no | map of name to version constraint strings; informational |
 
-`requires` is validated for shape only (string values, no callables) and is never compared with the running versions: Pegwork does not refuse a package whose constraint it does not meet. It tells readers and tools which plugin version the package was written for. An older Pegwork rejects the newer sections on its own (unknown keys), which is the real guard. The plugin version (`PEGWORK_VERSION`, plugin header) and the API version (`Pegwork\Api\VERSION`) are both 0.3.0.
+`requires` is validated for shape only (string values, no callables) and is never compared with the running versions: Pegwork does not refuse a package whose constraint it does not meet. It tells readers and tools which plugin version the package was written for. An older Pegwork rejects the newer sections on its own (unknown keys), which is the real guard. The plugin version (`PEGWORK_VERSION`, plugin header) and the API version (`Pegwork\Api\VERSION`) are both 0.4.0.
 
 ## Content types
 

@@ -563,4 +563,27 @@ class ExportImportGateTest extends WP_UnitTestCase {
 		$this->assertFalse( $plan->is_valid() );
 		$this->assertFalse( get_option( Loader::DB_OPTION ) );
 	}
+
+	/**
+	 * QA C3: an import that would stop a kept DB entry from loading (a form bound to a field the package
+	 * removes) is rejected, in a dry run too, and nothing is written.
+	 */
+	public function test_import_that_breaks_a_kept_entry_is_rejected() {
+		$fixtures = dirname( __DIR__ ) . '/fixtures/import-break';
+		$this->assertTrue( Importer::import( $fixtures . '/a' )->is_valid() );
+		$this->assertArrayHasKey( 'imp_form', Plugin::registry()->forms() );
+		$stored = get_option( Loader::DB_OPTION );
+
+		foreach ( array( true, false ) as $dry_run ) {
+			$plan = Importer::import( $fixtures . '/b', false, $dry_run );
+			$this->assertFalse( $plan->is_valid(), $dry_run ? 'dry run' : 'import' );
+			$this->assertSame( 'import_breaks_entry', $plan->errors[0]->code );
+			$this->assertStringContainsString( 'imp_form', $plan->errors[0]->message );
+			$this->assertSame( $stored, get_option( Loader::DB_OPTION ) );
+		}
+		$this->assertArrayHasKey( 'imp_form', Plugin::registry()->forms() );
+
+		$this->assertTrue( Importer::import( $fixtures . '/b', true )->is_valid(), 'With prune the form is removed on purpose.' );
+		$this->assertArrayNotHasKey( 'imp_form', Plugin::registry()->forms() );
+	}
 }

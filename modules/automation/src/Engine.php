@@ -154,6 +154,7 @@ final class Engine {
 			self::SCHEDULE_HOOK            => array( 'on_schedule', 1 ),
 			self::SWEEP_HOOK               => array( 'on_sweep', 3 ),
 			'pegwork_event_record_updated' => array( 'on_record_updated', 1 ),
+			'pegwork_activated'            => array( 'on_activated', 0 ),
 		);
 		foreach ( $hooks as $hook => [ $method, $args ] ) {
 			if ( ! has_action( $hook, array( self::class, $method ) ) ) {
@@ -201,6 +202,14 @@ final class Engine {
 				self::instance()->maintenance()->rearm();
 			}
 		}
+	}
+
+	/**
+	 * Reschedules wake-ups lost while Pegwork or this module was not running (WP-Cron consumed them with no
+	 * handler), instead of leaving them to the 03:00 maintenance. Hooked to pegwork_activated.
+	 */
+	public static function on_activated(): void {
+		self::instance()->maintenance()->resume();
 	}
 
 	/**

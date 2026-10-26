@@ -178,6 +178,7 @@ final class Status {
 					match ( $trigger['type'] ) {
 						'event'    => 'on ' . $trigger['event'],
 						'schedule' => 'every ' . $trigger['every'],
+						'manual'   => isset( $trigger['content_type'] ) ? 'manual on ' . $trigger['content_type'] : 'manual',
 						default    => 'webhook',
 					},
 					count( $automation['steps'] ),

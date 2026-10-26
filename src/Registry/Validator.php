@@ -115,7 +115,8 @@ final class Validator {
 
 	/**
 	 * WordPress query vars, core post types and core taxonomies. A content type or taxonomy
-	 * with one of these keys breaks queries or collides with core. Keys starting `wp_` are also reserved.
+	 * with one of these keys breaks queries or collides with core. Keys starting `wp_` are also reserved, and
+	 * keys starting `pegwork_` belong to Pegwork's own post types.
 	 */
 	public const RESERVED_KEYS = array(
 		'action',
@@ -949,6 +950,9 @@ final class Validator {
 		if ( in_array( $value, self::RESERVED_KEYS, true ) || str_starts_with( $value, 'wp_' ) ) {
 			/* translators: %s: key. */
 			$this->add( 'reserved_key', $pointer, sprintf( __( '"%s" is reserved by WordPress.', 'pegwork' ), $value ) );
+		} elseif ( str_starts_with( $value, 'pegwork_' ) ) {
+			/* translators: %s: key. */
+			$this->add( 'reserved_key', $pointer, sprintf( __( '"%s" is reserved: keys starting pegwork_ belong to Pegwork itself (such as pegwork_form and pegwork_automation).', 'pegwork' ), $value ) );
 		}
 	}
 

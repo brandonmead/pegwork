@@ -54,6 +54,60 @@ final class Meta {
 				}
 			}
 		}
+
+		foreach ( array_keys( $registry->content_types() ) as $type_key ) {
+			if ( ! has_filter( 'rest_prepare_' . $type_key, array( self::class, 'rest_prepare' ) ) ) {
+				add_filter( 'rest_prepare_' . $type_key, array( self::class, 'rest_prepare' ), 10, 3 );
+			}
+		}
+	}
+
+	/**
+	 * Leaves Pegwork field meta and relationship links (`_rel_*`) out of the REST response of a
+	 * password-protected record until the reader gives the password, as core does for its content. Other
+	 * meta is left to its own plugin. Hooked to rest_prepare_{post_type}.
+	 *
+	 * @param \WP_REST_Response|mixed $response Response.
+	 * @param \WP_Post|mixed          $post     Post.
+	 * @param \WP_REST_Request|mixed  $request  Request.
+	 * @return \WP_REST_Response|mixed
+	 */
+	public static function rest_prepare( $response, $post, $request ) {
+		if ( ! $response instanceof \WP_REST_Response || ! $post instanceof \WP_Post || '' === $post->post_password || ! $request instanceof \WP_REST_Request ) {
+			return $response;
+		}
+		$data = $response->get_data();
+		if ( ! is_array( $data ) || ! is_array( $data['meta'] ?? null ) || self::can_read_protected( $post, $request ) ) {
+			return $response;
+		}
+
+		foreach ( array_keys( $data['meta'] ) as $meta_key ) {
+			if ( in_array( $meta_key, self::$registered[ $post->post_type ] ?? array(), true ) || str_starts_with( (string) $meta_key, Relationships::META_PREFIX ) ) {
+				unset( $data['meta'][ $meta_key ] );
+			}
+		}
+		$response->set_data( $data );
+
+		return $response;
+	}
+
+	/**
+	 * Whether a REST reader may see a password-protected record's content, by core's rules: an editor in edit
+	 * context, the right `password` param, or the post password cookie.
+	 *
+	 * @param \WP_Post         $post    Post with a password.
+	 * @param \WP_REST_Request $request Request.
+	 */
+	private static function can_read_protected( \WP_Post $post, \WP_REST_Request $request ): bool {
+		if ( 'edit' === $request['context'] && current_user_can( 'edit_post', $post->ID ) ) {
+			return true;
+		}
+		$password = $request['password'];
+		if ( is_string( $password ) && '' !== $password ) {
+			return hash_equals( $post->post_password, $password );
+		}
+
+		return ! post_password_required( $post );
 	}
 
 	/**
@@ -216,7 +270,7 @@ final class Meta {
 	}
 
 	/**
-	 * Sanitize callback for a field's type.
+	 * Sanitize callback for a field's type. URLs go through sanitize_url(): web addresses only, '' otherwise.
 	 *
 	 * @param array<string, mixed> $field Normalized field.
 	 */
@@ -224,7 +278,7 @@ final class Meta {
 		return match ( $field['type'] ) {
 			'textarea'  => 'sanitize_textarea_field',
 			'rich_text' => 'wp_kses_post',
-			'url'       => 'esc_url_raw',
+			'url'       => fn( $value ) => is_scalar( $value ) ? self::sanitize_url( (string) $value ) : '',
 			'email'     => 'sanitize_email',
 			'boolean'   => 'rest_sanitize_boolean',
 			'date'      => array( self::class, 'sanitize_date' ),

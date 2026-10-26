@@ -1,0 +1,6 @@
+{ "format": 1, "key": "imp_form", "label": "Add an item",
+  "target": { "content_type": "imp_item", "action": "create", "status": "draft" },
+  "fields": [
+    { "bind": { "field": "name" } },
+    { "bind": { "field": "note" } }
+  ] }

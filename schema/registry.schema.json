@@ -30,10 +30,10 @@
 			]
 		},
 		"object_key": {
-			"description": "Content type or taxonomy key: not a reserved WordPress term and not prefixed wp_.",
+			"description": "Content type or taxonomy key: not a reserved WordPress term and not prefixed wp_ or pegwork_.",
 			"allOf": [
 				{ "$ref": "#/$defs/key" },
-				{ "not": { "pattern": "^wp_" } },
+				{ "not": { "pattern": "^(wp_|pegwork_)" } },
 				{ "not": { "$ref": "#/$defs/reserved_key" } }
 			]
 		},

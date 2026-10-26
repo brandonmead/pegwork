@@ -210,6 +210,8 @@ final class Loader {
 		if ( ! in_array( $slug, $enabled, true ) ) {
 			$enabled[] = $slug;
 			update_option( self::OPTION, $enabled );
+			// The module boots on the next load, where pegwork_activated lets it recover (Plugin::fire_activated()).
+			\Pegwork\Plugin::mark_activated();
 		}
 		return true;
 	}
