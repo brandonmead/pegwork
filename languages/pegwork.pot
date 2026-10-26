@@ -2,21 +2,21 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Pegwork 0.4.0\n"
+"Project-Id-Version: Pegwork 0.4.1\n"
 "Report-Msgid-Bugs-To: https://github.com/brandonmead/pegwork/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T03:26:47+00:00\n"
+"POT-Creation-Date: 2026-10-26T09:48:36+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: pegwork\n"
 
 #. Plugin Name of the plugin
 #: pegwork.php
-#: modules/automation/src/Editor/BuilderEditor.php:83
+#: modules/automation/src/Editor/BuilderEditor.php:85
 #: modules/automation/src/Health.php:236
 #: modules/forms/src/Module.php:97
 #: modules/listings/src/Module.php:70
@@ -58,12 +58,12 @@ msgstr ""
 msgid "Automation %s disabled for this site. New runs do not start; queued runs are cancelled when they wake."
 msgstr ""
 
-#: modules/automation/src/Admin/Actions.php:83
-msgid "Run now is for schedule automations. Event automations run when their event fires."
+#: modules/automation/src/Admin/Actions.php:87
+msgid "Run now is for schedule automations and staff automations without a record. Event automations run when their event fires."
 msgstr ""
 
 #. translators: 1: automation label, 2: number of records or firings matched, 3: number of runs created.
-#: modules/automation/src/Admin/Actions.php:99
+#: modules/automation/src/Admin/Actions.php:103
 #, php-format
 msgid "%1$s: matched %2$s, created %3$s run. It runs in the background; reload this page to follow it."
 msgid_plural "%1$s: matched %2$s, created %3$s runs. They run in the background; reload this page to follow them."
@@ -71,146 +71,174 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of matches skipped.
-#: modules/automation/src/Admin/Actions.php:106
+#: modules/automation/src/Admin/Actions.php:110
 #, php-format
 msgid "%s already had a run for its idempotency key."
 msgid_plural "%s already had a run for their idempotency key."
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/automation/src/Admin/Actions.php:109
+#: modules/automation/src/Admin/Actions.php:113
 msgid "Stopped at max_runs; the rest are checked next time."
 msgstr ""
 
-#: modules/automation/src/Admin/Actions.php:112
+#: modules/automation/src/Admin/Actions.php:116
 msgid "The sweep continues in the background."
 msgstr ""
 
+#. translators: %s: automation label.
+#: modules/automation/src/Admin/Actions.php:149
+#, php-format
+msgid "%s was already started from this page; no second run was created."
+msgstr ""
+
+#. translators: %s: automation label.
+#: modules/automation/src/Admin/Actions.php:151
+#, php-format
+msgid "%s started. It runs in the background; reload this page to follow it."
+msgstr ""
+
 #. translators: %d: run ID.
-#: modules/automation/src/Admin/Actions.php:146
+#: modules/automation/src/Admin/Actions.php:183
 #, php-format
 msgid "Run %d queued again from the step that failed. It runs in the background; reload this page to follow it."
 msgstr ""
 
-#: modules/automation/src/Admin/Actions.php:165
+#: modules/automation/src/Admin/Actions.php:202
 msgid "Sorry, you are not allowed to manage Pegwork automations."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:36
-#: modules/automation/src/Admin/AutomationList.php:45
+#: modules/automation/src/Admin/AutomationList.php:37
+#: modules/automation/src/Admin/AutomationList.php:46
 #: modules/automation/src/Admin/Screen.php:71
-#: modules/automation/src/Editor/AutomationPost.php:106
-#: modules/automation/src/Editor/AutomationPost.php:116
+#: modules/automation/src/Editor/AutomationPost.php:123
+#: modules/automation/src/Editor/AutomationPost.php:133
 msgid "Automations"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:37
-#: modules/automation/src/Editor/AutomationPost.php:108
-#: modules/automation/src/Editor/AutomationPost.php:109
+#: modules/automation/src/Admin/AutomationList.php:38
+#: modules/automation/src/Editor/AutomationPost.php:125
+#: modules/automation/src/Editor/AutomationPost.php:126
 msgid "Add automation"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:38
+#: modules/automation/src/Admin/AutomationList.php:39
 msgid "View run log"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:41
-msgid "Automations come from the schema registry. Site automations are edited here; automations from a schema package are read-only and can be duplicated as site automations. You can also switch one on or off for this site, run a schedule now, and follow its runs."
-msgstr ""
-
-#: modules/automation/src/Admin/AutomationList.php:47
-#: modules/automation/src/Admin/RunLog.php:57
-#: modules/automation/src/Admin/RunLog.php:89
-#: modules/automation/src/Admin/RunLog.php:151
-#: modules/automation/src/Editor/AutomationPost.php:107
-#: src/Modules/manifest.php:33
-#: assets/build/automation-builder.js:21
-msgid "Automation"
+#: modules/automation/src/Admin/AutomationList.php:42
+msgid "Automations come from the schema registry. Site automations are edited here; automations from a schema package are read-only and can be duplicated as site automations. You can also switch one on or off for this site, run a schedule or a staff automation now, and follow its runs."
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:48
-#: modules/automation/src/Admin/RunLog.php:90
-#: modules/automation/src/Admin/RunLog.php:162
-#: assets/build/automation-builder.js:23
-msgid "Trigger"
+#: modules/automation/src/Admin/RunLog.php:57
+#: modules/automation/src/Admin/RunLog.php:89
+#: modules/automation/src/Admin/RunLog.php:151
+#: modules/automation/src/Editor/AutomationPost.php:124
+#: src/Modules/manifest.php:33
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:42
+msgid "Automation"
 msgstr ""
 
 #: modules/automation/src/Admin/AutomationList.php:49
-#: modules/automation/src/Admin/AutomationList.php:125
+#: modules/automation/src/Admin/RunLog.php:90
+#: modules/automation/src/Admin/RunLog.php:162
+#: assets/build/automation-builder.js:7
+#: assets/build/automation-builder.js:44
+msgid "Trigger"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:50
+#: modules/automation/src/Admin/AutomationList.php:144
 #: src/Admin/Modules.php:85
 msgid "Enabled"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:50
+#: modules/automation/src/Admin/AutomationList.php:51
 msgid "Last run"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:51
+#: modules/automation/src/Admin/AutomationList.php:52
 msgid "Next run"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:52
+#: modules/automation/src/Admin/AutomationList.php:53
 #: modules/forms/src/EntriesAdmin.php:419
 msgid "Actions"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:56
+#: modules/automation/src/Admin/AutomationList.php:57
 msgid "No automations registered. Add an automations section to a schema package (see the registry reference) or import one with wp pegwork schema import."
 msgstr ""
 
 #. translators: %s: CLI command.
-#: modules/automation/src/Admin/AutomationList.php:85
+#: modules/automation/src/Admin/AutomationList.php:87
 #, php-format
 msgid "The same rules apply to %s. Times are in the site time zone."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:101
+#: modules/automation/src/Admin/AutomationList.php:103
+msgid "Editors can run"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:104
+msgid "Administrators can run"
+msgstr ""
+
+#. translators: %s: content type label (plural), such as "Gifts".
+#: modules/automation/src/Admin/AutomationList.php:110
+#, php-format
+msgid "Staff can also run it on selected %s"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:120
 msgid "POST signed JSON to"
 msgstr ""
 
 #. translators: %s: CLI command.
-#: modules/automation/src/Admin/AutomationList.php:104
+#: modules/automation/src/Admin/AutomationList.php:123
 #, php-format
 msgid "Secret: %s"
 msgstr ""
 
 #. translators: 1: on or off (JSON default), 2: on or off (site override).
-#: modules/automation/src/Admin/AutomationList.php:117
-#: modules/automation/src/Admin/AutomationList.php:123
+#: modules/automation/src/Admin/AutomationList.php:136
+#: modules/automation/src/Admin/AutomationList.php:142
 #: assets/build/listings-editor.js:9
 msgid "on"
 msgstr ""
 
 #. translators: 1: on or off (JSON default), 2: on or off (site override).
-#: modules/automation/src/Admin/AutomationList.php:117
-#: modules/automation/src/Admin/AutomationList.php:123
+#: modules/automation/src/Admin/AutomationList.php:136
+#: modules/automation/src/Admin/AutomationList.php:142
 #: assets/build/listings-editor.js:9
 msgid "off"
 msgstr ""
 
 #. translators: %s: on or off.
-#: modules/automation/src/Admin/AutomationList.php:121
+#: modules/automation/src/Admin/AutomationList.php:140
 #, php-format
 msgid "JSON default %s, no site override"
 msgstr ""
 
 #. translators: 1: on or off (JSON default), 2: on or off (site override).
-#: modules/automation/src/Admin/AutomationList.php:123
+#: modules/automation/src/Admin/AutomationList.php:142
 #, php-format
 msgid "JSON default %1$s, site override %2$s"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:125
+#: modules/automation/src/Admin/AutomationList.php:144
 #: src/Admin/Modules.php:85
 msgid "Disabled"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:136
+#: modules/automation/src/Admin/AutomationList.php:155
 msgid "Never run"
 msgstr ""
 
 #. translators: %s: number of queued, running or waiting runs.
-#: modules/automation/src/Admin/AutomationList.php:145
+#: modules/automation/src/Admin/AutomationList.php:164
 #, php-format
 msgid "%s open run"
 msgid_plural "%s open runs"
@@ -218,198 +246,375 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of failed runs.
-#: modules/automation/src/Admin/AutomationList.php:149
+#: modules/automation/src/Admin/AutomationList.php:168
 #, php-format
 msgid "%s failed in the last 7 days"
 msgid_plural "%s failed in the last 7 days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/automation/src/Admin/AutomationList.php:165
+#: modules/automation/src/Admin/AutomationList.php:185
 msgid "When a signed request arrives"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:166
+#: modules/automation/src/Admin/AutomationList.php:187
+msgid "When staff start it"
+msgstr ""
+
+#: modules/automation/src/Admin/AutomationList.php:189
 msgid "When its event fires"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:170
+#: modules/automation/src/Admin/AutomationList.php:194
 msgid "None while disabled"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:172
+#: modules/automation/src/Admin/AutomationList.php:196
 msgid "Scheduled on the next page load"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:187
-#: modules/forms/src/EntriesTable.php:258
+#: modules/automation/src/Admin/AutomationList.php:211
+#: modules/forms/src/EntriesTable.php:263
 #: modules/forms/src/FormsTable.php:122
 msgid "View"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:189
-#: assets/build/automation-builder.js:22
-#: assets/build/automation-builder.js:25
+#: modules/automation/src/Admin/AutomationList.php:213
+#: assets/build/automation-builder.js:43
+#: assets/build/automation-builder.js:46
 msgid "Duplicate as site automation"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:191
+#: modules/automation/src/Admin/AutomationList.php:215
 #: modules/forms/src/FormsTable.php:122
 msgid "Edit"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:212
+#: modules/automation/src/Admin/AutomationList.php:239
 #: src/Admin/Modules.php:111
 msgid "Disable"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:212
+#: modules/automation/src/Admin/AutomationList.php:239
 #: src/Admin/Modules.php:111
 msgid "Enable"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:220
-#: modules/automation/src/Admin/AutomationList.php:224
+#: modules/automation/src/Admin/AutomationList.php:250
+#: modules/automation/src/Admin/AutomationList.php:254
 msgid "Run now"
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:225
+#: modules/automation/src/Admin/AutomationList.php:255
 msgid "Enable it to run it now."
 msgstr ""
 
-#: modules/automation/src/Admin/AutomationList.php:236
+#: modules/automation/src/Admin/AutomationList.php:266
+#: modules/automation/src/Admin/BulkRun.php:433
 msgid "View runs"
 msgstr ""
 
 #. translators: %s: automation label.
-#: modules/automation/src/Admin/AutomationList.php:238
+#: modules/automation/src/Admin/AutomationList.php:268
 #, php-format
 msgid "of %s"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:28
-msgid "Queued"
+#: modules/automation/src/Admin/BulkRun.php:136
+#: modules/automation/src/Admin/BulkRun.php:137
+#: modules/automation/src/Admin/BulkRun.php:153
+#: modules/automation/src/Admin/BulkRun.php:254
+#: assets/build/automation-actions.js:2
+msgid "Run an automation"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:29
-msgid "Running"
+#. translators: %s: button text of the automation, such as "Send receipt".
+#: modules/automation/src/Admin/BulkRun.php:183
+#, php-format
+msgid "Run: %s"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:30
-msgid "Waiting"
+#: modules/automation/src/Admin/BulkRun.php:204
+#: modules/automation/src/Admin/BulkRun.php:236
+#: modules/automation/src/Admin/BulkRun.php:326
+#: modules/automation/src/StartRoute.php:114
+msgid "Sorry, you are not allowed to run this automation."
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:31
-msgid "Completed"
+#. translators: %d: most records per request (50).
+#: modules/automation/src/Admin/BulkRun.php:210
+#: modules/automation/src/Admin/BulkRun.php:258
+#, php-format
+msgid "Select at most %d records to run an automation on. Nothing was started."
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:259
+msgid "No records were selected."
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:261
+msgid "Back to the list"
+msgstr ""
+
+#. translators: 1: button text of the automation, 2: number of records, 3: content type label (singular for 1, else plural).
+#: modules/automation/src/Admin/BulkRun.php:271
+#, php-format
+msgid "Run \"%1$s\" on %2$s %3$s?"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:277
+msgid "Each record gets its own run, which starts in the background. Records it does not apply to, or that you cannot run it on, are skipped."
+msgstr ""
+
+#. translators: %s: content type label (plural).
+#: modules/automation/src/Admin/BulkRun.php:282
+#, php-format
+msgid "Selected %s"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:284
+#: modules/automation/src/Admin/RunLog.php:70
+#: modules/automation/src/Admin/RunLog.php:92
+#: modules/automation/src/Admin/RunLog.php:161
+#: modules/automation/src/Admin/RunLog.php:195
+#: modules/forms/src/EntriesAdmin.php:350
+#: modules/forms/src/EntriesTable.php:76
+#: modules/forms/src/Export.php:137
+#: modules/forms/src/Privacy.php:147
+#: src/Admin/Modules.php:68
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:41
+msgid "Status"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:284
+msgid "Result"
+msgstr ""
+
+#. translators: 1: number of records, 2: content type label (singular for 1, else plural).
+#: modules/automation/src/Admin/BulkRun.php:302
+#, php-format
+msgid "Run on %1$s %2$s"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:308
+msgid "It runs on none of these records."
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:310
+#: modules/forms/src/EntriesAdmin.php:501
+#: assets/build/automation-actions.js:1
+msgid "Cancel"
+msgstr ""
+
+#. translators: %d: most records per request (50).
+#: modules/automation/src/Admin/BulkRun.php:334
+#, php-format
+msgid "Select 1 to %d records to run an automation on. Nothing was started."
+msgstr ""
+
+#. translators: %d: seconds to wait.
+#: modules/automation/src/Admin/BulkRun.php:347
+#: modules/automation/src/StartRoute.php:164
+#, php-format
+msgid "Too many automations started. Try again in %d second."
+msgid_plural "Too many automations started. Try again in %d seconds."
+msgstr[0] ""
+msgstr[1] ""
+
+#: modules/automation/src/Admin/BulkRun.php:349
+#: modules/automation/src/Links/Handler.php:283
+msgid "Too many requests"
+msgstr ""
+
+#. translators: %s: number of runs.
+#: modules/automation/src/Admin/BulkRun.php:399
+#, php-format
+msgid "Started %s run."
+msgid_plural "Started %s runs."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of records.
+#: modules/automation/src/Admin/BulkRun.php:402
+#, php-format
+msgid "%s did not apply."
+msgid_plural "%s did not apply."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of records.
+#: modules/automation/src/Admin/BulkRun.php:406
+#, php-format
+msgid "You cannot run it on %s record."
+msgid_plural "You cannot run it on %s records."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of records.
+#: modules/automation/src/Admin/BulkRun.php:410
+#, php-format
+msgid "%s was already started from this screen."
+msgid_plural "%s were already started from this screen."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: content type label (singular), 2: record ID.
+#: modules/automation/src/Admin/BulkRun.php:482
+#, php-format
+msgid "%1$s %2$d"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:532
+msgid "Will run"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:533
+msgid "Does not apply"
+msgstr ""
+
+#: modules/automation/src/Admin/BulkRun.php:534
+msgid "You cannot run it on this record"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:32
-#: modules/automation/src/Admin/Format.php:47
-#: modules/forms/src/EntryFields.php:97
-msgid "Failed"
+msgid "Queued"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:33
-msgid "Cancelled"
+msgid "Running"
 msgstr ""
 
 #: modules/automation/src/Admin/Format.php:34
+msgid "Waiting"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:35
+msgid "Completed"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:36
+#: modules/automation/src/Admin/Format.php:51
+#: modules/forms/src/EntryFields.php:97
+#: assets/build/automation-builder.js:2
+msgid "Failed"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:37
+msgid "Cancelled"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:38
 msgid "Skipped"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:46
+#: modules/automation/src/Admin/Format.php:50
 msgid "OK"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:48
+#: modules/automation/src/Admin/Format.php:52
 msgid "Failed, will retry"
 msgstr ""
 
 #. translators: %s: event name such as record.updated.
-#: modules/automation/src/Admin/Format.php:98
+#: modules/automation/src/Admin/Format.php:102
 #, php-format
 msgid "On %s"
 msgstr ""
 
 #. translators: 1: event name such as record.updated, 2: content type or form key.
-#: modules/automation/src/Admin/Format.php:100
+#: modules/automation/src/Admin/Format.php:104
 #, php-format
 msgid "On %1$s (%2$s)"
 msgstr ""
 
 #. translators: %s: minutes past the hour, such as 30.
-#: modules/automation/src/Admin/Format.php:107
+#: modules/automation/src/Admin/Format.php:111
 #, php-format
 msgid "Every hour at %s minutes past"
 msgstr ""
 
 #. translators: 1: weekday name, 2: time HH:MM in site time.
-#: modules/automation/src/Admin/Format.php:113
+#: modules/automation/src/Admin/Format.php:117
 #, php-format
 msgid "Every week on %1$s at %2$s"
 msgstr ""
 
 #. translators: %s: time HH:MM in site time.
-#: modules/automation/src/Admin/Format.php:117
+#: modules/automation/src/Admin/Format.php:121
 #, php-format
 msgid "Every day at %s"
 msgstr ""
 
 #. translators: 1: schedule such as "Every day at 09:00", 2: content type key.
-#: modules/automation/src/Admin/Format.php:121
+#: modules/automation/src/Admin/Format.php:125
 #, php-format
 msgid "%1$s, for each %2$s"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:126
+#: modules/automation/src/Admin/Format.php:130
 msgid "Inbound webhook"
 msgstr ""
 
+#. translators: 1: button text, 2: content type key.
+#: modules/automation/src/Admin/Format.php:135
+#, php-format
+msgid "Started by staff: \"%1$s\" on each %2$s"
+msgstr ""
+
+#. translators: %s: button text.
+#: modules/automation/src/Admin/Format.php:137
+#, php-format
+msgid "Started by staff: \"%s\" (Run now)"
+msgstr ""
+
 #. translators: %s: trigger type.
-#: modules/automation/src/Admin/Format.php:129
+#: modules/automation/src/Admin/Format.php:140
 #, php-format
 msgid "%s (not supported yet)"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:142
+#: modules/automation/src/Admin/Format.php:153
 msgid "Site automation (database)"
 msgstr ""
 
 #. translators: %s: schema package id.
-#: modules/automation/src/Admin/Format.php:145
+#: modules/automation/src/Admin/Format.php:156
 #, php-format
 msgid "File package %s"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:155
+#: modules/automation/src/Admin/Format.php:166
 msgid "Event"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:156
-#: assets/build/automation-builder.js:23
+#: modules/automation/src/Admin/Format.php:167
+#: assets/build/automation-builder.js:44
 msgid "Schedule"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:157
+#: modules/automation/src/Admin/Format.php:168
 msgid "Manual"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:158
-#: assets/build/automation-builder.js:23
-#: assets/build/automation-builder.js:24
+#: modules/automation/src/Admin/Format.php:169
+#: assets/build/automation-builder.js:44
+#: assets/build/automation-builder.js:45
 msgid "Webhook"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:159
+#: modules/automation/src/Admin/Format.php:170
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:45
 msgid "Link"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:173
-#: modules/automation/src/Admin/RunLog.php:164
-#: modules/automation/src/Admin/RunLog.php:165
+#: modules/automation/src/Admin/Format.php:184
+#: modules/automation/src/Admin/RunLog.php:168
+#: modules/automation/src/Admin/RunLog.php:169
 #: modules/forms/src/EntriesAdmin.php:205
 #: modules/forms/src/EntriesAdmin.php:351
-#: modules/forms/src/EntriesTable.php:335
+#: modules/forms/src/EntriesTable.php:340
 #: src/Admin/Modules.php:84
 #: src/Options/Screen.php:289
 #: src/Options/Screen.php:366
@@ -418,50 +623,161 @@ msgid "None"
 msgstr ""
 
 #. translators: %d: record (post) ID.
+#. translators: 1: content type label, 2: record ID.
 #. translators: %d: post ID.
-#: modules/automation/src/Admin/Format.php:177
-#: src/Content/RecordValidator.php:242
+#: modules/automation/src/Admin/Format.php:188
+#: modules/automation/src/Admin/Format.php:370
+#: src/Content/RecordValidator.php:441
 #, php-format
 msgid "#%d"
 msgstr ""
 
 #. translators: %s: record ID such as #24.
-#: modules/automation/src/Admin/Format.php:180
+#: modules/automation/src/Admin/Format.php:191
 #, php-format
 msgid "%s (deleted)"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:182
+#: modules/automation/src/Admin/Format.php:193
 #: modules/forms/src/EntriesAdmin.php:213
-#: assets/build/automation-builder.js:17
+#: assets/build/automation-builder.js:34
 #: assets/build/editor-panel.js:2
 msgid "(no title)"
 msgstr ""
 
 #. translators: %s: step ID.
-#: modules/automation/src/Admin/Format.php:197
+#: modules/automation/src/Admin/Format.php:213
+#, php-format
+msgid "Stopped at wait %s"
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/Admin/Format.php:216
 #, php-format
 msgid "Stopped at condition %s"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:214
+#. translators: %s: field label.
+#: modules/automation/src/Admin/Format.php:221
+#, php-format
+msgid "Waiting for %s"
+msgstr ""
+
+#. translators: %s: comma-separated step IDs.
+#: modules/automation/src/Admin/Format.php:225
+#, php-format
+msgid "Completed with errors in %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:228
+msgid "Stopped: the record was deleted"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:245
 msgid "yes"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:214
+#: modules/automation/src/Admin/Format.php:245
 msgid "no"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:233
+#. translators: 1: step ID, 2: loop item number.
+#: modules/automation/src/Admin/Format.php:288
+#, php-format
+msgid "%1$s, item %2$s"
+msgstr ""
+
+#. translators: 1: run link, 2: automation label, 3: step ID.
+#: modules/automation/src/Admin/Format.php:291
+#, php-format
+msgid "%1$s of %2$s (step %3$s)"
+msgstr ""
+
+#. translators: %d: run ID.
+#: modules/automation/src/Admin/Format.php:301
+#: modules/automation/src/Admin/RunLog.php:109
+#: modules/automation/src/Admin/RunLog.php:134
+#, php-format
+msgid "Run %d"
+msgstr ""
+
+#. translators: 1: item number, 2: number of items.
+#: modules/automation/src/Admin/Format.php:353
+#, php-format
+msgid "Item %1$d of %2$d"
+msgstr ""
+
+#. translators: 1: item number, 2: number of items, 3: record such as "Task #38 (Call Ada)".
+#: modules/automation/src/Admin/Format.php:356
+#, php-format
+msgid "Item %1$d of %2$d: %3$s"
+msgstr ""
+
+#. translators: 1: content type label, 2: record ID.
+#: modules/automation/src/Admin/Format.php:370
+#, php-format
+msgid "%1$s #%2$d"
+msgstr ""
+
+#. translators: 1: record such as "Task #38", 2: record title.
+#. translators: 1: field label, 2: the field's date.
+#. translators: 1: record title, 2: status such as "Draft".
+#: modules/automation/src/Admin/Format.php:373
+#: modules/automation/src/DryRun.php:995
+#: assets/build/editor-panel.js:3
+#, php-format,js-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#. translators: %d: number of further records.
+#: modules/automation/src/Admin/Format.php:394
+#: modules/automation/src/DryRun.php:1160
+#, php-format
+msgid "and %d more"
+msgstr ""
+
+#. translators: %s: comma-separated records.
+#: modules/automation/src/Admin/Format.php:397
+#, php-format
+msgid "Read: %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:411
+msgid "Checked the date again"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:413
+msgid "the record is gone or in the trash, so the run stops"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:415
+msgid "still no date after 2 years, so the run stops"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:417
+msgid "the date is empty, so it waits for a date"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:419
+msgid "the time has come, so the run continues"
+msgstr ""
+
+#. translators: %s: date and time.
+#: modules/automation/src/Admin/Format.php:422
+#, php-format
+msgid "waits until %s"
+msgstr ""
+
+#: modules/automation/src/Admin/Format.php:436
 msgid "Took Otherwise"
 msgstr ""
 
-#: modules/automation/src/Admin/Format.php:236
+#: modules/automation/src/Admin/Format.php:439
 msgid "No branch matched"
 msgstr ""
 
 #. translators: %s: branch label.
-#: modules/automation/src/Admin/Format.php:239
+#: modules/automation/src/Admin/Format.php:442
 #, php-format
 msgid "Took branch %s"
 msgstr ""
@@ -476,19 +792,6 @@ msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:59
 msgid "All automations"
-msgstr ""
-
-#: modules/automation/src/Admin/RunLog.php:70
-#: modules/automation/src/Admin/RunLog.php:92
-#: modules/automation/src/Admin/RunLog.php:161
-#: modules/automation/src/Admin/RunLog.php:191
-#: modules/forms/src/EntriesAdmin.php:350
-#: modules/forms/src/EntriesTable.php:76
-#: modules/forms/src/Export.php:137
-#: modules/forms/src/Privacy.php:147
-#: src/Admin/Modules.php:68
-#: assets/build/automation-builder.js:20
-msgid "Status"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:72
@@ -517,18 +820,19 @@ msgid "Run"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:91
-#: modules/automation/src/Admin/RunLog.php:163
+#: modules/automation/src/Admin/RunLog.php:167
 msgid "Record"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:93
-#: modules/automation/src/Admin/RunLog.php:165
+#: modules/automation/src/Admin/RunLog.php:169
 msgid "Outcome"
 msgstr ""
 
 #: modules/automation/src/Admin/RunLog.php:94
-#: modules/automation/src/Admin/RunLog.php:170
-#: assets/build/automation-builder.js:23
+#: modules/automation/src/Admin/RunLog.php:174
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:44
 msgid "Created"
 msgstr ""
 
@@ -543,13 +847,6 @@ msgstr ""
 #: modules/automation/src/Admin/RunLog.php:105
 #: modules/automation/src/Admin/RunLog.php:145
 msgid "(removed)"
-msgstr ""
-
-#. translators: %d: run ID.
-#: modules/automation/src/Admin/RunLog.php:109
-#: modules/automation/src/Admin/RunLog.php:134
-#, php-format
-msgid "Run %d"
 msgstr ""
 
 #. translators: %d: run ID.
@@ -573,122 +870,127 @@ msgstr ""
 msgid "All its runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:164
+#: modules/automation/src/Admin/RunLog.php:165
+msgid "Started by"
+msgstr ""
+
+#: modules/automation/src/Admin/RunLog.php:168
 msgid "Current step"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:165
-#: modules/automation/src/Admin/RunLog.php:195
+#: modules/automation/src/Admin/RunLog.php:169
+#: modules/automation/src/Admin/RunLog.php:199
 #: src/Admin/Overview.php:130
 msgid "Error"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:167
+#: modules/automation/src/Admin/RunLog.php:171
 msgid "Resumes at"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:167
+#: modules/automation/src/Admin/RunLog.php:171
 msgid "Not set"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:169
+#: modules/automation/src/Admin/RunLog.php:173
 msgid "Loop depth"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:171
-#: modules/automation/src/Admin/RunLog.php:192
+#: modules/automation/src/Admin/RunLog.php:175
+#: modules/automation/src/Admin/RunLog.php:196
+#: assets/build/automation-builder.js:2
 msgid "Started"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:171
-#: modules/automation/src/Admin/RunLog.php:172
+#: modules/automation/src/Admin/RunLog.php:175
+#: modules/automation/src/Admin/RunLog.php:176
 msgid "Not yet"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:172
+#: modules/automation/src/Admin/RunLog.php:176
 msgid "Finished"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:179
+#: modules/automation/src/Admin/RunLog.php:183
 msgid "Retry"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:180
+#: modules/automation/src/Admin/RunLog.php:184
 msgid "Resumes the run at the step that failed; earlier steps are not repeated."
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:185
+#: modules/automation/src/Admin/RunLog.php:189
 msgid "Step attempts"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:187
+#: modules/automation/src/Admin/RunLog.php:191
 msgid "Step attempts, oldest first"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:189
+#: modules/automation/src/Admin/RunLog.php:193
 #: assets/build/automation-builder.js:1
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:45
 msgid "Step"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:190
+#: modules/automation/src/Admin/RunLog.php:194
 msgid "Attempt"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:193
+#: modules/automation/src/Admin/RunLog.php:197
 msgid "Duration"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:194
+#: modules/automation/src/Admin/RunLog.php:198
 #: modules/forms/src/EntriesTable.php:75
 msgid "Summary"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:199
+#: modules/automation/src/Admin/RunLog.php:203
 msgid "No step has run yet."
 msgstr ""
 
 #. translators: %s: decision step ID.
-#: modules/automation/src/Admin/RunLog.php:215
+#: modules/automation/src/Admin/RunLog.php:229
 #, php-format
 msgid "Otherwise branch of %s"
 msgstr ""
 
 #. translators: 1: branch label, 2: decision step ID.
-#: modules/automation/src/Admin/RunLog.php:217
+#: modules/automation/src/Admin/RunLog.php:231
 #, php-format
 msgid "Branch %1$s of %2$s"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:226
+#: modules/automation/src/Admin/RunLog.php:240
 msgid "(no longer in this automation)"
 msgstr ""
 
 #. translators: %s: duration in milliseconds.
-#: modules/automation/src/Admin/RunLog.php:233
+#: modules/automation/src/Admin/RunLog.php:247
 #, php-format
 msgid "%s ms"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:291
+#: modules/automation/src/Admin/RunLog.php:312
 msgid "Newer runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:292
+#: modules/automation/src/Admin/RunLog.php:313
 msgid "Older runs"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:293
+#: modules/automation/src/Admin/RunLog.php:314
 #: modules/forms/src/EntriesAdmin.php:383
 msgid "Page"
 msgstr ""
 
-#: modules/automation/src/Admin/RunLog.php:296
+#: modules/automation/src/Admin/RunLog.php:317
 msgid "Run log pages"
 msgstr ""
 
 #. translators: 1: current page, 2: number of pages.
-#: modules/automation/src/Admin/RunLog.php:299
+#: modules/automation/src/Admin/RunLog.php:320
 #, php-format
 msgid "Page %1$s of %2$s"
 msgstr ""
@@ -697,246 +999,514 @@ msgstr ""
 msgid "Pegwork Automations"
 msgstr ""
 
-#: modules/automation/src/Admin/Screen.php:139
+#: modules/automation/src/Admin/Screen.php:141
 #: src/Admin/Modules.php:50
 #: src/Admin/Overview.php:26
 #: src/Options/Screen.php:141
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:77
+#: modules/automation/src/DryRun.php:96
 msgid "Choose a sample record."
 msgstr ""
 
 #. translators: %s: content type key.
-#: modules/automation/src/DryRun.php:79
+#: modules/automation/src/DryRun.php:98
 #, php-format
 msgid "Choose a sample %s record."
 msgstr ""
 
 #. translators: %d: record ID.
-#: modules/automation/src/DryRun.php:89
+#: modules/automation/src/DryRun.php:108
 #, php-format
 msgid "Record %d is not a Pegwork record."
 msgstr ""
 
 #. translators: 1: record ID, 2: content type key.
-#: modules/automation/src/DryRun.php:91
+#: modules/automation/src/DryRun.php:110
 #, php-format
 msgid "Record %1$d is not a %2$s record."
 msgstr ""
 
 #. translators: %s: automation key.
-#: modules/automation/src/DryRun.php:213
+#: modules/automation/src/DryRun.php:248
 #, php-format
 msgid "No automation with key \"%s\"."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:297
+#: modules/automation/src/DryRun.php:302
+msgid "The run would continue (on_error)."
+msgstr ""
+
+#. translators: %s: step ID.
+#: modules/automation/src/DryRun.php:316
+#, php-format
+msgid "Condition %s is false: skips this item."
+msgstr ""
+
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:386
+#, php-format
+msgid "Loop %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: number of items, 3: content type label (singular for 1).
+#: modules/automation/src/DryRun.php:399
+#, php-format
+msgid "Loop %1$s: repeats its steps for %2$d %3$s."
+msgstr ""
+
+#. translators: 1: item number, 2: number of items, 3: record ID.
+#: modules/automation/src/DryRun.php:443
+#, php-format
+msgid "Item %1$d of %2$d (record %3$d) can no longer be read: skipped."
+msgstr ""
+
+#. translators: %d: number of further loop items.
+#: modules/automation/src/DryRun.php:460
+#, php-format
+msgid "and %d more item, same steps."
+msgid_plural "and %d more items, same steps."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: automation key, 2: its button label, 3: step ID.
+#: modules/automation/src/DryRun.php:506
+#, php-format
+msgid "Start %1$s \"%2$s\" for the record from step %3$s, known only in a real run (not started). Test it from its own editor."
+msgstr ""
+
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:522
+#, php-format
+msgid "Start %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: automation key, 2: its button label.
+#: modules/automation/src/DryRun.php:531
+#, php-format
+msgid "Start %1$s \"%2$s\""
+msgstr ""
+
+#. translators: 1: automation key, 2: its button label, 3: content type label (singular).
+#: modules/automation/src/DryRun.php:534
+#, php-format
+msgid "Start %1$s \"%2$s\" for this %3$s"
+msgstr ""
+
+#. translators: 1: automation key, 2: its button label, 3: content type label (singular), 4: record ID.
+#: modules/automation/src/DryRun.php:537
+#, php-format
+msgid "Start %1$s \"%2$s\" for %3$s %4$d"
+msgstr ""
+
+#. translators: %s: "Start <automation key> "<button>" for this <type>".
+#: modules/automation/src/DryRun.php:563
+#, php-format
+msgid "%s: it would be skipped (depth limit)."
+msgstr ""
+
+#. translators: %s: "Start <automation key> "<button>" for this <type>".
+#: modules/automation/src/DryRun.php:565
+#, php-format
+msgid "%s: it applies (not started). Test it from its own editor."
+msgstr ""
+
+#. translators: %s: "Start <automation key> "<button>" for this <type>".
+#: modules/automation/src/DryRun.php:567
+#, php-format
+msgid "%s: it does not apply (its Only when is false)."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:617
 msgid "A real trigger would start a run."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:298
+#: modules/automation/src/DryRun.php:618
 msgid "A real trigger would start a run for this record."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:301
+#: modules/automation/src/DryRun.php:621
 msgid "A real trigger would not start a run. The steps are tested anyway."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:302
+#: modules/automation/src/DryRun.php:622
 msgid "A real trigger would not start a run for this record. The steps are tested anyway."
 msgstr ""
 
 #. translators: %s: step ID.
-#: modules/automation/src/DryRun.php:344
+#: modules/automation/src/DryRun.php:666
 #, php-format
 msgid "Decision %s: no branch matches; continues after the decision."
 msgstr ""
 
 #. translators: %s: step ID.
-#: modules/automation/src/DryRun.php:347
+#: modules/automation/src/DryRun.php:669
 #, php-format
 msgid "Decision %s: takes Otherwise."
 msgstr ""
 
 #. translators: 1: step ID, 2: branch label.
-#: modules/automation/src/DryRun.php:349
+#: modules/automation/src/DryRun.php:671
 #, php-format
 msgid "Decision %1$s: takes \"%2$s\"."
 msgstr ""
 
 #. translators: %s: step ID.
-#: modules/automation/src/DryRun.php:358
+#: modules/automation/src/DryRun.php:680
 #, php-format
 msgid "Condition %s holds; continues."
 msgstr ""
 
 #. translators: %s: step ID.
-#: modules/automation/src/DryRun.php:360
+#: modules/automation/src/DryRun.php:682
 #, php-format
 msgid "Condition %s is false: stops here."
 msgstr ""
 
 #. translators: 1: step ID, 2: ISO 8601 duration.
-#: modules/automation/src/DryRun.php:368
+#: modules/automation/src/DryRun.php:694
 #, php-format
 msgid "Wait %1$s: waits %2$s. The test continues as if it had passed, against the record as it is now."
 msgstr ""
 
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:708
+#: modules/automation/src/DryRun.php:938
+#, php-format
+msgid "Send email %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: relationship key, 3: "from" record ID, 4: "to" record ID.
+#: modules/automation/src/DryRun.php:736
+#, php-format
+msgid "Relate %1$s: would add a %2$s link from record %3$s to record %4$s (not applied)."
+msgstr ""
+
+#. translators: 1: step ID, 2: relationship key, 3: "from" record ID, 4: "to" record ID.
+#: modules/automation/src/DryRun.php:738
+#, php-format
+msgid "Relate %1$s: would remove the %2$s link from record %3$s to record %4$s (not applied)."
+msgstr ""
+
 #. translators: 1: step ID, 2: record ID, 3: field keys.
-#: modules/automation/src/DryRun.php:391
+#: modules/automation/src/DryRun.php:755
 #, php-format
 msgid "Update record %1$s: would write %3$s to record %2$s (not applied)."
 msgstr ""
 
 #. translators: 1: step ID, 2: content type key, 3: status, 4: field keys.
-#: modules/automation/src/DryRun.php:399
+#: modules/automation/src/DryRun.php:763
 #, php-format
 msgid "Create record %1$s: would create a %3$s %2$s with %4$s (not applied)."
 msgstr ""
 
+#. translators: 1: step ID, 2: host name, 3: step ID.
+#: modules/automation/src/DryRun.php:783
+#, php-format
+msgid "Call webhook %1$s: would POST to %2$s with the record from step %3$s, known only in a real run (not sent)."
+msgstr ""
+
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:799
+#, php-format
+msgid "Call webhook %1$s: would fail: %2$s"
+msgstr ""
+
 #. translators: 1: step ID, 2: host name, 3: field keys.
-#: modules/automation/src/DryRun.php:414
+#: modules/automation/src/DryRun.php:813
 #, php-format
 msgid "Call webhook %1$s: would POST to %2$s with %3$s (not sent)."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:417
+#: modules/automation/src/DryRun.php:816
 msgid "no record fields"
 msgstr ""
 
 #. translators: 1: step ID, 2: step type.
-#: modules/automation/src/DryRun.php:424
+#: modules/automation/src/DryRun.php:827
 #, php-format
 msgid "Step %1$s: type \"%2$s\" is not supported."
 msgstr ""
 
-#. translators: 1: step ID, 2: error message.
-#: modules/automation/src/DryRun.php:463
+#. translators: 1: step ID, 2: step ID.
+#: modules/automation/src/DryRun.php:855
 #, php-format
-msgid "Send email %1$s: would fail: %2$s"
+msgid "Move to trash %1$s: the record from step %2$s, known only in a real run (not applied)."
 msgstr ""
 
+#. translators: %d: record ID.
+#: modules/automation/src/DryRun.php:868
+#, php-format
+msgid "no record with ID %d."
+msgstr ""
+
+#. translators: 1: record ID, 2: its content type, 3: the step's content type.
+#: modules/automation/src/DryRun.php:871
+#, php-format
+msgid "record %1$d is a %2$s; this step moves only %3$s records."
+msgstr ""
+
+#. translators: %d: per-run trash limit.
+#: modules/automation/src/DryRun.php:874
+#, php-format
+msgid "the run would already have moved %d records to the trash, the most one run may move."
+msgstr ""
+
+#. translators: 1: step ID, 2: reason.
+#: modules/automation/src/DryRun.php:881
+#, php-format
+msgid "Move to trash %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: content type label, 3: record ID, 4: record title.
+#: modules/automation/src/DryRun.php:892
+#, php-format
+msgid "Move to trash %1$s: %2$s %3$d \"%4$s\" is already in the trash."
+msgstr ""
+
+#. translators: 1: step ID, 2: content type label, 3: record ID, 4: record title.
+#: modules/automation/src/DryRun.php:900
+#, php-format
+msgid "Move to trash %1$s: %2$s %3$d \"%4$s\" (not applied)."
+msgstr ""
+
+#. translators: 1: role slug, 2: number of members.
+#: modules/automation/src/DryRun.php:946
+#, php-format
+msgid "role %1$s (%2$d person)"
+msgid_plural "role %1$s (%2$d people)"
+msgstr[0] ""
+msgstr[1] ""
+
 #. translators: 1: step ID, 2: recipients, 3: subject.
-#: modules/automation/src/DryRun.php:473
+#: modules/automation/src/DryRun.php:955
 #, php-format
 msgid "Send email %1$s: to %2$s, subject \"%3$s\" (not sent)."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:490
+#. translators: 1: step ID, 2: field label.
+#: modules/automation/src/DryRun.php:985
+#, php-format
+msgid "Wait %1$s: %2$s is empty: it would wait for a date (up to 2 years). The test continues as if it had passed."
+msgstr ""
+
+#. translators: 1: step ID, 2: the wait in words, such as "3 days before Due on (March 20, 2027) at 09:00".
+#: modules/automation/src/DryRun.php:1006
+#, php-format
+msgid "Wait %1$s: until %2$s. That time has passed: it continues at once."
+msgstr ""
+
+#. translators: 1: step ID, 2: the wait in words, such as "3 days before Due on (March 20, 2027) at 09:00", 3: date and time it wakes.
+#: modules/automation/src/DryRun.php:1017
+#, php-format
+msgid "Wait %1$s: until %2$s, that is %3$s. When it wakes it checks the date again. The test continues as if it had passed."
+msgstr ""
+
+#. translators: 1: item number, 2: number of items, 3: content type label, 4: record ID, 5: record title.
+#: modules/automation/src/DryRun.php:1040
+#, php-format
+msgid "Item %1$d of %2$d: %3$s %4$d \"%5$s\":"
+msgstr ""
+
+#: modules/automation/src/DryRun.php:1050
 msgid "Otherwise:"
 msgstr ""
 
 #. translators: %s: branch label.
-#: modules/automation/src/DryRun.php:492
+#: modules/automation/src/DryRun.php:1052
 #, php-format
 msgid "If %s:"
 msgstr ""
 
-#: modules/automation/src/DryRun.php:497
+#: modules/automation/src/DryRun.php:1057
 msgid "The run would complete."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:498
+#: modules/automation/src/DryRun.php:1058
 msgid "The run would stop there."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:499
+#: modules/automation/src/DryRun.php:1059
 msgid "The run would hit the step limit."
 msgstr ""
 
-#: modules/automation/src/DryRun.php:500
+#. translators: %s: comma-separated step IDs.
+#: modules/automation/src/DryRun.php:1062
+#, php-format
+msgid "The run would complete with errors in %s."
+msgstr ""
+
+#: modules/automation/src/DryRun.php:1065
 msgid "The run would fail there."
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:110
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:1111
+#, php-format
+msgid "Get record %1$s: would fail: %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: error message.
+#: modules/automation/src/DryRun.php:1111
+#, php-format
+msgid "Find records %1$s: would fail: %2$s"
+msgstr ""
+
+#: modules/automation/src/DryRun.php:1120
+msgid "Reads in a test see the site as it is now: the writes before them are not applied."
+msgstr ""
+
+#. translators: 1: step ID, 2: content type label, 3: record ID, 4: record title.
+#: modules/automation/src/DryRun.php:1134
+#, php-format
+msgid "Get record %1$s: found %2$s %3$d \"%4$s\"."
+msgstr ""
+
+#. translators: 1: step ID, 2: step ID.
+#: modules/automation/src/DryRun.php:1137
+#, php-format
+msgid "Get record %1$s: not found in a test run (step %2$s would create or name it)."
+msgstr ""
+
+#. translators: 1: step ID, 2: content type label.
+#: modules/automation/src/DryRun.php:1140
+#, php-format
+msgid "Get record %1$s: no %2$s found."
+msgstr ""
+
+#. translators: 1: field key, 2: total.
+#: modules/automation/src/DryRun.php:1165
+#, php-format
+msgid "sum of %1$s %2$s"
+msgstr ""
+
+#. translators: 1: step ID, 2: number of matches, 3: content type label (singular for 1), 4: number returned.
+#: modules/automation/src/DryRun.php:1169
+#, php-format
+msgid "Find records %1$s: %2$d %3$s found, %4$d returned"
+msgstr ""
+
+#: modules/automation/src/DryRun.php:1198
+msgid "Its Created date is empty, so it matches nothing."
+msgstr ""
+
+#. translators: 1: day such as "October 25, 2024", 2: day.
+#: modules/automation/src/DryRun.php:1206
+#, php-format
+msgid "Created after %1$s and before %2$s."
+msgstr ""
+
+#. translators: %s: day such as "October 25, 2024".
+#: modules/automation/src/DryRun.php:1210
+#, php-format
+msgid "Created before %s."
+msgstr ""
+
+#. translators: %s: day such as "October 25, 2024".
+#: modules/automation/src/DryRun.php:1212
+#, php-format
+msgid "Created after %s."
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:127
 msgid "Edit automation"
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:111
+#: modules/automation/src/Editor/AutomationPost.php:128
 msgid "New automation"
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:112
+#: modules/automation/src/Editor/AutomationPost.php:129
 msgid "View automation"
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:113
+#: modules/automation/src/Editor/AutomationPost.php:130
 msgid "Search automations"
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:114
+#: modules/automation/src/Editor/AutomationPost.php:131
 msgid "No automations found."
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:115
+#: modules/automation/src/Editor/AutomationPost.php:132
 msgid "No automations found in Trash."
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:117
-#: modules/automation/src/Editor/AutomationPost.php:118
-#: modules/automation/src/Editor/AutomationPost.php:119
-#: modules/automation/src/Editor/AutomationPost.php:120
+#: modules/automation/src/Editor/AutomationPost.php:134
+#: modules/automation/src/Editor/AutomationPost.php:135
+#: modules/automation/src/Editor/AutomationPost.php:136
+#: modules/automation/src/Editor/AutomationPost.php:137
 msgid "Automation saved."
 msgstr ""
 
-#: modules/automation/src/Editor/AutomationPost.php:122
+#: modules/automation/src/Editor/AutomationPost.php:139
 msgid "Pegwork automation definitions, edited in the block editor. The registry is the source."
 msgstr ""
 
 #. translators: %s: automation key.
-#: modules/automation/src/Editor/AutomationPost.php:297
+#: modules/automation/src/Editor/AutomationPost.php:314
 #, php-format
 msgid "An automation with key \"%s\" already exists. Choose another key."
 msgstr ""
 
+#. translators: 1: automation key, 2: comma-separated automation keys.
+#: modules/automation/src/Editor/AutomationPost.php:442
+#: src/Registry/SiteDefinitions.php:185
+#, php-format
+msgid "Automation \"%1$s\" is started by %2$s, which would stop loading. Remove or change those \"Start another automation\" steps first."
+msgstr ""
+
+#: modules/automation/src/Editor/AutomationPost.php:454
+msgid "Automation in use"
+msgstr ""
+
 #. translators: %s: validation messages.
-#: modules/automation/src/Editor/AutomationPost.php:685
-#: src/Registry/SiteDefinitions.php:221
+#: modules/automation/src/Editor/AutomationPost.php:814
+#: src/Registry/SiteDefinitions.php:284
 #, php-format
 msgid "This automation cannot be saved: %s"
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:113
+#: modules/automation/src/Editor/Builder.php:124
 msgid "The automation settings could not be read. Reload the editor and try again."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:121
+#: modules/automation/src/Editor/Builder.php:132
 msgid "Add an automation title. It is the automation label."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:129
+#: modules/automation/src/Editor/Builder.php:140
 msgid "Add an automation key: lowercase letters, digits and underscores, starting with a letter."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:134
-#: src/Registry/Rules/AutomationRules.php:256
+#: modules/automation/src/Editor/Builder.php:145
+#: src/Registry/Rules/AutomationRules.php:431
 msgid "Add at least one step."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:187
-#: modules/automation/src/Editor/Builder.php:196
+#: modules/automation/src/Editor/Builder.php:198
+#: modules/automation/src/Editor/Builder.php:215
 msgid "An automation can hold only steps and decisions. Remove other content."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:192
+#: modules/automation/src/Editor/Builder.php:203
 msgid "A branch must be inside a decision."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:226
+#: modules/automation/src/Editor/Builder.php:240
 msgid "A decision can hold only branches. Put steps inside a branch."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:232
+#: modules/automation/src/Editor/Builder.php:246
 msgid "A decision can have only one Otherwise branch."
 msgstr ""
 
-#: modules/automation/src/Editor/Builder.php:239
+#: modules/automation/src/Editor/Builder.php:253
 msgid "The Otherwise branch must come last."
 msgstr ""
 
-#: modules/automation/src/Editor/BuilderEditor.php:327
+#: modules/automation/src/Editor/BuilderEditor.php:370
 #: modules/forms/src/BuilderEditor.php:240
 #: modules/forms/src/EntriesAdmin.php:107
 #: modules/forms/src/Files.php:96
@@ -945,22 +1515,22 @@ msgstr ""
 
 #. translators: %s: automation label.
 #. translators: %s: form label.
-#: modules/automation/src/Editor/BuilderEditor.php:334
+#: modules/automation/src/Editor/BuilderEditor.php:377
 #: modules/forms/src/BuilderEditor.php:250
 #, php-format
 msgid "%s (copy)"
 msgstr ""
 
-#: modules/automation/src/Editor/PreviewRoutes.php:142
+#: modules/automation/src/Editor/PreviewRoutes.php:147
 msgid "Sorry, you are not allowed to test automations."
 msgstr ""
 
-#: modules/automation/src/Editor/PreviewRoutes.php:169
+#: modules/automation/src/Editor/PreviewRoutes.php:174
 msgid "Send the request body as JSON (Content-Type: application/json)."
 msgstr ""
 
 #. translators: %d: maximum size in KB.
-#: modules/automation/src/Editor/PreviewRoutes.php:259
+#: modules/automation/src/Editor/PreviewRoutes.php:265
 #, php-format
 msgid "Sample payloads are at most %d KB."
 msgstr ""
@@ -1059,7 +1629,7 @@ msgid "The link may be incomplete or changed. Copy the whole link from the email
 msgstr ""
 
 #: modules/automation/src/Links/Handler.php:113
-#: modules/forms/src/Confirm.php:401
+#: modules/forms/src/Confirm.php:408
 msgid "This link has expired"
 msgstr ""
 
@@ -1116,10 +1686,6 @@ msgid "We could not complete this request. Please contact the site team, who can
 msgstr ""
 
 #: modules/automation/src/Links/Handler.php:283
-msgid "Too many requests"
-msgstr ""
-
-#: modules/automation/src/Links/Handler.php:283
 msgid "Please wait a few minutes, then try the link again."
 msgstr ""
 
@@ -1129,10 +1695,155 @@ msgstr ""
 msgid "Go to %s"
 msgstr ""
 
+#: modules/automation/src/Manual.php:177
+msgid "This automation does not apply to this record."
+msgstr ""
+
+#. translators: %s: automation key.
+#: modules/automation/src/Manual.php:216
+#, php-format
+msgid "No automation %s can be started by staff."
+msgstr ""
+
+#. translators: %s: automation label.
+#: modules/automation/src/Manual.php:220
+#, php-format
+msgid "Automation %s is disabled on this site; enable it first."
+msgstr ""
+
+#. translators: %s: automation key.
+#: modules/automation/src/Manual.php:228
+#, php-format
+msgid "Automation %s has no content type, so it runs without a record."
+msgstr ""
+
+#. translators: %s: automation key.
+#: modules/automation/src/Manual.php:233
+#, php-format
+msgid "Automation %s runs on one record; name it."
+msgstr ""
+
+#. translators: %d: record ID.
+#. translators: %d: post ID.
+#: modules/automation/src/Manual.php:238
+#: src/Api/Records.php:126
+#: src/Api/Records.php:163
+#, php-format
+msgid "No record with ID %d."
+msgstr ""
+
+#. translators: 1: record ID, 2: its content type, 3: automation key, 4: the automation's content type.
+#: modules/automation/src/Manual.php:242
+#, php-format
+msgid "Record %1$d is a %2$s; automation %3$s runs on %4$s."
+msgstr ""
+
+#: modules/automation/src/StartRoute.php:107
+msgid "Your session has expired. Reload the page and try again."
+msgstr ""
+
+#: modules/automation/src/StartRoute.php:110
+msgid "Sorry, you are not allowed to run automations."
+msgstr ""
+
+#. translators: %s: button text of the automation.
+#: modules/automation/src/StartRoute.php:194
+#, php-format
+msgid "%s was already started from this dialog."
+msgstr ""
+
+#. translators: %s: button text of the automation.
+#: modules/automation/src/StartRoute.php:196
+#, php-format
+msgid "%s started. It runs in the background."
+msgstr ""
+
 #. translators: %s: step ID.
-#: modules/automation/src/Templates.php:179
+#: modules/automation/src/Templates.php:228
+#: modules/automation/src/Templates.php:279
 #, php-format
 msgid "[from step %s]"
+msgstr ""
+
+#. translators: 1: step ID, 2: field label.
+#: modules/automation/src/Templates.php:281
+#, php-format
+msgid "[from step %1$s: %2$s]"
+msgstr ""
+
+#. translators: 1: field label, 2: time of day (HH:MM).
+#: modules/automation/src/WaitUntil.php:96
+#: assets/build/automation-builder.js:28
+#, php-format,js-format
+msgid "%1$s at %2$s"
+msgstr ""
+
+#. translators: 1: amount of time such as "3 days", 2: field label, 3: time of day (HH:MM).
+#: modules/automation/src/WaitUntil.php:100
+#: assets/build/automation-builder.js:28
+#, php-format,js-format
+msgid "%1$s before %2$s at %3$s"
+msgstr ""
+
+#. translators: 1: amount of time such as "2 hours", 2: field label, 3: time of day (HH:MM).
+#: modules/automation/src/WaitUntil.php:102
+#: assets/build/automation-builder.js:28
+#, php-format,js-format
+msgid "%1$s after %2$s at %3$s"
+msgstr ""
+
+#. translators: %s: number of years.
+#: modules/automation/src/WaitUntil.php:123
+#, php-format
+msgid "%s year"
+msgid_plural "%s years"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of months.
+#: modules/automation/src/WaitUntil.php:125
+#, php-format
+msgid "%s month"
+msgid_plural "%s months"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of days.
+#: modules/automation/src/WaitUntil.php:127
+#, php-format
+msgid "%s day"
+msgid_plural "%s days"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of hours.
+#: modules/automation/src/WaitUntil.php:129
+#, php-format
+msgid "%s hour"
+msgid_plural "%s hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of minutes.
+#: modules/automation/src/WaitUntil.php:131
+#, php-format
+msgid "%s minute"
+msgid_plural "%s minutes"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of seconds.
+#: modules/automation/src/WaitUntil.php:133
+#, php-format
+msgid "%s second"
+msgid_plural "%s seconds"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: separator between amounts of time, such as "1 day, 2 hours".
+#: modules/automation/src/WaitUntil.php:142
+msgctxt "duration separator"
+msgid ", "
 msgstr ""
 
 #: modules/automation/src/Webhooks/Inbound.php:180
@@ -1204,31 +1915,31 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: content type plural name, lowercase.
-#: modules/filters/src/FiltersBlock.php:396
+#: modules/filters/src/FiltersBlock.php:403
 #, php-format
 msgid "Filter %s"
 msgstr ""
 
-#: modules/filters/src/FiltersBlock.php:407
+#: modules/filters/src/FiltersBlock.php:414
 msgid "Apply filters"
 msgstr ""
 
-#: modules/filters/src/FiltersBlock.php:408
+#: modules/filters/src/FiltersBlock.php:415
 msgid "Clear all"
 msgstr ""
 
 #. translators: %s: content type plural name, lowercase.
 #. translators: %s: plural content type name.
 #. translators: %s: plural taxonomy name.
-#: modules/filters/src/FiltersBlock.php:449
+#: modules/filters/src/FiltersBlock.php:456
 #: src/Content/PostTypes.php:109
 #: src/Content/Taxonomies.php:183
 #, php-format
 msgid "Search %s"
 msgstr ""
 
-#: modules/filters/src/FiltersBlock.php:506
-#: modules/filters/src/FiltersBlock.php:535
+#: modules/filters/src/FiltersBlock.php:513
+#: modules/filters/src/FiltersBlock.php:542
 #: assets/build/listings-editor.js:5
 msgid "Any"
 msgstr ""
@@ -1266,75 +1977,75 @@ msgstr ""
 msgid "Add a label."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:236
+#: modules/forms/src/Confirm.php:243
 msgid "The form no longer exists."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:243
+#: modules/forms/src/Confirm.php:250
 msgid "The submitter can no longer edit this record."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:370
-#: modules/forms/src/Confirm.php:396
+#: modules/forms/src/Confirm.php:377
+#: modules/forms/src/Confirm.php:403
 msgid "Confirmation received"
 msgstr ""
 
-#: modules/forms/src/Confirm.php:371
+#: modules/forms/src/Confirm.php:378
 msgid "Submission confirmed"
 msgstr ""
 
-#: modules/forms/src/Confirm.php:397
+#: modules/forms/src/Confirm.php:404
 msgid "Already confirmed"
 msgstr ""
 
-#: modules/forms/src/Confirm.php:397
+#: modules/forms/src/Confirm.php:404
 msgid "This submission is already confirmed. There is nothing more to do."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:401
+#: modules/forms/src/Confirm.php:408
 msgid "This confirmation link has expired. Submit the form again below."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:405
+#: modules/forms/src/Confirm.php:412
 msgid "This link is not valid"
 msgstr ""
 
-#: modules/forms/src/Confirm.php:405
+#: modules/forms/src/Confirm.php:412
 msgid "This confirmation link is not valid. Check that you used the whole link from the email, or submit the form again below."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:486
+#: modules/forms/src/Confirm.php:493
 #: assets/build/forms-builder.js:9
 msgid "Confirm your submission"
 msgstr ""
 
 #. translators: %s: form label.
-#: modules/forms/src/Confirm.php:488
+#: modules/forms/src/Confirm.php:495
 #, php-format
 msgid "Your \"%s\" submission is waiting. Press the button to confirm it."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:492
+#: modules/forms/src/Confirm.php:499
 msgid "Confirm my submission"
 msgstr ""
 
-#: modules/forms/src/Confirm.php:506
+#: modules/forms/src/Confirm.php:513
 #: assets/build/forms-builder.js:6
 msgid "We got your confirmation, but something in your submission needs a person to check it. We will be in touch."
 msgstr ""
 
-#: modules/forms/src/Confirm.php:516
+#: modules/forms/src/Confirm.php:523
 #: assets/build/forms-builder.js:6
 msgid "Thank you. Your submission is confirmed."
 msgstr ""
 
 #. translators: %s: page title.
-#: modules/forms/src/Confirm.php:544
+#: modules/forms/src/Confirm.php:551
 #, php-format
 msgid "Continue to %s"
 msgstr ""
 
-#: modules/forms/src/Confirm.php:545
+#: modules/forms/src/Confirm.php:552
 msgid "Continue to the site"
 msgstr ""
 
@@ -1469,7 +2180,8 @@ msgstr ""
 #: modules/forms/src/FormPost.php:104
 #: modules/forms/src/FormsTable.php:45
 #: modules/forms/src/Privacy.php:135
-#: assets/build/automation-builder.js:23
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:44
 #: assets/build/forms-editor.js:5
 msgid "Form"
 msgstr ""
@@ -1477,7 +2189,7 @@ msgstr ""
 #: modules/forms/src/EntriesAdmin.php:351
 #: modules/forms/src/EntriesTable.php:73
 #: modules/forms/src/Export.php:138
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:45
 #: assets/build/forms-builder.js:5
 msgid "Email"
 msgstr ""
@@ -1485,7 +2197,7 @@ msgstr ""
 #: modules/forms/src/EntriesAdmin.php:352
 #: modules/forms/src/EntriesTable.php:72
 #: modules/forms/src/Privacy.php:143
-#: assets/build/automation-builder.js:23
+#: assets/build/automation-builder.js:44
 #: assets/build/forms-builder.js:10
 msgid "Submitted"
 msgstr ""
@@ -1542,18 +2254,18 @@ msgid "Create post anyway"
 msgstr ""
 
 #: modules/forms/src/EntriesAdmin.php:434
-#: modules/forms/src/EntriesTable.php:169
+#: modules/forms/src/EntriesTable.php:174
 msgid "Not spam"
 msgstr ""
 
 #: modules/forms/src/EntriesAdmin.php:436
-#: modules/forms/src/EntriesTable.php:170
+#: modules/forms/src/EntriesTable.php:175
 msgid "Mark as spam"
 msgstr ""
 
 #: modules/forms/src/EntriesAdmin.php:445
 #: modules/forms/src/EntriesAdmin.php:500
-#: modules/forms/src/EntriesTable.php:172
+#: modules/forms/src/EntriesTable.php:177
 msgid "Delete permanently"
 msgstr ""
 
@@ -1579,10 +2291,6 @@ msgid_plural "These entries will be permanently deleted. This cannot be undone. 
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/forms/src/EntriesAdmin.php:501
-msgid "Cancel"
-msgstr ""
-
 #: modules/forms/src/EntriesAdmin.php:512
 msgid "Filter by form"
 msgstr ""
@@ -1597,7 +2305,7 @@ msgid "Edit the draft"
 msgstr ""
 
 #. translators: %s: number of entries.
-#: modules/forms/src/EntriesTable.php:134
+#: modules/forms/src/EntriesTable.php:139
 #, php-format
 msgctxt "entries"
 msgid "All <span class=\"count\">(%s)</span>"
@@ -1606,7 +2314,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: modules/forms/src/EntriesTable.php:136
+#: modules/forms/src/EntriesTable.php:141
 #, php-format
 msgctxt "entries"
 msgid "Received <span class=\"count\">(%s)</span>"
@@ -1615,7 +2323,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: modules/forms/src/EntriesTable.php:138
+#: modules/forms/src/EntriesTable.php:143
 #, php-format
 msgctxt "entries"
 msgid "Unconfirmed <span class=\"count\">(%s)</span>"
@@ -1624,7 +2332,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: modules/forms/src/EntriesTable.php:140
+#: modules/forms/src/EntriesTable.php:145
 #, php-format
 msgctxt "entries"
 msgid "Processing <span class=\"count\">(%s)</span>"
@@ -1633,7 +2341,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: modules/forms/src/EntriesTable.php:142
+#: modules/forms/src/EntriesTable.php:147
 #, php-format
 msgctxt "entries"
 msgid "Failed <span class=\"count\">(%s)</span>"
@@ -1642,7 +2350,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of entries.
-#: modules/forms/src/EntriesTable.php:144
+#: modules/forms/src/EntriesTable.php:149
 #, php-format
 msgctxt "entries"
 msgid "Spam <span class=\"count\">(%s)</span>"
@@ -1650,40 +2358,40 @@ msgid_plural "Spam <span class=\"count\">(%s)</span>"
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/forms/src/EntriesTable.php:185
+#: modules/forms/src/EntriesTable.php:190
 msgid "Select bulk action"
 msgstr ""
 
-#: modules/forms/src/EntriesTable.php:187
+#: modules/forms/src/EntriesTable.php:192
 msgid "Bulk actions"
 msgstr ""
 
-#: modules/forms/src/EntriesTable.php:192
+#: modules/forms/src/EntriesTable.php:197
 msgid "Apply"
 msgstr ""
 
-#: modules/forms/src/EntriesTable.php:215
+#: modules/forms/src/EntriesTable.php:220
 msgid "No entries match these filters."
 msgstr ""
 
-#: modules/forms/src/EntriesTable.php:218
+#: modules/forms/src/EntriesTable.php:223
 msgid "No entries yet. Entries appear here when someone submits a form."
 msgstr ""
 
 #. translators: %d: entry ID.
-#: modules/forms/src/EntriesTable.php:230
+#: modules/forms/src/EntriesTable.php:235
 #, php-format
 msgid "Select entry %d"
 msgstr ""
 
 #. translators: %d: entry ID.
-#: modules/forms/src/EntriesTable.php:260
-#: modules/forms/src/EntriesTable.php:263
+#: modules/forms/src/EntriesTable.php:265
+#: modules/forms/src/EntriesTable.php:268
 #, php-format
 msgid "entry %d"
 msgstr ""
 
-#: modules/forms/src/EntriesTable.php:261
+#: modules/forms/src/EntriesTable.php:266
 msgid "Delete"
 msgstr ""
 
@@ -1746,15 +2454,16 @@ msgid "The draft could not be created."
 msgstr ""
 
 #: modules/forms/src/EntryFields.php:80
-#: modules/forms/src/Notifications.php:247
+#: modules/forms/src/Notifications.php:277
 #: src/Admin/Overview.php:281
 #: assets/build/listings-editor.js:3
 msgid "Yes"
 msgstr ""
 
 #: modules/forms/src/EntryFields.php:80
-#: modules/forms/src/Notifications.php:247
+#: modules/forms/src/Notifications.php:277
 #: src/Admin/Overview.php:281
+#: assets/build/automation-builder.js:31
 #: assets/build/listings-editor.js:3
 msgid "No"
 msgstr ""
@@ -1789,6 +2498,7 @@ msgstr ""
 
 #: modules/forms/src/Export.php:137
 #: modules/forms/src/Privacy.php:139
+#: assets/build/automation-builder.js:1
 msgid "Entry ID"
 msgstr ""
 
@@ -1797,6 +2507,7 @@ msgid "Submitted (UTC)"
 msgstr ""
 
 #: modules/forms/src/Export.php:139
+#: assets/build/automation-builder.js:1
 msgid "Post ID"
 msgstr ""
 
@@ -1866,7 +2577,7 @@ msgstr ""
 
 #. translators: %s: validation messages.
 #: modules/forms/src/FormPost.php:639
-#: src/Registry/SiteDefinitions.php:219
+#: src/Registry/SiteDefinitions.php:282
 #, php-format
 msgid "This form cannot be saved: %s"
 msgstr ""
@@ -1893,7 +2604,7 @@ msgstr ""
 #: src/Admin/Overview.php:107
 #: src/Admin/Overview.php:159
 #: src/Admin/Overview.php:194
-#: assets/build/automation-builder.js:23
+#: assets/build/automation-builder.js:44
 #: assets/build/forms-builder.js:5
 #: assets/build/forms-builder.js:10
 #: assets/build/forms-builder.js:23
@@ -1942,6 +2653,7 @@ msgid "Duplicate as site form"
 msgstr ""
 
 #: modules/forms/src/FormsTable.php:153
+#: assets/build/automation-builder.js:9
 msgid "Site"
 msgstr ""
 
@@ -1983,6 +2695,7 @@ msgstr ""
 
 #. translators: %s: URL of the entry in the admin.
 #: modules/forms/src/Notifications.php:136
+#: modules/forms/src/Notifications.php:169
 #, php-format
 msgid "Entry: %s"
 msgstr ""
@@ -1997,6 +2710,22 @@ msgstr ""
 #: modules/forms/src/Notifications.php:144
 #, php-format
 msgid "[%1$s] Form submission needs attention: %2$s"
+msgstr ""
+
+#. translators: %s: form label.
+#: modules/forms/src/Notifications.php:164
+#, php-format
+msgid "A submission to \"%s\" was stored, but its confirmation email could not be sent, so the visitor cannot confirm it."
+msgstr ""
+
+#: modules/forms/src/Notifications.php:166
+msgid "Check that the site can send email, then contact the visitor."
+msgstr ""
+
+#. translators: 1: site name, 2: form label.
+#: modules/forms/src/Notifications.php:174
+#, php-format
+msgid "[%1$s] Confirmation email failed: %2$s"
 msgstr ""
 
 #: modules/forms/src/Privacy.php:98
@@ -2065,63 +2794,67 @@ msgstr ""
 msgid "Form \"%1$s\" is not shown to visitors: %2$s."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:68
+#: modules/forms/src/Renderer.php:70
 msgid "Your submission was saved, but our spam check could not be completed. The site team will review it, so there is no need to send it again."
 msgstr ""
 
+#: modules/forms/src/Renderer.php:72
+msgid "We already have this submission, and its confirmation email was sent a moment ago. Check your inbox and spam folder. If it does not arrive within 10 minutes, send the form again."
+msgstr ""
+
 #. translators: %s: login link.
-#: modules/forms/src/Renderer.php:83
+#: modules/forms/src/Renderer.php:87
 #, php-format
 msgid "Please %s to use this form."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:84
+#: modules/forms/src/Renderer.php:88
 msgid "log in"
 msgstr ""
 
-#: modules/forms/src/Renderer.php:87
-#: modules/forms/src/Renderer.php:433
+#: modules/forms/src/Renderer.php:91
+#: modules/forms/src/Renderer.php:441
 msgid "You do not have permission to use this form."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:97
+#: modules/forms/src/Renderer.php:101
 msgid "There is no record here that you can edit with this form."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:137
+#: modules/forms/src/Renderer.php:145
 msgid "Leave this empty"
 msgstr ""
 
-#: modules/forms/src/Renderer.php:164
+#: modules/forms/src/Renderer.php:172
 #: assets/build/forms-builder.js:11
 msgid "Send"
 msgstr ""
 
-#: modules/forms/src/Renderer.php:188
+#: modules/forms/src/Renderer.php:196
 #: assets/build/forms-view.js:17
 msgid "There is a problem"
 msgstr ""
 
 #. translators: %s: file name.
-#: modules/forms/src/Renderer.php:235
+#: modules/forms/src/Renderer.php:243
 #, php-format
 msgid "Choose the file again. \"%s\" was not kept."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:240
-#: modules/forms/src/Renderer.php:329
-#: assets/build/automation-builder.js:16
+#: modules/forms/src/Renderer.php:248
+#: modules/forms/src/Renderer.php:337
+#: assets/build/automation-builder.js:30
 #: assets/build/forms-builder.js:1
 #: assets/build/forms-view.js:17
 msgid "Error:"
 msgstr ""
 
-#: modules/forms/src/Renderer.php:274
+#: modules/forms/src/Renderer.php:282
 #: assets/build/editor-panel.js:2
 msgid "Choose an option"
 msgstr ""
 
-#: modules/forms/src/Renderer.php:365
+#: modules/forms/src/Renderer.php:373
 #: src/Options/Screen.php:228
 #: assets/build/forms-builder.js:23
 #: assets/build/forms-view.js:16
@@ -2129,57 +2862,67 @@ msgid "(required)"
 msgstr ""
 
 #. translators: %d: number of hours.
-#: modules/forms/src/Renderer.php:408
+#: modules/forms/src/Renderer.php:416
 #, php-format
 msgid "Check your email for a link to confirm your submission. The link expires in %d hour."
 msgid_plural "Check your email for a link to confirm your submission. The link expires in %d hours."
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/forms/src/Renderer.php:412
+#: modules/forms/src/Renderer.php:420
 #: assets/build/forms-builder.js:6
 msgid "Thank you. Your message has been sent."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:432
+#: modules/forms/src/Renderer.php:440
 msgid "This page was open too long. Check your answers and send again."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:434
+#: modules/forms/src/Renderer.php:442
 msgid "Your submission could not be saved. Try again later."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:435
+#. translators: %s: size limit, for example 8 MB.
+#: modules/forms/src/Renderer.php:445
+#, php-format
+msgid "Your files are too large to send together, so nothing was sent. The limit is %s in total. Choose smaller files and send the form again."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:448
+msgid "Your submission was saved, but we could not send the confirmation email. The site team has been told and will follow up. You do not need to send the form again."
+msgstr ""
+
+#: modules/forms/src/Renderer.php:449
 msgid "The spam check did not pass. Wait for the check to finish, then send the form again."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:436
+#: modules/forms/src/Renderer.php:450
 #: modules/forms/src/Turnstile.php:130
 msgid "This form needs JavaScript for its spam check. Turn on JavaScript in your browser to send it."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:437
+#: modules/forms/src/Renderer.php:451
 msgid "Your submission was received, but it could not be processed. The site team has been told and will follow up."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:450
+#: modules/forms/src/Renderer.php:464
 msgid "Too many submissions with this email address."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:451
+#: modules/forms/src/Renderer.php:465
 msgid "Too many confirmation emails to this address."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:452
+#: modules/forms/src/Renderer.php:466
 msgid "Too many submissions from your connection."
 msgstr ""
 
-#: modules/forms/src/Renderer.php:455
+#: modules/forms/src/Renderer.php:469
 msgid "Try again later."
 msgstr ""
 
 #. translators: %d: number of hours.
-#: modules/forms/src/Renderer.php:462
+#: modules/forms/src/Renderer.php:476
 #, php-format
 msgid "Try again in about %d hour."
 msgid_plural "Try again in about %d hours."
@@ -2187,7 +2930,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of minutes.
-#: modules/forms/src/Renderer.php:466
+#: modules/forms/src/Renderer.php:480
 #, php-format
 msgid "Try again in about %d minute."
 msgid_plural "Try again in about %d minutes."
@@ -2195,33 +2938,33 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:419
+#: modules/forms/src/Submission.php:465
 #, php-format
 msgid "%s is too long."
 msgstr ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:582
+#: modules/forms/src/Submission.php:628
 #: assets/build/forms-view.js:7
 #, php-format,js-format
 msgid "Enter %s as an email address, like name@example.com."
 msgstr ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:584
+#: modules/forms/src/Submission.php:630
 #: assets/build/forms-view.js:8
 #, php-format,js-format
 msgid "Enter %s as a web address, like https://example.org."
 msgstr ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:586
+#: modules/forms/src/Submission.php:632
 #, php-format
 msgid "Enter %s as a real date, like 2026-03-31."
 msgstr ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:588
+#: modules/forms/src/Submission.php:634
 #: src/Options/Values.php:207
 #: assets/build/forms-view.js:3
 #, php-format,js-format
@@ -2229,21 +2972,22 @@ msgid "%s must be a number."
 msgstr ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:590
+#: modules/forms/src/Submission.php:636
 #, php-format
 msgid "Choose one of the options for %s."
 msgstr ""
 
 #. translators: %s: field label.
-#: modules/forms/src/Submission.php:592
-#: src/Api/Records.php:159
+#: modules/forms/src/Submission.php:638
+#: src/Api/Records.php:365
+#: src/Content/RecordValidator.php:338
 #, php-format
 msgid "%s has an invalid value."
 msgstr ""
 
 #. translators: %s: page title.
 #. translators: %s: error message.
-#: modules/forms/src/Submission.php:653
+#: modules/forms/src/Submission.php:699
 #: src/Options/Screen.php:258
 #: assets/build/forms-view.js:17
 #, php-format,js-format
@@ -2360,17 +3104,17 @@ msgid "Latest %s"
 msgstr ""
 
 #. translators: %s: content type plural name, lowercase.
-#: modules/listings/src/Patterns.php:479
+#: modules/listings/src/Patterns.php:491
 #, php-format
 msgid "No %s match your search or filters."
 msgstr ""
 
-#: modules/listings/src/Patterns.php:546
+#: modules/listings/src/Patterns.php:558
 msgid "Clear all filters"
 msgstr ""
 
 #. translators: %s: field or taxonomy label.
-#: modules/listings/src/Patterns.php:675
+#: modules/listings/src/Patterns.php:687
 #, php-format
 msgid "%s: "
 msgstr ""
@@ -2470,14 +3214,14 @@ msgid "Module %s disabled."
 msgstr ""
 
 #. translators: %d: number of errors.
-#: src/Admin/Notices.php:38
+#: src/Admin/Notices.php:41
 #, php-format
 msgid "Pegwork found %d schema error. Packages with errors are not registered."
 msgid_plural "Pegwork found %d schema errors. Packages with errors are not registered."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Notices.php:54
+#: src/Admin/Notices.php:57
 msgid "Run \"wp pegwork schema validate\" for the full list."
 msgstr ""
 
@@ -2497,7 +3241,7 @@ msgstr ""
 #: src/Admin/Overview.php:43
 #: src/Admin/Overview.php:160
 #: src/Admin/Overview.php:196
-#: assets/build/automation-builder.js:23
+#: assets/build/automation-builder.js:44
 msgid "Label"
 msgstr ""
 
@@ -2514,13 +3258,15 @@ msgid "Relationships"
 msgstr ""
 
 #: src/Admin/Overview.php:63
-#: assets/build/automation-builder.js:17
+#: assets/build/automation-builder.js:34
+#: assets/build/automation-builder.js:40
 msgid "From"
 msgstr ""
 
 #: src/Admin/Overview.php:64
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
+#: assets/build/automation-builder.js:45
 #: assets/build/forms-builder.js:10
 msgid "To"
 msgstr ""
@@ -2655,7 +3401,8 @@ msgstr ""
 
 #: src/Admin/Overview.php:204
 #: src/Options/Screen.php:231
-#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
 #: assets/build/editor-panel.js:1
 #: assets/build/editor-panel.js:2
 msgid "Private"
@@ -2708,41 +3455,60 @@ msgid "Invalid event name \"%s\": use dot-separated lowercase segments, such as 
 msgstr ""
 
 #. translators: %s: content type key.
-#: src/Api/Records.php:65
-#: src/Content/RecordValidator.php:100
+#: src/Api/Records.php:71
+#: src/Content/RecordQuery.php:163
+#: src/Content/RecordValidator.php:268
 #, php-format
 msgid "Unknown content type \"%s\"."
 msgstr ""
 
 #. translators: %s: post status.
-#: src/Api/Records.php:69
+#: src/Api/Records.php:76
 #, php-format
 msgid "Unknown status \"%s\"."
 msgstr ""
 
+#: src/Api/Records.php:169
+msgid "Trash is turned off on this site (EMPTY_TRASH_DAYS is 0), so the record was not moved. Pegwork never deletes records permanently."
+msgstr ""
+
 #. translators: %d: post ID.
-#: src/Api/Records.php:114
+#: src/Api/Records.php:178
 #, php-format
-msgid "No record with ID %d."
+msgid "Record %d could not be moved to the trash."
+msgstr ""
+
+#. translators: %s: relationship key.
+#: src/Api/Records.php:267
+#: src/Content/RecordQuery.php:341
+#, php-format
+msgid "Unknown relationship \"%s\"."
+msgstr ""
+
+#. translators: 1: record ID, 2: singular label of the "from" content type.
+#: src/Api/Records.php:274
+#, php-format
+msgid "Record %1$d is not a %2$s."
+msgstr ""
+
+#. translators: %s: per-field error messages.
+#: src/Api/Records.php:327
+#: src/Api/Records.php:411
+#: src/Content/RecordValidator.php:311
+#, php-format
+msgid "This record cannot be saved: %s"
 msgstr ""
 
 #. translators: 1: term slug, 2: taxonomy key.
-#: src/Api/Records.php:176
+#: src/Api/Records.php:382
 #, php-format
 msgid "Unknown term \"%1$s\" in %2$s."
 msgstr ""
 
 #. translators: %s: value key.
-#: src/Api/Records.php:186
+#: src/Api/Records.php:396
 #, php-format
 msgid "Unknown field or taxonomy \"%s\"."
-msgstr ""
-
-#. translators: %s: per-field error messages.
-#: src/Api/Records.php:201
-#: src/Content/RecordValidator.php:138
-#, php-format
-msgid "This record cannot be saved: %s"
 msgstr ""
 
 #. translators: %s: plural content type name.
@@ -2841,96 +3607,231 @@ msgstr ""
 msgid "%s trashed."
 msgstr ""
 
+#. translators: %s: query property.
+#: src/Content/RecordQuery.php:169
+#, php-format
+msgid "Unknown query property \"%s\"."
+msgstr ""
+
+#: src/Content/RecordQuery.php:174
+msgid "status must list publish, future, draft, pending or private."
+msgstr ""
+
+#. translators: %d: maximum.
+#: src/Content/RecordQuery.php:182
+#, php-format
+msgid "limit must be an integer from 0 to %d."
+msgstr ""
+
+#. translators: %d: maximum.
+#: src/Content/RecordQuery.php:190
+#, php-format
+msgid "sum lists at most %d number fields."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Content/RecordQuery.php:196
+#: src/Registry/Rules/AutomationRules.php:2630
+#, php-format
+msgid "Only number fields can be summed, not \"%s\"."
+msgstr ""
+
+#. translators: %d: maximum leaves.
+#: src/Content/RecordQuery.php:235
+#, php-format
+msgid "filter is { \"all\": [...] } or { \"any\": [...] } with 1 to %d conditions."
+msgstr ""
+
+#: src/Content/RecordQuery.php:293
+msgid "created is { \"before\": \"YYYY-MM-DD\" } or { \"after\": \"YYYY-MM-DD\" }, or both."
+msgstr ""
+
+#. translators: 1: relationship key, 2: content type key.
+#: src/Content/RecordQuery.php:345
+#: src/Registry/Rules/AutomationRules.php:2559
+#, php-format
+msgid "Relationship \"%1$s\" does not link \"%2$s\" records."
+msgstr ""
+
+#. translators: %s: operator.
+#: src/Content/RecordQuery.php:374
+#, php-format
+msgid "Unknown filter operator \"%s\"."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Content/RecordQuery.php:398
+#, php-format
+msgid "Unknown field \"%s\"."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Content/RecordQuery.php:403
+#: src/Registry/Rules/AutomationRules.php:2602
+#, php-format
+msgid "Field \"%s\" holds long text and cannot be filtered."
+msgstr ""
+
+#. translators: 1: operator, 2: field type.
+#: src/Content/RecordQuery.php:412
+#: src/Registry/Rules/AutomationRules.php:2518
+#, php-format
+msgid "\"%1$s\" compares numbers and dates, not %2$s values."
+msgstr ""
+
+#: src/Content/RecordQuery.php:415
+#: src/Content/RecordQuery.php:612
+#: src/Registry/Rules/AutomationRules.php:2521
+msgid "\"contains\" applies to multi-select taxonomies only."
+msgstr ""
+
+#: src/Content/RecordQuery.php:424
+msgid "\"in\" and \"not_in\" take a list of values."
+msgstr ""
+
+#. translators: 1: field key, 2: reason.
+#: src/Content/RecordQuery.php:433
+#: src/Registry/Rules/AutomationRules.php:2608
+#, php-format
+msgid "Filter on \"%1$s\": %2$s"
+msgstr ""
+
+#: src/Content/RecordQuery.php:504
+msgid "the value is not a single text, number or date."
+msgstr ""
+
+#: src/Content/RecordQuery.php:509
+msgid "the value is not a number."
+msgstr ""
+
+#: src/Content/RecordQuery.php:533
+#: src/Content/RecordQuery.php:538
+msgid "the value is not a date (YYYY-MM-DD) or date-time."
+msgstr ""
+
+#: src/Content/RecordQuery.php:581
+msgid "A boolean field compares with true or false."
+msgstr ""
+
+#. translators: %s: operator.
+#: src/Content/RecordQuery.php:609
+#, php-format
+msgid "\"%s\" compares numbers and dates, not taxonomy terms."
+msgstr ""
+
+#: src/Content/RecordQuery.php:623
+msgid "A taxonomy compares with term slugs."
+msgstr ""
+
+#: src/Content/RecordQuery.php:664
+msgid "sort order is asc or desc."
+msgstr ""
+
+#. translators: %s: field key.
+#: src/Content/RecordQuery.php:675
+#: src/Registry/Rules/AutomationRules.php:2634
+#, php-format
+msgid "Records cannot be sorted by \"%s\"."
+msgstr ""
+
+#. translators: 1: number of records, 2: comma-separated record titles.
+#: src/Content/RecordValidator.php:170
+#, php-format
+msgid "%1$d record kept its status because it is not complete: %2$s. Open it in the editor to see what is missing."
+msgid_plural "%1$d records kept their status because they are not complete: %2$s. Open them in the editor to see what is missing."
+msgstr[0] ""
+msgstr[1] ""
+
 #. translators: %s: taxonomy label.
-#: src/Content/RecordValidator.php:113
+#: src/Content/RecordValidator.php:281
 #, php-format
 msgid "%s allows only one term."
 msgstr ""
 
 #. translators: %s: taxonomy label.
 #. translators: %s: field label.
-#: src/Content/RecordValidator.php:116
-#: src/Content/RecordValidator.php:285
+#: src/Content/RecordValidator.php:284
+#: src/Content/RecordValidator.php:484
 #: assets/build/forms-view.js:4
 #, php-format,js-format
 msgid "%s is required."
 msgstr ""
 
 #. translators: 1: record ID as given, 2: singular label of the linked content type.
-#: src/Content/RecordValidator.php:201
+#: src/Content/RecordValidator.php:400
 #, php-format
 msgid "Record %1$s is not a %2$s."
 msgstr ""
 
 #. translators: 1: linked type label, 2: linked record title, 3: linking type label, 4: linking record title.
-#: src/Content/RecordValidator.php:213
+#: src/Content/RecordValidator.php:412
 #, php-format
 msgid "%1$s \"%2$s\" is already linked from %3$s \"%4$s\"."
 msgstr ""
 
 #. translators: %s: singular label of the linked content type.
-#: src/Content/RecordValidator.php:225
+#: src/Content/RecordValidator.php:424
 #, php-format
 msgid "At least one %s is required."
 msgstr ""
 
 #. translators: %s: checkbox label.
-#: src/Content/RecordValidator.php:281
+#: src/Content/RecordValidator.php:480
 #: assets/build/forms-view.js:2
 #, php-format,js-format
 msgid "Check the box to confirm: %s"
 msgstr ""
 
 #. translators: 1: field label, 2: character count.
-#: src/Content/RecordValidator.php:293
+#: src/Content/RecordValidator.php:492
 #: assets/build/forms-view.js:9
 #, php-format,js-format
 msgid "%1$s must be at least %2$d characters."
 msgstr ""
 
 #. translators: 1: field label, 2: character count.
-#: src/Content/RecordValidator.php:297
+#: src/Content/RecordValidator.php:496
 #: assets/build/forms-view.js:10
 #, php-format,js-format
 msgid "%1$s must be at most %2$d characters."
 msgstr ""
 
 #. translators: 1: field label, 2: minimum words, 3: current words.
-#: src/Content/RecordValidator.php:303
+#: src/Content/RecordValidator.php:502
 #: assets/build/forms-view.js:11
 #, php-format,js-format
 msgid "%1$s must be at least %2$d words (it has %3$d)."
 msgstr ""
 
 #. translators: 1: field label, 2: maximum words, 3: current words.
-#: src/Content/RecordValidator.php:307
+#: src/Content/RecordValidator.php:506
 #: assets/build/forms-view.js:12
 #, php-format,js-format
 msgid "%1$s must be at most %2$d words (it has %3$d)."
 msgstr ""
 
 #. translators: 1: field label, 2: minimum value.
-#: src/Content/RecordValidator.php:312
+#: src/Content/RecordValidator.php:511
 #: assets/build/forms-view.js:5
 #, php-format,js-format
 msgid "%1$s must be at least %2$s."
 msgstr ""
 
 #. translators: 1: field label, 2: maximum value.
-#: src/Content/RecordValidator.php:316
+#: src/Content/RecordValidator.php:515
 #: assets/build/forms-view.js:6
 #, php-format,js-format
 msgid "%1$s must be at most %2$s."
 msgstr ""
 
 #. translators: %s: field label.
-#: src/Content/RecordValidator.php:320
+#: src/Content/RecordValidator.php:519
 #, php-format
 msgid "%s is not in the expected format."
 msgstr ""
 
 #. translators: %s: singular label of the linked content type.
-#: src/Content/Relationships.php:144
+#: src/Content/Relationships.php:190
 #, php-format
 msgid "Limit results to records linked to this %s ID."
 msgstr ""
@@ -2964,31 +3865,31 @@ msgid "Module %1$s requires these modules to be enabled first: %2$s."
 msgstr ""
 
 #. translators: %s: module slug.
-#: src/Modules/Loader.php:227
+#: src/Modules/Loader.php:229
 #, php-format
 msgid "Module %s is not enabled."
 msgstr ""
 
 #. translators: 1: module slug, 2: comma-separated module slugs.
-#: src/Modules/Loader.php:235
+#: src/Modules/Loader.php:237
 #, php-format
 msgid "Module %1$s is required by these enabled modules, so disable them first: %2$s."
 msgstr ""
 
 #. translators: %s: module slug
-#: src/Modules/Loader.php:287
+#: src/Modules/Loader.php:289
 #, php-format
 msgid "Pegwork: the enabled module \"%s\" does not exist and was ignored."
 msgstr ""
 
 #. translators: 1: module slug, 2: comma-separated list of module slugs
-#: src/Modules/Loader.php:291
+#: src/Modules/Loader.php:293
 #, php-format
 msgid "Pegwork: the module \"%1$s\" was skipped because it requires: %2$s."
 msgstr ""
 
 #. translators: %s: module slug
-#: src/Modules/Loader.php:295
+#: src/Modules/Loader.php:297
 #, php-format
 msgid "Pegwork: the module \"%s\" was skipped because its module.php did not return a Pegwork module."
 msgstr ""
@@ -3112,8 +4013,14 @@ msgstr ""
 msgid "Nothing was saved for this field."
 msgstr ""
 
-#: src/Plugin.php:74
+#: src/Plugin.php:128
 msgid "Pegwork Platform for WordPress"
+msgstr ""
+
+#. translators: 1: object kind, 2: key.
+#: src/Registry/Importer.php:167
+#, php-format
+msgid "This import would stop DB entry %1$s \"%2$s\" from loading. Change the package, or import with --prune to remove the entry."
 msgstr ""
 
 #: src/Registry/Loader.php:89
@@ -3126,413 +4033,750 @@ msgstr ""
 msgid "Key \"%s\" is already defined in the DB source."
 msgstr ""
 
-#: src/Registry/Loader.php:202
+#: src/Registry/Loader.php:204
 msgid "Package directory not found."
 msgstr ""
 
-#: src/Registry/Loader.php:207
+#: src/Registry/Loader.php:209
 msgid "Package has no manifest.json."
 msgstr ""
 
 #. translators: 1: key, 2: file that already defines it, relative to the package directory.
-#: src/Registry/Loader.php:234
+#: src/Registry/Loader.php:236
 #, php-format
 msgid "Key \"%1$s\" is already defined in %2$s."
 msgstr ""
 
 #. translators: %s: package id.
-#: src/Registry/Loader.php:269
+#: src/Registry/Loader.php:271
 #, php-format
 msgid "Package \"%s\" is already registered; this copy was not registered."
 msgstr ""
 
 #. translators: 1: key, 2: package that defines it, 3: rejected package.
-#: src/Registry/Loader.php:281
+#: src/Registry/Loader.php:283
 #, php-format
 msgid "Key \"%1$s\" is already defined by package \"%2$s\"; package \"%3$s\" was not registered."
 msgstr ""
 
 #. translators: %s: JSON parser message.
-#: src/Registry/Loader.php:306
+#: src/Registry/Loader.php:308
 #, php-format
 msgid "Invalid JSON: %s."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:186
-#: src/Registry/Rules/AutomationRules.php:307
+#. translators: 1: worst-case step attempts, 2: limit, 3: items per loop, 4: body steps that fit after one step, 5: attempts of that example.
+#: src/Registry/Rules/AutomationRules.php:277
+#, php-format
+msgid "This automation can take %1$d step attempts in one run; the limit is %2$d. Every step outside a loop body counts once (the loop step itself too, and a decision adds its longest branch), and every step inside a body counts %3$d times. So with one step before a %3$d-item loop, the body can hold %4$d steps: 1 + 1 + %4$d x %3$d = %5$d. Move steps out of the loop or split the automation."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:342
+#: src/Registry/Rules/AutomationRules.php:484
 msgid "Missing required property \"type\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:199
+#: src/Registry/Rules/AutomationRules.php:355
 msgid "Event names are dot-separated keys, such as \"record.status_changed\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:214
+#: src/Registry/Rules/AutomationRules.php:370
+#: src/Registry/Rules/AutomationRules.php:710
 msgid "\"at\" is a site time of day, HH:MM (24-hour)."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:238
+#. translators: %d: maximum characters.
+#: src/Registry/Rules/AutomationRules.php:394
+#, php-format
+msgid "Button text is at most %d characters."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:406
+msgid "\"allow\": \"editors\" lets users who can edit the record run it, so it needs a \"content_type\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:412
 msgid "\"content_type\" narrows record.* events only."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:241
+#: src/Registry/Rules/AutomationRules.php:415
 msgid "\"form\" narrows form.* events only."
 msgstr ""
 
 #. translators: %d: maximum number of branches.
-#: src/Registry/Rules/AutomationRules.php:287
+#: src/Registry/Rules/AutomationRules.php:463
 #, php-format
 msgid "A decision has from 1 to %d branches."
 msgstr ""
 
 #. translators: %s: step type.
-#: src/Registry/Rules/AutomationRules.php:315
+#: src/Registry/Rules/AutomationRules.php:492
 #, php-format
 msgid "Link steps run within the click, so only update_record and condition are allowed, not \"%s\"."
 msgstr ""
 
-#. translators: %d: maximum nesting levels.
-#: src/Registry/Rules/AutomationRules.php:320
-#, php-format
-msgid "Decisions nest at most %d levels deep."
+#: src/Registry/Rules/AutomationRules.php:496
+#: assets/build/automation-builder.js:45
+msgid "A loop cannot hold a wait, at any depth: per-record timing belongs in per-record runs (a record event or a schedule with \"for_each\")."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:377
+#: src/Registry/Rules/AutomationRules.php:500
+#: assets/build/automation-builder.js:45
+msgid "A loop cannot hold another loop."
+msgstr ""
+
+#. translators: %d: maximum nesting levels.
+#: src/Registry/Rules/AutomationRules.php:505
+#, php-format
+msgid "Decisions and loops nest at most %d levels deep."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:562
 msgid "Webhook URLs start with http:// or https://."
 msgstr ""
 
 #. translators: %d: maximum seconds.
-#: src/Registry/Rules/AutomationRules.php:384
+#: src/Registry/Rules/AutomationRules.php:569
 #, php-format
 msgid "\"timeout\" is more than 0 and at most %d seconds."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:418
+#. translators: %d: maximum records.
+#: src/Registry/Rules/AutomationRules.php:612
+#, php-format
+msgid "\"limit\" is an integer from 0 to %d."
+msgstr ""
+
+#. translators: %d: maximum fields.
+#: src/Registry/Rules/AutomationRules.php:619
+#, php-format
+msgid "\"sum\" lists at most %d number fields."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:629
+msgid "\"over\" is the records of a find_records step: \"steps.<id>.records\"."
+msgstr ""
+
+#. translators: %d: maximum steps.
+#: src/Registry/Rules/AutomationRules.php:637
+#, php-format
+msgid "A loop body has from 1 to %d steps, counting the steps inside decisions."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:666
+msgid "A webhook that sends a read record names both \"record\" and its \"content_type\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:669
+msgid "A wait has exactly one of \"for\" (a duration) or \"until\" (a date field of the record)."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:673
+msgid "\"record\" reads one record by ID, so it cannot be combined with \"related\", \"filter\" or \"created\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:680
+msgid "Say which record to read: \"record\" (an ID), \"related\", \"filter\" or \"created\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:681
+msgid "Say which records to read: \"related\", \"filter\", \"created\" or a combination (reading a whole content type is never implicit)."
+msgstr ""
+
+#. translators: %s: maximum duration.
+#: src/Registry/Rules/AutomationRules.php:705
+#, php-format
+msgid "\"offset\" is an ISO 8601 duration with an optional sign, such as \"-P3D\", of at most %s either way."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:730
+#: src/Registry/Rules/AutomationRules.php:754
+msgid "A \"created\" date is a Y-m-d date, { \"date\": \"today|now\", \"offset\": \"-P2Y\" } or { \"var\": \"<path>\" }."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:746
+#: src/Registry/Rules/AutomationRules.php:1009
+msgid "Offsets are ISO 8601 durations with an optional sign, such as \"-P12M\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:758
+msgid "\"created\" needs \"before\", \"after\" or both."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:785
+msgid "\"status\" lists one or more statuses, each once."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:813
+msgid "A filter is exactly one of { \"all\": [...] } or { \"any\": [...] }."
+msgstr ""
+
+#. translators: %d: maximum conditions.
+#: src/Registry/Rules/AutomationRules.php:825
+#, php-format
+msgid "A filter has from 1 to %d conditions, one level deep."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:841
+msgid "Filters are one level deep: { \"field\", \"op\", \"value\" } leaves only."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:871
 msgid "\"values\" needs at least one field."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:424
-msgid "Expected a string, number, boolean or list of strings."
+#: src/Registry/Rules/AutomationRules.php:879
+msgid "Expected a string, number, boolean, list of strings or list of integers."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:466
+#: src/Registry/Rules/AutomationRules.php:921
 msgid "A condition is exactly one of { \"all\": [...] }, { \"any\": [...] }, { \"not\": {...} } or { \"var\", \"op\", \"value\" }."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:479
+#: src/Registry/Rules/AutomationRules.php:934
 msgid "A condition group needs at least one condition."
 msgstr ""
 
 #. translators: %s: operator.
-#: src/Registry/Rules/AutomationRules.php:512
+#: src/Registry/Rules/AutomationRules.php:977
 #, php-format
 msgid "Operator \"%s\" takes no \"value\"."
 msgstr ""
 
 #. translators: %s: operator.
-#: src/Registry/Rules/AutomationRules.php:518
+#: src/Registry/Rules/AutomationRules.php:983
 #, php-format
 msgid "Operator \"%s\" needs a \"value\"."
 msgstr ""
 
 #. translators: %s: operator.
-#: src/Registry/Rules/AutomationRules.php:525
+#: src/Registry/Rules/AutomationRules.php:990
 #, php-format
 msgid "Operator \"%s\" needs a non-empty list of strings, numbers or booleans."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:544
-msgid "Offsets are ISO 8601 durations with an optional sign, such as \"-P12M\"."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:552
+#: src/Registry/Rules/AutomationRules.php:1017
 msgid "A value is a string, number, boolean, { \"var\": \"<path>\" } or { \"date\": \"today|now\", \"offset\": \"-P12M\" }."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:563
+#: src/Registry/Rules/AutomationRules.php:1028
 msgid "Paths are dot-separated keys, such as \"record.last_verified\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:579
+#: src/Registry/Rules/AutomationRules.php:1044
 msgid "Durations are ISO 8601, such as \"P30D\" or \"PT1H\"."
 msgstr ""
 
 #. translators: 1: minimum duration, 2: maximum duration.
-#: src/Registry/Rules/AutomationRules.php:584
+#: src/Registry/Rules/AutomationRules.php:1049
 #, php-format
 msgid "Duration must be from %1$s to %2$s."
 msgstr ""
 
 #. translators: %s: step id.
-#: src/Registry/Rules/AutomationRules.php:695
+#: src/Registry/Rules/AutomationRules.php:1167
 #, php-format
 msgid "Step id \"%s\" is already used in this automation."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:705
+#: src/Registry/Rules/AutomationRules.php:1182
 msgid "This trigger binds no record; give update_record a \"record\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:732
-msgid "This trigger binds no record, so the webhook has no record fields to send."
+#: src/Registry/Rules/AutomationRules.php:1214
+msgid "A schedule with \"for_each\" cannot trash records: use a schedule without \"for_each\", find_records and a loop, which trash at most 50 records a run."
 msgstr ""
 
-#. translators: 1: nesting depth, 2: node count, 3: maximum depth, 4: maximum nodes.
-#: src/Registry/Rules/AutomationRules.php:816
+#: src/Registry/Rules/AutomationRules.php:1239
+msgid "This trigger binds no record, so the webhook has no record fields to send (send a read record with \"record\" and \"content_type\")."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1381
+msgid "a list of records is \"steps.<id>.records\" of a find_records step."
+msgstr ""
+
+#. translators: 1: step id, 2: step type.
+#: src/Registry/Rules/AutomationRules.php:1386
 #, php-format
-msgid "Condition has depth %1$d and %2$d nodes; the limits are depth %3$d and %4$d nodes."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:854
-msgid "\"changed\" needs a record.updated trigger and a \"record.<key>\" var."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:878
-msgid "Unbalanced \"{{\" or \"}}\" in template."
-msgstr ""
-
-#. translators: %s: merge tag.
-#: src/Registry/Rules/AutomationRules.php:884
-#, php-format
-msgid "Merge tag \"{{%s}}\" is not \"{{ path }}\", \"{{ path | date }}\" or \"{{ path | default:\"text\" }}\" (date before default)."
-msgstr ""
-
-#. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:893
-#, php-format
-msgid "Path \"%s\": use \"option:<page>.<field>\"."
-msgstr ""
-
-#. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:934
-#, php-format
-msgid "Path \"%s\" is not a date, so it cannot take \"| date\"."
+msgid "step \"%1$s\" is a %2$s step; only find_records steps have \"records\"."
 msgstr ""
 
 #. translators: 1: path, 2: reason.
-#: src/Registry/Rules/AutomationRules.php:964
+#: src/Registry/Rules/AutomationRules.php:1390
+#: src/Registry/Rules/AutomationRules.php:1831
 #, php-format
 msgid "Path \"%1$s\": %2$s"
 msgstr ""
 
-#. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:970
+#. translators: 1: step id, 2: loop step id.
+#: src/Registry/Rules/AutomationRules.php:1411
 #, php-format
-msgid "Path \"%s\" needs a record, but this trigger binds none (use a record.* event, a schedule with \"for_each\", or a form event that binds: form.confirmed, or form.submitted of a form without \"confirm\", of a form with a \"target\")."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:974
-msgid "use \"record.<key>\"."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:998
-msgid "use \"steps.<id>.<output>\"."
+msgid "step \"%1$s\" runs inside loop \"%2$s\", so its outputs exist only later in the same item."
 msgstr ""
 
 #. translators: %s: step id.
-#: src/Registry/Rules/AutomationRules.php:1001
+#: src/Registry/Rules/AutomationRules.php:1415
 #, php-format
 msgid "step \"%s\" runs only in another branch."
 msgstr ""
 
 #. translators: %s: step id.
-#: src/Registry/Rules/AutomationRules.php:1004
+#: src/Registry/Rules/AutomationRules.php:1418
 #, php-format
 msgid "no step \"%s\" runs before this point."
 msgstr ""
 
-#. translators: 1: step type, 2: output name.
-#: src/Registry/Rules/AutomationRules.php:1007
+#. translators: 1: recipient parts, 2: limit.
+#: src/Registry/Rules/AutomationRules.php:1474
 #, php-format
-msgid "%1$s steps have no output \"%2$s\"."
+msgid "\"to\" has %1$d recipients; at most %2$d per email (a role counts as one here, and its members are capped when the email is sent)."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1014
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:1493
+#, php-format
+msgid "A wait waits until a date field of the run's record: \"record.<date field>\", not \"%s\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1497
+msgid "A wait until a date needs a record, but this trigger binds none (use a record.* event with \"content_type\", a schedule with \"for_each\", a manual trigger with \"content_type\", or a form event that binds)."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1501
+msgid "The trigger names no content type, so the date field cannot be checked: add the trigger's \"content_type\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1526
+msgid "\"record\" is exactly one typed reference: {{record.id}}, {{steps.<id>.record_id}} of a get_record or create_record step, or {{steps.<loop>.item.id}}."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1532
+msgid "This trigger binds no record; give trash_record a \"record\"."
+msgstr ""
+
+#. translators: %s: content type key.
+#: src/Registry/Rules/AutomationRules.php:1543
+#, php-format
+msgid "The trigger names no content type, so the record may not be a \"%s\" record: add the trigger's \"content_type\"."
+msgstr ""
+
+#. translators: 1: content type key, 2: content type key.
+#: src/Registry/Rules/AutomationRules.php:1545
+#, php-format
+msgid "The record is a \"%1$s\" record, but this step trashes \"%2$s\" records only."
+msgstr ""
+
+#. translators: 1: nesting depth, 2: node count, 3: maximum depth, 4: maximum nodes.
+#: src/Registry/Rules/AutomationRules.php:1604
+#, php-format
+msgid "Condition has depth %1$d and %2$d nodes; the limits are depth %3$d and %4$d nodes."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1642
+msgid "\"changed\" needs a record.updated trigger and a \"record.<key>\" var."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1666
+msgid "A role recipient is a whole part of send_email \"to\", written \"{role:<slug>}\" (lowercase letters, digits, \"_\" and \"-\"). Roles cannot appear in \"reply_to\" or any other template."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1671
+msgid "Unbalanced \"{{\" or \"}}\" in template."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1680
+msgid "{{#each}} blocks are allowed only in send_email \"text\" and \"html\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1685
+msgid "{{#each}} blocks cannot be nested."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1696
+msgid "{{else}} and {{/each}} belong to an open {{#each}}, with at most one {{else}}."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1710
+msgid "{{#each}} needs a closing {{/each}}."
+msgstr ""
+
+#. translators: %s: merge tag.
+#: src/Registry/Rules/AutomationRules.php:1726
+#, php-format
+msgid "Merge tag \"{{%s}}\" is not \"{{ path }}\" with optional filters in this order: | add:\"P3D\", then | date or | number (or | number:2), then | default:\"text\"."
+msgstr ""
+
+#. translators: %s: duration.
+#: src/Registry/Rules/AutomationRules.php:1741
+#, php-format
+msgid "\"| add\" takes an ISO 8601 duration with an optional sign, such as \"P3D\" or \"-PT6H\", not \"%s\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1745
+msgid "\"| add\" gives a date, so it cannot take \"| number\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:1753
+#, php-format
+msgid "Path \"%s\": use \"option:<page>.<field>\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:1805
+#, php-format
+msgid "Path \"%s\" is not a number, so it cannot take \"| number\"."
+msgstr ""
+
+#. translators: 1: path, 2: filter.
+#: src/Registry/Rules/AutomationRules.php:1807
+#, php-format
+msgid "Path \"%1$s\" is not a date, so it cannot take \"| %2$s\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:1838
+#, php-format
+msgid "Path \"%s\" needs a record, but this trigger binds none (use a record.* event, a schedule with \"for_each\", a manual trigger with \"content_type\", or a form event that binds: form.confirmed, or form.submitted of a form without \"confirm\", of a form with a \"target\")."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1842
+msgid "use \"record.<key>\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1850
+msgid "\"item.<key>\" exists only inside {{#each}} ... {{/each}}; in a loop, use \"steps.<loop>.item.<key>\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1854
+msgid "use \"item.<key>\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1870
 msgid "use \"site.name\" or \"site.url\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1021
+#: src/Registry/Rules/AutomationRules.php:1877
 msgid "today and now have no sub-keys."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1027
+#: src/Registry/Rules/AutomationRules.php:1883
 msgid "use \"run.id\"."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1033
+#: src/Registry/Rules/AutomationRules.php:1889
 msgid "use \"link.<name>\"."
 msgstr ""
 
 #. translators: %s: link name.
-#: src/Registry/Rules/AutomationRules.php:1036
+#: src/Registry/Rules/AutomationRules.php:1892
 #, php-format
 msgid "Link \"%s\" is not defined in this automation's \"links\"."
 msgstr ""
 
 #. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:1039
+#: src/Registry/Rules/AutomationRules.php:1895
 #, php-format
 msgid "Path \"%s\" signs a link for the bound record, but this trigger binds none."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1046
+#: src/Registry/Rules/AutomationRules.php:1902
 msgid "paths start with record, trigger, steps, site, today, now, run or link."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1047
+#: src/Registry/Rules/AutomationRules.php:1903
 msgid "condition paths start with record, trigger, steps or site (use a date operand for today and now)."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1067
+#: src/Registry/Rules/AutomationRules.php:1956
+msgid "use \"steps.<id>.<output>\", or \"steps.<id>.record.<key>\", \"steps.<id>.item.<key>\" or \"steps.<id>.sum.<field>\"."
+msgstr ""
+
+#. translators: %s: loop step id.
+#: src/Registry/Rules/AutomationRules.php:1966
+#, php-format
+msgid "the count of loop \"%s\" is set after the loop; inside it, use \"index\"."
+msgstr ""
+
+#. translators: 1: output name, 2: loop step id.
+#: src/Registry/Rules/AutomationRules.php:1982
+#, php-format
+msgid "\"%1$s\" exists only inside the body of loop \"%2$s\"."
+msgstr ""
+
+#. translators: 1: step type, 2: output name.
+#: src/Registry/Rules/AutomationRules.php:1990
+#, php-format
+msgid "%1$s steps have no output \"%2$s\"."
+msgstr ""
+
+#. translators: 1: step type, 2: output name.
+#: src/Registry/Rules/AutomationRules.php:1990
+msgid " (without \"on_error\")"
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:1994
+msgid "\"records\" is a list: use it as a loop's \"over\" or in {{#each}} ... {{/each}}; \"count\" holds how many records match."
+msgstr ""
+
+#. translators: 1: step id, 2: output name.
+#: src/Registry/Rules/AutomationRules.php:2002
+#, php-format
+msgid "use \"steps.%1$s.%2$s.<key>\"."
+msgstr ""
+
+#. translators: 1: step id, 2: output name.
+#: src/Registry/Rules/AutomationRules.php:2004
+#, php-format
+msgid "use \"steps.%1$s.%2$s\"."
+msgstr ""
+
+#. translators: 1: field key, 2: step id.
+#: src/Registry/Rules/AutomationRules.php:2014
+#, php-format
+msgid "step \"%2$s\" does not sum \"%1$s\"; add it to its \"sum\"."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:2049
 msgid "webhook triggers expose \"trigger.payload.*\" only."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1072
+#: src/Registry/Rules/AutomationRules.php:2054
 msgid "schedule triggers have no payload."
 msgstr ""
 
+#: src/Registry/Rules/AutomationRules.php:2059
+msgid "manual triggers expose \"trigger.user_id\" and \"trigger.source\"."
+msgstr ""
+
 #. translators: 1: event name, 2: comma-separated keys.
-#: src/Registry/Rules/AutomationRules.php:1080
+#: src/Registry/Rules/AutomationRules.php:2069
 #, php-format
 msgid "%1$s payloads have %2$s."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1085
+#: src/Registry/Rules/AutomationRules.php:2074
 msgid "use \"trigger.old.<key>\"."
 msgstr ""
 
 #. translators: %s: comma-separated keys.
-#: src/Registry/Rules/AutomationRules.php:1102
+#: src/Registry/Rules/AutomationRules.php:2095
 #, php-format
 msgid "form event payloads have %s."
 msgstr ""
 
 #. translators: %s: content type key.
-#: src/Registry/Rules/AutomationRules.php:1142
+#: src/Registry/Rules/AutomationRules.php:2136
 #: src/Registry/Rules/OptionsPageRules.php:225
-#: src/Registry/Validator.php:299
+#: src/Registry/Validator.php:304
 #, php-format
 msgid "Content type \"%s\" is not defined."
 msgstr ""
 
 #. translators: %s: form key.
-#: src/Registry/Rules/AutomationRules.php:1148
+#: src/Registry/Rules/AutomationRules.php:2142
 #, php-format
 msgid "Form \"%s\" is not defined."
 msgstr ""
 
+#. translators: 1: field key, 2: content type key.
+#: src/Registry/Rules/AutomationRules.php:2179
+#, php-format
+msgid "\"%1$s\" is not a date field of content type \"%2$s\"."
+msgstr ""
+
+#. translators: %s: path.
+#: src/Registry/Rules/AutomationRules.php:2193
+#, php-format
+msgid "Path \"%s\" is not a date, so it cannot bound \"created\"."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/Rules/AutomationRules.php:2211
+#, php-format
+msgid "Automation \"%s\" is not defined."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/Rules/AutomationRules.php:2217
+#, php-format
+msgid "Automation \"%s\" cannot be started: only automations with a manual trigger can."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/Rules/AutomationRules.php:2222
+#, php-format
+msgid "A package automation cannot start a site automation (\"%s\"): the package would not load without it. Start a package automation, or save this one on the site."
+msgstr ""
+
+#. translators: %s: chain of automation keys.
+#: src/Registry/Rules/AutomationRules.php:2228
+#, php-format
+msgid "Starting it would start this automation again: %s."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/Rules/AutomationRules.php:2236
+#, php-format
+msgid "A schedule with \"for_each\" cannot start automation \"%s\": it can move records to the trash. Use a schedule without \"for_each\", find_records and a loop, which trash at most 50 records a run."
+msgstr ""
+
+#. translators: %s: automation key.
+#: src/Registry/Rules/AutomationRules.php:2244
+#, php-format
+msgid "Automation \"%s\" names no content type, so it takes no \"record\"."
+msgstr ""
+
+#. translators: 1: content type key, 2: automation key, 3: content type key.
+#: src/Registry/Rules/AutomationRules.php:2251
+#, php-format
+msgid "\"record\" is a \"%1$s\" record, but automation \"%2$s\" runs on \"%3$s\" records."
+msgstr ""
+
+#. translators: 1: automation key, 2: content type key.
+#: src/Registry/Rules/AutomationRules.php:2257
+#, php-format
+msgid "Missing \"record\": automation \"%1$s\" runs on a \"%2$s\" record, and \"record\" defaults to the bound record only when that is one."
+msgstr ""
+
 #. translators: %s: field key.
-#: src/Registry/Rules/AutomationRules.php:1215
+#: src/Registry/Rules/AutomationRules.php:2375
+#: src/Registry/Rules/AutomationRules.php:2706
 #, php-format
 msgid "Field \"%s\" cannot be checked: name the trigger's \"content_type\" to use record fields."
 msgstr ""
 
 #. translators: 1: field key, 2: content type key.
-#: src/Registry/Rules/AutomationRules.php:1217
+#: src/Registry/Rules/AutomationRules.php:2377
+#: src/Registry/Rules/AutomationRules.php:2651
 #, php-format
 msgid "\"%1$s\" is not a field or taxonomy of content type \"%2$s\"."
 msgstr ""
 
 #. translators: %s: field key.
-#: src/Registry/Rules/AutomationRules.php:1223
-#: src/Registry/Rules/AutomationRules.php:1302
+#: src/Registry/Rules/AutomationRules.php:2383
+#: src/Registry/Rules/AutomationRules.php:2467
 #, php-format
 msgid "Field \"%s\" is private and cannot appear in webhook bodies or link pages."
 msgstr ""
 
 #. translators: %s: options page key.
-#: src/Registry/Rules/AutomationRules.php:1239
+#: src/Registry/Rules/AutomationRules.php:2399
 #: src/Registry/Rules/FormRules.php:622
 #, php-format
 msgid "Options page \"%s\" is not defined."
 msgstr ""
 
 #. translators: 1: field key, 2: options page key.
-#: src/Registry/Rules/AutomationRules.php:1248
+#: src/Registry/Rules/AutomationRules.php:2408
 #: src/Registry/Rules/FormRules.php:631
 #, php-format
 msgid "Field \"%1$s\" is not defined on options page \"%2$s\"."
 msgstr ""
 
 #. translators: 1: options page key, 2: field key.
-#: src/Registry/Rules/AutomationRules.php:1256
+#: src/Registry/Rules/AutomationRules.php:2416
 #, php-format
 msgid "Options field \"%1$s.%2$s\" is private and cannot appear in templates. For a recipient, write \"{option:%1$s.%2$s}\" in \"to\"."
 msgstr ""
 
-#. translators: 1: options page key, 2: field key.
-#: src/Registry/Rules/AutomationRules.php:1262
+#. translators: 1: options page key, 2: field key, 3: field type, 4: filter.
+#: src/Registry/Rules/AutomationRules.php:2424
 #, php-format
-msgid "Options field \"%1$s.%2$s\" is not a date field, so it cannot take \"| date\"."
+msgid "Options field \"%1$s.%2$s\" is not a %3$s field, so it cannot take \"| %4$s\"."
 msgstr ""
 
-#. translators: %s: path.
-#: src/Registry/Rules/AutomationRules.php:1276
+#. translators: 1: path, 2: field type, 3: filter.
+#: src/Registry/Rules/AutomationRules.php:2441
 #, php-format
-msgid "Path \"%s\" is not a date field, so it cannot take \"| date\"."
+msgid "Path \"%1$s\" is not a %2$s field, so it cannot take \"| %3$s\"."
 msgstr ""
 
 #. translators: 1: field key, 2: form key.
-#: src/Registry/Rules/AutomationRules.php:1295
+#: src/Registry/Rules/AutomationRules.php:2460
 #, php-format
 msgid "Field \"%1$s\" is not a field of form \"%2$s\"."
 msgstr ""
 
 #. translators: 1: var path, 2: reason.
-#: src/Registry/Rules/AutomationRules.php:1351
+#: src/Registry/Rules/AutomationRules.php:2502
 #, php-format
 msgid "Condition on \"%1$s\": %2$s"
 msgstr ""
 
-#. translators: 1: operator, 2: field type.
-#: src/Registry/Rules/AutomationRules.php:1356
-#, php-format
-msgid "\"%1$s\" compares numbers and dates, not %2$s values."
-msgstr ""
-
-#: src/Registry/Rules/AutomationRules.php:1360
-msgid "\"contains\" applies to multi-select taxonomies only."
-msgstr ""
-
 #. translators: %s: field type.
-#: src/Registry/Rules/AutomationRules.php:1371
+#: src/Registry/Rules/AutomationRules.php:2530
 #, php-format
 msgid "a date operand cannot compare with a %s value."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1413
-msgid "only multi-select taxonomies take a list."
+#. translators: 1: content type key, 2: relationship key, 3: content type key.
+#: src/Registry/Rules/AutomationRules.php:2565
+#, php-format
+msgid "\"of\" is a \"%1$s\" record, but relationship \"%2$s\" reads from \"%3$s\" records here."
+msgstr ""
+
+#. translators: %s: relationship key.
+#: src/Registry/Rules/AutomationRules.php:2580
+#, php-format
+msgid "Relationship \"%s\" is not defined."
+msgstr ""
+
+#. translators: 1: content type key, 2: relationship key.
+#: src/Registry/Rules/AutomationRules.php:2675
+#, php-format
+msgid "Missing \"from\": it defaults to the bound record only when that is a \"%1$s\" record, the \"from\" end of \"%2$s\"."
+msgstr ""
+
+#. translators: 1: end, 2: content type key, 3: relationship key, 4: content type key.
+#: src/Registry/Rules/AutomationRules.php:2681
+#, php-format
+msgid "\"%1$s\" is a \"%2$s\" record, but the \"%1$s\" end of relationship \"%3$s\" is \"%4$s\"."
+msgstr ""
+
+#. translators: 1: field key, 2: content type key.
+#: src/Registry/Rules/AutomationRules.php:2708
+#, php-format
+msgid "\"%1$s\" is not a field or taxonomy of content type \"%2$s\", or a relationship from it."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:2722
+msgid "a relationship takes record IDs: a template, comma-separated IDs or a list of integers."
+msgstr ""
+
+#: src/Registry/Rules/AutomationRules.php:2726
+msgid "only multi-select taxonomies take a list, of term slugs."
 msgstr ""
 
 #. translators: 1: field key, 2: reason.
-#: src/Registry/Rules/AutomationRules.php:1419
+#: src/Registry/Rules/AutomationRules.php:2732
 #, php-format
 msgid "Value for \"%1$s\": %2$s"
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1446
+#: src/Registry/Rules/AutomationRules.php:2779
 msgid "expected true or false."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1447
+#: src/Registry/Rules/AutomationRules.php:2780
 msgid "expected a number."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1448
+#: src/Registry/Rules/AutomationRules.php:2781
 msgid "expected a Y-m-d date."
 msgstr ""
 
 #. translators: %s: comma-separated option values.
-#: src/Registry/Rules/AutomationRules.php:1450
+#: src/Registry/Rules/AutomationRules.php:2783
 #, php-format
 msgid "expected one of the options: %s."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1451
+#: src/Registry/Rules/AutomationRules.php:2784
 msgid "expected a term slug."
 msgstr ""
 
-#: src/Registry/Rules/AutomationRules.php:1452
+#: src/Registry/Rules/AutomationRules.php:2785
 msgid "expected a string."
 msgstr ""
 
@@ -3689,7 +4933,7 @@ msgstr ""
 
 #. translators: %s: field key.
 #: src/Registry/Rules/ListingRules.php:134
-#: src/Registry/Validator.php:422
+#: src/Registry/Validator.php:427
 #, php-format
 msgid "Field \"%s\" is not defined on this content type."
 msgstr ""
@@ -3730,237 +4974,277 @@ msgstr ""
 
 #. translators: %d: maximum key length.
 #: src/Registry/Rules/OptionsPageRules.php:204
-#: src/Registry/Validator.php:943
+#: src/Registry/Validator.php:948
 #, php-format
 msgid "Key is longer than %d characters."
 msgstr ""
 
-#: src/Registry/SiteDefinitions.php:98
+#: src/Registry/SiteDefinitions.php:107
 msgid "The form was not accepted by the registry."
 msgstr ""
 
-#: src/Registry/SiteDefinitions.php:99
+#: src/Registry/SiteDefinitions.php:108
 msgid "The automation was not accepted by the registry."
 msgstr ""
 
 #. translators: %s: form key.
-#: src/Registry/SiteDefinitions.php:128
+#: src/Registry/SiteDefinitions.php:139
 #, php-format
 msgid "No site form with key \"%s\"."
 msgstr ""
 
 #. translators: %s: automation key.
-#: src/Registry/SiteDefinitions.php:130
+#: src/Registry/SiteDefinitions.php:141
 #, php-format
 msgid "No site automation with key \"%s\"."
 msgstr ""
 
 #. translators: %s: form key.
-#: src/Registry/SiteDefinitions.php:193
+#: src/Registry/SiteDefinitions.php:244
 #, php-format
 msgid "Form \"%s\" is defined by a file package and is read-only here. Duplicate it under a new key instead."
 msgstr ""
 
 #. translators: %s: automation key.
-#: src/Registry/SiteDefinitions.php:195
+#: src/Registry/SiteDefinitions.php:246
 #, php-format
 msgid "Automation \"%s\" is defined by a file package and is read-only here. Duplicate it under a new key instead."
 msgstr ""
 
+#. translators: %s: property name in words, such as "Subject" or "Content type".
+#: src/Registry/SiteDefinitions.php:271
+#, php-format
+msgid "Required: %s."
+msgstr ""
+
 #. translators: %s: taxonomy key.
-#: src/Registry/Validator.php:286
+#: src/Registry/Validator.php:291
 #, php-format
 msgid "Taxonomy \"%s\" is not defined."
 msgstr ""
 
 #. translators: 1: meta key, 2: field key, 3: content type key.
-#: src/Registry/Validator.php:313
+#: src/Registry/Validator.php:318
 #, php-format
 msgid "Meta key \"%1$s\" is already used by field \"%2$s\" on content type \"%3$s\"."
 msgstr ""
 
 #. translators: %s: field key.
-#: src/Registry/Validator.php:430
+#: src/Registry/Validator.php:435
 #, php-format
 msgid "Field \"%s\" is private, so a public field cannot depend on it: whether the field shows would reveal the private value."
 msgstr ""
 
 #. translators: %s: field key.
-#: src/Registry/Validator.php:470
+#: src/Registry/Validator.php:475
 #, php-format
 msgid "Field key \"%s\" is reserved: record events and automation paths use it for the post's own id, status and type."
 msgstr ""
 
 #. translators: %s: property name.
-#: src/Registry/Validator.php:504
+#: src/Registry/Validator.php:509
 #, php-format
 msgid "\"%s\" is not allowed in options page fields (settings screens have no conditions or storage mapping)."
 msgstr ""
 
-#: src/Registry/Validator.php:514
+#: src/Registry/Validator.php:519
 msgid "\"max_size_mb\" must be greater than 0."
 msgstr ""
 
-#: src/Registry/Validator.php:527
+#: src/Registry/Validator.php:532
 msgid "Post fields need \"post_type\"."
 msgstr ""
 
-#: src/Registry/Validator.php:530
+#: src/Registry/Validator.php:535
 msgid "\"post_type\" is only allowed on post fields."
 msgstr ""
 
-#: src/Registry/Validator.php:533
+#: src/Registry/Validator.php:538
 msgid "File fields need \"accept\" (the allowed file extensions)."
 msgstr ""
 
 #. translators: %s: property name.
-#: src/Registry/Validator.php:538
+#: src/Registry/Validator.php:543
 #, php-format
 msgid "\"%s\" is only allowed on file fields."
 msgstr ""
 
-#: src/Registry/Validator.php:547
+#: src/Registry/Validator.php:552
 msgid "\"meta_key\" applies only to meta storage."
 msgstr ""
 
-#: src/Registry/Validator.php:550
+#: src/Registry/Validator.php:555
 msgid "Private fields need a protected meta key (starting with \"_\")."
 msgstr ""
 
-#: src/Registry/Validator.php:553
+#: src/Registry/Validator.php:558
 msgid "Private fields cannot be stored in post_title or post_content: those columns are public (REST, feeds, search, the theme). Use meta storage."
 msgstr ""
 
-#: src/Registry/Validator.php:557
+#: src/Registry/Validator.php:562
 msgid "Select fields need \"options\"."
 msgstr ""
 
-#: src/Registry/Validator.php:560
+#: src/Registry/Validator.php:565
 msgid "\"options\" is only allowed on select fields."
 msgstr ""
 
 #. translators: %s: field type.
-#: src/Registry/Validator.php:569
+#: src/Registry/Validator.php:574
 #, php-format
 msgid "Default does not match field type \"%s\"."
 msgstr ""
 
 #. translators: 1: validation rule, 2: field type.
-#: src/Registry/Validator.php:587
+#: src/Registry/Validator.php:592
 #, php-format
 msgid "Rule \"%1$s\" does not apply to %2$s fields."
 msgstr ""
 
-#: src/Registry/Validator.php:603
+#: src/Registry/Validator.php:608
 msgid "Field type \"post\" is only allowed on options pages. Link records with a relationship instead."
 msgstr ""
 
-#: src/Registry/Validator.php:666
+#: src/Registry/Validator.php:671
 msgid "A relationship must link two different content types."
 msgstr ""
 
-#: src/Registry/Validator.php:679
+#: src/Registry/Validator.php:684
 msgid "Table storage is not supported yet; use \"meta\"."
 msgstr ""
 
-#: src/Registry/Validator.php:796
+#: src/Registry/Validator.php:801
 msgid "Term slugs use lowercase letters, digits and single hyphens."
 msgstr ""
 
 #. translators: %s: property name.
-#: src/Registry/Validator.php:823
+#: src/Registry/Validator.php:828
 #, php-format
 msgid "Missing required property \"%s\"."
 msgstr ""
 
 #. translators: %s: property name.
-#: src/Registry/Validator.php:831
+#: src/Registry/Validator.php:836
 #, php-format
 msgid "Unknown property \"%s\"."
 msgstr ""
 
-#: src/Registry/Validator.php:853
+#: src/Registry/Validator.php:858
 msgid "an object"
 msgstr ""
 
-#: src/Registry/Validator.php:854
+#: src/Registry/Validator.php:859
 msgid "a list"
 msgstr ""
 
-#: src/Registry/Validator.php:855
+#: src/Registry/Validator.php:860
 msgid "a non-empty string"
 msgstr ""
 
-#: src/Registry/Validator.php:856
+#: src/Registry/Validator.php:861
 msgid "true or false"
 msgstr ""
 
-#: src/Registry/Validator.php:857
+#: src/Registry/Validator.php:862
 msgid "a non-negative integer"
 msgstr ""
 
-#: src/Registry/Validator.php:858
+#: src/Registry/Validator.php:863
 msgid "a number"
 msgstr ""
 
-#: src/Registry/Validator.php:859
+#: src/Registry/Validator.php:864
 msgid "a string, number or boolean"
 msgstr ""
 
 #. translators: %s: expected type, such as "a non-empty string".
-#: src/Registry/Validator.php:864
+#: src/Registry/Validator.php:869
 #, php-format
 msgid "Expected %s."
 msgstr ""
 
 #. translators: %s: comma-separated allowed values.
-#: src/Registry/Validator.php:880
+#: src/Registry/Validator.php:885
 #, php-format
 msgid "Expected one of: %s."
 msgstr ""
 
 #. translators: 1: format found, 2: supported format.
-#: src/Registry/Validator.php:895
+#: src/Registry/Validator.php:900
 #, php-format
 msgid "Format %1$d is not supported; expected %2$d."
 msgstr ""
 
-#: src/Registry/Validator.php:907
+#: src/Registry/Validator.php:912
 msgid "Meta keys use letters, digits and underscores, optionally after one leading underscore."
 msgstr ""
 
-#: src/Registry/Validator.php:923
+#: src/Registry/Validator.php:928
 msgid "Keys use lowercase letters, digits and underscores, and start with a letter."
 msgstr ""
 
 #. translators: %s: key.
-#: src/Registry/Validator.php:947
+#: src/Registry/Validator.php:952
 #, php-format
 msgid "\"%s\" is reserved by WordPress."
 msgstr ""
 
-#: src/Registry/Validator.php:959
+#. translators: %s: key.
+#: src/Registry/Validator.php:955
+#, php-format
+msgid "\"%s\" is reserved: keys starting pegwork_ belong to Pegwork itself (such as pegwork_form and pegwork_automation)."
+msgstr ""
+
+#: src/Registry/Validator.php:967
 msgid "Version must be semver, such as 1.2.0."
 msgstr ""
 
-#: src/Registry/Validator.php:975
+#: src/Registry/Validator.php:983
 msgid "Pattern is not a valid regular expression."
 msgstr ""
 
 #. translators: %s: duplicated value.
-#: src/Registry/Validator.php:1027
+#: src/Registry/Validator.php:1035
 #, php-format
 msgid "Duplicate \"%s\"."
 msgstr ""
 
-#: src/Registry/Validator.php:1041
+#: src/Registry/Validator.php:1049
 msgid "PHP objects and callables are not allowed in a schema."
 msgstr ""
 
 #. translators: %s: property name.
-#: src/Registry/Validator.php:1051
+#: src/Registry/Validator.php:1059
 #, php-format
 msgid "\"%s\" looks like a PHP callable; callables are not allowed in a schema."
+msgstr ""
+
+#: assets/build/automation-actions.js:1
+msgid "View run"
+msgstr ""
+
+#: assets/build/automation-actions.js:1
+msgid "The automation could not be started."
+msgstr ""
+
+#. translators: 1: button text such as "Resend thank-you", 2: record title.
+#: assets/build/automation-actions.js:2
+#, js-format
+msgid "%1$s for %2$s?"
+msgstr ""
+
+#: assets/build/automation-actions.js:2
+msgid "It uses the last saved version; unsaved changes are not included."
+msgstr ""
+
+#: assets/build/automation-actions.js:2
+msgid "Save this record first to run an automation on it."
+msgstr ""
+
+#. translators: %d: record ID.
+#: assets/build/automation-actions.js:3
+#, js-format
+msgid "record #%d"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
@@ -3980,18 +5264,42 @@ msgid "Call webhook"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:41
+#: assets/build/automation-builder.js:45
 msgid "Wait"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
-#: assets/build/automation-builder.js:20
 msgid "Continue only if"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Decision"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Get a record"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Find records"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Link records"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Repeat for each"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Move to trash"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Start another automation"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
@@ -4064,6 +5372,8 @@ msgid "changed"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:2
+#: assets/build/automation-builder.js:39
 msgid "Record ID"
 msgstr ""
 
@@ -4092,12 +5402,12 @@ msgid "Site address"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
-#: assets/build/automation-builder.js:17
+#: assets/build/automation-builder.js:34
 msgid "Today"
 msgstr ""
 
 #: assets/build/automation-builder.js:1
-#: assets/build/automation-builder.js:17
+#: assets/build/automation-builder.js:34
 msgid "Now"
 msgstr ""
 
@@ -4105,26 +5415,135 @@ msgstr ""
 msgid "Run ID"
 msgstr ""
 
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:39
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
+#: assets/build/automation-builder.js:44
+#: assets/build/filters-editor.js:1
+#: assets/build/listings-editor.js:7
+msgid "Content type"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Status before"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "New status"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Changed by (user ID)"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Started by (user ID)"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+msgid "Started from"
+msgstr ""
+
+#: assets/build/automation-builder.js:1
+#: assets/build/automation-builder.js:40
+msgid "ID"
+msgstr ""
+
 #. translators: %s: field label.
+#: assets/build/automation-builder.js:2
+#, js-format
+msgid "Total %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Found"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Items repeated"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Number found"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Item number"
+msgstr ""
+
+#: assets/build/automation-builder.js:2
+msgid "Error code"
+msgstr ""
+
+#. translators: 1: output name, 2: step ID.
+#. translators: 1: group name, 2: step ID.
 #: assets/build/automation-builder.js:3
+#: assets/build/automation-builder.js:9
+#, js-format
+msgid "%1$s (from %2$s)"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:5
 #, js-format
 msgid "%s (before the change)"
 msgstr ""
 
 #. translators: %s: form field label.
-#: assets/build/automation-builder.js:5
+#: assets/build/automation-builder.js:7
 #, js-format
 msgid "%s (as submitted)"
 msgstr ""
 
 #. translators: %s: field name.
-#: assets/build/automation-builder.js:5
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:7
+#: assets/build/automation-builder.js:41
 #, js-format
 msgid "%s (private)"
 msgstr ""
 
-#. translators: %d: number of years.
+#. translators: %s: content type label.
 #: assets/build/automation-builder.js:7
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "This %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:7
+msgid "This record"
+msgstr ""
+
+#. translators: 1: content type label, 2: loop step ID.
+#: assets/build/automation-builder.js:8
+#: assets/build/automation-builder.js:20
+#, js-format
+msgid "Each %1$s (in %2$s)"
+msgstr ""
+
+#: assets/build/automation-builder.js:8
+msgid "item"
+msgstr ""
+
+#: assets/build/automation-builder.js:8
+msgid "Totals"
+msgstr ""
+
+#: assets/build/automation-builder.js:9
+msgid "Time"
+msgstr ""
+
+#: assets/build/automation-builder.js:9
+msgid "Options"
+msgstr ""
+
+#: assets/build/automation-builder.js:9
+msgid "Links"
+msgstr ""
+
+#. translators: %d: number of years.
+#: assets/build/automation-builder.js:11
 #, js-format
 msgid "%d year"
 msgid_plural "%d years"
@@ -4132,7 +5551,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of months.
-#: assets/build/automation-builder.js:9
+#: assets/build/automation-builder.js:13
 #, js-format
 msgid "%d month"
 msgid_plural "%d months"
@@ -4140,7 +5559,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of weeks.
-#: assets/build/automation-builder.js:11
+#: assets/build/automation-builder.js:15
 #, js-format
 msgid "%d week"
 msgid_plural "%d weeks"
@@ -4148,7 +5567,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of hours.
-#: assets/build/automation-builder.js:13
+#: assets/build/automation-builder.js:17
 #, js-format
 msgid "%d hour"
 msgid_plural "%d hours"
@@ -4156,801 +5575,129 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of days.
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 #, js-format
 msgid "%d day"
 msgid_plural "%d days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 msgid "now"
 msgstr ""
 
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 msgid "today"
 msgstr ""
 
 #. translators: 1: today or now, 2: duration such as "12 months".
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 #, js-format
 msgid "%1$s minus %2$s"
 msgstr ""
 
 #. translators: 1: today or now, 2: duration such as "12 months".
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 #, js-format
 msgid "%1$s plus %2$s"
 msgstr ""
 
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 msgid "true"
 msgstr ""
 
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 msgid "false"
 msgstr ""
 
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 msgid "and"
 msgstr ""
 
-#: assets/build/automation-builder.js:15
+#: assets/build/automation-builder.js:19
 msgid "or"
 msgstr ""
 
 #. translators: %s: a condition in words.
-#: assets/build/automation-builder.js:16
+#: assets/build/automation-builder.js:20
 #, js-format
 msgid "not (%s)"
 msgstr ""
 
-#. translators: %s: field label.
-#: assets/build/automation-builder.js:17
-#, js-format
-msgid "Insert merge tag into %s"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Insert merge tag"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Merge tag"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Format as a date"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Text when empty (optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Insert"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Hours"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Days"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Weeks"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Months"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Years"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "ISO 8601 duration"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Amount"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Unit"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Sample record"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Type to search records by title."
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Sample record ID"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Sample payload (JSON)"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Such as {\"kind\": \"a\"}. Read as trigger.payload.* (webhooks) or trigger.* (other events)."
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "The sample payload is not a JSON object."
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "All of these are true"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Any of these is true"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Not all of these are true"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "None of these are true"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "This is not true"
-msgstr ""
-
-#. translators: %s: condition name.
-#: assets/build/automation-builder.js:17
-#, js-format
-msgid "Values of %s"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Values, separated by commas"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Compare with"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "A value"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Another field"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Today or now, plus or minus"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Other field"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Offset (ISO 8601)"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "Plus or minus"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "plus"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-msgid "minus"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
-#: assets/build/listings-editor.js:2
-msgid "Value"
-msgstr ""
-
-#: assets/build/automation-builder.js:17
 #: assets/build/automation-builder.js:20
-msgid "true (checked)"
+#: assets/build/automation-builder.js:21
+msgid "this record"
 msgstr ""
 
-#: assets/build/automation-builder.js:17
+#. translators: %s: content type label.
 #: assets/build/automation-builder.js:20
-msgid "false (not checked)"
-msgstr ""
-
-#. translators: %d: condition number.
-#. translators: %d: condition number
-#: assets/build/automation-builder.js:18
-#: assets/build/listings-editor.js:3
-#, js-format
-msgid "Condition %d"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Field"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Another path…"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Path"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Such as trigger.payload.kind."
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-#: assets/build/listings-editor.js:3
-msgid "Operator"
-msgstr ""
-
-#. translators: 1: condition number, 2: condition in words.
-#: assets/build/automation-builder.js:18
-#, js-format
-msgid "Remove condition %1$d: %2$s"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Remove Not"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Match"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-#: assets/build/listings-editor.js:7
-msgid "Add condition"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Add group"
-msgstr ""
-
-#. translators: 1: group number, 2: group legend.
-#: assets/build/automation-builder.js:18
-#, js-format
-msgid "Remove group %1$d: %2$s"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "No condition yet."
-msgstr ""
-
-#. translators: 1: maximum depth, 2: maximum conditions.
-#: assets/build/automation-builder.js:18
-#, js-format
-msgid "Conditions nest at most %1$d levels deep, with at most %2$d parts."
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-msgid "Main steps"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:27
-msgid "Otherwise"
-msgstr ""
-
-#: assets/build/automation-builder.js:18
-#: assets/build/automation-builder.js:27
-msgid "(unnamed branch)"
-msgstr ""
-
-#. translators: 1: decision id, 2: branch label.
-#. translators: 1: content type label, 2: field or taxonomy label.
-#. translators: 1: content type label, 2: field label.
-#: assets/build/automation-builder.js:19
-#: assets/build/forms-builder.js:12
-#: assets/build/forms-builder.js:23
-#, js-format
-msgid "%1$s: %2$s"
-msgstr ""
-
-#: assets/build/automation-builder.js:19
-#: assets/build/automation-builder.js:27
-msgid "decision"
-msgstr ""
-
-#: assets/build/automation-builder.js:19
-msgid "Move to branch"
-msgstr ""
-
-#. translators: %s: branch name.
-#: assets/build/automation-builder.js:20
-#, js-format
-msgid "Moved to %s."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Choose a sample record to see the preview."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "The preview could not be shown."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Hide preview"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Show preview"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:24
-msgid "Preview"
-msgstr ""
-
-#. translators: %s: branch label.
-#. translators: %s: condition in words.
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:27
-#, js-format
-msgid "If %s"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Test run"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Walks the saved automation with a sample and shows what each step would do. Nothing is sent, written or logged."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "The test runs the saved version. Save to test your latest changes."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "The test run failed."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Run test"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Save the automation first."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Test run result"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Values"
-msgstr ""
-
-#. translators: %s: field name.
-#: assets/build/automation-builder.js:20
-#, js-format
-msgid "Value of %s"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "(clear the field)"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Term slugs, separated by commas."
-msgstr ""
-
-#. translators: %d: row number.
-#: assets/build/automation-builder.js:20
-#, js-format
-msgid "Field %d"
-msgstr ""
-
-#. translators: %d: row number.
-#: assets/build/automation-builder.js:20
-#, js-format
-msgid "Field key %d"
-msgstr ""
-
-#. translators: 1: row number, 2: field key.
-#: assets/build/automation-builder.js:20
-#, js-format
-msgid "Remove value %1$d: %2$s"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Add value"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Addresses separated by commas, a merge tag such as {{record.email}}, or {option:page.field} for a private options field."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Reply-To (optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:24
-#: assets/build/forms-builder.js:9
-#: assets/build/forms-builder.js:10
-msgid "Subject"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:24
-msgid "Text body"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "HTML body (optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Sent beside the text body. Without the unfiltered HTML capability, unsafe markup is removed on save."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Record (optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Empty updates the record the trigger is about. Or a record ID, such as {{steps.make_task.record_id}}."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/automation-builder.js:23
-#: assets/build/filters-editor.js:1
-#: assets/build/listings-editor.js:7
-msgid "Content type"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Choose a content type"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/editor-panel.js:2
-msgid "Draft"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/forms-builder.js:7
-msgid "Pending review"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/forms-builder.js:7
-msgid "Published"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-#: assets/build/forms-builder.js:5
-msgid "URL"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "http:// or https://. Private fields cannot appear here."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Record fields to send"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Timeout (seconds, optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Wait for"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "From 1 hour to 2 years."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Add the condition the run needs to go on. When it is false, the run stops here."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Advanced"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Step ID"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Runs waiting at this step fail if you change its ID."
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Retry when the step fails"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Retries (empty for the default)"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "Wait between tries"
-msgstr ""
-
-#: assets/build/automation-builder.js:20
-msgid "ISO 8601 durations separated by commas, such as PT1M, PT10M, PT1H."
-msgstr ""
-
-#. translators: %d: branch number.
 #: assets/build/automation-builder.js:21
 #, js-format
-msgid "Path %d"
+msgid "this %s"
 msgstr ""
 
+#. translators: 1: content type label, 2: step ID.
+#. translators: 1: content type plural label, 2: step ID.
+#: assets/build/automation-builder.js:20
+#: assets/build/automation-builder.js:29
+#, js-format
+msgid "%1$s from %2$s"
+msgstr ""
+
+#. translators: 1: content type label, 2: record ID template.
 #: assets/build/automation-builder.js:21
-msgid "Remove otherwise"
+#, js-format
+msgid "Get %1$s by ID %2$s"
 msgstr ""
 
-#: assets/build/automation-builder.js:21
-msgid "Add otherwise"
-msgstr ""
-
-#. translators: %s: branch name.
+#. translators: 1: content type label, 2: relationship label, 3: record in words.
 #: assets/build/automation-builder.js:21
 #, js-format
-msgid "Add step to %s"
+msgid "Get %1$s by relationship %2$s of %3$s"
 msgstr ""
 
-#. translators: %s: package ID.
-#: assets/build/automation-builder.js:22
+#. translators: 1: content type plural label, 2: record in words.
+#: assets/build/automation-builder.js:21
 #, js-format
-msgid "This automation comes from the file package \"%s\" and is read-only here."
+msgid "Find %1$s linked to %2$s"
 msgstr ""
 
-#. translators: %d: number of runs.
+#. translators: 1: read in words, 2: filter in words.
 #: assets/build/automation-builder.js:23
 #, js-format
-msgid "%d run is in progress. It continues from its current step; a run at a step you removed will fail."
-msgid_plural "%d runs are in progress. They continue from their current step; runs at a step you removed will fail."
-msgstr[0] ""
-msgstr[1] ""
-
-#: assets/build/automation-builder.js:23
-msgid "Locked: runs and the log use this key."
+msgid "%1$s, where %2$s"
 msgstr ""
 
+#. translators: 1: content type label, 2: filter in words.
 #: assets/build/automation-builder.js:23
-msgid "Lowercase letters, digits and underscores. Empty uses the label. It cannot change after the first save."
+#, js-format
+msgid "Get %1$s where %2$s"
 msgstr ""
 
+#. translators: 1: content type plural label, 2: filter in words.
 #: assets/build/automation-builder.js:23
-msgid "Description (optional)"
+#, js-format
+msgid "Find %1$s where %2$s"
 msgstr ""
 
-#: assets/build/automation-builder.js:23
-msgid "Active"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Runs when its trigger fires."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Off: nothing starts a run. New automations start off."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "This site turns it on in the Automations list, whatever this setting says."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "This site turns it off in the Automations list, whatever this setting says."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Open the Automations list"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Any content type"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "When a record is"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Updated"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Changed status"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Deleted"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-#: assets/build/forms-editor.js:1
-msgid "Choose a form"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "When an entry is"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-#: assets/build/forms-builder.js:10
-msgid "Confirmed by email"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Every"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Hour"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Day"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Week"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "At (site time, optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Once for each record of a type"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Records of"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "With status"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "At most this many runs per firing (optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Only records where"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Every record with those statuses."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Senders post signed JSON to:"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Show or rotate the signing secret with WP-CLI:"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "The inbound URL appears here after the first save."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Event name"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Dot-separated, such as shop.order_paid. Its payload is trigger.*."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Starts on"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Choose a trigger"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Record event"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Form event"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Other event"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Only when"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Every event starts a run."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Run once per (optional)"
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "A run starts only once for each value, such as {{record.id}}."
-msgstr ""
-
-#: assets/build/automation-builder.js:23
-msgid "Signed links (edit them in the JSON file)"
-msgstr ""
-
-#. translators: 1: duration, 2: number of steps.
+#. translators: 1: read in words, 2: field labels.
 #: assets/build/automation-builder.js:24
 #, js-format
-msgid "expires after %1$s, %2$d step"
-msgid_plural "expires after %1$s, %2$d steps"
-msgstr[0] ""
-msgstr[1] ""
+msgid "%1$s: total %2$s"
+msgstr ""
 
+#. translators: 1: content type label, 2: content type label, 3: add or remove.
 #: assets/build/automation-builder.js:24
-#: assets/build/forms-builder.js:11
-msgid "Save"
+#, js-format
+msgid "Link %1$s to %2$s (%3$s)"
 msgstr ""
 
 #: assets/build/automation-builder.js:24
-msgid "Ready to save this automation?"
+msgid "remove"
 msgstr ""
 
 #: assets/build/automation-builder.js:24
-msgid "Saving checks the automation and adds it to this site. New automations start off."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Sends an email built from merge tags."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Writes fields of the record, or of a record by ID."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Creates a record of a content type."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Posts public record fields to a URL, signed."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Pauses the run, then continues."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Stops the run unless a condition holds."
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "Automation step"
-msgstr ""
-
-#: assets/build/automation-builder.js:24
-msgid "One step of the automation."
+msgid "add"
 msgstr ""
 
 #. translators: 1: recipient, 2: subject.
@@ -4959,188 +5706,1451 @@ msgstr ""
 msgid "Email to %1$s: %2$s"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
+#. translators: %s: role names.
+#: assets/build/automation-builder.js:25
+#, js-format
+msgid "everyone with role %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:25
+msgctxt "between role names"
+msgid "and"
+msgstr ""
+
+#: assets/build/automation-builder.js:25
 msgid "(no recipient)"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:25
 msgid "(no subject)"
 msgstr ""
 
 #. translators: 1: record ID template, 2: field keys.
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:25
 #, js-format
 msgid "Update record %1$s: %2$s"
 msgstr ""
 
 #. translators: %s: field keys.
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:25
 #, js-format
 msgid "Update this record: %s"
 msgstr ""
 
 #. translators: 1: content type label, 2: field keys.
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:25
 #, js-format
 msgid "Create %1$s: %2$s"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:25
 msgid "(no values)"
 msgstr ""
 
 #. translators: %s: host name.
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:25
 #, js-format
 msgid "Send to %s"
 msgstr ""
 
+#. translators: %s: target such as "3 days before Due on at 09:00".
+#: assets/build/automation-builder.js:26
+#, js-format
+msgid "Wait until %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:26
+msgid "(no date field)"
+msgstr ""
+
 #. translators: %s: duration such as "30 days".
-#: assets/build/automation-builder.js:24
+#: assets/build/automation-builder.js:28
 #, js-format
 msgid "Wait %s, then continue"
 msgstr ""
 
-#. translators: %s: condition in words.
-#: assets/build/automation-builder.js:24
+#. translators: %s: record in words, such as "Each Volunteer (in each_old)".
+#: assets/build/automation-builder.js:28
 #, js-format
-msgid "Continue only if %s"
+msgid "Move %s to the trash"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
-msgid "HTML body"
+#. translators: 1: automation label, 2: record in words, such as "this Gift".
+#: assets/build/automation-builder.js:28
+#, js-format
+msgid "Start \"%1$s\" for %2$s (runs separately)"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
-msgid "Update"
+#. translators: %s: automation label.
+#: assets/build/automation-builder.js:28
+#, js-format
+msgid "Start \"%s\" (runs separately)"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
-msgid "Create"
+#: assets/build/automation-builder.js:28
+msgid "Continue with this item only if"
 msgstr ""
 
-#: assets/build/automation-builder.js:24
-msgid "Check"
+#. translators: 1: content type label, 2: step ID, 3: most items.
+#: assets/build/automation-builder.js:30
+#, js-format
+msgid "For each %1$s from %2$s (at most %3$d)"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:31
+#, js-format
+msgid "Insert merge tag into %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Insert merge tag"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Merge tag"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Format as a date"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Plus or minus a duration"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Plus"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+#: assets/build/automation-builder.js:34
+msgid "Amount"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+#: assets/build/automation-builder.js:34
+msgid "Unit"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Format the number"
+msgstr ""
+
+#: assets/build/automation-builder.js:31
+msgid "Formatted (1,250 or 1,250.50)"
+msgstr ""
+
+#. translators: %d: number of decimal places.
+#: assets/build/automation-builder.js:32
+#, js-format
+msgid "Formatted, %d decimal place"
+msgid_plural "Formatted, %d decimal places"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:32
+msgid "Text when empty (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:32
+msgid "Insert"
+msgstr ""
+
+#: assets/build/automation-builder.js:32
+msgid "Insert list of records"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:33
+#, js-format
+msgid "Insert list of records into %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:33
+msgid "List"
+msgstr ""
+
+#: assets/build/automation-builder.js:33
+msgid "One line per record, with its first field. Inside the block, item tags read that record; text after {{else}} shows when the list is empty."
+msgstr ""
+
+#: assets/build/automation-builder.js:33
+msgid "Insert list"
+msgstr ""
+
+#: assets/build/automation-builder.js:33
+msgid "Add a role"
+msgstr ""
+
+#. translators: %s: field label.
+#: assets/build/automation-builder.js:34
+#, js-format
+msgid "Add a role to %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Role"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Everyone with the role when it sends, in Bcc. The log shows how many, never who."
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Add role"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Hours"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Days"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Weeks"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Months"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Years"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "ISO 8601 duration"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Sample record"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Type to search records by title."
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Sample record ID"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Sample payload (JSON)"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Such as {\"kind\": \"a\"}. Read as trigger.payload.* (webhooks) or trigger.* (other events)."
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "The sample payload is not a JSON object."
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "All of these are true"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Any of these is true"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Not all of these are true"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "None of these are true"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "This is not true"
+msgstr ""
+
+#. translators: %s: condition name.
+#: assets/build/automation-builder.js:34
+#, js-format
+msgid "Values of %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Values, separated by commas"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Compare with"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "A value"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Another value"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Another field"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Today or now, plus or minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Other value"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Other field"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Offset (ISO 8601)"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "Plus or minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "plus"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+msgid "minus"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+#: assets/build/listings-editor.js:2
+msgid "Value"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+#: assets/build/automation-builder.js:41
+msgid "true (checked)"
+msgstr ""
+
+#: assets/build/automation-builder.js:34
+#: assets/build/automation-builder.js:41
+msgid "false (not checked)"
+msgstr ""
+
+#. translators: %d: condition number.
+#. translators: %d: condition number
+#: assets/build/automation-builder.js:35
+#: assets/build/listings-editor.js:3
+#, js-format
+msgid "Condition %d"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Field"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Another path…"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Path"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Such as trigger.payload.kind."
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+#: assets/build/listings-editor.js:3
+msgid "Operator"
+msgstr ""
+
+#. translators: 1: condition number, 2: condition in words.
+#: assets/build/automation-builder.js:35
+#, js-format
+msgid "Remove condition %1$d: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Remove Not"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Match"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Add filter"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+#: assets/build/listings-editor.js:7
+msgid "Add condition"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Add group"
+msgstr ""
+
+#. translators: 1: group number, 2: group legend.
+#: assets/build/automation-builder.js:35
+#, js-format
+msgid "Remove group %1$d: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "No condition yet."
+msgstr ""
+
+#. translators: 1: maximum depth, 2: maximum conditions.
+#: assets/build/automation-builder.js:35
+#, js-format
+msgid "Conditions nest at most %1$d levels deep, with at most %2$d parts."
+msgstr ""
+
+#: assets/build/automation-builder.js:35
+msgid "Move to"
+msgstr ""
+
+#. translators: %s: loop step id.
+#: assets/build/automation-builder.js:35
+#: assets/build/automation-builder.js:45
+#, js-format
+msgid "Repeat %s"
+msgstr ""
+
+#. translators: 1: decision id, 2: branch label.
+#. translators: 1: content type label, 2: field or taxonomy label.
+#. translators: 1: content type label, 2: field label.
+#: assets/build/automation-builder.js:36
+#: assets/build/forms-builder.js:12
+#: assets/build/forms-builder.js:23
+#, js-format
+msgid "%1$s: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:36
+#: assets/build/automation-builder.js:48
+msgid "decision"
+msgstr ""
+
+#: assets/build/automation-builder.js:36
+#: assets/build/automation-builder.js:38
+#: assets/build/automation-builder.js:48
+msgid "Otherwise"
+msgstr ""
+
+#: assets/build/automation-builder.js:36
+#: assets/build/automation-builder.js:48
+msgid "(unnamed branch)"
+msgstr ""
+
+#: assets/build/automation-builder.js:36
+msgid "Main steps"
+msgstr ""
+
+#. translators: %s: step list name.
+#: assets/build/automation-builder.js:37
+#, js-format
+msgid "Moved to %s."
+msgstr ""
+
+#: assets/build/automation-builder.js:37
+msgid "Choose a sample record to see the preview."
+msgstr ""
+
+#: assets/build/automation-builder.js:37
+msgid "The preview could not be shown."
+msgstr ""
+
+#: assets/build/automation-builder.js:37
+msgid "Hide preview"
+msgstr ""
+
+#: assets/build/automation-builder.js:37
+msgid "Show preview"
+msgstr ""
+
+#: assets/build/automation-builder.js:37
+#: assets/build/automation-builder.js:45
+msgid "Preview"
+msgstr ""
+
+#. translators: 1: item number, 2: number of items, 3: content type label, 4: record ID, 5: record title.
+#: assets/build/automation-builder.js:38
+#, js-format
+msgid "Item %1$d of %2$d: %3$s %4$d \"%5$s\""
+msgstr ""
+
+#. translators: %s: branch label.
+#. translators: %s: condition in words.
+#: assets/build/automation-builder.js:38
+#: assets/build/automation-builder.js:48
+#, js-format
+msgid "If %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "Test run"
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "Walks the saved automation with a sample and shows what each step would do. Nothing is sent, written or logged."
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "The test runs the saved version. Save to test your latest changes."
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "The test run failed."
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "Run test"
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "Save the automation first."
+msgstr ""
+
+#: assets/build/automation-builder.js:38
+msgid "Test run result"
+msgstr ""
+
+#. translators: 1: relationship label, 2: "from" content type, 3: "to" content type.
+#: assets/build/automation-builder.js:39
+#, js-format
+msgid "%1$s (%2$s to %3$s)"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Relationship"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Its ID"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "A relationship"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+#: assets/build/automation-builder.js:40
+msgid "Matching fields"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "A relationship and matching fields"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Only when it was created (More options)"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
+msgid "Choose a content type"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Find the record by"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Find the records by"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "One ID, such as {{trigger.payload.gift_id}}. A record of another type is not found."
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Linked by"
+msgstr ""
+
+#: assets/build/automation-builder.js:39
+msgid "Of"
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "The ID of a %s record, such as {{record.id}}."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "The ID of the record at the other end, such as {{record.id}}."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Limit"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Records to load, 0 to 50 (10 when empty). Totals count every match, not only these."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Also total"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "More options"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Sort by"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Order"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Lowest or oldest first"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Highest or newest first"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Created before"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Created after"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "A date, a date from the run, or today plus or minus. Before is before that day; after is from the next day on. Empty: any time."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Include records that are"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
+#: assets/build/forms-builder.js:7
+msgid "Published"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+#: assets/build/editor-panel.js:2
+msgid "Scheduled"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
+#: assets/build/editor-panel.js:2
+msgid "Draft"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+#: assets/build/automation-builder.js:41
+#: assets/build/forms-builder.js:7
+msgid "Pending review"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Add"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+#: assets/build/editor-panel.js:7
+msgid "Remove"
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "From (a %s ID)"
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "Empty: this %s."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "A record ID, such as {{steps.task.record_id}}."
+msgstr ""
+
+#. translators: %s: content type label.
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "To (a %s ID)"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Which record"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "No record of this type is in reach here. Get a record, or Find records and Repeat for each, gives one."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Moves the record to the trash. WordPress deletes trashed items for good after 30 days (EMPTY_TRASH_DAYS). At most 50 per run."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Choose an automation"
+msgstr ""
+
+#. translators: 1: automation label, 2: content type label.
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "%1$s: on each %2$s"
+msgstr ""
+
+#. translators: %s: automation label.
+#: assets/build/automation-builder.js:40
+#, js-format
+msgid "%s: no record"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Enabled automations with a manual trigger. It runs separately, as its own run. This automation does not wait for it."
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "For record"
+msgstr ""
+
+#: assets/build/automation-builder.js:40
+msgid "Needs a trigger with a record of one content type that has a date field."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "For a length of time"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Until a date"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Wait for"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "From 1 hour to 2 years."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Date field"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Before or after"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Before"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "On the day"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "After"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "How long"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "At"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Time of day on the date, in site time, before the offset applies."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Values"
+msgstr ""
+
+#. translators: %s: field name.
+#: assets/build/automation-builder.js:41
+#, js-format
+msgid "Value of %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "(clear the field)"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Term slugs, separated by commas."
+msgstr ""
+
+#. translators: %d: row number.
+#: assets/build/automation-builder.js:41
+#, js-format
+msgid "Field %d"
+msgstr ""
+
+#. translators: %d: row number.
+#: assets/build/automation-builder.js:41
+#, js-format
+msgid "Field key %d"
+msgstr ""
+
+#. translators: 1: row number, 2: field key.
+#: assets/build/automation-builder.js:41
+#, js-format
+msgid "Remove value %1$d: %2$s"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Add value"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Addresses separated by commas, a merge tag such as {{record.email}}, {option:page.field} for a private options field, or {role:editor} for everyone with a role."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Reply-To (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+#: assets/build/automation-builder.js:45
+#: assets/build/forms-builder.js:9
+#: assets/build/forms-builder.js:10
+msgid "Subject"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+#: assets/build/automation-builder.js:45
+msgid "Text body"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "HTML body (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Sent beside the text body. Without the unfiltered HTML capability, unsafe markup is removed on save."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Record (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Empty updates the record the trigger is about. Or a record ID, such as {{steps.make_task.record_id}}."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+#: assets/build/forms-builder.js:5
+msgid "URL"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "http:// or https://. Private fields cannot appear here."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Record fields to send"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Timeout (seconds, optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Add the condition this item needs. When it is false, the loop goes on with the next item."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Add the condition the run needs to go on. When it is false, the run stops here."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Advanced"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Step ID"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Runs waiting at this step fail if you change its ID."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Retry when the step fails"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Retries (empty for the default)"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Wait between tries"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "ISO 8601 durations separated by commas, such as PT1M, PT10M, PT1H."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "If this step fails after retries"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Later steps can check Failed."
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Stop the run"
+msgstr ""
+
+#: assets/build/automation-builder.js:41
+msgid "Continue"
+msgstr ""
+
+#. translators: %d: branch number.
+#: assets/build/automation-builder.js:42
+#, js-format
+msgid "Path %d"
+msgstr ""
+
+#: assets/build/automation-builder.js:42
+msgid "Remove otherwise"
+msgstr ""
+
+#: assets/build/automation-builder.js:42
+msgid "Add otherwise"
 msgstr ""
 
 #. translators: %s: package ID.
-#: assets/build/automation-builder.js:25
+#: assets/build/automation-builder.js:43
+#, js-format
+msgid "This automation comes from the file package \"%s\" and is read-only here."
+msgstr ""
+
+#. translators: %d: number of runs.
+#: assets/build/automation-builder.js:44
+#, js-format
+msgid "%d run is in progress. It continues from its current step; a run at a step you removed will fail."
+msgid_plural "%d runs are in progress. They continue from their current step; runs at a step you removed will fail."
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:44
+msgid "Locked: runs and the log use this key."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Lowercase letters, digits and underscores. Empty uses the label. It cannot change after the first save."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Description (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Active"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Runs when its trigger fires."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Off: nothing starts a run. New automations start off."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "This site turns it on in the Automations list, whatever this setting says."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "This site turns it off in the Automations list, whatever this setting says."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Open the Automations list"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Any content type"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "When a record is"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Updated"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Changed status"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Deleted"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+#: assets/build/forms-editor.js:1
+msgid "Choose a form"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "When an entry is"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+#: assets/build/forms-builder.js:10
+msgid "Confirmed by email"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Every"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Hour"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Day"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Week"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "At (site time, optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Once for each record of a type"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Records of"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "With status"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "At most this many runs per firing (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Only records where"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Every record with those statuses."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Senders post signed JSON to:"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Show or rotate the signing secret with WP-CLI:"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "The inbound URL appears here after the first save."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "None: Run now on the Automations list"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "A button on the edit screen of these records runs it for that record."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "The run has no record. Start it with Run now on the Automations list."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Button text"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Such as \"Resend thank-you\". At most 40 characters."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Who can run it"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "It runs with this automation's full access: it may email people and read other records."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Administrators"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Anyone who can edit the record"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Event name"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Dot-separated, such as shop.order_paid. Its payload is trigger.*."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Starts on"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Choose a trigger"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Record event"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Form event"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Started by staff"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Other event"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Only when"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Staff can always run it. When this condition is false, the button says the automation does not apply."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Every event starts a run."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Run once per (optional)"
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "A run starts only once for each value, such as {{record.id}}."
+msgstr ""
+
+#: assets/build/automation-builder.js:44
+msgid "Signed links (read-only here, kept when you save)"
+msgstr ""
+
+#. translators: 1: duration, 2: number of steps.
+#: assets/build/automation-builder.js:45
+#, js-format
+msgid "expires after %1$s, %2$d step"
+msgid_plural "expires after %1$s, %2$d steps"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/automation-builder.js:45
+#: assets/build/forms-builder.js:11
+msgid "Save"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Ready to save this automation?"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Saving checks the automation and adds it to this site. New automations start off."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Sends an email built from merge tags."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Writes fields of the record, or of a record by ID."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Creates a record of a content type."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Posts public record fields to a URL, signed."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Pauses the run, then continues."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Stops the run unless a condition holds."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Reads one record: by ID, through a relationship, or by matching fields."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Counts and totals the matching records, and loads up to 50."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Adds or removes one relationship link."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Moves one record to the trash: this record, a record read before, or each item of a loop."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Starts a manual automation as its own run, and continues without waiting for it."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Automation step"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "One step of the automation."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "A schedule that runs once for each record cannot move records to the trash. Use a schedule without it, Find records and Repeat for each: at most 50 records a run."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "HTML body"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Checks the date again when it wakes. Waits for a date if it is empty."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Removes records"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Continues if it fails"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Update"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Create"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Check"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Get"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Find"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Repeat"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+#: assets/build/editor-panel.js:2
+msgid "Trash"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Start"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Runs its steps once for each record a Find records step loaded, then continues below."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Add step for each item"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "For each"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "The records a Find records step before this loaded (at most 50). The steps inside run once for each, in order; a wait or another loop cannot go inside."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Choose a list of records"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "No Find records step runs before this"
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+msgid "Choose the records to repeat for."
+msgstr ""
+
+#: assets/build/automation-builder.js:45
+#: assets/build/automation-builder.js:48
+msgid "Then continue below"
+msgstr ""
+
+#. translators: %s: package ID.
+#: assets/build/automation-builder.js:46
 #, js-format
 msgid "This automation comes from the file package \"%s\" and is read-only. Duplicate it to make a site automation you can change."
 msgstr ""
 
 #. translators: %d: number of problems.
-#: assets/build/automation-builder.js:26
+#: assets/build/automation-builder.js:47
 #, js-format
 msgid "%d problem stops this automation from saving. Each is shown at its step or setting."
 msgid_plural "%d problems stop this automation from saving. Each is shown at its step or setting."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/automation-builder.js:26
+#: assets/build/automation-builder.js:47
 msgid "Go to first error"
 msgstr ""
 
 #. translators: %d: number of runs.
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 #, js-format
 msgid "%d run is in progress. It continues from its current step when you save; a run at a step you removed will fail."
 msgid_plural "%d runs are in progress. They continue from their current step when you save; runs at a step you removed will fail."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Runs the steps of the first branch whose condition holds, else Otherwise, then continues below."
 msgstr ""
 
 #. translators: %s: decision id.
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 #, js-format
 msgid "Add branch to %s"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Runs the first branch whose condition holds."
 msgstr ""
 
-#: assets/build/automation-builder.js:27
-msgid "Then continue below"
-msgstr ""
-
 #. translators: %s: decision id.
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 #, js-format
 msgid "Decision %s"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "If / Otherwise"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "One condition: its steps, or the Otherwise steps."
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Path 1"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Choose a path"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Several conditions, checked in order; the first that holds runs."
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Path 2"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Branch"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "One branch of a decision."
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "(no condition yet)"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#. translators: %s: branch name.
+#: assets/build/automation-builder.js:48
+#, js-format
+msgid "Add step to %s"
+msgstr ""
+
+#: assets/build/automation-builder.js:48
 msgid "Runs when no branch above matches. Remove it from the decision toolbar."
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Branch name"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Shown in the run log. Unique within the decision."
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Run this branch when"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Every branch needs a condition."
 msgstr ""
 
 #. translators: %s: branch name.
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 #, js-format
 msgid "Name: %s"
 msgstr ""
 
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 msgid "Name:"
 msgstr ""
 
 #. translators: %s: branch label.
-#: assets/build/automation-builder.js:27
+#: assets/build/automation-builder.js:48
 #, js-format
 msgid "Branch %s"
 msgstr ""
@@ -5163,20 +7173,6 @@ msgstr ""
 
 #: assets/build/editor-panel.js:2
 msgid "Pending"
-msgstr ""
-
-#: assets/build/editor-panel.js:2
-msgid "Scheduled"
-msgstr ""
-
-#: assets/build/editor-panel.js:2
-msgid "Trash"
-msgstr ""
-
-#. translators: 1: record title, 2: status such as "Draft".
-#: assets/build/editor-panel.js:3
-#, js-format
-msgid "%1$s (%2$s)"
 msgstr ""
 
 #: assets/build/editor-panel.js:3
@@ -5219,10 +7215,6 @@ msgstr ""
 #: assets/build/editor-panel.js:7
 #, js-format
 msgid "Removed %s"
-msgstr ""
-
-#: assets/build/editor-panel.js:7
-msgid "Remove"
 msgstr ""
 
 #: assets/build/editor-panel.js:7
@@ -5953,6 +7945,10 @@ msgid "Next"
 msgstr ""
 
 #: assets/build/forms-view.js:17
+msgid "The spam check is still running. Wait a moment, then send the form again."
+msgstr ""
+
+#: assets/build/forms-view.js:17
 msgid "Sending"
 msgstr ""
 
@@ -6093,6 +8089,7 @@ msgstr ""
 
 #: modules/automation/blocks/automation-branch/block.json
 #: modules/automation/blocks/automation-decision/block.json
+#: modules/automation/blocks/automation-loop/block.json
 #: modules/automation/blocks/automation-step/block.json
 msgctxt "block keyword"
 msgid "automation"
@@ -6121,6 +8118,36 @@ msgstr ""
 #: modules/automation/blocks/automation-decision/block.json
 msgctxt "block keyword"
 msgid "path"
+msgstr ""
+
+#: modules/automation/blocks/automation-loop/block.json
+msgctxt "block title"
+msgid "Repeat for each"
+msgstr ""
+
+#: modules/automation/blocks/automation-loop/block.json
+msgctxt "block description"
+msgid "Runs its steps once for each record a Find records step loaded, then continues below."
+msgstr ""
+
+#: modules/automation/blocks/automation-loop/block.json
+msgctxt "block keyword"
+msgid "loop"
+msgstr ""
+
+#: modules/automation/blocks/automation-loop/block.json
+msgctxt "block keyword"
+msgid "repeat"
+msgstr ""
+
+#: modules/automation/blocks/automation-loop/block.json
+msgctxt "block keyword"
+msgid "each"
+msgstr ""
+
+#: modules/automation/blocks/automation-loop/block.json
+msgctxt "block keyword"
+msgid "list"
 msgstr ""
 
 #: modules/automation/blocks/automation-step/block.json
