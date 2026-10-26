@@ -2,14 +2,12 @@
 
 Module `automation` (`modules/automation/`, namespace `PegworkAutomation\`): runs the registry's automations (`docs/registry-reference.md#automations`) in the background, logs every run, and adds `wp pegwork automation` and Pegwork > Automations. Design: `docs/phase-4-design.md` sections 6 and 8 and its 2026-10-18 decisions. Uses only `Pegwork\Api` (Records, Module, `ADMIN_MENU`), `pegwork_registry()` and WordPress.
 
-What it does (Automation v3, plugin 0.3.0):
-- Triggers: record and form events, schedules (`for_each` sweeps), inbound webhooks with per-automation secrets, and `manual` (staff start it from the record editor, the list's Run now or `run`; [Manual trigger](#manual-trigger)).
-- Steps: `update_record`, `create_record`, `condition`, `decision` (branches run along the step tree; design `docs/phase-6-design.md` sections 1 to 3), `send_email`, `call_webhook` (with `record` for a record's public fields), `wait`, the reads `get_record` and `find_records`, `relate`, and `loop` ([Reads, relate and on_error](#reads-relate-and-on_error), [Loops](#loops); design `docs/automation-v3-design.md`). `on_error: continue` lets a run go on past a failed step. Automation v4 (in progress): `start_automation` ([Start another automation](#start-another-automation)).
+What it does (Automation v4, plugin 0.4.0):
+- Triggers: record and form events, schedules (`for_each` sweeps), inbound webhooks with per-automation secrets, and `manual` (staff start it from the record editor, the list's Run now, bulk Run on selected records or `run`; [Manual trigger](#manual-trigger), [Bulk Run](#bulk-run)).
+- Steps: `update_record`, `create_record`, `condition`, `decision` (branches run along the step tree; design `docs/phase-6-design.md` sections 1 to 3), `send_email` (with `{role:<slug>}` recipients in Bcc), `call_webhook` (with `record` for a record's public fields), `wait` (for a duration or until a date field; [Wait until a date](#wait-until-a-date)), the reads `get_record` and `find_records` (with `created`), `relate`, `loop`, `trash_record` ([Trash](#trash)) and `start_automation` ([Start another automation](#start-another-automation)) ([Reads, relate and on_error](#reads-relate-and-on_error), [Loops](#loops); designs `docs/automation-v3-design.md` and `docs/automation-v4-design.md`). `on_error: continue` lets a run go on past a failed step.
 - Templates: merge tags, the filters `| date`, `| default`, `| add` and `| number`, and `{{#each}}` blocks.
 - Runs: retries, signed links (`{{link.*}}`, the public link handler, link runs), WP-Cron wake-ups, maintenance, per-item delivery IDs and no default retries in loop bodies, a step limit of 600, and Schema 2 (`pegwork_run_steps.iteration`). A run of a definition the module cannot run in full (a step type without a handler; `Engine::unsupported()`, which guards a definition from a newer registry) fails with `unsupported_step` before its first step, so nothing is half done (no retry).
 - CLI `list`, `log`, `run`, `test`, `tick`, `retry`, `enable`, `disable` (`--now`, `--sync`), `link`, `link-key`, `secret`; admin screens (list, toggles, Run now, run log and detail grouped by branch and loop item, Retry) and the block editor ([Editor](#editor)) with Test run.
-
-Automation v4 (in progress, `docs/automation-v4-design.md`): `trash_record` runs ([Trash](#trash)).
 
 [Trying the BarnCRM example flows](#trying-the-barncrm-example-flows) runs every kind of flow on a test site.
 
@@ -450,7 +448,9 @@ To repeat the cycle use a new Project: the reactivation sets Last verified to th
 
 ## Trying the BarnCRM example flows
 
-The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM flows with reads") live in `tests/fixtures/valid/barn` (`README.md` there lists them), so this needs a dev checkout of the plugin (the release zip has no `tests/`): a throwaway site from `bin/e2e-local-site.sh start <name> <port>`, or any Local site whose `wp-content/plugins/pegwork` is a checkout. On an E2E site, first remove the `pegwork-e2e-barn.php` and `pegwork-e2e-manual.php` links from `wp-content/mu-plugins/` (they register the same `barn_*` types as a file package, so the import below would conflict). Mail: Local's Mailpit, or on an E2E site the forms mu-plugin's option `pegwork_e2e_mail` (`wp option get pegwork_e2e_mail --format=json`). The outputs quoted below are from a run on 2026-10-23 (site time UTC); IDs and dates differ on your site.
+The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM flows with reads") and `docs/automation-v4-design.md` ("Worked examples: BarnCRM flows") live in `tests/fixtures/valid/barn` (`README.md` there lists them), so this needs a dev checkout of the plugin (the release zip has no `tests/`): a throwaway site from `bin/e2e-local-site.sh start <name> <port>`, or any Local site whose `wp-content/plugins/pegwork` is a checkout. On an E2E site, first remove the `pegwork-e2e-barn.php` and `pegwork-e2e-manual.php` links from `wp-content/mu-plugins/` (they register the same `barn_*` types as a file package, so the import below would conflict). Mail: Local's Mailpit, or on an E2E site the forms mu-plugin's option `pegwork_e2e_mail` (`wp option get pegwork_e2e_mail --format=json`, Bcc in each mail's `headers`). The outputs quoted below are from a run on 2026-10-26 with plugin 0.4.0 (site time UTC); IDs and dates differ on your site.
+
+The site's own WP-Cron and `wp cron event run` can race (two processes writing the cron option at once), which loses a just-scheduled wake-up: a run then stays `queued`. `tick` picks up runs queued for over 10 minutes; to do it at once, `wp pegwork automation tick --now=+15minutes` (runs on that moved clock, so their later waits are 15 minutes later).
 
 1. Set up:
    ```sh
@@ -463,7 +463,7 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
    wp pegwork options set barn_settings volunteer_manager manager@example.org
    wp pegwork options set barn_settings donate_url https://example.org/donate
    ```
-   Expect `Success: 15 change(s): 15 added` (manifest, four types, `gift_donor` and `task_gift`, the form, six automations, the options page) and `wp pegwork automation list` showing `barn_donation_inbound` (webhook), `barn_gift_thanks` and `barn_lifetime_milestone` (record.created on barn_gift), `barn_resend_thanks` (manual, editors), `barn_tasks_digest` (every week at 08:00, next firing on the first day of the week) and `barn_volunteer_intake` enabled.
+   Expect `Success: 19 change(s): 19 added` (manifest, four types, `gift_donor` and `task_gift`, the form, ten automations, the options page) and `wp pegwork automation list` showing `barn_donation_inbound` (webhook), `barn_gift_receipt` and `barn_resend_thanks` (manual (barn_gift, editors)), `barn_gift_thanks` and `barn_lifetime_milestone` (record.created (barn_gift)), `barn_task_due_reminder` (record.created (barn_task)), `barn_tasks_digest` (every week at 08:00, next firing on the first day of the week), `barn_volunteer_intake` and `barn_volunteer_review` (form.submitted (barn_volunteer_signup)) and `barn_volunteer_retention` (every day at 03:30) enabled.
 2. A first gift, linked to its donor as the gift editor's Donor picker would (the Records API takes the relationship key in the same write):
    ```sh
    C=$(wp eval 'echo Pegwork\Api\Records::create( "barn_contact", array( "name" => "Ada Lovelace", "email" => "ada@example.org" ), "private" );')
@@ -472,11 +472,13 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
    wp pegwork automation log barn_gift_thanks
    wp pegwork automation log barn_lifetime_milestone
    ```
-   Expect the `barn_gift_thanks` run `waiting` at `gifts_later` (30 days), the `barn_lifetime_milestone` run `completed` with `stopped_at:reached`, the email "Thank you for your generous gift" to ada@example.org ("Dear Ada Lovelace, Thank you for your gift of $300 on October 23, 2026. ...") with Reply-To development@example.org, one published `barn_task` "Thank-you call: Ada Lovelace" due in two days (`wp post list --post_type=barn_task --post_status=any`), and the contact's `last_gift_on` today:
+   Expect the `barn_gift_thanks` run `waiting` at `gifts_later` (30 days), the `barn_lifetime_milestone` run `completed` with `stopped_at:reached`, the email "Thank you for your generous gift" to ada@example.org ("Dear Ada Lovelace, Thank you for your gift of $300 on October 26, 2026. ...") with Reply-To development@example.org, one published `barn_task` "Thank-you call: Ada Lovelace" due in two days (`wp post list --post_type=barn_task --post_status=any`), and the contact's `last_gift_on` today. The thanks run's `receipt` step starts `barn_gift_receipt` for the gift (depth 1, its run detail says "Started by Run 1 ... (step receipt)"), which sends "Your receipt from <site>" to ada@example.org ("Receipt for your gift of $300.00 received on October 26, 2026."). The call task starts `barn_task_due_reminder`: it is due in two days, so 3 days before has passed and "Due October 28, 2026: Thank-you call: Ada Lovelace" goes to development@example.org at once:
    ```
    id  automation               trigger               record  status     depth  step         outcome
-   4   barn_gift_thanks         event record.created  34      waiting    0      gifts_later
-   5   barn_lifetime_milestone  event record.created  34      completed  0      reached      stopped_at:reached
+   4   barn_gift_receipt        manual                31      completed  1      send
+   3   barn_task_due_reminder   event record.created  32      completed  1      stamp
+   2   barn_lifetime_milestone  event record.created  31      completed  0      reached      stopped_at:reached
+   1   barn_gift_thanks         event record.created  31      waiting    0      gifts_later
    ```
 3. Lifetime giving: a second donor gives 600, 300 and 100.
    ```sh
@@ -485,12 +487,13 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
    wp cron event run --due-now
    wp pegwork automation log barn_lifetime_milestone
    ```
-   Expect the first two milestone runs `stopped_at:reached`, the third `completed` at `celebrate` with "Thank you for 3 gifts to <site>" to mo@example.org ("Your gifts to <site> now total $1,000.00."), and Mo's `milestone_1000_on` today. Each gift is thanked too; Mo's second and third thank-you runs stop at `first_gift` (he has given before), his first waits.
-4. Staff resend a thank-you (the gift editor's "Resend thank-you" button does the same):
+   Expect the first two milestone runs `stopped_at:reached`, the third `completed` at `celebrate` with "Thank you for 3 gifts to <site>" to mo@example.org ("Your gifts to <site> now total $1,000.00."), and Mo's `milestone_1000_on` today. Each gift is thanked and gets its receipt too; Mo's second and third thank-you runs stop at `first_gift` (he has given before), his first waits.
+4. Staff resend a thank-you and a receipt (the gift editor's "Resend thank-you" and "Send receipt" buttons do the same):
    ```sh
    wp pegwork automation run barn_resend_thanks --record=$G --sync
+   wp pegwork automation run barn_gift_receipt --record=$G --sync
    ```
-   Expect `Matched 1, created 1 run(s)`, the run `completed` at `thank`, and "Thank you for your gift" to ada@example.org ("Thank you again for your gift of $300 ...").
+   Expect `Matched 1, created 1 run(s)` each, the runs `completed` at `thank` and `send` (depth 0), "Thank you for your gift" to ada@example.org ("Thank you again for your gift of $300 ...") and a second "Your receipt from <site>".
 5. A donation platform posts a gift. Sign the body as [Verifying Pegwork webhooks](#verifying-pegwork-webhooks) describes (the secret stays in a variable):
    ```sh
    SECRET=$(wp pegwork automation secret barn_donation_inbound)
@@ -502,7 +505,7 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
    wp cron event run --due-now
    wp pegwork automation log --run=<the run_id printed>
    ```
-   Expect `{"run_id":13,"status":"queued"}`, then the run `completed` at `add_gift` with `existing` `"found":false`, the `Not in the CRM yet` branch creating the contact, `contact` `"found":true` and `add_gift` writing `amount, gift_donor, name, received_on`. The new gift's `barn_gift_thanks` run has depth 1 and thanks nia@example.org ("Thank you for your gift of $120 ..."), then waits. Posting the same email again (a new delivery ID) reuses the contact; an empty `email` stops at `has_email`.
+   Expect `{"run_id":18,"status":"queued"}`, then the run `completed` at `add_gift` with `existing` `"found":false`, the `Not in the CRM yet` branch creating the contact, `contact` `"found":true` and `add_gift` writing `amount, gift_donor, name, received_on`. The new gift's `barn_gift_thanks` run has depth 1 and thanks nia@example.org ("Thank you for your gift of $120 ..."), then waits; its receipt run has depth 2. (If the thanks and milestone runs stay `queued`, see the WP-Cron race above.) Posting the same email again (a new delivery ID) reuses the contact; an empty `email` stops at `has_email`.
 6. The tasks digest, fired once now on a moved clock (`run` does not move its weekly schedule). Add an overdue task with no assignee first:
    ```sh
    wp eval 'echo Pegwork\Api\Records::create( "barn_task", array( "name" => "Thank Bo", "due_on" => wp_date( "Y-m-d", time() - DAY_IN_SECONDS ) ), "publish" );'
@@ -510,7 +513,7 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
    wp pegwork automation run barn_tasks_digest --now=+1day
    wp pegwork automation log --run=<the digest run>
    ```
-   Expect `Clock for this process: <tomorrow> (site time)` and the run `completed` with `completed_with_errors:remind`; the second command `Matched 1, created 0 run(s), 1 already had a run for their idempotency key` (`tasks:{{today}}`). One reminder per task with an assignee ("Due October 25, 2026: Thank-you call: Ada Lovelace" to development@example.org, with the edit URL), and the summary "4 tasks due by October 31, 2026" listing "- Thank Bo, due October 22, 2026, no assignee" first. `log --run` groups the loop by item:
+   Expect `Clock for this process: <tomorrow> (site time)` and the run `completed` with `completed_with_errors:remind`; the second command `Matched 1, created 0 run(s), 1 already had a run for their idempotency key` (`tasks:{{today}}`). One reminder per task with an assignee ("Due October 28, 2026: Thank-you call: Ada Lovelace" to development@example.org, with the edit URL), and the summary "4 tasks due by November 3, 2026" listing "- Thank Bo, due October 25, 2026, no assignee" first. Thank Bo's own `barn_task_due_reminder` run stopped at `still_open` when it was created (already overdue). `log --run` groups the loop by item (output from the 0.3.0 run):
    ```
    step         type           attempt  status  summary
    due          find_records   1        ok      {"content_type":"barn_task","count":4,"returned":4,"ids":[46,35,38,40]}
@@ -534,6 +537,15 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
    wp pegwork automation run barn_volunteer_intake --record=$V2 --sync
    ```
    Expect each `Matched 1, created 1 run(s)` with the run `waiting` at `check`, coordinator emails garden@example.org and events@example.org in the records, and the notices "New volunteer: Vera Garden" to garden@example.org (Reply-To vera@example.org) and "New volunteer: Evan Events" to events@example.org.
+
+   A sign-up also tells every reviewer (`barn_volunteer_review`, `{role:editor}` plus the volunteer manager). Add two editors and run it on Vera's record:
+   ```sh
+   wp user create rhea rhea@example.org --role=editor
+   wp user create sam sam@example.org --role=editor
+   wp pegwork automation run barn_volunteer_review --record=$V1 --sync
+   wp pegwork automation log --run=<the review run>
+   ```
+   Expect one email "Volunteer application to review: Vera Garden" To manager@example.org with `Bcc: rhea@example.org` and `Bcc: sam@example.org` (the administrator gets nothing), and the `notify` row `{"to":["m***@example.org","role:editor (2)"],...}`: the log names the role and its count, never a member.
 8. Evan's coordinator reaches out: set his Stage to Contacted on the edit screen, or `wp post meta update $V2 _barn_volunteer_stage contacted`.
 9. Two and five days later. Each `--now` is an offset from the real clock, and a wait created under `--now` is stored on that timeline, so the second wait (three days from `+3days`) needs `+7days`:
    ```sh
@@ -545,14 +557,34 @@ The worked examples of `docs/automation-v3-design.md` ("Worked examples: BarnCRM
     ```
     Resumed 3 run(s).
     id  automation        trigger               record  status     step            outcome
-    4   barn_gift_thanks  event record.created  34      completed  follow_up
-    6   barn_gift_thanks  event record.created  37      completed  no_second_gift  stopped_at:no_second_gift
-    14  barn_gift_thanks  event record.created  43      completed  follow_up
+    1   barn_gift_thanks  event record.created  31      completed  follow_up
+    5   barn_gift_thanks  event record.created  34      completed  no_second_gift  stopped_at:no_second_gift
+    19  barn_gift_thanks  event record.created  40      completed  follow_up
     ```
     Ada (one gift) and Nia get "What your gift made possible" ending with "If you would like to give again: https://example.org/donate"; Mo's first run stops at `no_second_gift` because he gave again. The donor is read again after the wait, so an email corrected in the meantime is the one used.
-11. The paths: `wp pegwork automation log --run=4` (Ada) lists `donor`, `has_donor`, `size` (`{"branch":"Major gift (250 or more)","index":0}`), `  thank_major`, `  call_task` (`keys` `assignee_email, due_on, name, task_gift`), `stamp_donor`, `gifts` (`"count":1`), `first_gift`, `grace` (`"for":"P30D"`), `gifts_later` (`"count":1`), `no_second_gift`, `follow_up`, with branch steps indented two spaces. `log --run=<Vera's run>`: `route` (`{"branch":"Garden","index":1}`), `  to_garden`, `notify`, `grace`, `check` (`{"branch":"Not contacted yet","index":0}`), `  remind`, `  grace_2`, `  still_new` (`{"passed":true}`), `  escalate`; Evan's run ends at `check`. Pegwork > Automations > View run log shows the same runs; each run's detail has the read lines ("Read: Contact #33 (Ada Lovelace)"), branch label rows and loop item rows.
+11. The paths: `wp pegwork automation log --run=1` (Ada) lists `donor`, `has_donor`, `size` (`{"branch":"Major gift (250 or more)","index":0}`), `  thank_major`, `  call_task` (`keys` `assignee_email, due_on, name, task_gift`), `stamp_donor`, `receipt` (`{"automation":"barn_gift_receipt","record_id":31,"started":true,"run":4}`; the run detail links Run 4), `gifts` (`"count":1`), `first_gift`, `grace` (`"for":"P30D"`), `gifts_later` (`"count":1`), `no_second_gift`, `follow_up`, with branch steps indented two spaces. `log --run=<Vera's run>`: `route` (`{"branch":"Garden","index":1}`), `  to_garden`, `notify`, `grace`, `check` (`{"branch":"Not contacted yet","index":0}`), `  remind`, `  grace_2`, `  still_new` (`{"passed":true}`), `  escalate`; Evan's run ends at `check`. Pegwork > Automations > View run log shows the same runs; each run's detail has the read lines ("Read: Contact #30 (Ada Lovelace)"), branch label rows and loop item rows.
+12. A task due in 10 days, then moved earlier (`barn_task_due_reminder`, [Wait until a date](#wait-until-a-date)):
+    ```sh
+    T=$(wp eval 'echo Pegwork\Api\Records::create( "barn_task", array( "name" => "Send the newsletter", "due_on" => wp_date( "Y-m-d", time() + 10 * DAY_IN_SECONDS ), "assignee_email" => "news@example.org" ), "publish" );')
+    wp pegwork automation log --run=<its reminder run>
+    wp eval "Pegwork\Api\Records::update( $T, array( 'due_on' => wp_date( 'Y-m-d', time() + 5 * DAY_IN_SECONDS ) ) );"
+    wp pegwork automation log --run=<its reminder run>
+    wp pegwork automation tick --now=+1day
+    wp pegwork automation tick --now=+3days
+    ```
+    Expect the run `waiting` at `before_due` with `{"until":"3 days before due_on at 09:00","date":"2026-11-05","resume_at":"2026-11-02 09:00:00"}`; after the edit a second `before_due` row (the edit nudged the run, which checked the date again) with `"date":"2026-10-31","resume_at":"2026-10-28 09:00:00"`; `Resumed 0 run(s)` on the first tick, `Resumed 1 run(s)` on the second, the run `completed` at `stamp`, and "Due October 31, 2026: Send the newsletter" to news@example.org. The run detail reads "Waits until November 2, 2026 9:00 am", "Checked the date again: waits until October 28, 2026 9:00 am", "Checked the date again: the time has come, so the run continues".
+13. Retention two years from now (`barn_volunteer_retention`, [Trash](#trash)). Add a placed application, then fire the schedule once on a clock two years and a day ahead (`run` does not move the daily schedule):
+    ```sh
+    wp post create --post_type=barn_volunteer --post_status=pending --post_title="Pia Placed" \
+      --meta_input='{"_barn_volunteer_email":"pia@example.org","_barn_volunteer_interest":"office","_barn_volunteer_stage":"placed"}' --user=admin
+    wp pegwork automation run barn_volunteer_retention --now=+P2Y1D
+    wp pegwork automation run barn_volunteer_retention --now=+P2Y1D
+    wp post list --post_type=barn_volunteer --post_status=trash
+    ```
+    Expect the run `completed` at `report`: `old` found `{"created":{"before":"2026-10-27"},"count":2,"ids":[<Vera>,<Evan>]}`, each loop item `remove` `{"changed":true}`, and "2 volunteer applications moved to the trash" to manager@example.org ("2 of 2 applications older than two years (not placed) were moved to the trash today. ..."); Pia (placed) stays. The second command creates nothing (`retention:{{today}}`). Both applications are in the trash. A restored one (Volunteers > Trash > Restore; WordPress restores it as a draft) is readable again, but it still matches the next day's search, so retention moves it to the trash again unless its Stage changes to Placed.
+14. Bulk Run on Local ([Bulk Run](#bulk-run)): in the admin, Gifts, tick Mo's three gifts, choose "Run: Send receipt" in Bulk actions and Apply. The confirmation screen "Run "Send receipt" on 3 Gifts?" lists each gift as "Will run"; "Run on 3 Gifts" returns to Gifts with "Started 3 runs. View runs", and each of Mo's gifts gets one more receipt (`trigger` `manual`, source `bulk`). Submitting the same screen again starts nothing.
 
-`tests/Integration/Automation/BarnFlowsGateTest.php` runs every flow on a frozen clock, through the real form for volunteers and the signed REST route for the donation platform. `tests/e2e/specs/automation-barn-flows.e2e.js`, `automation-builder-reads.e2e.js` and `automation-builder-loops.e2e.js` build the donor, milestone, digest and volunteer automations in the editor by keyboard and check they save identical to the fixture files ([Testing](#testing)).
+`tests/Integration/Automation/BarnFlowsGateTest.php` runs every flow on a frozen clock, through the real form for volunteers and the signed REST route for the donation platform, including the v4 timelines (due reminder, retention, shared receipt, review). `tests/e2e/specs/automation-barn-flows.e2e.js`, `automation-builder-reads.e2e.js`, `automation-builder-loops.e2e.js`, `automation-builder-v4.e2e.js` and `automation-builder-v4-trash-start.e2e.js` build the donor, milestone, digest, volunteer, due reminder, review and retention automations in the editor by keyboard and check they save identical to the fixture files ([Testing](#testing)).
 
 ![barn_gift_thanks built in the editor](screenshots/automation-barn-gift-thanks-1280.png)
 
@@ -577,6 +609,24 @@ The run log after the steps above, and the detail of one run per flow:
 ![The inbound gift thanked at depth 1](screenshots/automation-barn-run-inbound-thanks-1280.png)
 
 ![Volunteer intake escalated](screenshots/automation-barn-run-volunteer-1280.png)
+
+The v4 flows on the 0.4.0 run:
+
+![The run log with the v4 runs](screenshots/automation-barn-v4-run-log-1280.png)
+
+![Donor run with the receipt started (Run 4)](screenshots/automation-barn-run-donor-receipt-1280.png)
+
+![The receipt run, started by the donor run](screenshots/automation-barn-run-receipt-1280.png)
+
+![Due reminder: waited, nudged, checked again, reminded](screenshots/automation-barn-run-due-reminder-1280.png)
+
+![Retention: two applications moved to the trash](screenshots/automation-barn-run-retention-1280.png)
+
+![Review: the role and its count, no member addresses](screenshots/automation-barn-run-review-1280.png)
+
+![Bulk Run confirmation on three gifts](screenshots/automation-barn-bulk-confirm-1280.png)
+
+![Bulk Run notice](screenshots/automation-barn-bulk-notice-1280.png)
 
 ## Admin screens
 
