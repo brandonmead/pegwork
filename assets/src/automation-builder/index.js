@@ -397,18 +397,28 @@ export function goToFirstError() {
 }
 
 /**
- * After a refused save: a notice with the number of problems and "Go to first error".
+ * After a refused save: a notice with the number of problems and "Go to first error", in place of
+ * core's "Updating failed." notice, which would repeat every message in one line.
  */
 function SaveErrorsNotice() {
 	const errors = useSaveErrors();
 	const { createErrorNotice, removeNotice } = useDispatch( noticesStore );
 	const count = Object.keys( errors ).length;
+	// Core adds its notice when the save request fails, before or after the error reaches us.
+	const coreNotice = useSelect(
+		( pick ) =>
+			pick( noticesStore )
+				.getNotices()
+				.some( ( notice ) => notice.id === 'editor-save' ),
+		[]
+	);
 
 	useEffect( () => {
 		if ( ! count ) {
 			removeNotice( 'pegwork-automation-errors' );
 			return;
 		}
+		removeNotice( 'editor-save' );
 		createErrorNotice(
 			sprintf(
 				/* translators: %d: number of problems. */
@@ -430,7 +440,7 @@ function SaveErrorsNotice() {
 				],
 			}
 		);
-	}, [ errors, count, createErrorNotice, removeNotice ] );
+	}, [ errors, count, coreNotice, createErrorNotice, removeNotice ] );
 
 	return null;
 }

@@ -115,8 +115,18 @@ function pathName( path ) {
 		today: __( 'Today', 'pegwork' ),
 		now: __( 'Now', 'pegwork' ),
 		'run.id': __( 'Run ID', 'pegwork' ),
-		'trigger.user_id': __( 'Started by (user ID)', 'pegwork' ),
+		'trigger.id': __( 'Record ID', 'pegwork' ),
+		'trigger.type': __( 'Content type', 'pegwork' ),
+		'trigger.status': __( 'Status', 'pegwork' ),
+		'trigger.old_status': __( 'Status before', 'pegwork' ),
+		'trigger.new_status': __( 'New status', 'pegwork' ),
+		'trigger.user_id': __( 'Changed by (user ID)', 'pegwork' ),
+		'trigger.started_by': __( 'Started by (user ID)', 'pegwork' ),
 		'trigger.source': __( 'Started from', 'pegwork' ),
+		'trigger.form': __( 'Form', 'pegwork' ),
+		'trigger.entry_id': __( 'Entry ID', 'pegwork' ),
+		'trigger.post_id': __( 'Post ID', 'pegwork' ),
+		'trigger.record_id': __( 'Record ID', 'pegwork' ),
 		id: __( 'ID', 'pegwork' ),
 	};
 	return names[ path ] || path;
@@ -131,7 +141,15 @@ function pathName( path ) {
 function outputName( field ) {
 	const parts = field.path.split( '.' );
 	if ( parts.length === 4 && /^(record|item)$/.test( parts[ 2 ] ) ) {
-		return field.label || pathName( `record.${ parts[ 3 ] }` );
+		// A read record's `id` is "ID": its step's `record_id` output is "Record ID".
+		return (
+			field.label ||
+			pathName(
+				parts[ 2 ] === 'record' && parts[ 3 ] === 'id'
+					? 'id'
+					: `record.${ parts[ 3 ] }`
+			)
+		);
 	}
 	if ( parts.length === 4 && parts[ 2 ] === 'sum' ) {
 		return sprintf(
@@ -164,7 +182,14 @@ function outputName( field ) {
  * @return {string} Name.
  */
 export function fieldName( field, withStep = true ) {
-	let name = field.label || pathName( field.path );
+	let name =
+		field.label ||
+		pathName(
+			// The user who started a manual run; on record events, the user who made the change.
+			field.source?.type === 'manual' && field.path === 'trigger.user_id'
+				? 'trigger.started_by'
+				: field.path
+		);
 	if ( field.step && ! withStep ) {
 		name = outputName( field );
 	} else if ( field.step ) {
@@ -246,6 +271,22 @@ export function groupLabel( tag, config ) {
 		default:
 			return __( 'Site', 'pegwork' );
 	}
+}
+
+/**
+ * Merge tags by group heading, in first-seen order: one group per heading even when its tags are
+ * apart (`run.id` comes after the Time tags but belongs to Site).
+ *
+ * @param {Array}  tags   Tags from scope.js mergeTags().
+ * @param {Object} config Parsed config.
+ * @return {Object<string, Array>} Tags by heading.
+ */
+export function tagGroups( tags, config ) {
+	const groups = {};
+	for ( const tag of tags ) {
+		( groups[ groupLabel( tag, config ) ] ||= [] ).push( tag );
+	}
+	return groups;
 }
 
 /**

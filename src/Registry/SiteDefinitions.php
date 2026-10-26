@@ -251,17 +251,29 @@ final class SiteDefinitions {
 	/**
 	 * The error for validation failures, with messages by JSON pointer.
 	 *
+	 * For automations, a missing or empty required value is reported at its own pointer as
+	 * "Required: Subject." (the builder shows it at that control), not at its object in schema words.
+	 *
 	 * @param string            $kind    Kind.
 	 * @param ValidationError[] $errors  Errors.
 	 * @param string|null       $message Overall message; defaults to the joined messages.
 	 */
 	private static function invalid( string $kind, array $errors, ?string $message = null ): WP_Error {
-		$fields = array();
+		$fields   = array();
+		$messages = array();
 		foreach ( $errors as $error ) {
-			$pointer            = '' === $error->pointer ? '/' : $error->pointer;
-			$fields[ $pointer ] = isset( $fields[ $pointer ] ) ? $fields[ $pointer ] . ' ' . $error->message : $error->message;
+			$pointer = '' === $error->pointer ? '/' : $error->pointer;
+			$text    = $error->message;
+			$name    = substr( (string) strrchr( $error->field, '/' ), 1 );
+			if ( 'automation' === $kind && '' !== $name && ! is_numeric( $name ) ) {
+				$pointer = $error->field;
+				/* translators: %s: property name in words, such as "Subject" or "Content type". */
+				$text = sprintf( __( 'Required: %s.', 'pegwork' ), ucfirst( str_replace( '_', ' ', $name ) ) );
+			}
+			$fields[ $pointer ] = isset( $fields[ $pointer ] ) ? $fields[ $pointer ] . ' ' . $text : $text;
+			$messages[]         = $text;
 		}
-		$joined = implode( ' ', array_map( fn( ValidationError $error ) => $error->message, $errors ) );
+		$joined = implode( ' ', $messages );
 
 		return new WP_Error(
 			'pegwork_invalid_' . self::KINDS[ $kind ],

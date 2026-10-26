@@ -403,27 +403,25 @@ export function uniqueId( type, taken ) {
 }
 
 /**
- * Whether a block needs a new id: it has none, or an earlier block in document order has the same
- * one (a duplicated or pasted block).
+ * Whether a mounting block needs a new id: it has none, or another block anywhere in the document
+ * has the same one (a duplicated block, or one pasted before or after its original). Only the
+ * block that mounts asks, so the original keeps its id.
  *
- * @param {Array}  blocks   Every block, in document order.
+ * @param {Array}  blocks   Every block.
  * @param {string} clientId Block.
  * @param {string} id       Its id.
  * @return {boolean} Whether to replace it.
  */
 export function needsId( blocks, clientId, id ) {
-	if ( ! id ) {
-		return true;
-	}
-	for ( const block of blocks ) {
-		if ( block.clientId === clientId ) {
-			return false;
-		}
-		if ( block.name !== BRANCH && block.attributes?.id === id ) {
-			return true;
-		}
-	}
-	return false;
+	return (
+		! id ||
+		blocks.some(
+			( block ) =>
+				block.clientId !== clientId &&
+				block.name !== BRANCH &&
+				block.attributes?.id === id
+		)
+	);
 }
 
 /**

@@ -28,6 +28,9 @@ Purpose: planned work and goals with status; completed items move to changelog.m
 7. Editor: loops and lists: done, in review (branch `v3-editor-loops`). "Repeat for each" block, inserter and paste rules (no Wait or loop in a body), Move to into loop bodies, "Insert list of records", Test run item headings (closes PR 4's leftover), run-detail step ids on one line. Builder budget raised to 27,136 bytes gzipped (26,994 measured).
 8. BarnCRM proof with reads: done, in review (branch `v3-barn-proof`). Barn fixture on v3 flows, `BarnFlowsGateTest` timelines, editor E2E, runbook checked by hand, plugin 0.3.0. Automation v3 is built; done when PRs 1 to 8 are merged.
 
+## QA fix PRs (October 2026 QA pass)
+- Builder (B-01 to B-06): done, in review (branch `qa-fix-builder`). Open: "Required: Text." names the property, not the builder's "Text body" label.
+
 ## Automation v4 PRs (`docs/automation-v4-design.md` section 11)
 1. Core: `Records::trash()` and `created` reads, API 0.4.0: done, in review (branch `v4-core-trash`). Its leftover (`Records::get()`/`update()` still read trashed records) is handled in the engine by PR 4.
 2. Registry: v4 shapes: done, in review (branch `v4-registry`). Runs using v4 shapes fail `unsupported_step` before their first step until PRs 3 to 6. Left for Editor PR 9: refuse trashing an automation post whose definition is in use (the definition already stays); round-trip the `v4` package in `reads.test.js`.
