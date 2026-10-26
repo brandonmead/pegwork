@@ -476,7 +476,7 @@ final class AutomationPost {
 			while ( array() !== $lists && (string) $caller !== $key ) {
 				foreach ( (array) array_shift( $lists ) as $step ) {
 					$step = (array) $step;
-					if ( 'start_automation' === ( $step['type'] ?? '' ) && $key === ( $step['automation'] ?? null ) ) {
+					if ( 'start_automation' === ( $step['type'] ?? '' ) && ( $step['automation'] ?? null ) === $key ) {
 						$callers[] = (string) $caller;
 						continue 3;
 					}
