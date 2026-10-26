@@ -39,7 +39,7 @@ class AutomationStartTest extends AutomationTestCase {
 	 * @return string
 	 */
 	protected function package() {
-		return dirname( __DIR__, 2 ) . '/fixtures/engine-start';
+		return dirname( __DIR__, 2 ) . '/fixtures/valid/engine-start';
 	}
 
 	/**

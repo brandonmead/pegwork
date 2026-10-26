@@ -48,6 +48,7 @@ import {
 	STEP_TYPES,
 	errorOwners,
 	flatten,
+	parseSettings,
 	pointerMap,
 	saveErrors,
 } from './logic';
@@ -55,7 +56,8 @@ import LoopEdit from './loop-edit';
 import { TestRunPanel } from './preview';
 import SettingsPanels, { PANEL, TRIGGER_PANEL } from './settings';
 import StepEdit, { ICONS } from './step-edit';
-import { config, useSaveErrors } from './store';
+import { isSweep } from './scope';
+import { SETTINGS_META, config, useSaveErrors } from './store';
 import './builder.scss';
 
 // The notices store by name: @wordpress/notices is not a dependency (the forms builder does the same).
@@ -105,6 +107,14 @@ const DESCRIPTIONS = {
 		'pegwork'
 	),
 	relate: __( 'Adds or removes one relationship link.', 'pegwork' ),
+	trash_record: __(
+		'Moves one record to the trash: this record, a record read before, or each item of a loop.',
+		'pegwork'
+	),
+	start_automation: __(
+		'Starts a manual automation as its own run, and continues without waiting for it.',
+		'pegwork'
+	),
 };
 
 const VARIATIONS = STEP_TYPES.map( ( type ) => ( {
@@ -147,7 +157,8 @@ registerBlockType( loopMetadata, {
  * Inserter rules inside a loop body (AutomationRules loop_wait, loop_nested): a loop is never
  * offered there, and the Wait variation is withdrawn while the selection is a loop or inside one
  * (inserters and the block switcher list variations, which no filter can drop per location; a
- * focused appender selects its loop or branch). A wait pasted in anyway is refused at its card.
+ * focused appender selects its loop or branch). Move to trash is withdrawn while the trigger is a
+ * sweep (trash_in_sweep). A step pasted in anyway is refused at its card.
  */
 addFilter(
 	'blockEditor.__unstableCanInsertBlockType',
@@ -166,26 +177,41 @@ addFilter(
 				getBlockParentsByBlockName( rootClientId, LOOP ).length )
 		)
 );
-let waitHidden = false;
-subscribe( () => {
-	const editor = select( blockEditorStore );
-	const id = editor.getSelectedBlockClientId();
-	const hide =
-		!! id &&
-		( editor.getBlockName( id ) === LOOP ||
-			editor.getBlockParentsByBlockName( id, LOOP ).length > 0 );
-	if ( hide !== waitHidden ) {
-		waitHidden = hide;
+const hidden = {};
+let meta;
+let sweep = false;
+const offer = ( name, hide ) => {
+	if ( hide !== Boolean( hidden[ name ] ) ) {
+		hidden[ name ] = hide;
 		if ( hide ) {
-			unregisterBlockVariation( STEP, 'wait' );
+			unregisterBlockVariation( STEP, name );
 		} else {
 			registerBlockVariation(
 				STEP,
-				VARIATIONS.find( ( item ) => item.name === 'wait' )
+				VARIATIONS.find( ( item ) => item.name === name )
 			);
 		}
 	}
-}, blockEditorStore );
+};
+subscribe( () => {
+	const editor = select( blockEditorStore );
+	const id = editor.getSelectedBlockClientId();
+	offer(
+		'wait',
+		!! id &&
+			( editor.getBlockName( id ) === LOOP ||
+				editor.getBlockParentsByBlockName( id, LOOP ).length > 0 )
+	);
+	const json =
+		select( editorStore ).getEditedPostAttribute( 'meta' )?.[
+			SETTINGS_META
+		];
+	if ( json !== meta ) {
+		meta = json;
+		sweep = isSweep( parseSettings( json ).trigger );
+	}
+	offer( 'trash_record', sweep );
+} );
 
 const branch = ( label ) => [ BRANCH, { label } ];
 

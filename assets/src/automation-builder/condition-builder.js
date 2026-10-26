@@ -99,7 +99,14 @@ function legendOf( match ) {
  * @param {?Array}   [props.operands] Paths "Another value" may name (filter rows: run paths), else
  *                                    the fields.
  */
-function ValueControl( { leaf, field, fields, onChange, label, operands } ) {
+export function ValueControl( {
+	leaf,
+	field,
+	fields,
+	onChange,
+	label,
+	operands,
+} ) {
 	const others = operands || fields;
 	const kind = valueKind( leaf );
 	const type = field?.type ?? null;

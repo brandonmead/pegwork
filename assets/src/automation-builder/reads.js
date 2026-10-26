@@ -21,7 +21,8 @@ const UNFILTERABLE = [ 'rich_text', 'textarea' ];
 const SORTABLE = [ 'text', 'number', 'date', 'select', 'email' ];
 
 /**
- * How a read finds its records: `record` (by ID, get_record only), `related`, `filter` or `both`.
+ * How a read finds its records: `record` (by ID, get_record only), `related`, `filter`, `both`, or
+ * `created` (only its created date, which also counts for read_source).
  *
  * @param {Object} step Read step.
  * @return {string} Source ('' when it has none yet).
@@ -36,7 +37,26 @@ export function readSource( step ) {
 	if ( step.related ) {
 		return 'related';
 	}
-	return step.filter ? 'filter' : '';
+	if ( step.filter ) {
+		return 'filter';
+	}
+	return step.created ? 'created' : '';
+}
+
+/**
+ * A read's `created` with one bound set, or removed when empty; undefined without bounds.
+ *
+ * @param {?Object} created `{ before?, after? }`.
+ * @param {string}  bound   `before` or `after`.
+ * @param {*}       value   `Y-m-d`, `{ date, offset? }` or `{ var }` ('' or undefined removes it).
+ * @return {Object|undefined} Created.
+ */
+export function withCreated( created, bound, value ) {
+	const next = { ...created, [ bound ]: value };
+	if ( value === undefined || value === '' ) {
+		delete next[ bound ];
+	}
+	return Object.keys( next ).length ? next : undefined;
 }
 
 /**
@@ -61,6 +81,10 @@ export function withSource( step, source, firstRow ) {
 		record: source === 'record' ? ( step.record ?? '' ) : undefined,
 		related,
 		filter,
+		created:
+			source === 'created'
+				? step.created || { before: { date: 'today' } }
+				: step.created,
 	};
 }
 

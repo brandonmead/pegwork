@@ -14,7 +14,9 @@ import {
 	conditionFields,
 	dateFields,
 	formatTag,
+	isSweep,
 	mergeTags,
+	recordTargets,
 	stepsBefore,
 	takesRoles,
 	withRole,
@@ -120,6 +122,57 @@ describe( 'wait date fields (shared fixture)', () => {
 		const paths = dateFields( definition, config ).map(
 			( field ) => field.path
 		);
+		expect( paths ).toEqual( item.expect );
+		for ( const refused of item.refuse ) {
+			expect( paths ).not.toContain( refused );
+		}
+	} );
+} );
+
+describe( 'trash targets (shared fixture)', () => {
+	it.each(
+		fixture.trash.map( ( item ) => [
+			`${ item.automation }${ item.at }`,
+			item,
+		] )
+	)( '%s', ( name, item ) => {
+		const { definition, config } = load( item );
+		const targets = recordTargets(
+			conditionFields( definition, item.at, config )
+		);
+		expect( targets ).toEqual( item.expect );
+		for ( const refused of item.refuse ) {
+			expect( targets.map( ( target ) => target.value ) ).not.toContain(
+				refused
+			);
+		}
+	} );
+
+	it( 'knows a sweep', () => {
+		expect(
+			isSweep( {
+				type: 'schedule',
+				every: 'day',
+				for_each: { content_type: 'x' },
+			} )
+		).toBe( true );
+		expect( isSweep( { type: 'schedule', every: 'day' } ) ).toBe( false );
+		expect( isSweep( { type: 'event' } ) ).toBe( false );
+	} );
+} );
+
+describe( 'created operands (shared fixture)', () => {
+	it.each(
+		fixture.created.map( ( item ) => [
+			`${ item.automation }${ item.at }`,
+			item,
+		] )
+	)( '%s', ( name, item ) => {
+		const { definition, config } = load( item );
+		// read-edit.js offers the date fields in scope at the read.
+		const paths = conditionFields( definition, item.at, config )
+			.filter( ( field ) => field.type === 'date' )
+			.map( ( field ) => field.path );
 		expect( paths ).toEqual( item.expect );
 		for ( const refused of item.refuse ) {
 			expect( paths ).not.toContain( refused );

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pegwork E2E start another automation
- * Description: Test-only helpers for the start_automation browser test: registers tests/e2e/start-package (a manual automation that starts another), and exposes an admin-only REST route that deletes their runs. Not shipped.
+ * Description: Test-only helpers for the start_automation browser test: registers tests/e2e/packages/start (a manual automation that starts another), and exposes an admin-only REST route that deletes their runs. Not shipped.
  *
  * @package Pegwork
  */
@@ -14,7 +14,7 @@ add_action(
 	'pegwork_register',
 	static function ( $builder ) {
 		if ( defined( 'PEGWORK_DIR' ) ) {
-			$builder->add_package( PEGWORK_DIR . 'tests/e2e/start-package' );
+			$builder->add_package( PEGWORK_DIR . 'tests/e2e/packages/start' );
 		}
 	}
 );

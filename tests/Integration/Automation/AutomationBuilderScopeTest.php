@@ -193,6 +193,58 @@ class AutomationBuilderScopeTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A Move to trash step put in place of the step at the case's pointer validates for each offered record with its
+	 * type, and is refused with another type and for each refused template ('' meaning no `record`).
+	 */
+	public function test_trash_targets() {
+		$cases = self::fixture()['trash'];
+		$this->assertGreaterThanOrEqual( 2, count( $cases ) );
+		foreach ( $cases as $case ) {
+			$data  = self::automation( $case['package'], $case['automation'] );
+			$label = $case['automation'] . ' ' . $case['at'];
+			$types = array_column( self::fixture()['packages'][ $case['package'] ]['config']['types'], 'key' );
+			$trash = static fn( $record, $type ) => array(
+				'id'           => 'probe_trash',
+				'type'         => 'trash_record',
+				'content_type' => $type,
+			) + ( '' === $record ? array() : array( 'record' => $record ) );
+			$this->assertNotSame( array(), $case['expect'], $label );
+			foreach ( $case['expect'] as $target ) {
+				$errors = self::errors( $case['package'], self::with( $data, $case['at'], $trash( $target['value'], $target['type'] ) ) );
+				$this->assertSame( array(), $errors, $label . ' ' . $target['value'] );
+				$other = current( array_diff( $types, array( $target['type'] ) ) );
+				$this->assertNotSame( array(), self::errors( $case['package'], self::with( $data, $case['at'], $trash( $target['value'], $other ) ) ), $label . ' ' . $target['value'] . ' as ' . $other );
+			}
+			foreach ( $case['refuse'] as $record ) {
+				foreach ( $types as $type ) {
+					$this->assertNotSame( array(), self::errors( $case['package'], self::with( $data, $case['at'], $trash( $record, $type ) ) ), $label . ' refuses ' . $record . ' as ' . $type );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Each date path the read's Created operands offer validates as `created.before { var }` at the read; each refused
+	 * one does not.
+	 */
+	public function test_created_operands() {
+		$cases = self::fixture()['created'];
+		$this->assertGreaterThanOrEqual( 2, count( $cases ) );
+		foreach ( $cases as $case ) {
+			$data  = self::automation( $case['package'], $case['automation'] );
+			$label = $case['automation'] . ' ' . $case['at'];
+			$this->assertNotSame( array(), $case['refuse'], $label );
+			$with = static fn( $path ) => self::with( $data, $case['at'] . '/created', array( 'before' => array( 'var' => $path ) ) );
+			foreach ( $case['expect'] as $path ) {
+				$this->assertSame( array(), self::errors( $case['package'], $with( $path ) ), $label . ' ' . $path );
+			}
+			foreach ( $case['refuse'] as $path ) {
+				$this->assertNotSame( array(), self::errors( $case['package'], $with( $path ) ), $label . ' refuses ' . $path );
+			}
+		}
+	}
+
+	/**
 	 * Exactly the offered operators pass the validator for a var in a condition (the trigger's unless the
 	 * case names another, as for typed read outputs).
 	 */

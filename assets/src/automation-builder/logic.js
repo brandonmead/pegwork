@@ -26,6 +26,8 @@ export const STEP_TYPES = [
 	'get_record',
 	'find_records',
 	'relate',
+	'trash_record',
+	'start_automation',
 ];
 
 /**
@@ -39,6 +41,8 @@ export const ON_ERROR_TYPES = [
 	'relate',
 	'get_record',
 	'find_records',
+	'trash_record',
+	'start_automation',
 ];
 
 /**
@@ -56,6 +60,8 @@ const ID_BASE = {
 	get_record: 'get',
 	find_records: 'find',
 	relate: 'link',
+	trash_record: 'trash',
+	start_automation: 'start',
 };
 
 /**
@@ -98,6 +104,10 @@ export function parseConfig( raw ) {
 		// Roles a `{role:<slug>}` recipient may name (slug and name only, never members).
 		roles: list( config.roles ).filter(
 			( role ) => role && typeof role.slug === 'string'
+		),
+		// Enabled manual automations a start step may start (`key`, `label`, `content_type`).
+		automations: list( config.automations ).filter(
+			( automation ) => automation && typeof automation.key === 'string'
 		),
 		rest: config.rest && typeof config.rest === 'object' ? config.rest : {},
 		lockedKey: text( config.lockedKey ),

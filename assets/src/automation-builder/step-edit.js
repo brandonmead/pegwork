@@ -39,6 +39,7 @@ import {
 	binding,
 	collections,
 	conditionFields,
+	isSweep,
 	loopsAround,
 	mergeTags,
 	stepsBefore,
@@ -48,6 +49,7 @@ import {
 	valueFields,
 } from './scope';
 import { config, useDefinition, useErrorOwners } from './store';
+import { StartFields, TrashFields } from './trash-start-edit';
 import WaitFields from './wait-edit';
 
 export const ICONS = {
@@ -60,6 +62,8 @@ export const ICONS = {
 	get_record: 'search',
 	find_records: 'list-view',
 	relate: 'admin-links',
+	trash_record: 'trash',
+	start_automation: 'controls-forward',
 };
 
 const STATUSES = [ 'draft', 'pending', 'publish', 'private' ];
@@ -611,6 +615,27 @@ function TypeFields( {
 				</>
 			);
 		}
+		case 'trash_record':
+			return (
+				<TrashFields
+					attributes={ attributes }
+					setAttributes={ setAttributes }
+					pointer={ pointer }
+					errors={ errors }
+					definition={ definition }
+				/>
+			);
+		case 'start_automation':
+			return (
+				<StartFields
+					attributes={ attributes }
+					set={ set }
+					pointer={ pointer }
+					errors={ errors }
+					definition={ definition }
+					tags={ tags }
+				/>
+			);
 		case 'wait':
 			return (
 				<WaitFields
@@ -825,8 +850,23 @@ export default function StepEdit( {
 		attributes.type === 'condition'
 			? conditionLabel( inLoop )
 			: typeLabel( attributes.type );
-	// A wait pasted or moved into a loop body (the inserter never offers one there).
-	const refused = inLoop && attributes.type === 'wait';
+	// A wait pasted or moved into a loop body, or a trash step pasted into a sweep (the inserter
+	// never offers either there).
+	let refused = '';
+	if ( inLoop && attributes.type === 'wait' ) {
+		refused = __(
+			'A loop cannot hold a wait, at any depth: per-record timing belongs in per-record runs (a record event or a schedule with "for_each").',
+			'pegwork'
+		);
+	} else if (
+		attributes.type === 'trash_record' &&
+		isSweep( definition.trigger )
+	) {
+		refused = __(
+			'A schedule that runs once for each record cannot move records to the trash. Use a schedule without it, Find records and Repeat for each: at most 50 records a run.',
+			'pegwork'
+		);
+	}
 	const set = ( key, value ) =>
 		setAttributes( {
 			[ key ]: value === '' || value === null ? undefined : value,
@@ -884,15 +924,7 @@ export default function StepEdit( {
 				/>
 				<strong>{ name }</strong> <code>{ attributes.id }</code>
 			</p>
-			{ refused && (
-				<Refused
-					message={ __(
-						'A loop cannot hold a wait, at any depth: per-record timing belongs in per-record runs (a record event or a schedule with "for_each").',
-						'pegwork'
-					) }
-					focus={ isSelected }
-				/>
-			) }
+			{ refused && <Refused message={ refused } focus={ isSelected } /> }
 			{ summary && (
 				<p className="pegwork-automation-step__summary">{ summary }</p>
 			) }
@@ -902,6 +934,12 @@ export default function StepEdit( {
 						'Checks the date again when it wakes. Waits for a date if it is empty.',
 						'pegwork'
 					) }
+				</p>
+			) }
+			{ attributes.type === 'trash_record' && (
+				<p className="pegwork-automation-step__note">
+					<Dashicon icon="warning" />{ ' ' }
+					{ __( 'Removes records', 'pegwork' ) }
 				</p>
 			) }
 			{ attributes.on_error === 'continue' && (

@@ -267,6 +267,39 @@ export function valueFields( config, type ) {
 }
 
 /**
+ * Whether a trigger is a sweep (a schedule with `for_each`), where AutomationRules refuses
+ * trash_record (`trash_in_sweep`).
+ *
+ * @param {Object} trigger Trigger.
+ * @return {boolean} Whether it is a sweep.
+ */
+export const isSweep = ( trigger ) =>
+	trigger?.type === 'schedule' && Boolean( trigger.for_each );
+
+/**
+ * The typed record references in scope (AutomationRules typed_reference_of()) of a known content
+ * type, as a trash_record step names them: the bound record (value '', the default), the
+ * `record_id` of a get_record or create_record step that ran before, and each loop's item.
+ *
+ * @param {Array<Object>} fields Condition fields at the step (conditionFields()).
+ * @return {Array<{value: string, type: string}>} Targets.
+ */
+export function recordTargets( fields ) {
+	return fields
+		.filter(
+			( field ) =>
+				field.source?.content_type &&
+				( field.path === 'record.id' ||
+					field.output === 'record_id' ||
+					( field.source.item && field.key === 'id' ) )
+		)
+		.map( ( field ) => ( {
+			value: field.path === 'record.id' ? '' : `{{${ field.path }}}`,
+			type: field.source.content_type,
+		} ) );
+}
+
+/**
  * A record of a content type as paths: id, status and type, then its fields and taxonomies.
  *
  * @param {Object}  config Parsed config.

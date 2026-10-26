@@ -452,6 +452,84 @@ class AutomationBuilderTest extends AutomationTestCase {
 	}
 
 	/**
+	 * Automation v4: trashing the post of an automation another one starts is refused with the in-use message
+	 * (REST 409 naming the callers; wp_die elsewhere), and the post and its definition stay. Without callers the
+	 * trash works. The builder config lists the enabled manual automations other than the edited one.
+	 */
+	public function test_trash_refused_while_started() {
+		$target    = array(
+			'format'  => 1,
+			'key'     => 'site_target',
+			'label'   => 'Site target',
+			'trigger' => array(
+				'type'         => 'manual',
+				'content_type' => 'job',
+				'button'       => 'Notify',
+			),
+			'steps'   => array(
+				array(
+					'id'      => 'tell',
+					'type'    => 'send_email',
+					'to'      => 'desk@example.org',
+					'subject' => 'Hello',
+					'text'    => 'Hello',
+				),
+			),
+		);
+		$target_id = $this->create( $target );
+		$caller_id = $this->create(
+			$this->definition(
+				array(
+					'key'   => 'site_caller',
+					'steps' => array(
+						array(
+							'id'         => 'notify',
+							'type'       => 'start_automation',
+							'automation' => 'site_target',
+						),
+					),
+				)
+			)
+		);
+		$startable = fn( $post_id ) => array_values( array_filter( BuilderEditor::config( get_post( $post_id ) )['automations'], fn( $item ) => 'site_target' === $item['key'] ) );
+		$this->assertSame( array(), $startable( $caller_id ), 'A new site automation is off, so it is not offered.' );
+		$this->assertTrue( pegwork_save_automation( array_merge( $target, array( 'enabled' => true ) ) ) );
+		$this->assertSame(
+			array(
+				array(
+					'key'          => 'site_target',
+					'label'        => 'Site target',
+					'content_type' => 'job',
+				),
+			),
+			$startable( $caller_id )
+		);
+		$this->assertSame( array(), $startable( $target_id ), 'Not itself.' );
+
+		$response = rest_get_server()->dispatch( new WP_REST_Request( 'DELETE', '/wp/v2/pegwork-automations/' . $target_id ) );
+		$this->assertSame( 409, $response->get_status() );
+		$this->assertSame( 'pegwork_automation_in_use', $response->get_data()['code'] );
+		$this->assertStringContainsString( 'site_caller', $response->get_data()['message'] );
+		$this->assertSame( 'private', get_post_status( $target_id ) );
+		$this->assertNotNull( pegwork_registry()->automation( 'site_target' ) );
+		$this->assertNotNull( pegwork_registry()->automation( 'site_caller' ) );
+
+		try {
+			wp_trash_post( $target_id );
+			$this->fail( 'Outside REST the refusal stops the request.' );
+		} catch ( WPDieException $e ) {
+			$this->assertStringContainsString( 'site_caller', $e->getMessage() );
+		}
+		$this->assertSame( 'private', get_post_status( $target_id ) );
+		$this->assertNotNull( pegwork_registry()->automation( 'site_target' ) );
+
+		$this->assertSame( 200, rest_get_server()->dispatch( new WP_REST_Request( 'DELETE', '/wp/v2/pegwork-automations/' . $caller_id ) )->get_status() );
+		$this->assertSame( 200, rest_get_server()->dispatch( new WP_REST_Request( 'DELETE', '/wp/v2/pegwork-automations/' . $target_id ) )->get_status() );
+		$this->assertSame( 'trash', get_post_status( $target_id ) );
+		$this->assertNull( pegwork_registry()->automation( 'site_target' ) );
+	}
+
+	/**
 	 * Opening a post regenerates it when the definition changed elsewhere (import, API, file edit),
 	 * keeping the modified date.
 	 */

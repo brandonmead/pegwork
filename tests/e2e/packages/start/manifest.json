@@ -1,0 +1,1 @@
+{ "format": 1, "id": "e2e_start", "version": "1.0.0", "label": "E2E start another automation", "requires": { "pegwork": ">=0.4.0" } }
