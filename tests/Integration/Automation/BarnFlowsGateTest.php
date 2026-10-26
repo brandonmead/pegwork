@@ -1,6 +1,6 @@
 <?php
 /**
- * Phase 6 and Automation v3 gate: the BarnCRM flows on simulated time.
+ * Phase 6, Automation v3 and Automation v4 gate: the BarnCRM flows on simulated time.
  *
  * @package Pegwork
  */
@@ -9,11 +9,15 @@ namespace Pegwork\Tests\Integration\Automation;
 
 use Pegwork\Api\Records;
 use Pegwork\Tests\Support\AutomationTestCase;
+use PegworkAutomation\Admin\BulkRun;
 use PegworkAutomation\Admin\Screen;
 use PegworkAutomation\Cli\AutomationCommand;
 use PegworkAutomation\Engine;
 use PegworkAutomation\Manual;
+use PegworkAutomation\Overrides;
+use PegworkAutomation\Schema;
 use PegworkAutomation\Webhooks\Secrets;
+use RuntimeException;
 use PegworkForms\Schema as FormsSchema;
 use PegworkForms\Submission;
 use PegworkForms\Token;
@@ -29,6 +33,11 @@ require_once dirname( __DIR__, 3 ) . '/modules/forms/module.php'; // Registers t
  * wait crosses the start of daylight saving time (2027-03-14) and must still end at 09:00 site time. Gifts
  * are linked to their donor through `gift_donor`, as staff or the inbound webhook record them. Volunteers
  * sign up through the real form pipeline as visitors.
+ *
+ * Automation v4 (`docs/automation-v4-design.md` section 7, "Gate BarnFlowsGateTest, v4 timelines"): the due
+ * reminder, retention, shared receipt and review timelines. The v3 timelines run with the v4 automations that
+ * are not part of their flow turned off (only_v3()), so they pass unchanged except for the receipt each
+ * thanked gift now starts.
  */
 class BarnFlowsGateTest extends AutomationTestCase {
 
@@ -61,12 +70,17 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	/**
 	 * Steps of a donor run up to the wait, by branch.
 	 */
-	private const MAJOR_PATH = array( 'donor', 'has_donor', 'size', 'thank_major', 'call_task', 'stamp_donor', 'gifts', 'first_gift', 'grace' );
+	private const MAJOR_PATH = array( 'donor', 'has_donor', 'size', 'thank_major', 'call_task', 'stamp_donor', 'receipt', 'gifts', 'first_gift', 'grace' );
 
 	/**
 	 * Steps of a donor run up to the wait, otherwise branch.
 	 */
-	private const OTHER_PATH = array( 'donor', 'has_donor', 'size', 'thank', 'stamp_donor', 'gifts', 'first_gift', 'grace' );
+	private const OTHER_PATH = array( 'donor', 'has_donor', 'size', 'thank', 'stamp_donor', 'receipt', 'gifts', 'first_gift', 'grace' );
+
+	/**
+	 * The v4 automations a v3 timeline does not exercise (the receipt is part of the donor flow).
+	 */
+	private const V4_OTHERS = array( 'barn_task_due_reminder', 'barn_volunteer_retention', 'barn_volunteer_review' );
 
 	/**
 	 * Mails already checked: assertions read only the ones sent since.
@@ -112,6 +126,8 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 */
 	public function tear_down() {
 		unset( $_GET['view'], $_GET['run'] );
+		$_POST    = array();
+		$_REQUEST = array();
 		parent::tear_down();
 	}
 
@@ -119,6 +135,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 * Donor acknowledgment and first-gift follow-up, one automation (design section 8, donor steps 1 to 5).
 	 */
 	public function test_donor_timeline() {
+		$this->only_v3();
 		$ada   = $this->contact( 'Ada Lovelace', 'ada@donor.example' );
 		$grace = $this->contact( 'Grace Hopper', 'grace@donor.example' );
 		$carl  = $this->contact( 'Carl Sagan', 'carl@donor.example' );
@@ -135,8 +152,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 			),
 			$this->step_row( $run, 'size' )['summary']
 		);
-		$mail = $this->only_new_mail();
-		$this->assertSame( array( 'ada@donor.example', self::EMAIL_A ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$mail = $this->thanked_with_receipt( 'ada@donor.example', self::EMAIL_A );
 		$this->assertStringContainsString( 'Reply-To: ' . self::SETTINGS['development_email'], $mail['header'] );
 		$this->assertStringContainsString( 'Dear Ada Lovelace,', $mail['body'] );
 		$this->assertStringContainsString( 'Thank you for your gift of $300 on March 1, 2027. Our director will call you', $mail['body'] );
@@ -168,8 +184,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 			),
 			$this->step_row( $run, 'size' )['summary']
 		);
-		$mail = $this->only_new_mail();
-		$this->assertSame( array( 'grace@donor.example', self::EMAIL_B ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$mail = $this->thanked_with_receipt( 'grace@donor.example', self::EMAIL_B );
 		$this->assertStringNotContainsString( 'Reply-To:', $mail['header'] );
 		$this->assertStringContainsString( 'Thank you for your gift of $40 on March 1, 2027.', $mail['body'] );
 		$this->assertSame( array(), $this->tasks( $g2 ), 'A gift under 250 creates no task.' );
@@ -180,7 +195,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		$c1  = $this->gift( 250, $carl );
 		$run = $this->thanks_run( $c1 );
 		$this->assertSame( self::MAJOR_PATH, $this->path( $run ) );
-		$this->assertSame( self::EMAIL_A, $this->only_new_mail()['subject'] );
+		$this->thanked_with_receipt( 'carl@donor.example', self::EMAIL_A );
 		$this->assertCount( 1, $this->tasks( $c1 ) );
 		$this->assertSame( 'waiting', $run['status'] );
 		$carl_first = $run;
@@ -188,17 +203,16 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		$run        = $this->thanks_run( $c2 );
 		$this->assertSame( 'completed', $run['status'] );
 		$this->assertSame( 'stopped_at:first_gift', $run['context']['outcome'] );
-		$this->assertSame( array_slice( self::OTHER_PATH, 0, 7 ), $this->path( $run ) );
+		$this->assertSame( array_slice( self::OTHER_PATH, 0, 8 ), $this->path( $run ) );
 		$this->assertSame( 2, $this->step_row( $run, 'gifts' )['summary']['count'] );
-		$this->assertSame( self::EMAIL_B, $this->only_new_mail()['subject'] );
+		$this->thanked_with_receipt( 'carl@donor.example', self::EMAIL_B );
 
 		// 3. 2027-03-10: G3 (Ada, 75) is thanked; its run stops at first_gift.
 		$this->clock->set( '2027-03-10 09:00' );
 		$g3  = $this->gift( 75, $ada );
 		$run = $this->thanks_run( $g3 );
 		$this->assertSame( 'stopped_at:first_gift', $run['context']['outcome'] );
-		$mail = $this->only_new_mail();
-		$this->assertSame( array( 'ada@donor.example', self::EMAIL_B ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$mail = $this->thanked_with_receipt( 'ada@donor.example', self::EMAIL_B );
 		$this->assertStringContainsString( 'Thank you for your gift of $75 on March 10, 2027.', $mail['body'] );
 		$this->assertSame( '2027-03-10', $this->value( $ada, 'last_gift_on' ) );
 
@@ -233,7 +247,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 
 		// Grace's path in `log --run` and the run detail: the branch step indented, no private value shown.
 		$rows = AutomationCommand::step_rows( $run, $this->steps( $run['id'] ), true );
-		$this->assertSame( array( 'donor', 'has_donor', 'size', '  thank', 'stamp_donor', 'gifts', 'first_gift', 'grace', 'gifts_later', 'no_second_gift', 'follow_up' ), array_column( $rows, 'step' ) );
+		$this->assertSame( array( 'donor', 'has_donor', 'size', '  thank', 'stamp_donor', 'receipt', 'gifts', 'first_gift', 'grace', 'gifts_later', 'no_second_gift', 'follow_up' ), array_column( $rows, 'step' ) );
 		$html = $this->run_detail( $run['id'] );
 		$this->assertStringContainsString( 'Read: Contact #' . $grace . ' (Grace Hopper)', $html, 'The read line names the donor read.' );
 		$this->assertStringContainsString( 'Otherwise branch of <code>size</code></td></tr><tr><th scope="row" class="pegwork-depth-1"><code>thank</code>', $html );
@@ -247,12 +261,16 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		$this->assertSame( array( 'donor', 'has_donor' ), $this->path( $run ) );
 		$this->assertSame( array(), $this->new_mail() );
 
-		// Totals: five thank-yous and one follow-up, two call tasks, no milestone, nothing failed or waiting.
+		// Totals: five thank-yous each with its receipt and one follow-up, two call tasks, no milestone,
+		// nothing failed or waiting.
 		$subjects = array_column( tests_retrieve_phpmailer_instance()->mock_sent, 'subject' );
-		$this->assertSame( array( self::EMAIL_A, self::EMAIL_B, self::EMAIL_A, self::EMAIL_B, self::EMAIL_B, self::FOLLOW_UP ), $subjects );
+		$receipt  = $this->receipt_subject();
+		$this->assertSame( array( self::EMAIL_A, $receipt, self::EMAIL_B, $receipt, self::EMAIL_A, $receipt, self::EMAIL_B, $receipt, self::EMAIL_B, $receipt, self::FOLLOW_UP ), $subjects );
 		$this->assertCount( 2, $this->tasks() );
+		$this->assertCount( 5, $this->runs( 'barn_gift_receipt' ), 'One receipt run per thanked gift, none for the gift without a donor.' );
 		$all = array_merge( $this->runs( 'barn_gift_thanks' ), $this->runs( 'barn_lifetime_milestone' ) );
 		$this->assertCount( 12, $all, 'Each of the six gifts starts both gift automations.' );
+		$all = array_merge( $all, $this->runs( 'barn_gift_receipt' ) );
 		$this->assertSame( array( 'completed' ), array_values( array_unique( array_column( array_map( fn( $run ) => $this->run_row( $run['id'] ), $all ), 'status' ) ) ) );
 	}
 
@@ -260,6 +278,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 * Lifetime giving reaches 1,000 (design section 8, milestone steps 1 to 3).
 	 */
 	public function test_milestone_timeline() {
+		$this->only_v3();
 		$mo   = $this->contact( 'Mo Ibrahim', 'mo@donor.example' );
 		$zora = $this->contact( 'Zora Neale', 'zora@donor.example' );
 
@@ -309,6 +328,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 * Monday digest of tasks due (design section 8, digest steps 1 to 5).
 	 */
 	public function test_digest_timeline() {
+		$this->only_v3();
 		// 1. T1 (due 06-08), T2 (due 06-10, done), T3 (due 06-20), T4 (due 06-01, open, no assignee email).
 		$t1 = $this->task( 'Call Ada', '2027-06-08', 'ada.task@barn.example' );
 		$this->task( 'Send receipts', '2027-06-10', 'receipts@barn.example', true );
@@ -361,6 +381,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 * inbound; worked example d).
 	 */
 	public function test_inbound_and_manual() {
+		$this->only_v3();
 		$this->clock->set( '2027-05-10 11:00' );
 
 		// A new email: one contact, one gift linked to it, thanked at depth 1.
@@ -395,8 +416,10 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		$thanks = $this->thanks_run( $gifts[0] );
 		$this->assertSame( 1, (int) $thanks['depth'], 'Started by add_gift.' );
 		$this->assertSame( self::OTHER_PATH, $this->path( $thanks ) );
-		$mail = $this->only_new_mail();
-		$this->assertSame( array( 'nia@donor.example', self::EMAIL_B ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$receipt = $this->run_for( 'barn_gift_receipt', $gifts[0] );
+		$this->assertSame( 2, (int) $receipt['depth'], 'The inbound path: webhook at 0, thanks at 1, receipt at 2.' );
+		$this->assertSame( 'completed', $receipt['status'] );
+		$mail = $this->thanked_with_receipt( 'nia@donor.example', self::EMAIL_B );
 		$this->assertStringContainsString( 'Dear Nia Long,', $mail['body'] );
 		$this->assertStringContainsString( 'Thank you for your gift of $120 on May 10, 2027.', $mail['body'] );
 
@@ -412,7 +435,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		$this->assertSame( array( 'has_email', 'existing', 'new_contact', 'contact', 'add_gift' ), $this->path( $this->run_row( $again->get_data()['run_id'] ) ) );
 		$this->assertCount( 1, $this->contacts_by_email( 'nia@donor.example' ) );
 		$this->assertSame( 2, Records::find( 'barn_gift', array( 'count' => true ) )['count'] );
-		$this->assertSame( self::EMAIL_B, $this->only_new_mail()['subject'] );
+		$this->thanked_with_receipt( 'nia@donor.example', self::EMAIL_B );
 
 		// An empty email stops at has_email and creates nothing.
 		$empty = $this->inbound(
@@ -445,6 +468,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 * Volunteer intake (design `docs/phase-6-design.md` section 11, volunteer steps 1 to 6; unchanged).
 	 */
 	public function test_volunteer_timeline() {
+		$this->only_v3();
 		// 1. 2027-05-03 10:00, form submissions: routed, one notice to the right coordinator.
 		$this->clock->set( '2027-05-03 10:00' );
 		$v1       = $this->sign_up( 'Vera Garden', 'vera@volunteer.example', 'garden' );
@@ -557,6 +581,502 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		$this->assertCount( 6, tests_retrieve_phpmailer_instance()->mock_sent );
 		$this->assertSame( array( 'completed' ), array_values( array_unique( array_column( array_map( fn( $run ) => $this->run_row( $run['id'] ), $this->runs( 'barn_volunteer_intake' ) ), 'status' ) ) ) );
 		$this->assertCount( 3, $this->runs( 'barn_volunteer_intake' ) );
+	}
+
+	/**
+	 * Due reminder, `barn_task_due_reminder` (v4 design section 7, due reminder steps 1 to 11). Tasks are
+	 * created 2027-03-01 10:00 New York time. DST starts 2027-03-14, so 09:00 site time is 14:00 UTC before it
+	 * and 13:00 UTC after it.
+	 */
+	public function test_due_reminder_timeline() {
+		$this->clock->set( '2027-03-01 10:00' );
+		$due = array(
+			'T1'  => '2027-03-20',
+			'T2'  => '2027-03-12',
+			'T3'  => '2027-03-10',
+			'T3b' => '2027-03-10',
+			'T4'  => '',
+			'T5'  => '2027-03-20',
+			'T6'  => '2027-03-02',
+			'T7'  => '2026-12-01',
+			'T8'  => '2027-03-20',
+			'T9'  => '2027-03-20',
+		);
+		$t   = array();
+		foreach ( $due as $name => $date ) {
+			$t[ $name ] = $this->task( $name, $date, strtolower( $name ) . '@barn.example' );
+		}
+		$this->drain();
+		$state = fn( $name ) => $this->reminder_state( $t[ $name ] );
+
+		// 1. T1 waits until 03-17 09:00 EDT, the cursor on the wait.
+		$this->assertSame( array( 'waiting', 'before_due', '2027-03-17 13:00:00', null ), $state( 'T1' ) );
+		$this->assertSame( array( 'waiting', 'before_due', '2027-03-09 14:00:00', null ), $state( 'T2' ), '09:00 EST.' );
+		// 5. T4 has no due date: it parks for up to two years from its first arrival.
+		$this->assertSame( array( 'waiting', 'before_due', '2029-03-01 15:00:00', null ), $state( 'T4' ) );
+		// 7. T6's target (02-27 09:00) has passed: reminded at once.
+		$this->assertSame( array( 'completed', 'stamp', null, null ), $state( 'T6' ) );
+		// 8. T7, imported overdue: continues, stops at still_open, no email.
+		$this->assertSame( 'stopped_at:still_open', $state( 'T7' )[3] );
+		$mail = $this->only_new_mail();
+		$this->assertSame( array( 't6@barn.example', 'Due March 2, 2027: T6' ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$this->assertStringContainsString( 'T6 is due March 2, 2027. Mark it done when finished: ' . admin_url( 'post.php?post=' . $t['T6'] . '&action=edit' ), $mail['body'] );
+		$this->assertSame( '2027-03-01', $this->value( $t['T6'], 'reminded_on' ) );
+
+		// 2. 03-05 10:00: T2 moved to 03-07 is nudged and reminded at once (the new target has passed).
+		$this->clock->set( '2027-03-05 10:00' );
+		$this->edit_task( $t['T2'], array( 'due_on' => '2027-03-07' ) );
+		$this->assertSame( 'completed', $state( 'T2' )[0] );
+		$mail = $this->only_new_mail();
+		$this->assertSame( array( 't2@barn.example', 'Due March 7, 2027: T2' ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$this->assertSame( '2027-03-05', $this->value( $t['T2'], 'reminded_on' ) );
+		// 3. T3 moved to 03-31: waits until 03-28 09:00.
+		$this->edit_task( $t['T3'], array( 'due_on' => '2027-03-31' ) );
+		$this->assertSame( array( 'waiting', 'before_due', '2027-03-28 13:00:00', null ), $state( 'T3' ) );
+		// 4. T3b: the same move written straight to post meta (no event, no nudge).
+		update_post_meta( $t['T3b'], '_barn_task_due_on', '2027-03-31' );
+		$this->drain();
+		$this->assertSame( '2027-03-07 14:00:00', $state( 'T3b' )[2] );
+		// 11. A record.updated of T1's name leaves its resume time unchanged.
+		$this->edit_task( $t['T1'], array( 'name' => 'T1 renamed' ) );
+		$this->assertSame( '2027-03-17 13:00:00', $state( 'T1' )[2] );
+		$this->assertSame( array(), $this->new_mail() );
+
+		// 3 and 4. 03-07: nothing for T3; T3b wakes on its original time, checks the date again, waits for 03-28.
+		$this->go( '2027-03-07 12:00' );
+		$this->assertSame( array( 'waiting', 'before_due', '2027-03-28 13:00:00', null ), $state( 'T3b' ) );
+		$this->assertSame( '2027-03-28 13:00:00', $state( 'T3' )[2] );
+		$this->assertSame( array(), $this->new_mail() );
+
+		// 6. 03-10: T5's due date cleared: parked (the horizon counts from the first arrival), no email.
+		$this->clock->set( '2027-03-10 10:00' );
+		$this->edit_task( $t['T5'], array( 'due_on' => '' ) );
+		$this->assertSame( array( 'waiting', 'before_due', '2029-03-01 15:00:00', null ), $state( 'T5' ) );
+		// 10. T9 trashed: the status change nudges its run, which stops (no_record).
+		$this->assertTrue( Records::trash( $t['T9'] ) );
+		$this->drain();
+		$this->assertSame( array( 'completed', 'stopped_at:before_due' ), array( $state( 'T9' )[0], $state( 'T9' )[3] ) );
+		$this->assertTrue( $this->wait_summaries( $t['T9'] )[1]['no_record'] );
+
+		// 9. 03-15: T8 marked done (not a waited field, no nudge).
+		$this->clock->set( '2027-03-15 10:00' );
+		$this->edit_task( $t['T8'], array( 'done' => true ) );
+		$this->assertSame( '2027-03-17 13:00:00', $state( 'T8' )[2] );
+		$this->assertCount( 1, $this->wait_summaries( $t['T8'] ), 'Not woken.' );
+
+		// 1. Nothing on 03-16 or at 08:59 on 03-17; at 09:00 one reminder for T1, stamped. 9. T8 stops at
+		// still_open.
+		$this->go( '2027-03-16 09:00' );
+		$this->go( '2027-03-17 08:59' );
+		$this->assertSame( array(), $this->new_mail() );
+		$this->go( '2027-03-17 09:00' );
+		$mail = $this->only_new_mail();
+		$this->assertSame( array( 't1@barn.example', 'Due March 20, 2027: T1 renamed' ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$this->assertSame( '2027-03-17', $this->value( $t['T1'], 'reminded_on' ) );
+		$this->assertSame( array( 'completed', 'stamp', null, null ), $state( 'T1' ) );
+		$this->assertSame( 'stopped_at:still_open', $state( 'T8' )[3] );
+		$this->assertSame( 'waiting', $state( 'T5' )[0] );
+
+		// 5. 03-20: T4 gets a due date of 04-10: it waits until 04-07 09:00.
+		$this->clock->set( '2027-03-20 10:00' );
+		$this->edit_task( $t['T4'], array( 'due_on' => '2027-04-10' ) );
+		$this->assertSame( array( 'waiting', 'before_due', '2027-04-07 13:00:00', null ), $state( 'T4' ) );
+
+		// 3 and 4. 03-28 09:00: T3 and T3b are reminded.
+		$this->go( '2027-03-28 08:59' );
+		$this->assertSame( array(), $this->new_mail() );
+		$this->go( '2027-03-28 09:00' );
+		$to = array_map( fn( $mail ) => $mail['to'][0][0], $this->new_mail() );
+		sort( $to );
+		$this->assertSame( array( 't3@barn.example', 't3b@barn.example' ), $to );
+
+		// 5. 04-07 09:00: T4 is reminded.
+		$this->go( '2027-04-07 08:59' );
+		$this->assertSame( array(), $this->new_mail() );
+		$this->go( '2027-04-07 09:00' );
+		$this->assertSame( 'Due April 10, 2027: T4', $this->only_new_mail()['subject'] );
+
+		// 6. 2029-03-01 10:00: T5, still without a date, stops at the wait (no_date), with no email.
+		$this->go( '2029-03-01 09:59' );
+		$this->assertSame( 'waiting', $state( 'T5' )[0] );
+		$this->go( '2029-03-01 10:00' );
+		$this->assertSame( array( 'completed', 'stopped_at:before_due' ), array( $state( 'T5' )[0], $state( 'T5' )[3] ) );
+		$rows = $this->wait_summaries( $t['T5'] );
+		$this->assertTrue( end( $rows )['no_date'] );
+
+		// Totals: six reminders (T6, T2, T1, T3, T3b, T4), one run per task, every run completed.
+		$this->assertSame( array(), $this->new_mail() );
+		$this->assertCount( 6, tests_retrieve_phpmailer_instance()->mock_sent );
+		$runs = $this->runs( 'barn_task_due_reminder' );
+		$this->assertCount( 10, $runs );
+		$this->assertSame( array( 'completed' ), array_values( array_unique( array_column( array_map( fn( $run ) => $this->run_row( $run['id'] ), $runs ), 'status' ) ) ) );
+	}
+
+	/**
+	 * Retention, `barn_volunteer_retention` (v4 design section 7, retention steps 1 to 6): applications
+	 * created 2027-05-03 and 2027-06-05; the schedule fires at 03:30 site time two years later.
+	 */
+	public function test_retention_timeline() {
+		// 1. 55 applications created 2027-05-03 with stage new, 1 placed, 1 created 2027-06-05.
+		$old = array();
+		for ( $i = 1; $i <= 55; $i++ ) {
+			$old[] = $this->volunteer( 'Applicant ' . $i, '2027-05-03 10:00:00' );
+		}
+		$placed = $this->volunteer( 'Placed applicant', '2027-05-03 10:00:00', 'placed' );
+		$june   = $this->volunteer( 'June applicant', '2027-06-05 10:00:00' );
+		$all    = array_merge( $old, array( $placed, $june ) );
+
+		// 5. With trash turned off (EMPTY_TRASH_DAYS 0; the filter is the test seam for the constant) the first
+		// item fails trash_disabled, the run fails, and every row remains.
+		$this->clock->set( '2029-05-31 03:30' );
+		add_filter( 'pegwork_records_trash_enabled', '__return_false' );
+		$run = $this->retention();
+		remove_filter( 'pegwork_records_trash_enabled', '__return_false' );
+		$this->assertSame( 'failed', $run['status'] );
+		$this->assertStringStartsWith( 'trash_disabled', (string) $run['error'] );
+		$this->assertSame( array( 'old', 'any_old', 'each_old', 'remove#1:failed' ), $this->trace( $run ) );
+		$this->assertSame( array( 'pending' ), array_values( array_unique( array_map( 'get_post_status', $all ) ) ) );
+		$this->assertSame( array(), $this->new_mail() );
+
+		// 2. 2029-06-01 03:30: the first 50 by ID go to the trash; the report says "50 of 55".
+		$this->clock->set( '2029-06-01 03:30' );
+		$run = $this->retention();
+		$this->assertSame( 'completed', $run['status'], (string) $run['error'] );
+		$this->assertSame( 50, $run['context']['trashed'] );
+		$this->assertSame( array( 'before' => '2027-06-01' ), $this->step_row( $run, 'old' )['summary']['created'] );
+		$this->assertSame( array_fill( 0, 50, 'trash' ), array_map( 'get_post_status', array_slice( $old, 0, 50 ) ) );
+		$this->assertSame( array_fill( 0, 7, 'pending' ), array_map( 'get_post_status', array_merge( array_slice( $old, 50 ), array( $placed, $june ) ) ) );
+		$mail = $this->only_new_mail();
+		$this->assertSame( array( self::SETTINGS['volunteer_manager'], '50 volunteer applications moved to the trash' ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$this->assertStringContainsString( '50 of 55 applications older than two years (not placed) were moved to the trash today.', $mail['body'] );
+
+		// 4. A second firing the same day creates nothing.
+		$this->clock->set( '2029-06-01 15:00' );
+		Engine::instance()->schedules()->fire( 'barn_volunteer_retention' );
+		$this->drain();
+		$this->assertCount( 2, $this->runs( 'barn_volunteer_retention' ), 'Idempotency: retention:{{today}}.' );
+		$this->assertSame( array(), $this->new_mail() );
+
+		// 2. 06-02: the other 5 go; the placed one stays.
+		$this->clock->set( '2029-06-02 03:30' );
+		$run = $this->retention();
+		$this->assertSame( 5, $run['context']['trashed'] );
+		$this->assertSame( array_fill( 0, 5, 'trash' ), array_map( 'get_post_status', array_slice( $old, 50 ) ) );
+		$this->assertStringContainsString( '5 of 5 applications', $this->only_new_mail()['body'] );
+
+		// 06-05: nothing is old enough yet, so the run stops at any_old with no report.
+		$this->clock->set( '2029-06-05 03:30' );
+		$this->assertSame( 'stopped_at:any_old', $this->retention()['context']['outcome'] );
+		$this->assertSame( array(), $this->new_mail() );
+
+		// 3. 2029-06-06: the 2027-06-05 application goes.
+		$this->clock->set( '2029-06-06 03:30' );
+		$run = $this->retention();
+		$this->assertSame( 1, $run['context']['trashed'] );
+		$this->assertSame( array( 'pending', 'trash' ), array( get_post_status( $placed ), get_post_status( $june ) ) );
+		$this->assertSame( '1 volunteer applications moved to the trash', $this->only_new_mail()['subject'] );
+
+		// 6. A restored application can be read again (and is not found by retention until trashed again).
+		$this->assertInstanceOf( \WP_Post::class, wp_untrash_post( $old[0] ) );
+		$this->assertNotSame( 'trash', get_post_status( $old[0] ) );
+		$this->assertSame( 'Applicant 1', Records::get( $old[0] )['values']['name'] );
+		$this->assertSame( 'new', $this->value( $old[0], 'stage' ) );
+	}
+
+	/**
+	 * Shared receipt, `barn_gift_thanks` plus `barn_gift_receipt` (v4 design section 7, receipt steps 1, 2, 3,
+	 * 5 and 6; step 4, the inbound path, is in test_inbound_and_manual()).
+	 */
+	public function test_receipt_timeline() {
+		Overrides::set( 'barn_task_due_reminder', 'off' );
+		$ada   = $this->contact( 'Ada Lovelace', 'ada@donor.example' );
+		$grace = $this->contact( 'Grace Hopper', 'grace@donor.example' );
+
+		// 1. A gift of 300 on 2027-03-01 sends email A and, from a child run at depth 1, the receipt.
+		$this->clock->set( '2027-03-01 09:00' );
+		$gift    = $this->gift( 300, $ada );
+		$thanks  = $this->thanks_run( $gift );
+		$receipt = $this->run_for( 'barn_gift_receipt', $gift );
+		$this->assertSame( array( 'completed', 1, 'automation' ), array( $receipt['status'], (int) $receipt['depth'], $receipt['context']['trigger']['source'] ) );
+		$this->assertSame( (int) $thanks['id'], $receipt['context']['parent']['run'] );
+		$this->assertSame( array( 'donor', 'has_donor', 'send' ), $this->path( $receipt ) );
+		$summary = $this->step_row( $thanks, 'receipt' )['summary'];
+		$this->assertTrue( $summary['started'] );
+		$this->assertSame( (int) $receipt['id'], $summary['run'] );
+		$this->assertSame( 'start:' . $thanks['id'] . '-receipt', $receipt['idempotency_key'] );
+		$mail = $this->new_mail()[1];
+		$this->assertSame( array( 'ada@donor.example', $this->receipt_subject() ), array( $mail['to'][0][0], $mail['subject'] ) );
+		$this->assertStringContainsString( 'Reply-To: ' . self::SETTINGS['development_email'], $mail['header'] );
+		$this->assertStringContainsString( 'Receipt for your gift of $300.00 received on March 1, 2027.', $mail['body'] );
+
+		// 2. The parent still waits until 03-31.
+		$this->assertSame( array( 'waiting', 'gifts_later', '2027-03-31 13:00:00' ), array( $thanks['status'], $thanks['current_step'], $thanks['resume_at'] ) );
+
+		// 3. A gift of 0 is thanked; the receipt does not apply (`started: false`), so no receipt.
+		$zero   = $this->gift( 0, $grace );
+		$thanks = $this->thanks_run( $zero );
+		$this->assertSame( self::OTHER_PATH, $this->path( $thanks ) );
+		$summary = $this->step_row( $thanks, 'receipt' )['summary'];
+		$this->assertSame( array( false, 'not_applicable' ), array( $summary['started'], $summary['skipped'] ) );
+		$this->assertSame( array(), array_filter( $this->runs( 'barn_gift_receipt' ), fn( $run ) => $zero === $run['record_id'] ) );
+		$this->assertSame( self::EMAIL_B, $this->only_new_mail()['subject'] );
+
+		// 5. A thanks run forced to depth 2 logs a skipped receipt run at depth 3 (loop_depth), and sends no receipt.
+		global $wpdb;
+		$deep = Records::create(
+			'barn_gift',
+			array(
+				'name'        => 'Gift of 90',
+				'amount'      => 90,
+				'received_on' => '2027-03-01',
+				'gift_donor'  => $grace,
+			),
+			'private'
+		);
+		$this->assertIsInt( $deep );
+		$thanks = $this->thanks_run( $deep );
+		$wpdb->update( Schema::runs(), array( 'depth' => 2 ), array( 'id' => $thanks['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Test setup.
+		$this->drain();
+		$skipped = $this->run_for( 'barn_gift_receipt', $deep );
+		$this->assertSame( array( 'skipped', 3 ), array( $skipped['status'], (int) $skipped['depth'] ) );
+		$this->assertSame( 'loop_depth: trigger depth 3 reached the limit of 3.', $skipped['error'] );
+		$summary = $this->step_row( $this->run_row( $thanks['id'] ), 'receipt' )['summary'];
+		$this->assertSame( array( false, 'loop_depth', (int) $skipped['id'] ), array( $summary['started'], $summary['skipped'], $summary['run'] ) );
+		$this->assertSame( array( self::EMAIL_B ), array_column( $this->new_mail(), 'subject' ) );
+
+		// 6. Staff "Send receipt" on a gift sends one receipt.
+		$started = ( new Manual() )->start( 'barn_gift_receipt', $gift, $this->editor, 'editor' );
+		$this->assertIsArray( $started );
+		$this->drain();
+		$this->assertSame( 'editor', $this->run_row( $started['run'] )['context']['trigger']['source'] );
+		$mail = $this->only_new_mail();
+		$this->assertSame( array( 'ada@donor.example', $this->receipt_subject() ), array( $mail['to'][0][0], $mail['subject'] ) );
+
+		// 6. Bulk Run on 3 gifts (an editor, from Gifts) sends one receipt each.
+		$bulk = array( $this->gift( 25, $grace ), $this->gift( 35, $grace ), $this->gift( 45, $grace ) );
+		$this->new_mail();
+		$this->assertArrayHasKey( BulkRun::ACTION . 'barn_gift_receipt', BulkRun::bulk_actions( array(), 'barn_gift' ) );
+		$this->bulk_run( 'barn_gift_receipt', $bulk );
+		$this->drain();
+		set_current_screen( 'edit-barn_gift' );
+		ob_start();
+		BulkRun::notice();
+		$this->assertStringContainsString( 'Started 3 runs.', (string) ob_get_clean() );
+		$mails = $this->new_mail();
+		$this->assertSame( array_fill( 0, 3, $this->receipt_subject() ), array_column( $mails, 'subject' ) );
+		$this->assertStringContainsString( 'Receipt for your gift of $35.00', $mails[1]['body'] );
+		foreach ( $bulk as $id ) {
+			$runs = array_values( array_filter( $this->runs( 'barn_gift_receipt' ), fn( $run ) => $id === $run['record_id'] ) );
+			$this->assertSame( array( 'automation', 'bulk' ), array_map( fn( $run ) => $run['context']['trigger']['source'], $runs ), 'One from the thanks run, one from bulk.' );
+		}
+	}
+
+	/**
+	 * Review alert, `barn_volunteer_review` (v4 design section 7): two editors, one administrator and one
+	 * author. A sign-up sends one email To the volunteer manager, Bcc both editors; the log shows the role
+	 * and its count, never a member's address.
+	 */
+	public function test_review_timeline() {
+		$this->clock->set( '2027-05-03 10:00' );
+		$editors = array(
+			get_userdata( $this->editor )->user_email,
+			get_userdata(
+				self::factory()->user->create(
+					array(
+						'role'       => 'editor',
+						'user_email' => 'second.editor@barn.example',
+					)
+				)
+			)->user_email,
+		);
+		sort( $editors );
+		self::factory()->user->create(
+			array(
+				'role'       => 'administrator',
+				'user_email' => 'admin@barn.example',
+			)
+		);
+		self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'user_email' => 'author@barn.example',
+			)
+		);
+
+		$id      = $this->sign_up( 'Rosa Parks', 'rosa@volunteer.example', 'garden', 2 );
+		$mails   = $this->new_mail();
+		$subject = 'Volunteer application to review: Rosa Parks';
+		$this->assertSame( array( 'New volunteer: Rosa Parks', $subject ), array_column( $mails, 'subject' ), 'The intake notice and one review email.' );
+		$review = $mails[1];
+		$this->assertSame( array( array( self::SETTINGS['volunteer_manager'], '' ) ), $review['to'] );
+		$bcc = array_map( fn( $pair ) => $pair[0], $review['bcc'] );
+		sort( $bcc );
+		$this->assertSame( $editors, $bcc, 'Both editors in Bcc; the administrator and the author get nothing.' );
+		$this->assertStringContainsString( 'Rosa Parks applied to help with garden. Review it here: ' . admin_url( 'post.php?post=' . $id . '&action=edit' ), $review['body'] );
+
+		$run = $this->run_for( 'barn_volunteer_review', $id );
+		$this->assertSame( 'completed', $run['status'], (string) $run['error'] );
+		$to = $this->step_row( $run, 'notify' )['summary']['to'];
+		$this->assertContains( 'role:editor (2)', $to );
+		$html = $this->run_detail( $run['id'] );
+		$this->assertStringContainsString( 'role:editor (2)', $html );
+		foreach ( $editors as $address ) {
+			$this->assertStringNotContainsString( $address, (string) wp_json_encode( $to ) );
+			$this->assertStringNotContainsString( $address, $html );
+		}
+	}
+
+	/**
+	 * Turns off the v4 automations a v3 timeline does not exercise.
+	 */
+	private function only_v3() {
+		foreach ( self::V4_OTHERS as $key ) {
+			Overrides::set( $key, 'off' );
+		}
+	}
+
+	/**
+	 * Subject of the shared receipt.
+	 *
+	 * @return string
+	 */
+	private function receipt_subject() {
+		return 'Your receipt from ' . get_bloginfo( 'name' );
+	}
+
+	/**
+	 * The two mails a thanked gift sends since the last call: the thank-you, then the receipt from the child run.
+	 *
+	 * @param string $email   Donor address.
+	 * @param string $subject Thank-you subject.
+	 * @return array<string, mixed> The thank-you mail.
+	 */
+	private function thanked_with_receipt( $email, $subject ) {
+		$mails = $this->new_mail();
+		$this->assertSame(
+			array( array( $email, $subject ), array( $email, $this->receipt_subject() ) ),
+			array_map( fn( $mail ) => array( $mail['to'][0][0], $mail['subject'] ), $mails )
+		);
+		return $mails[0];
+	}
+
+	/**
+	 * Moves the clock to a site time and fires due wake-ups.
+	 *
+	 * @param string $at Site time.
+	 */
+	private function go( $at ) {
+		$this->clock->set( $at );
+		$this->drain();
+	}
+
+	/**
+	 * Updates a task (emits record.updated) and runs what it wakes.
+	 *
+	 * @param int                  $id     Task ID.
+	 * @param array<string, mixed> $values Values.
+	 */
+	private function edit_task( $id, array $values ) {
+		$this->assertTrue( Records::update( $id, $values ) );
+		$this->drain();
+	}
+
+	/**
+	 * A task's reminder run as [ status, current step, resume time while waiting, outcome ].
+	 *
+	 * @param int $task Task ID.
+	 * @return array{0: string, 1: string|null, 2: string|null, 3: string|null}
+	 */
+	private function reminder_state( $task ) {
+		$run = $this->run_row( $this->run_for( 'barn_task_due_reminder', $task )['id'] );
+		return array( $run['status'], $run['current_step'], 'waiting' === $run['status'] ? $run['resume_at'] : null, $run['context']['outcome'] ?? null );
+	}
+
+	/**
+	 * Summaries of a task's `before_due` wait rows, oldest first.
+	 *
+	 * @param int $task Task ID.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function wait_summaries( $task ) {
+		$run = $this->run_for( 'barn_task_due_reminder', $task );
+		return array_values( array_map( fn( $row ) => (array) $row['summary'], array_filter( $this->steps( $run['id'] ), fn( $row ) => 'before_due' === $row['step_id'] ) ) );
+	}
+
+	/**
+	 * A volunteer application created at a site time (pending, as the form writes it).
+	 *
+	 * @param string $name    Name.
+	 * @param string $created Site time, `Y-m-d H:i:s`.
+	 * @param string $stage   Stage.
+	 * @return int Record ID.
+	 */
+	private function volunteer( $name, $created, $stage = 'new' ) {
+		global $wpdb;
+		$id = Records::create(
+			'barn_volunteer',
+			array(
+				'name'     => $name,
+				'email'    => 'applicant@volunteer.example',
+				'interest' => 'garden',
+				'stage'    => $stage,
+			),
+			'pending'
+		);
+		$this->assertIsInt( $id, is_wp_error( $id ) ? $id->get_error_message() : '' );
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Backdate the creation time.
+			$wpdb->posts,
+			array(
+				'post_date'     => $created,
+				'post_date_gmt' => get_gmt_from_date( $created ),
+			),
+			array( 'ID' => $id )
+		);
+		clean_post_cache( $id );
+		return $id;
+	}
+
+	/**
+	 * Fires the retention schedule at the clock's time and runs it.
+	 *
+	 * @return array<string, mixed> The newest retention run.
+	 */
+	private function retention() {
+		Engine::instance()->schedules()->fire( 'barn_volunteer_retention' );
+		$this->drain();
+		$runs = $this->runs( 'barn_volunteer_retention' );
+		return $this->run_row( end( $runs )['id'] );
+	}
+
+	/**
+	 * Submits the bulk Run confirmation screen as the current user, as the browser would.
+	 *
+	 * @param string $key Automation key.
+	 * @param int[]  $ids Record IDs.
+	 */
+	private function bulk_run( $key, array $ids ) {
+		$fields   = array(
+			'action'     => BulkRun::POST,
+			'automation' => $key,
+			'records'    => implode( ',', $ids ),
+			'request'    => 'barn-bulk-request-1',
+			'back'       => admin_url( 'edit.php?post_type=barn_gift' ),
+			'_wpnonce'   => wp_create_nonce( BulkRun::NONCE . $key ),
+		);
+		$_POST    = $fields;
+		$_REQUEST = $fields;
+		$redirect = static function ( $location ) {
+			throw new RuntimeException( 'redirect:' . $location ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test signal, never printed.
+		};
+		add_filter( 'wp_redirect', $redirect );
+		try {
+			BulkRun::submit();
+			$this->fail( 'The handler did not redirect.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertSame( 'redirect:' . admin_url( 'edit.php?post_type=barn_gift' ), $e->getMessage() );
+		} finally {
+			remove_filter( 'wp_redirect', $redirect );
+		}
 	}
 
 	/**
@@ -685,9 +1205,10 @@ class BarnFlowsGateTest extends AutomationTestCase {
 	 * @param string $name     Name.
 	 * @param string $email    Email.
 	 * @param string $interest Interest.
+	 * @param int    $runs     Runs the submission starts (intake, plus the review when it is on).
 	 * @return int Volunteer record ID.
 	 */
-	private function sign_up( $name, $email, $interest ) {
+	private function sign_up( $name, $email, $interest, $runs = 1 ) {
 		$user = get_current_user_id();
 		wp_set_current_user( 0 );
 		$now     = $this->clock->now()->getTimestamp();
@@ -708,7 +1229,7 @@ class BarnFlowsGateTest extends AutomationTestCase {
 		wp_set_current_user( $user );
 		$this->assertSame( 'sent', $outcome['outcome'], (string) wp_json_encode( $outcome ) );
 		$this->assertSame( 'barn_volunteer', get_post_type( $outcome['record_id'] ) );
-		$this->assertSame( 1, $this->drain() );
+		$this->assertSame( $runs, $this->drain() );
 		return $outcome['record_id'];
 	}
 

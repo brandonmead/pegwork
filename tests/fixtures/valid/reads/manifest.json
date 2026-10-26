@@ -1,1 +1,1 @@
-{ "format": 1, "id": "reads", "version": "1.0.0", "label": "Automation v3 reads: the BarnCRM worked examples and every new step shape", "requires": { "pegwork": ">=0.3.0" } }
+{ "format": 1, "id": "reads", "version": "1.1.0", "label": "Automation v3 reads: the BarnCRM worked examples and every new step shape", "requires": { "pegwork": ">=0.4.0" } }

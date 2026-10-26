@@ -217,7 +217,11 @@ add_action(
 						return new WP_Error( 'pegwork_e2e_barn_key', 'Unknown BarnCRM automation.', array( 'status' => 404 ) );
 					}
 					$saved = pegwork_registry()->automation( $key );
-					$file  = PEGWORK_DIR . 'tests/fixtures/valid/' . ( $v4 ? 'v4' : 'barn' ) . '/automations/' . $key . '.json';
+					// The BarnCRM proof fixture's file when it has one (the v4 worked examples are copied there byte for byte).
+					$file = PEGWORK_DIR . 'tests/fixtures/valid/barn/automations/' . $key . '.json';
+					if ( $v4 && ! file_exists( $file ) ) {
+						$file = PEGWORK_DIR . 'tests/fixtures/valid/v4/automations/' . $key . '.json';
+					}
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture.
 					$fixture = json_decode( (string) file_get_contents( $file ), true );
 					return rest_ensure_response(

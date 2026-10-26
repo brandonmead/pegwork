@@ -2,8 +2,9 @@
  * The BarnCRM example flows (design `docs/automation-v3-design.md`, "Worked examples: BarnCRM flows
  * with reads", and the Phase 6 volunteer intake) built in the automation editor by keyboard only (no
  * mouse calls): from Pegwork > Automations > Add automation, barn_gift_thanks (the donor read through
- * the Donor relationship, the size decision, the call task linked to its gift, the stamp, the gift
- * count, the 30-day wait, the recount and the follow-up) and barn_volunteer_intake are built control
+ * the Donor relationship, the size decision, the call task linked to its gift, the stamp, the shared
+ * receipt started with "Start another automation" (Automation v4), the gift count, the 30-day wait,
+ * the recount and the follow-up) and barn_volunteer_intake are built control
  * by control, saved, and read back through the admin e2e route; each canonical JSON must equal the
  * fixture in tests/fixtures/valid/barn/automations byte for byte, except `enabled` (a new site
  * automation is saved disabled). The texts typed come from the fixture; the structure, ids,
@@ -223,6 +224,10 @@ test.beforeAll( async () => {
 		enabled: true,
 	} );
 	await adminCall( 'POST', '/pegwork-e2e/v1/barn/reset' );
+	// The shared receipt barn_gift_thanks starts (v4): an enabled manual automation, so the picker offers it.
+	await adminCall( 'POST', '/pegwork-e2e/v1/barn/v4-automation', {
+		key: 'barn_gift_receipt',
+	} );
 	for ( const amount of [ 300, 40 ] ) {
 		gifts[ amount ] = await adminCall(
 			'POST',
@@ -283,7 +288,7 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 		sidebar( page ).getByRole( 'combobox', { name: 'Value', exact: true } )
 	).toHaveValue( 'true' );
 
-	// The main list after them: size, stamp_donor, gifts, first_gift, grace, gifts_later,
+	// The main list after them: size, stamp_donor, receipt, gifts, first_gift, grace, gifts_later,
 	// no_second_gift, follow_up.
 	await insertMain( page, 'If / Otherwise' );
 	await setStepId( page, 'decision', 'size' );
@@ -294,6 +299,22 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 	await insertInto( field( page, 'Record (optional)' ), stamp.record );
 	// The typed reference names a Contact, so its fields are offered.
 	await fillValues( page, stamp.values, { last_gift_on: 'Last gift on' } );
+	// receipt (v4): start the shared receipt automation for this gift.
+	await insertMain( page, 'Start another automation' );
+	await setStepId( page, 'start', 'receipt' );
+	await openBlockTab( page );
+	await choose(
+		sidebar( page ).getByRole( 'combobox', {
+			name: 'Automation',
+			exact: true,
+		} ),
+		stepOf( def, 'receipt' ).automation
+	);
+	await expect(
+		frame.locator( '.pegwork-automation-step__summary', {
+			hasText: 'Start "Send the receipt for a gift" for this Gift',
+		} )
+	).toHaveCount( 1 );
 	for ( const id of [ 'gifts', 'gifts_later' ] ) {
 		await insertMain( page, 'Find records' );
 		await setStepId( page, 'find', id );
@@ -362,7 +383,7 @@ test( 'build barn_gift_thanks by keyboard; it saves identical to the fixture', a
 	await page.reload();
 	await openEditor( page, /post\.php\?post=\d+&action=edit/ );
 	await expect( frame.locator( '.pegwork-automation-step' ) ).toHaveCount(
-		12
+		13
 	);
 	await checkPegworkA11y( page );
 	await shot( page, 'automation-barn-gift-thanks-1280.png', 2000 );
@@ -434,6 +455,9 @@ test( 'Test run of barn_gift_thanks reads the donor and takes the major branch f
 			'Get record donor: found Contact'
 		);
 		await expect( report ).toContainText( 'Find records gifts: 1 Gift' );
+		await expect( report ).toContainText(
+			'Start barn_gift_receipt "Send receipt" for this Gift'
+		);
 		await expect( report ).toContainText( 'follow_up' );
 		if ( amount === 300 ) {
 			await expect( report ).toContainText( 'call_task' );
