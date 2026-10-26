@@ -21,8 +21,10 @@ use PegworkAutomation\Templates;
  * item's `id`). A record already in the trash is not a failure: `changed: false`. No output.
  *
  * Limits: at most limit() records moved per run (`context.trashed`), else `trash_limit`; never in a
- * schedule sweep (`trash_in_sweep`, checked again here for a definition from a newer registry). These, a
- * record of another type (`record_type`), a missing record and `trash_disabled` are not retried.
+ * schedule sweep or a run its chain started (`trash_in_sweep`, checked again here for a definition from a
+ * newer registry); in a run a user started, another record needs that user's `delete_post`
+ * (`record_forbidden`). These, a record of another type (`record_type`), a missing record and
+ * `trash_disabled` are not retried.
  *
  * Summary: `content_type`, `record_id`, `changed`.
  */
@@ -52,16 +54,32 @@ final class TrashRecord implements Step {
 	}
 
 	/**
-	 * Whether a run is one record of a schedule sweep (`for_each`).
+	 * Whether a run is one record of a schedule sweep (`for_each`), or a run that a sweep started through
+	 * start_automation, directly or further down the chain (`context.sweep`).
 	 *
 	 * @param array<string, mixed> $run Run row.
 	 */
 	public static function in_sweep( array $run ): bool {
-		if ( 'schedule' !== ( $run['trigger_type'] ?? '' ) ) {
-			return false;
+		return null !== self::sweep_of( $run );
+	}
+
+	/**
+	 * The key of the schedule sweep a run belongs to: its own automation for a sweep run, the stored
+	 * `context.sweep` for a run a sweep's chain started, else null.
+	 *
+	 * @param array<string, mixed> $run Run row.
+	 */
+	public static function sweep_of( array $run ): ?string {
+		$stored = $run['context']['sweep'] ?? null;
+		if ( is_string( $stored ) && '' !== $stored ) {
+			return $stored;
 		}
-		$definition = pegwork_registry()->automation( (string) ( $run['automation'] ?? '' ) );
-		return null !== ( $run['record_id'] ?? null ) || isset( $definition['trigger']['for_each'] );
+		if ( 'schedule' !== ( $run['trigger_type'] ?? '' ) ) {
+			return null;
+		}
+		$key        = (string) ( $run['automation'] ?? '' );
+		$definition = pegwork_registry()->automation( $key );
+		return null !== ( $run['record_id'] ?? null ) || isset( $definition['trigger']['for_each'] ) ? $key : null;
 	}
 
 	/**
@@ -89,6 +107,9 @@ final class TrashRecord implements Step {
 		$record = Records::get( $id );
 		if ( null === $record || 'auto-draft' === $record['status'] ) {
 			return StepResult::fail( 'pegwork_record_not_found', sprintf( 'No record with ID %d.', $id ), $summary, false );
+		}
+		if ( ! $context->can( 'delete_post', $id ) ) {
+			return StepResult::fail( 'record_forbidden', sprintf( 'The user who started this run (%1$d) cannot move record %2$d to the trash.', $context->actor(), $id ), $summary, false );
 		}
 		if ( $type !== $record['type'] ) {
 			return StepResult::fail( 'record_type', sprintf( 'Record %1$d is a %2$s; this step moves only %3$s records to the trash.', $id, (string) $record['type'], $type ), $summary, false );

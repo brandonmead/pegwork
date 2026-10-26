@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "key": "trasher",
+  "label": "Trashes the task",
+  "trigger": { "type": "manual", "content_type": "barn_task", "button": "Trash" },
+  "steps": [
+    { "id": "remove", "type": "trash_record", "content_type": "barn_task" }
+  ]
+}

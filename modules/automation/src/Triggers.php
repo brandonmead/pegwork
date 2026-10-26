@@ -276,6 +276,9 @@ final class Triggers {
 	 * - Payload: `user_id` (the parent's `trigger.user_id`, else 0), `source` `automation` and `origin`.
 	 *   `context.parent` `{ run, automation, step }` (plus `iteration`) is stored beside it, outside the
 	 *   payload, so the child's templates cannot read it.
+	 * - `context.actor`: the user who started the parent (Context::actor_of()), when there is one, so the
+	 *   child's steps act with that user's capabilities. `context.sweep`: the key of the schedule sweep the
+	 *   chain started at (TrashRecord::sweep_of()), so no run of the chain moves records to the trash.
 	 *
 	 * @param string                    $key        Automation key.
 	 * @param array<string, mixed>      $definition Canonical automation.
@@ -335,6 +338,15 @@ final class Triggers {
 				'parent'  => $origin,
 			),
 		);
+
+		$actor = Context::actor_of( $starter );
+		if ( $actor > 0 ) {
+			$run['context']['actor'] = $actor; // The child acts with the starting user's capabilities too.
+		}
+		$sweep = Steps\TrashRecord::sweep_of( $starter );
+		if ( null !== $sweep ) {
+			$run['context']['sweep'] = $sweep; // A chain that starts at a sweep never trashes (TrashRecord::in_sweep()).
+		}
 
 		/** This filter is documented in modules/automation/src/Triggers.php */
 		$max = (int) apply_filters( 'pegwork_automation_max_depth', self::MAX_DEPTH );

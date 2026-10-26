@@ -148,6 +148,13 @@ final class Context {
 	private array $loops = array();
 
 	/**
+	 * The user who started the run (staff starts and the runs they start), or 0 for system runs.
+	 *
+	 * @var int
+	 */
+	private int $actor = 0;
+
+	/**
 	 * Builds a context.
 	 *
 	 * @param Clock                               $clock      Engine clock.
@@ -211,8 +218,62 @@ final class Context {
 		if ( ! array_key_exists( $id, $this->cache ) ) {
 			$record             = Records::get( $id );
 			$this->cache[ $id ] = null !== $record && 'trash' === $record['status'] ? null : $record; // Trash is never read.
+			if ( null !== $this->cache[ $id ] && ! $this->can( 'read_post', $id ) ) {
+				$this->cache[ $id ] = null; // The user who started the run cannot read it: as if it did not exist.
+			}
 		}
 		return $this->cache[ $id ];
+	}
+
+	/**
+	 * Sets the user who started the run (Context::actor_of()).
+	 *
+	 * @param int $user User ID, or 0 for a system run.
+	 */
+	public function use_actor( int $user ): void {
+		$this->actor = max( 0, $user );
+	}
+
+	/**
+	 * The user who started the run, or 0 for a system run.
+	 */
+	public function actor(): int {
+		return $this->actor;
+	}
+
+	/**
+	 * Whether the run may act on a record with a capability: always for a system run and for the bound
+	 * record (checked when the run started: StartRoute::can_run(), or StartAutomation for a child), else
+	 * whether the user who started the run holds the capability (`read_post`, `edit_post`, `delete_post`)
+	 * on that record.
+	 *
+	 * @param string $cap Meta capability.
+	 * @param int    $id  Record ID.
+	 */
+	public function can( string $cap, int $id ): bool {
+		if ( 0 === $this->actor || ( null !== $this->record && (int) $this->record['id'] === $id ) ) {
+			return true;
+		}
+		return user_can( $this->actor, $cap, $id );
+	}
+
+	/**
+	 * The user who started a run: `context.actor` (stored on child runs by Triggers::chained()), else the
+	 * `trigger.user_id` of a staff start (trigger type `manual`, source `editor`, `list`, `bulk` or `cli`),
+	 * else 0. Event, schedule, webhook and link runs are system runs, whoever saved the record.
+	 *
+	 * @param array<string, mixed> $run Run row.
+	 */
+	public static function actor_of( array $run ): int {
+		$context = (array) ( $run['context'] ?? array() );
+		if ( isset( $context['actor'] ) ) {
+			return max( 0, (int) $context['actor'] );
+		}
+		$trigger = (array) ( $context['trigger'] ?? array() );
+		if ( 'manual' === ( $run['trigger_type'] ?? '' ) && in_array( $trigger['source'] ?? null, array( 'editor', 'list', 'bulk', 'cli' ), true ) ) {
+			return max( 0, (int) ( $trigger['user_id'] ?? 0 ) );
+		}
+		return 0;
 	}
 
 	/**

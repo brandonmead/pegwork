@@ -66,8 +66,22 @@ final class WpCronScheduler implements Scheduler {
 	 * @return int|null Unix time, or null.
 	 */
 	public function next( string $hook, array $args ): ?int {
+		self::fresh();
 		$next = wp_next_scheduled( $hook, $args );
 		return false === $next ? null : (int) $next;
+	}
+
+	/**
+	 * Drops this process's copy of the `cron` option, so next() sees what other processes scheduled
+	 * meanwhile: a long cron pass otherwise reads, and writes back, the copy it loaded when it started. A
+	 * persistent object cache is shared, so nothing is dropped then. Costs one options query per call.
+	 */
+	private static function fresh(): void {
+		if ( wp_using_ext_object_cache() ) {
+			return;
+		}
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'cron', 'options' );
 	}
 
 	/**

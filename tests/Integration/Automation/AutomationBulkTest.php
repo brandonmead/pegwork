@@ -263,15 +263,18 @@ class AutomationBulkTest extends AutomationTestCase {
 		);
 		wp_set_current_user( $this->editor );
 
-		$html = $this->screen( 'man_thanks', array( $run, $zero, $locked, $private ) );
-		$this->assertStringContainsString( '<h1 tabindex="-1" autofocus>Run &quot;Resend thank-you&quot; on 4 Gifts?</h1>', $html );
+		$missing = $private + 1000;
+		$html    = $this->screen( 'man_thanks', array( $run, $zero, $locked, $private, $missing ) );
+		$this->assertStringContainsString( '<h1 tabindex="-1" autofocus>Run &quot;Resend thank-you&quot; on 5 Gifts?</h1>', $html );
 		$this->assertStringContainsString( '<caption class="screen-reader-text">Selected Gifts</caption>', $html );
 		$this->assertStringContainsString( '<tr><th scope="row">Gift from Ada</th><td>Private</td><td>Will run</td></tr>', $html );
 		$this->assertStringContainsString( '<tr><th scope="row">Gift from Bo</th><td>Private</td><td>Does not apply</td></tr>', $html );
 		$this->assertStringContainsString( '<tr><th scope="row">Gift from Cy</th><td>Private</td><td>You cannot run it on this record</td></tr>', $html );
-		$this->assertStringContainsString( '<tr><th scope="row">Gift ' . $private . '</th><td>Private</td><td>Will run</td></tr>', $html );
+		// QA SEC-3: an unreadable record looks exactly like a missing one (no title, no status, cannot run).
+		$this->assertStringContainsString( '<tr><th scope="row">Gift ' . $private . '</th><td></td><td>You cannot run it on this record</td></tr>', $html );
+		$this->assertStringContainsString( '<tr><th scope="row">Gift ' . $missing . '</th><td></td><td>You cannot run it on this record</td></tr>', $html );
 		$this->assertStringNotContainsString( 'Secret gift', $html, 'No title without read_post.' );
-		$this->assertStringContainsString( '<button type="submit" class="button button-primary">Run on 2 Gifts</button>', $html );
+		$this->assertStringContainsString( '<button type="submit" class="button button-primary">Run on 1 Gift</button>', $html );
 		$this->assertStringContainsString( 'href="' . esc_url( admin_url( 'edit.php?post_type=man_gift&m=202611' ) ) . '">Cancel</a>', $html );
 		$this->assertStringContainsString( 'name="_wpnonce"', $html );
 		$this->assertMatchesRegularExpression( '/name="request" value="[0-9a-f-]{36}"/', $html, 'Without one from step 1, a new request ID.' );
