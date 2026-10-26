@@ -2,6 +2,7 @@ const { test, expect } = require( '@playwright/test' );
 const { authFile } = require( '../utils/env' );
 const { expectNoSeriousA11yViolations } = require( '../utils/a11y' );
 const { baseURL } = require( '../utils/listings' );
+const { screenshotDir } = require( '../utils/screenshots' );
 const { TOKEN, setUpDirectory, withParams } = require( '../utils/filters' );
 
 // Phase 2 accessibility gate (docs/phase-2-design.md sections 11 and 12): every display view at 1280 and
@@ -10,7 +11,7 @@ const { TOKEN, setUpDirectory, withParams } = require( '../utils/filters' );
 test.use( { storageState: { cookies: [], origins: [] } } );
 test.describe.configure( { mode: 'serial' } );
 
-const SCREENSHOTS = 'docs/screenshots';
+const SCREENSHOTS = screenshotDir();
 // The theme's header navigation lists every page the specs create; its page-list markup is core's.
 const AXE = { exclude: [ '.wp-block-navigation' ] };
 

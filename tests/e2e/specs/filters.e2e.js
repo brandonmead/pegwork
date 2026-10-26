@@ -2,6 +2,7 @@ const { test, expect } = require( '@playwright/test' );
 const { authFile } = require( '../utils/env' );
 const { expectNoSeriousA11yViolations } = require( '../utils/a11y' );
 const { baseURL, cardTitles } = require( '../utils/listings' );
+const { screenshotDir } = require( '../utils/screenshots' );
 const {
 	TOKEN,
 	allProjects,
@@ -17,7 +18,7 @@ test.use( { storageState: { cookies: [], origins: [] } } );
 test.describe.configure( { mode: 'serial' } );
 
 const PER_PAGE = 12;
-const SCREENSHOTS = 'docs/screenshots';
+const SCREENSHOTS = screenshotDir();
 
 let context;
 let tracker;

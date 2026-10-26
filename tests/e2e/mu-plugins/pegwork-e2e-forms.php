@@ -45,6 +45,10 @@ unset( $pegwork_e2e_turnstile );
 add_filter(
 	'pre_wp_mail',
 	static function ( $result, $atts ) {
+		// Option pegwork_e2e_mail_fail (POST pegwork-e2e/v1/mail-fail): mail to anyone but the site admin fails, as a broken mail server would.
+		if ( get_option( 'pegwork_e2e_mail_fail' ) && array( (string) get_option( 'admin_email' ) ) !== array_values( (array) $atts['to'] ) ) {
+			return false;
+		}
 		$log   = get_option( 'pegwork_e2e_mail', array() );
 		$log   = is_array( $log ) ? $log : array();
 		$log[] = array(
@@ -121,7 +125,34 @@ add_action(
 						}
 					}
 					delete_option( 'pegwork_e2e_turnstile' );
+					delete_option( 'pegwork_e2e_mail_fail' );
 					return rest_ensure_response( true );
+				},
+			)
+		);
+
+		// The server's post_max_size in bytes (0 when unlimited), so a spec can post just over it.
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/post-max',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin,
+				'callback'            => static fn() => rest_ensure_response( max( 0, (int) wp_convert_hr_to_bytes( (string) ini_get( 'post_max_size' ) ) ) ),
+			)
+		);
+
+		// Makes mail to anyone but the site admin fail (on) or work again (off).
+		register_rest_route(
+			'pegwork-e2e/v1',
+			'/mail-fail',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$on = rest_sanitize_boolean( $request['on'] );
+					$on ? update_option( 'pegwork_e2e_mail_fail', '1', false ) : delete_option( 'pegwork_e2e_mail_fail' );
+					return rest_ensure_response( $on );
 				},
 			)
 		);

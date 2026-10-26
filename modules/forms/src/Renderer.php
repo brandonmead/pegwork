@@ -63,10 +63,14 @@ final class Renderer {
 		$sent = isset( $_GET[ Submission::SENT ] ) && sanitize_key( wp_unslash( $_GET[ Submission::SENT ] ) ) === $key;
 		if ( $sent && 1 === self::$instances[ $key ] ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state after the redirect.
-			$held    = isset( $_GET[ Submission::HELD ] );
+			$held = isset( $_GET[ Submission::HELD ] );
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state after the redirect.
+			$again   = isset( $form['confirm'] ) && isset( $_GET[ Submission::AGAIN ] );
 			$message = $held
 				? __( 'Your submission was saved, but our spam check could not be completed. The site team will review it, so there is no need to send it again.', 'pegwork' )
-				: ( $form['messages']['success'] ?? self::default_success( $form ) );
+				: ( $again
+					? __( 'We already have this submission, and its confirmation email was sent a moment ago. Check your inbox and spam folder. If it does not arrive within 10 minutes, send the form again.', 'pegwork' )
+					: ( $form['messages']['success'] ?? self::default_success( $form ) ) );
 			return $html . '<div class="pegwork-form__status" role="status" tabindex="-1" autofocus><p>' . esc_html( $message ) . '</p></div></div>';
 		}
 
@@ -102,6 +106,10 @@ final class Renderer {
 		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
 		$files  = is_array( $state['files'] ?? null ) ? $state['files'] : array();
 		$values = is_array( $state['values'] ?? null ) ? $state['values'] : ( $record_id > 0 ? RecordWriter::prefill( $form, $record_id ) : array() );
+		if ( ! is_array( $state ) && 1 === self::$instances[ $key ] && Submission::too_large() && Definition::has_files( $form ) ) {
+			// PHP dropped the whole POST for size (Submission::handle()), so there is no state: tell the visitor.
+			$state = array( 'outcome' => 'too_large' );
+		}
 		$notice = self::outcome_notice( is_array( $state ) ? $state : array() );
 		// A re-render keeps the posted token's render time (Submission::process() `issued`).
 		$issued = is_int( $state['issued'] ?? null ) ? $state['issued'] : $now;
@@ -432,6 +440,12 @@ final class Renderer {
 			'expired'      => __( 'This page was open too long. Check your answers and send again.', 'pegwork' ),
 			'denied'       => __( 'You do not have permission to use this form.', 'pegwork' ),
 			'failed'       => __( 'Your submission could not be saved. Try again later.', 'pegwork' ),
+			'too_large'    => sprintf(
+				/* translators: %s: size limit, for example 8 MB. */
+				__( 'Your files are too large to send together, so nothing was sent. The limit is %s in total. Choose smaller files and send the form again.', 'pegwork' ),
+				size_format( Submission::max_post_bytes() )
+			),
+			'confirm_mail_failed' => __( 'Your submission was saved, but we could not send the confirmation email. The site team has been told and will follow up. You do not need to send the form again.', 'pegwork' ),
 			'captcha_failed' => __( 'The spam check did not pass. Wait for the check to finish, then send the form again.', 'pegwork' ),
 			'captcha_missing' => __( 'This form needs JavaScript for its spam check. Turn on JavaScript in your browser to send it.', 'pegwork' ),
 			'record_failed' => __( 'Your submission was received, but it could not be processed. The site team has been told and will follow up.', 'pegwork' ),

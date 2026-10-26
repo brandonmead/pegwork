@@ -346,7 +346,19 @@ final class Patterns {
 			} elseif ( 'post_excerpt' === $storage ) {
 				$block = self::block( 'core/post-excerpt' );
 			} elseif ( 'url' === $field['type'] ) {
-				$block = self::button( $field );
+				// An empty url leaves a Buttons wrapper with nothing in it, so the button sits in a Show if.
+				$block = self::block(
+					Conditional::NAME,
+					array(
+						'conditions' => array(
+							array(
+								'field' => $field['key'],
+								'op'    => 'not_empty',
+							),
+						),
+					),
+					self::lines( array( self::button( $field ) ) )
+				);
 			} elseif ( 'boolean' === $field['type'] ) {
 				$block = self::bound_paragraph( $field, array(), 'pegwork-badge' );
 			} else {
